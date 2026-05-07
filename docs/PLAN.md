@@ -386,6 +386,18 @@ Wiki lint gates:
 | secret-like content | error | Prevent credential leaks. |
 | excessive page count or size | warning | Avoid GitHub Wiki sprawl and agent-unfriendly pages. |
 
+## Detailed feature plans
+
+Detailed planned-feature epics live as one markdown file per feature under `docs/plans/`:
+
+- `docs/plans/production-scanner.md`
+- `docs/plans/doc-validation.md`
+- `docs/plans/wiki-graph.md`
+- `docs/plans/llm-compiler.md`
+- `docs/plans/incremental-mode.md`
+- `docs/plans/ci-publishing.md`
+- `docs/plans/agent-integration.md`
+
 ## Implementation milestones
 
 ### Milestone 1: Current scaffold

@@ -1,5 +1,5 @@
 ---
-name: "Review"
+name: "review"
 description: "Use for pull request review from a product and engineering perspective: check the implementation against the PR description, relevant plan, acceptance criteria, definition of done, non-goals, coding best practices, security expectations, and merge readiness. Keywords: review, PR review, acceptance criteria review, DoD review, security review, plan compliance."
 tools: [read, search, execute]
 argument-hint: "PR number or branch, relevant plan files, and any specific review focus areas or constraints."
@@ -55,4 +55,4 @@ Return:
 - Brief merge-readiness summary
 
 After returning the verdict, ask the user:
-> **Next step**: Should I submit this verdict as a comment on the PR, or spawn the Review Fixer to address the findings? (If there are no findings, state that no fixer run is needed and ask only about submitting the comment.)
+> **Next step**: Should I submit this verdict as a comment on the PR, or spawn the fixer to address the findings? (If there are no findings, state that no fixer run is needed and ask only about submitting the comment.)
