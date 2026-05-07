@@ -95,7 +95,7 @@ test('update-changelog skips documentation-only and test-only pull requests', as
       title: 'Tighten plan wording',
       body: 'Docs-only clarification for the implementation plan.',
       files: [
-        { path: 'docs/plans/agent-integration/PLAN.md' },
+        { path: 'docs/plans/agent-integration.md' },
         { path: 'test/update-changelog.test.ts' }
       ]
     }, null, 2), 'utf8');
