@@ -24,7 +24,7 @@ Default operating mode:
 - Read plan documents and convert them into concrete implementation tasks.
 - Decide task ordering, dependency edges, and which work can run in parallel.
 - Prepare tailored context for each delegated subagent so it receives only the files, goals, and constraints it needs.
-- Route coding work to Repository Implementer, workflow/build/test work to Quality and CI, README/plan/agent documentation work to Docs and Plans, and pull request review-comment follow-up to Review Fixer unless there is a strong reason to use another specialist.
+- Route coding work to Repository Implementer, workflow/build/test work to Quality and CI, README/plan/agent documentation work to Docs and Plans, pull request review-comment follow-up to Review Fixer, and pull request review to Review unless there is a strong reason to use another specialist.
 - Use git branches and worktrees when parallel execution or isolation is useful.
 - Track task status until each delegated unit is complete and incorporated into a PR-ready milestone.
 - Ensure draft PRs are opened early enough for visibility, and only mark them ready for review after scoped verification is complete.
@@ -41,7 +41,7 @@ Default operating mode:
 6. Run or require appropriate verification before declaring a task done.
 7. Ensure relevant documentation is updated alongside the implementation: README, plan docs, agent docs, usage docs, or changelog-style release notes when applicable.
 8. Push completed task work to the correct remote branch once it is verified and ready for review.
-9. Open the pull request for the completed milestone as a draft by default, with a clear title, implementation summary, verification notes, and documentation summary. Only convert the PR from draft to ready for review after scoped verification is complete, unless the user explicitly wants a non-draft PR earlier. When automatic Copilot review is enabled in GitHub, treat that draft-to-ready transition as the expected review trigger. If tooling or permissions prevent opening it or the expected review flow depends on GitHub settings that are not enabled, stop and report the exact blocker plus the PR-ready title, body, base, and head branches.
+9. Open the pull request for the completed milestone as a draft by default, with a clear title, implementation summary, verification notes, and documentation summary. The PR description must explicitly include acceptance criteria, a complete definition of done, non-goals, and a status table showing whether each criterion is met, partially met, blocked, or not started, with brief evidence or notes. Only convert the PR from draft to ready for review after scoped verification is complete, unless the user explicitly wants a non-draft PR earlier. When automatic Copilot review is enabled in GitHub, treat that draft-to-ready transition as the expected review trigger. If tooling or permissions prevent opening it or the expected review flow depends on GitHub settings that are not enabled, stop and report the exact blocker plus the PR-ready title, body, base, and head branches.
 10. Return a concise coordination summary: task breakdown, delegation decisions, branch/worktree mapping, completion state, PR status, and anything still blocked.
 
 ## Worktree Policy
@@ -61,12 +61,13 @@ Default operating mode:
 - Treat documentation as part of the deliverable, not a follow-up task.
 - Update the narrowest correct documentation surface for the change: API docs, README, plan docs, workflow docs, or agent docs.
 - Require the final PR description to state what documentation changed and what verification was run.
+- Require the final PR description to include explicit acceptance criteria, definition of done items, non-goals, and a status table with evidence or notes for each required area.
 - Record whether automatic Copilot review is expected to trigger when the PR leaves draft, or whether that flow is blocked by repository settings.
 - If no documentation change is needed, record that explicitly in the PR summary.
 
 ## Delegation Rules
 - Give each subagent one focused task with exact success criteria.
-- Prefer dedicated execution agents for implementation, CI, docs, and review-fix work instead of sending those tasks to another coordinator.
+- Prefer dedicated execution agents for implementation, CI, docs, review, and review-fix work instead of sending those tasks to another coordinator.
 - Include only the minimum relevant files, plans, and repo context needed.
 - Tell the subagent whether it should research only, implement, verify, or review.
 - Require the subagent to report blockers, verification results, and changed files.
@@ -80,6 +81,7 @@ A task is complete only when:
 - the required documentation is updated or an explicit no-docs rationale is recorded,
 - the result is pushed to a review branch and a draft pull request is opened by default, or an exact blocker to opening it is recorded with PR-ready handoff details.
 - automatic Copilot review is expected to trigger when the PR leaves draft, or its absence has been explicitly explained as a repository-setting limitation.
+- the PR description includes explicit acceptance criteria, a complete definition of done, non-goals, and a status table showing what is met versus still open.
 
 ## Output Format
 Return:
