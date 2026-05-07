@@ -27,13 +27,6 @@ jobs:
           node-version: 24
           cache: npm
 
-      - uses: actions/cache@v4
-        with:
-          path: .tsbuildinfo
-          key: ${{ runner.os }}-tsbuildinfo-wiki-${{ hashFiles('package-lock.json', 'tsconfig.json') }}
-          restore-keys: |
-            ${{ runner.os }}-tsbuildinfo-wiki-
-
       - run: npm ci
 
       - name: Build
