@@ -29,7 +29,7 @@
   "scripts": {
     "clean": "rm -rf dist .tsbuildinfo",
     "build": "tsc --project tsconfig.json",
-    "test:compiled": "node --test dist/test/**/*.test.js",
+    "test:compiled": "find dist/test -name '*.test.js' -exec node --test {} +",
     "check": "npm run build && npm run test:compiled",
     "test": "npm run check",
     "repo-wiki": "npm run build --silent && node ./dist/bin/repo-wiki.js",
