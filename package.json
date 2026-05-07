@@ -19,6 +19,7 @@
     "prompts/",
     ".llmwiki/schema.md",
     ".llmwiki/config.json",
+    "CHANGELOG.md",
     "README.md",
     "AGENTS.md",
     "LICENSE"
@@ -45,7 +46,10 @@
     "self:wiki": "npm run kb:bootstrap",
     "pack:check": "npm run build --silent && npm pack --dry-run",
     "lint:docs": "npm run build --silent && node ./dist/bin/repo-wiki.js lint-docs --repo . --scan .llmwiki/run",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "changelog:ensure": "node ./scripts/update-changelog.mjs ensure",
+    "changelog:release": "node ./scripts/update-changelog.mjs release",
+    "changelog:update": "node ./scripts/update-changelog.mjs update"
   },
   "keywords": [
     "llm-wiki",
