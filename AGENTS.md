@@ -6,9 +6,9 @@ Before editing implementation details, read:
 
 1. `docs/PLAN.md`
 2. `.llmwiki/schema.md`
-3. `src/cli.js`
-4. `src/scanner.js`
-5. `src/compiler.js`
+3. `src/cli.ts`
+4. `src/scanner.ts`
+5. `src/compiler.ts`
 
 Source code is authoritative. Generated wiki pages are derived artifacts.
 
