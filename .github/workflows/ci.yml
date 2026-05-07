@@ -1,0 +1,52 @@
+name: Build and test
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint code
+        run: npm run lint:code
+
+  test:
+    name: ${{ matrix.task.name }}
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task:
+          - name: Build and test
+            command: npm run check
+          - name: Coverage gate
+            command: npm run coverage
+          - name: Pack dry run
+            command: npm run pack:check
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: ${{ matrix.task.name }}
+        run: ${{ matrix.task.command }}

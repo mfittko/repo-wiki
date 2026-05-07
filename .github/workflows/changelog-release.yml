@@ -1,0 +1,61 @@
+name: Rotate changelog on release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version without brackets
+        required: true
+      date:
+        description: Release date in YYYY-MM-DD format
+        required: false
+  release:
+    types:
+      - published
+
+jobs:
+  rotate-changelog:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Determine release metadata
+        id: release
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            version="${{ github.event.inputs.version }}"
+            date="${{ github.event.inputs.date }}"
+          else
+            version="${{ github.event.release.tag_name }}"
+            version="${version#v}"
+            date="$(date -u +%F)"
+          fi
+          if [ -z "$date" ]; then
+            date="$(date -u +%F)"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "date=$date" >> "$GITHUB_OUTPUT"
+
+      - name: Rotate unreleased changelog entries
+        run: node ./scripts/update-changelog.mjs release --version "${{ steps.release.outputs.version }}" --date "${{ steps.release.outputs.date }}"
+
+      - name: Commit rotated changelog
+        run: |
+          if git diff --quiet -- CHANGELOG.md; then
+            echo "No changelog rotation needed"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "Rotate changelog for release ${{ steps.release.outputs.version }}"
+          git push origin HEAD:main

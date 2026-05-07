@@ -22,7 +22,7 @@ const SECRET_PATTERNS = [
   /sk-[A-Za-z0-9]{20,}/
 ];
 
-export async function lintWiki({ wikiDir, scanDir }) {
+export async function lintWiki({ wikiDir, scanDir }: { wikiDir: string; scanDir: string }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
   const issues = [];
   const files = await listMarkdown(wikiDir);
@@ -72,7 +72,7 @@ export async function lintWiki({ wikiDir, scanDir }) {
   };
 }
 
-async function listMarkdown(wikiDir) {
+async function listMarkdown(wikiDir: string) {
   const entries = await fs.readdir(wikiDir, { withFileTypes: true });
   return entries
     .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
@@ -80,12 +80,12 @@ async function listMarkdown(wikiDir) {
     .sort();
 }
 
-function extractWikiLinks(content) {
-  const links = new Set();
+function extractWikiLinks(content: string): string[] {
+  const links = new Set<string>();
   const pattern = /\[[^\]]+\]\(([^)]+)\)/g;
 
   for (const match of content.matchAll(pattern)) {
-    const target = match[1];
+    const target = String(match[1]);
     if (/^https?:/.test(target) || target.startsWith('#') || target.includes('/')) {
       continue;
     }
@@ -95,10 +95,10 @@ function extractWikiLinks(content) {
   return [...links];
 }
 
-function error(code, message) {
+function error(code: string, message: string) {
   return { level: 'error', code, message };
 }
 
-function warning(code, message) {
+function warning(code: string, message: string) {
   return { level: 'warning', code, message };
 }

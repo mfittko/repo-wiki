@@ -1,4 +1,4 @@
-import { parseArgs } from './utils/args.js';
+import { parseArgs, type ParsedArgs } from './utils/args.js';
 import { initProject } from './init.js';
 import { scanRepository } from './scanner.js';
 import { createBootstrapPlan } from './planner.js';
@@ -27,7 +27,12 @@ Examples:
   npx repo-wiki run --mode bootstrap --repo /path/to/existing/repo --wiki /tmp/repo-wiki
 `.trim();
 
-export async function runCli(argv) {
+function getStringOption(options: ParsedArgs, key: string) {
+  const value = options[key];
+  return typeof value === 'string' ? value : undefined;
+}
+
+export async function runCli(argv: string[]) {
   const [command, ...rest] = argv;
   const options = parseArgs(rest);
 
@@ -39,7 +44,7 @@ export async function runCli(argv) {
   switch (command) {
     case 'init': {
       const result = await initProject({
-        repoPath: options.repo || '.',
+        repoPath: getStringOption(options, 'repo') || '.',
         force: Boolean(options.force),
         writeAgents: Boolean(options['write-agents'])
       });
@@ -49,11 +54,11 @@ export async function runCli(argv) {
 
     case 'scan': {
       const result = await scanRepository({
-        mode: options.mode || 'bootstrap',
-        repoPath: options.repo || '.',
-        outDir: options.out || options.scan || '.llmwiki/run',
-        baseRef: options.base,
-        headRef: options.head
+        mode: getStringOption(options, 'mode') || 'bootstrap',
+        repoPath: getStringOption(options, 'repo') || '.',
+        outDir: getStringOption(options, 'out') || getStringOption(options, 'scan') || '.llmwiki/run',
+        baseRef: getStringOption(options, 'base'),
+        headRef: getStringOption(options, 'head')
       });
       console.log(JSON.stringify(result.summary, null, 2));
       return;
@@ -61,8 +66,8 @@ export async function runCli(argv) {
 
     case 'plan': {
       const result = await createBootstrapPlan({
-        scanDir: options.scan || '.llmwiki/run',
-        outFile: options.out || options.plan || '.llmwiki/bootstrap-plan.json'
+        scanDir: getStringOption(options, 'scan') || '.llmwiki/run',
+        outFile: getStringOption(options, 'out') || getStringOption(options, 'plan') || '.llmwiki/bootstrap-plan.json'
       });
       console.log(JSON.stringify(result.summary, null, 2));
       return;
@@ -70,9 +75,9 @@ export async function runCli(argv) {
 
     case 'compile': {
       const result = await compileWiki({
-        scanDir: options.scan || '.llmwiki/run',
-        planFile: options.plan || '.llmwiki/bootstrap-plan.json',
-        wikiDir: options.wiki || '.llmwiki/wiki'
+        scanDir: getStringOption(options, 'scan') || '.llmwiki/run',
+        planFile: getStringOption(options, 'plan') || '.llmwiki/bootstrap-plan.json',
+        wikiDir: getStringOption(options, 'wiki') || '.llmwiki/wiki'
       });
       console.log(JSON.stringify(result.summary, null, 2));
       return;
@@ -80,8 +85,8 @@ export async function runCli(argv) {
 
     case 'lint': {
       const result = await lintWiki({
-        wikiDir: options.wiki || '.llmwiki/wiki',
-        scanDir: options.scan || '.llmwiki/run'
+        wikiDir: getStringOption(options, 'wiki') || '.llmwiki/wiki',
+        scanDir: getStringOption(options, 'scan') || '.llmwiki/run'
       });
       console.log(JSON.stringify(result.summary, null, 2));
       if (result.summary.errors > 0) {
@@ -92,8 +97,8 @@ export async function runCli(argv) {
 
     case 'lint-docs': {
       const result = await lintDocs({
-        scanDir: options.scan || '.llmwiki/run',
-        repoPath: options.repo || '.'
+        scanDir: getStringOption(options, 'scan') || '.llmwiki/run',
+        repoPath: getStringOption(options, 'repo') || '.'
       });
       console.log(JSON.stringify(result.summary, null, 2));
       if (result.summary.errors > 0) {
@@ -104,10 +109,10 @@ export async function runCli(argv) {
 
     case 'publish': {
       const result = await publishWiki({
-        wikiDir: options.wiki || '.llmwiki/wiki',
-        remote: options.remote,
-        branch: options.branch || 'master',
-        message: options.message,
+        wikiDir: getStringOption(options, 'wiki') || '.llmwiki/wiki',
+        remote: getStringOption(options, 'remote'),
+        branch: getStringOption(options, 'branch') || 'master',
+        message: getStringOption(options, 'message'),
         dryRun: Boolean(options['dry-run'])
       });
       console.log(JSON.stringify(result.summary, null, 2));
@@ -128,19 +133,19 @@ export async function runCli(argv) {
   }
 }
 
-async function runPipeline(options) {
-  const mode = options.mode || 'bootstrap';
-  const repoPath = options.repo || '.';
-  const scanDir = options.scan || '.llmwiki/run';
-  const planFile = options.plan || (mode === 'incremental' ? '.llmwiki/incremental-plan.json' : '.llmwiki/bootstrap-plan.json');
-  const wikiDir = options.wiki || '.llmwiki/wiki';
+async function runPipeline(options: ParsedArgs) {
+  const mode = getStringOption(options, 'mode') || 'bootstrap';
+  const repoPath = getStringOption(options, 'repo') || '.';
+  const scanDir = getStringOption(options, 'scan') || '.llmwiki/run';
+  const planFile = getStringOption(options, 'plan') || (mode === 'incremental' ? '.llmwiki/incremental-plan.json' : '.llmwiki/bootstrap-plan.json');
+  const wikiDir = getStringOption(options, 'wiki') || '.llmwiki/wiki';
 
   const scan = await scanRepository({
     mode,
     repoPath,
     outDir: scanDir,
-    baseRef: options.base,
-    headRef: options.head
+    baseRef: getStringOption(options, 'base'),
+    headRef: getStringOption(options, 'head')
   });
 
   const plan = await createBootstrapPlan({
@@ -168,9 +173,9 @@ async function runPipeline(options) {
   if (options.publish) {
     publish = await publishWiki({
       wikiDir,
-      remote: options.remote,
-      branch: options.branch || 'master',
-      message: options.message,
+      remote: getStringOption(options, 'remote'),
+      branch: getStringOption(options, 'branch') || 'master',
+      message: getStringOption(options, 'message'),
       dryRun: Boolean(options['dry-run'])
     });
   }

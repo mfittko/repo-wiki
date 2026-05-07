@@ -24,9 +24,13 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
+          cache: npm
 
       - run: npm ci
+
+      - name: Build
+        run: npm run build
 
       - name: Determine mode
         run: |
@@ -37,17 +41,17 @@ jobs:
           fi
 
       - name: Scan
-        run: node ./bin/repo-wiki.js scan --mode "$MODE" --repo . --out .llmwiki/run
+        run: node ./dist/bin/repo-wiki.js scan --mode "$MODE" --repo . --out .llmwiki/run
 
       - name: Plan
-        run: node ./bin/repo-wiki.js plan --scan .llmwiki/run --out .llmwiki/plan.json
+        run: node ./dist/bin/repo-wiki.js plan --scan .llmwiki/run --out .llmwiki/plan.json
 
       - name: Compile
-        run: node ./bin/repo-wiki.js compile --scan .llmwiki/run --plan .llmwiki/plan.json --wiki .llmwiki/wiki
+        run: node ./dist/bin/repo-wiki.js compile --scan .llmwiki/run --plan .llmwiki/plan.json --wiki .llmwiki/wiki
 
       - name: Lint
-        run: node ./bin/repo-wiki.js lint --wiki .llmwiki/wiki --scan .llmwiki/run
+        run: node ./dist/bin/repo-wiki.js lint --wiki .llmwiki/wiki --scan .llmwiki/run
 
       - name: Publish placeholder
         if: github.ref == 'refs/heads/main'
-        run: node ./bin/repo-wiki.js publish --wiki .llmwiki/wiki
+        run: node ./dist/bin/repo-wiki.js publish --wiki .llmwiki/wiki

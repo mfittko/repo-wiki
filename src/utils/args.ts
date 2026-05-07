@@ -1,5 +1,7 @@
-export function parseArgs(argv) {
-  const options = {};
+export type ParsedArgs = Record<string, string | boolean | undefined>;
+
+export function parseArgs(argv: string[]): ParsedArgs {
+  const options: ParsedArgs = {};
 
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i];
