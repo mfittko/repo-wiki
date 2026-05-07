@@ -2,6 +2,8 @@ node_modules/
 .llmwiki/run/
 .llmwiki/wiki/
 .llmwiki/bootstrap-plan.json
+.llmwiki/incremental-plan.json
+.llmwiki/plan.json
 coverage/
 dist/
 .DS_Store
