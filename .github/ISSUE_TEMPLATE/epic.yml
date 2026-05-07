@@ -1,0 +1,53 @@
+name: Epic
+description: Track a roadmap milestone or large body of related work.
+title: "[Epic] "
+type: Epic
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template for roadmap milestones and other larger bodies of work that group related implementation tasks.
+
+  - type: input
+    id: milestone
+    attributes:
+      label: Roadmap milestone
+      description: Link to the relevant milestone or plan section, if applicable.
+      placeholder: "Milestone 2: Production scanner"
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: List the major capabilities or workstreams included in this epic.
+      placeholder: |
+        - [ ] Capability one
+        - [ ] Capability two
+        - [ ] Capability three
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: Define what must be true for this epic to be considered complete.
+      placeholder: |
+        - [ ] Behavior is implemented and covered by tests.
+        - [ ] Documentation or generated wiki output is updated where relevant.
+        - [ ] Lint, type-check, and test commands pass.
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Link relevant docs, source files, issues, or design notes.
+      placeholder: |
+        - docs/PLAN.md
+        - src/example.ts
+    validations:
+      required: false
