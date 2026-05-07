@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Changelog automation** — `scripts/update-changelog.mjs` with `npm run changelog:update` and `npm run changelog:release` commands
 - **Compiler wiki pages** — dependency map, configuration, HTTP routes, and testing-strategy pages rendered from scanner analysis output
 - Build scanner analysis foundation, TypeScript migration, and CI enforcement.
+- Add repo guidance and simplify agent names.
 
 ### Changed
 - Node.js engine requirement raised to `>=24`; removed unsafe incremental cache from scanner
