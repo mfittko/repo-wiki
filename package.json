@@ -29,6 +29,7 @@
   },
   "scripts": {
     "clean": "rm -rf dist .tsbuildinfo",
+    "lint:code": "tsc --project tsconfig.json --noEmit",
     "build": "tsc --project tsconfig.json",
     "test:compiled": "node ./dist/test/run-compiled-tests.js",
     "coverage:compiled": "c8 --include=dist/src/**/*.js --reporter=text --check-coverage --lines 95 node ./dist/test/run-compiled-tests.js",
