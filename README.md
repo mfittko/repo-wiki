@@ -23,12 +23,13 @@ npm install
 npm run build
 npm test
 npm run check
+npm run coverage
 npm run self:wiki
 npm run lint:docs
 npm run lint:local
 ```
 
-The local CLI and package verification flow runs against compiled output in `dist/`. `npm test` and `npm run check` both require a successful TypeScript build before tests run.
+The local CLI and package verification flow runs against compiled output in `dist/`. `npm test`, `npm run check`, and `npm run coverage` all require a successful TypeScript build before tests run. CI enforces a 95% line coverage gate on compiled source coverage.
 
 ## Commands
 

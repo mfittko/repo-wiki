@@ -29,7 +29,9 @@
   "scripts": {
     "clean": "rm -rf dist .tsbuildinfo",
     "build": "tsc --project tsconfig.json",
-    "test:compiled": "find dist/test -name '*.test.js' -exec node --test {} +",
+    "test:compiled": "node ./dist/test/run-compiled-tests.js",
+    "coverage:compiled": "c8 --include=dist/src/**/*.js --reporter=text --check-coverage --lines 95 node ./dist/test/run-compiled-tests.js",
+    "coverage": "npm run build && npm run coverage:compiled",
     "check": "npm run build && npm run test:compiled",
     "test": "npm run check",
     "repo-wiki": "npm run build --silent && node ./dist/bin/repo-wiki.js",
@@ -61,6 +63,7 @@
   "types": "./dist/src/index.d.ts",
   "devDependencies": {
     "@types/node": "^22.15.21",
+    "c8": "^10.1.3",
     "typescript": "^5.8.3"
   }
 }

@@ -37,7 +37,7 @@ async function writeFixture({ manifest, plan }) {
   await fs.mkdir(scanDir, { recursive: true });
   await fs.writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
   await fs.writeFile(planFile, JSON.stringify(plan, null, 2));
-  return { scanDir, wikiDir, planFile };
+  return { dir, scanDir, wikiDir, planFile };
 }
 
 test('compileWiki renders richer scanner analysis into wiki pages', async () => {
@@ -136,26 +136,31 @@ test('compileWiki renders richer scanner analysis into wiki pages', async () => 
     }
   };
 
-  const { scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan: createPlan() });
-  await compileWiki({ scanDir, planFile, wikiDir });
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan: createPlan() });
 
-  const buildPage = await fs.readFile(path.join(wikiDir, 'Build-Test-and-Run.md'), 'utf8');
-  const dependencyPage = await fs.readFile(path.join(wikiDir, 'Dependency-Map.md'), 'utf8');
-  const configPage = await fs.readFile(path.join(wikiDir, 'Configuration-and-Environment.md'), 'utf8');
-  const routesPage = await fs.readFile(path.join(wikiDir, 'API-HTTP-Routes.md'), 'utf8');
-  const testingPage = await fs.readFile(path.join(wikiDir, 'Testing-Strategy.md'), 'utf8');
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
 
-  assert.match(buildPage, /Package scripts/);
-  assert.match(buildPage, /node --test/);
-  assert.match(dependencyPage, /Resolved internal dependency edges/);
-  assert.match(dependencyPage, /src\/utils\.js/);
-  assert.match(configPage, /APP_MODE/);
-  assert.match(configPage, /PORT/);
-  assert.match(routesPage, /\/health/);
-  assert.match(routesPage, /healthCheck/);
-  assert.match(testingPage, /Test-to-source mappings/);
-  assert.match(testingPage, /test\/index\.test\.js/);
-  assert.match(testingPage, /src\/index\.js/);
+    const buildPage = await fs.readFile(path.join(wikiDir, 'Build-Test-and-Run.md'), 'utf8');
+    const dependencyPage = await fs.readFile(path.join(wikiDir, 'Dependency-Map.md'), 'utf8');
+    const configPage = await fs.readFile(path.join(wikiDir, 'Configuration-and-Environment.md'), 'utf8');
+    const routesPage = await fs.readFile(path.join(wikiDir, 'API-HTTP-Routes.md'), 'utf8');
+    const testingPage = await fs.readFile(path.join(wikiDir, 'Testing-Strategy.md'), 'utf8');
+
+    assert.match(buildPage, /Package scripts/);
+    assert.match(buildPage, /node --test/);
+    assert.match(dependencyPage, /Resolved internal dependency edges/);
+    assert.match(dependencyPage, /src\/utils\.js/);
+    assert.match(configPage, /APP_MODE/);
+    assert.match(configPage, /PORT/);
+    assert.match(routesPage, /\/health/);
+    assert.match(routesPage, /healthCheck/);
+    assert.match(testingPage, /Test-to-source mappings/);
+    assert.match(testingPage, /test\/index\.test\.js/);
+    assert.match(testingPage, /src\/index\.js/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
 });
 
 test('compileWiki falls back cleanly when richer analysis is absent', async () => {
@@ -180,16 +185,21 @@ test('compileWiki falls back cleanly when richer analysis is absent', async () =
     ]
   };
 
-  const { scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan: createPlan() });
-  await compileWiki({ scanDir, planFile, wikiDir });
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan: createPlan() });
 
-  const buildPage = await fs.readFile(path.join(wikiDir, 'Build-Test-and-Run.md'), 'utf8');
-  const dependencyPage = await fs.readFile(path.join(wikiDir, 'Dependency-Map.md'), 'utf8');
-  const configPage = await fs.readFile(path.join(wikiDir, 'Configuration-and-Environment.md'), 'utf8');
-  const testingPage = await fs.readFile(path.join(wikiDir, 'Testing-Strategy.md'), 'utf8');
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
 
-  assert.match(buildPage, /No package scripts were extracted/);
-  assert.match(dependencyPage, /Source file \| Imports/);
-  assert.match(configPage, /No explicit environment variable names were extracted/);
-  assert.match(testingPage, /The compiler will add direct test-to-source mappings/);
+    const buildPage = await fs.readFile(path.join(wikiDir, 'Build-Test-and-Run.md'), 'utf8');
+    const dependencyPage = await fs.readFile(path.join(wikiDir, 'Dependency-Map.md'), 'utf8');
+    const configPage = await fs.readFile(path.join(wikiDir, 'Configuration-and-Environment.md'), 'utf8');
+    const testingPage = await fs.readFile(path.join(wikiDir, 'Testing-Strategy.md'), 'utf8');
+
+    assert.match(buildPage, /No package scripts were extracted/);
+    assert.match(dependencyPage, /Source file \| Imports/);
+    assert.match(configPage, /No explicit environment variable names were extracted/);
+    assert.match(testingPage, /The compiler will add direct test-to-source mappings/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
 });

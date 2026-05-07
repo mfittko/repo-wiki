@@ -23,5 +23,8 @@ jobs:
       - name: Build and test
         run: npm run check
 
+      - name: Coverage gate
+        run: npm run coverage
+
       - name: Pack dry run
         run: npm run pack:check

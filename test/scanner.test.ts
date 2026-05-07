@@ -20,73 +20,78 @@ async function makeTempRepo() {
 
 test('scanRepository creates a manifest and source cards', async () => {
   const repo = await makeTempRepo();
-  const out = path.join(repo, '.llmwiki', 'run');
 
-  const result = await scanRepository({
-    mode: 'bootstrap',
-    repoPath: repo,
-    outDir: out
-  });
+  try {
+    const out = path.join(repo, '.llmwiki', 'run');
 
-  assert.equal(result.summary.files, 6);
-  assert.equal(result.manifest.totals.languages.JavaScript, 5);
-  assert.equal(result.manifest.totals.languages.JSON, 1);
-  assert.ok(result.manifest.files.some((file) => file.path === 'src/index.js'));
+    const result = await scanRepository({
+      mode: 'bootstrap',
+      repoPath: repo,
+      outDir: out
+    });
 
-  assert.deepEqual(result.manifest.analysis.package_scripts, [
-    {
-      path: 'package.json',
-      name: 'fixture-repo',
-      scripts: {
-        build: 'node build.js',
-        test: 'node --test'
+    assert.equal(result.summary.files, 6);
+    assert.equal(result.manifest.totals.languages.JavaScript, 5);
+    assert.equal(result.manifest.totals.languages.JSON, 1);
+    assert.ok(result.manifest.files.some((file) => file.path === 'src/index.js'));
+
+    assert.deepEqual(result.manifest.analysis.package_scripts, [
+      {
+        path: 'package.json',
+        name: 'fixture-repo',
+        scripts: {
+          build: 'node build.js',
+          test: 'node --test'
+        }
       }
-    }
-  ]);
+    ]);
 
-  assert.deepEqual(result.manifest.analysis.dependency_graph.edges, [
-    { from: 'src/index.js', to: 'src/utils.js', specifier: './utils.js' },
-    { from: 'test/index.test.js', to: 'src/index.js', specifier: '../src/index.js' }
-  ]);
+    assert.deepEqual(result.manifest.analysis.dependency_graph.edges, [
+      { from: 'src/index.js', to: 'src/utils.js', specifier: './utils.js' },
+      { from: 'test/index.test.js', to: 'src/index.js', specifier: '../src/index.js' }
+    ]);
 
-  assert.deepEqual(result.manifest.analysis.test_to_source.mappings, [
-    {
-      test: 'src/math.test.js',
-      sources: ['src/math.js'],
-      heuristics: ['filename_affinity']
-    },
-    {
-      test: 'test/index.test.js',
-      sources: ['src/index.js'],
-      heuristics: ['filename_affinity', 'imports']
-    }
-  ]);
+    assert.deepEqual(result.manifest.analysis.test_to_source.mappings, [
+      {
+        test: 'src/math.test.js',
+        sources: ['src/math.js'],
+        heuristics: ['filename_affinity']
+      },
+      {
+        test: 'test/index.test.js',
+        sources: ['src/index.js'],
+        heuristics: ['filename_affinity', 'imports']
+      }
+    ]);
 
-  const indexCard = result.manifest.files.find((file) => file.path === 'src/index.js');
-  assert.ok(indexCard);
-  assert.deepEqual(indexCard.exported_symbols, [
-    { name: 'hello', kind: 'function' },
-    { name: 'router', kind: 'const' }
-  ]);
-  assert.deepEqual(indexCard.environment_variables, ['APP_MODE', 'PORT']);
-  assert.deepEqual(indexCard.route_surfaces, [
-    {
-      kind: 'http-route',
-      framework: 'express',
-      target: 'app',
-      methods: ['GET'],
-      path: '/health',
-      handler: 'healthCheck'
-    },
-    {
-      kind: 'http-route',
-      framework: 'express',
-      target: 'router',
-      methods: ['POST'],
-      path: '/users',
-      handler: 'createUser'
-    }
-  ]);
-  assert.ok(indexCard.runtime_hints.includes('environment-variable'));
-  assert.ok(indexCard.runtime_hints.includes('http-route'));
+    const indexCard = result.manifest.files.find((file) => file.path === 'src/index.js');
+    assert.ok(indexCard);
+    assert.deepEqual(indexCard.exported_symbols, [
+      { name: 'hello', kind: 'function' },
+      { name: 'router', kind: 'const' }
+    ]);
+    assert.deepEqual(indexCard.environment_variables, ['APP_MODE', 'PORT']);
+    assert.deepEqual(indexCard.route_surfaces, [
+      {
+        kind: 'http-route',
+        framework: 'express',
+        target: 'app',
+        methods: ['GET'],
+        path: '/health',
+        handler: 'healthCheck'
+      },
+      {
+        kind: 'http-route',
+        framework: 'express',
+        target: 'router',
+        methods: ['POST'],
+        path: '/users',
+        handler: 'createUser'
+      }
+    ]);
+    assert.ok(indexCard.runtime_hints.includes('environment-variable'));
+    assert.ok(indexCard.runtime_hints.includes('http-route'));
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
 });
