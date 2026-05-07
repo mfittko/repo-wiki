@@ -1,3 +1,8 @@
+## Change Summary
+- What changed:
+- Why this change is needed:
+- Relevant plan:
+
 ## Acceptance Criteria
 | ID | Acceptance criterion |
 |---|---|

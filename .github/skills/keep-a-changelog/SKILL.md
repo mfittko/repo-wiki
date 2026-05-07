@@ -10,7 +10,7 @@ Use this skill after a pull request is merged to `main` or when cutting a releas
 
 ## Workflow
 1. Use `gh pr view <number> --json title,body,files,url` to inspect the merged PR title, structured PR description, and changed files.
-2. Treat the PR title as the primary human-written changelog signal, and the changed file list as the structural signal. The PR description may remain purely acceptance criteria, definition of done, and non-goals.
+2. Treat the PR title as the primary human-written changelog signal, and the changed file list as the structural signal. The PR description should include a concise change summary in addition to acceptance criteria, definition of done, and non-goals, but changelog automation must not rely on a dedicated changelog section there.
 3. Run the repository script to update `CHANGELOG.md` from GitHub PR metadata:
    - `node ./scripts/update-changelog.mjs update --pr <number> --repo <owner/repo>`
 4. Verify that `CHANGELOG.md` now contains the expected `Unreleased` entries without duplicates.
@@ -21,4 +21,4 @@ Use this skill after a pull request is merged to `main` or when cutting a releas
 ## Review Policy
 - Do not merge a PR that materially changes user-facing behavior, public API, developer workflow, CI or release workflow, or security posture unless its title is specific enough to support changelog derivation.
 - Treat vague PR titles as a review issue, because changelog automation depends on them.
-- Keep PR descriptions scoped to acceptance criteria, definition of done, and non-goals; do not require a separate narrative summary there for changelog purposes.
+- Keep PR descriptions scoped to a concise change summary, acceptance criteria, definition of done, and non-goals; do not require a dedicated changelog section there for changelog purposes.
