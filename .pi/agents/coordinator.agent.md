@@ -1,0 +1,1 @@
+../../.github/agents/coordinator.agent.md
