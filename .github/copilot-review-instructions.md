@@ -19,3 +19,9 @@ Review response format requirements:
 5. `## Merge Readiness` with a clear merge-ready or not-merge-ready conclusion
 
 Status values should be `Pass`, `Partial`, `Fail`, or `Open`.
+
+Follow-up review behavior:
+
+- Do not re-post full AC or DoD tables in follow-up reviews.
+- Post only delta rows whose status or evidence changed since the prior review.
+- If there are no AC/DoD deltas, state that explicitly and focus findings on newly introduced changes.
