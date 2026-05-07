@@ -28,7 +28,7 @@ Default operating mode:
 - Use git branches and worktrees when parallel execution or isolation is useful.
 - Track task status until each delegated unit is complete and incorporated into a PR-ready milestone.
 - Ensure draft PRs are opened early enough for visibility, and only mark them ready for review after scoped verification is complete.
-- Request or preserve Copilot review on PRs when the repository feature is available, and report clearly when automatic Copilot review must be enabled in GitHub settings instead of repo code.
+- Treat the draft-to-ready transition as the normal trigger point for automatic Copilot review when the repository feature is enabled, and report clearly when that GitHub setting is not available or not enabled.
 - Validate that completed work meets the task definition before pushing.
 - Ensure user-facing and developer-facing documentation changes required by the task are included before opening the final PR.
 
@@ -41,7 +41,7 @@ Default operating mode:
 6. Run or require appropriate verification before declaring a task done.
 7. Ensure relevant documentation is updated alongside the implementation: README, plan docs, agent docs, usage docs, or changelog-style release notes when applicable.
 8. Push completed task work to the correct remote branch once it is verified and ready for review.
-9. Open the pull request for the completed milestone as a draft by default, with a clear title, implementation summary, verification notes, and documentation summary. Request Copilot review when available. Only convert the PR from draft to ready for review after scoped verification is complete, unless the user explicitly wants a non-draft PR earlier. If tooling or permissions prevent opening it or enabling the expected review flow, stop and report the exact blocker plus the PR-ready title, body, base, and head branches.
+9. Open the pull request for the completed milestone as a draft by default, with a clear title, implementation summary, verification notes, and documentation summary. Only convert the PR from draft to ready for review after scoped verification is complete, unless the user explicitly wants a non-draft PR earlier. When automatic Copilot review is enabled in GitHub, treat that draft-to-ready transition as the expected review trigger. If tooling or permissions prevent opening it or the expected review flow depends on GitHub settings that are not enabled, stop and report the exact blocker plus the PR-ready title, body, base, and head branches.
 10. Return a concise coordination summary: task breakdown, delegation decisions, branch/worktree mapping, completion state, PR status, and anything still blocked.
 
 ## Worktree Policy
@@ -61,7 +61,7 @@ Default operating mode:
 - Treat documentation as part of the deliverable, not a follow-up task.
 - Update the narrowest correct documentation surface for the change: API docs, README, plan docs, workflow docs, or agent docs.
 - Require the final PR description to state what documentation changed and what verification was run.
-- Record whether Copilot review was requested, automatically enabled, or blocked by repository settings.
+- Record whether automatic Copilot review is expected to trigger when the PR leaves draft, or whether that flow is blocked by repository settings.
 - If no documentation change is needed, record that explicitly in the PR summary.
 
 ## Delegation Rules
@@ -79,7 +79,7 @@ A task is complete only when:
 - branch and worktree state are understood,
 - the required documentation is updated or an explicit no-docs rationale is recorded,
 - the result is pushed to a review branch and a draft pull request is opened by default, or an exact blocker to opening it is recorded with PR-ready handoff details.
-- Copilot review has been requested or its absence has been explicitly explained as a repository-setting limitation.
+- automatic Copilot review is expected to trigger when the PR leaves draft, or its absence has been explicitly explained as a repository-setting limitation.
 
 ## Output Format
 Return:
