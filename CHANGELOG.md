@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Repository analysis** — `src/repository-analysis.ts` with `buildRepositoryAnalysis` (dependency graph, test-to-source mapping) and `extractPackageMetadata` (package name and scripts); integrated into the scanner manifest under an `analysis` key
 - **TypeScript migration** — all files under `src/`, `test/`, and `bin/` converted from `.js` to `.ts`; `tsconfig.json` added with strict-off baseline configuration
 - **GitHub Actions CI** — workflow with build, test, coverage (95 % line gate via `c8`), and `pack --dry-run` steps; CI targets Node 24
-- **Agent instruction files** — Implementation Coordinator, Repository Implementer, Quality and CI, Docs and Plans, Review, and Review Fixer agents added under `.github/agents/`
+- **Agent instruction files** — coordinator, developer, quality, docs, review, and fixer agents added under `.github/agents/`
 - **PR template and Copilot review instructions** — `.github/pull_request_template.md` and Copilot review configuration added
 - **Changelog automation** — `scripts/update-changelog.mjs` with `npm run changelog:update` and `npm run changelog:release` commands
 - **Compiler wiki pages** — dependency map, configuration, HTTP routes, and testing-strategy pages rendered from scanner analysis output
