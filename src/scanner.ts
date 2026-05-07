@@ -45,12 +45,19 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
   const documentationCards: any[] = [];
 
   for (const file of files) {
-    const buffer = await fs.readFile(file.absolute);
-    const hash = crypto.createHash('sha256').update(buffer).digest('hex');
+    const stat = await fs.stat(file.absolute);
     const language = detectLanguage(file.relative);
     const kind = classifyPath(file.relative);
-    const isTextCandidate = isLikelyText(file.relative, buffer);
-    const content = isTextCandidate && buffer.length <= MAX_TEXT_BYTES ? buffer.toString('utf8') : '';
+
+    let hash = '';
+    let content = '';
+
+    if (stat.size <= MAX_TEXT_BYTES) {
+      const buffer = await fs.readFile(file.absolute);
+      hash = crypto.createHash('sha256').update(buffer).digest('hex');
+      const isTextCandidate = isLikelyText(file.relative, buffer);
+      content = isTextCandidate ? buffer.toString('utf8') : '';
+    }
     const packageMetadata = content ? extractPackageMetadata(file.relative, content) : null;
     const imports = content ? extractImports(content, language) : [];
     const symbols = content ? extractSymbols(content, language) : [];
@@ -64,7 +71,7 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
       path: file.relative,
       language,
       category: kind,
-      bytes: buffer.length,
+      bytes: stat.size,
       lines: content ? countLines(content) : null,
       sha256: hash,
       imports,
