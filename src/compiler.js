@@ -106,14 +106,18 @@ function renderArchitecture(manifest, plan) {
 function renderBuildTestAndRun(manifest) {
   const packageFiles = manifest.files.filter((file) => file.path.endsWith('package.json'));
   const ciFiles = manifest.files.filter((file) => file.category === 'ci');
+  const packageScripts = (manifest.analysis?.package_scripts || []).filter((entry) => Object.keys(entry.scripts || {}).length > 0);
+  const scriptRows = packageScripts.flatMap((entry) => Object.entries(entry.scripts || {}).map(([name, command]) => [code(entry.path), entry.name ? code(entry.name) : 'unknown', code(name), code(command)]));
+  const scriptsSection = scriptRows.length
+    ? `## Package scripts\n\n- Package manifests with scripts: ${packageScripts.length}\n- Scripts detected: ${scriptRows.length}\n\n${markdownTable(['Manifest', 'Package', 'Script', 'Command'], scriptRows)}\n`
+    : `## Package scripts\n\nNo package scripts were extracted from manifest analysis. Inspect package manifests, task runners, and CI workflows directly when confirming canonical commands.\n`;
 
-  return `${frontmatter(manifest, { kind: 'build_test_run' })}# Build, Test, and Run\n\n## Detected package manifests\n\n${packageFiles.map((file) => `- \`${file.path}\``).join('\n') || '- No package manifests detected.'}\n\n## Detected CI files\n\n${ciFiles.map((file) => `- \`${file.path}\``).join('\n') || '- No CI files detected.'}\n\n## Commands to verify manually\n\nThe sketch scanner does not yet parse scripts from package manifests. The production scanner should extract commands from package files, task runners, CI workflows, Dockerfiles, and project documentation.\n`;
+  return `${frontmatter(manifest, { kind: 'build_test_run' })}# Build, Test, and Run\n\n## Detected package manifests\n\n${packageFiles.map((file) => `- \`${file.path}\``).join('\n') || '- No package manifests detected.'}\n\n## Detected CI files\n\n${ciFiles.map((file) => `- \`${file.path}\``).join('\n') || '- No CI files detected.'}\n\n${scriptsSection}\n## Manual verification guidance\n\nTreat extracted scripts as a starting point. Verify the canonical build, test, and run paths against CI workflows, container entrypoints, and deployment configs when they exist.\n`;
 }
 
 function renderOpenQuestions(manifest, plan) {
   return `${frontmatter(manifest, { kind: 'open_questions' })}# Open Questions\n\n- What pages should be human-owned versus generated?\n- Which source paths should be excluded from wiki compilation?\n- Which modules require deeper AST-level extraction?\n- Which package manager and CI commands should be treated as canonical?\n- How should large files and generated files be summarized?\n- What confidence threshold should block publishing?\n\n## Bootstrap gaps\n\n- This first-pass compiler uses repository structure, not an LLM synthesis pass.\n- Existing human wiki reconciliation is not implemented yet.\n- GitHub Wiki publishing is a placeholder.\n`;
 }
-
 
 function renderDocumentationDebtReport(manifest) {
   const docs = manifest.documentation?.files || [];
@@ -166,6 +170,15 @@ ${contradicted.join('\n') || '- None detected.'}
 }
 
 function renderDependencyMap(manifest) {
+  const dependencyEdges = manifest.analysis?.dependency_graph?.edges || [];
+
+  if (dependencyEdges.length > 0) {
+    const rows = dependencyEdges.slice(0, 200).map((edge) => [code(edge.from), code(edge.to), code(edge.specifier)]);
+    const summary = manifest.analysis?.dependency_graph?.summary || {};
+
+    return `${frontmatter(manifest, { kind: 'dependency_map' })}# Dependency Map\n\n## Resolved internal dependency edges\n\n- Edges detected: ${summary.edges ?? dependencyEdges.length}\n- Importing files: ${summary.importers ?? uniqueCount(dependencyEdges.map((edge) => edge.from))}\n- Imported files: ${summary.imported_files ?? uniqueCount(dependencyEdges.map((edge) => edge.to))}\n\n${markdownTable(['From', 'To', 'Specifier'], rows)}\n`;
+  }
+
   const importRows = manifest.files
     .filter((file) => file.imports?.length)
     .slice(0, 100)
@@ -176,12 +189,23 @@ function renderDependencyMap(manifest) {
 
 function renderTestingStrategy(manifest) {
   const tests = manifest.files.filter((file) => file.category === 'test');
-  return `${frontmatter(manifest, { kind: 'testing_strategy' })}# Testing Strategy\n\n## Detected test files\n\n${tests.map((file) => `- \`${file.path}\``).join('\n') || '- No tests detected by the sketch scanner.'}\n\n## Next refinement\n\nThe production compiler should map tests to modules, entry points, and public APIs.\n`;
+  const mappings = manifest.analysis?.test_to_source?.mappings || [];
+  const mappingSection = mappings.length
+    ? `## Test-to-source mappings\n\n- Mapped tests: ${manifest.analysis?.test_to_source?.summary?.mapped_tests ?? mappings.length}\n- Source files covered: ${manifest.analysis?.test_to_source?.summary?.source_files ?? uniqueCount(mappings.flatMap((mapping) => mapping.sources))}\n\n${markdownTable(['Test', 'Source files', 'Heuristics'], mappings.map((mapping) => [code(mapping.test), formatCodeList(mapping.sources), mapping.heuristics.join(', ') || 'unknown']))}\n`
+    : `## Next refinement\n\nThe compiler will add direct test-to-source mappings when manifest analysis includes them.\n`;
+
+  return `${frontmatter(manifest, { kind: 'testing_strategy' })}# Testing Strategy\n\n## Detected test files\n\n${tests.map((file) => `- \`${file.path}\``).join('\n') || '- No tests detected by the sketch scanner.'}\n\n${mappingSection}`;
 }
 
 function renderConfiguration(manifest) {
   const configFiles = manifest.files.filter((file) => file.runtime_hints?.includes('environment-variable') || /(^|\/)(\.env|config|settings)/i.test(file.path));
-  return `${frontmatter(manifest, { kind: 'configuration' })}# Configuration and Environment\n\n## Detected configuration-related files\n\n${configFiles.map((file) => `- \`${file.path}\``).join('\n') || '- No configuration surfaces detected by the sketch scanner.'}\n\n## Secret handling\n\nGenerated wiki pages must describe variable names and configuration concepts, not copy secret values.\n`;
+  const envRows = collectEnvironmentRows(manifest.files);
+  const envNames = uniqueSorted(envRows.flatMap((row) => row.variables));
+  const envSection = envRows.length
+    ? `## Explicit environment variables\n\n- Unique variable names detected: ${envNames.length}\n- Variable names: ${formatCodeList(envNames)}\n\n${markdownTable(['Source file', 'Variables'], envRows.map((row) => [code(row.path), formatCodeList(row.variables)]))}\n`
+    : `## Explicit environment variables\n\nNo explicit environment variable names were extracted from source cards.\n`;
+
+  return `${frontmatter(manifest, { kind: 'configuration' })}# Configuration and Environment\n\n## Detected configuration-related files\n\n${configFiles.map((file) => `- \`${file.path}\``).join('\n') || '- No configuration surfaces detected by the sketch scanner.'}\n\n${envSection}\n## Secret handling\n\nGenerated wiki pages must describe variable names and configuration concepts, not copy secret values.\n`;
 }
 
 function renderSecurity(manifest) {
@@ -196,7 +220,12 @@ function renderRunbook(manifest) {
 
 function renderHttpRoutes(manifest) {
   const routeFiles = manifest.files.filter((file) => file.runtime_hints?.includes('http-route') || file.reasons?.includes('api-surface'));
-  return `${frontmatter(manifest, { kind: 'api_http_routes' })}# API: HTTP Routes\n\n## Detected route-related files\n\n${routeFiles.map((file) => `- \`${file.path}\``).join('\n') || '- No HTTP routes detected.'}\n\n## Next refinement\n\nAdd framework-specific extractors for Express, Fastify, NestJS, Next.js route handlers, Hono, Koa, tRPC, OpenAPI, and GraphQL.\n`;
+  const routes = collectRoutes(manifest.files);
+  const routeSection = routes.length
+    ? `## Detected routes\n\n- Route surfaces detected: ${routes.length}\n\n${markdownTable(['Source file', 'Framework', 'Target', 'Methods', 'Path', 'Handler'], routes.map((route) => [code(route.file), route.framework, code(route.target), route.methods.join(', ') || 'ANY', code(route.path), code(route.handler)]))}\n`
+    : `## Detected route-related files\n\n${routeFiles.map((file) => `- \`${file.path}\``).join('\n') || '- No HTTP routes detected.'}\n`;
+
+  return `${frontmatter(manifest, { kind: 'api_http_routes' })}# API: HTTP Routes\n\n${routeSection}\n## Next refinement\n\nAdd framework-specific extractors for Express, Fastify, NestJS, Next.js route handlers, Hono, Koa, tRPC, OpenAPI, and GraphQL.\n`;
 }
 
 function renderDataModel(manifest) {
@@ -215,7 +244,65 @@ function tableFromObject(object, headers) {
     return 'No entries detected.';
   }
 
-  return [`| ${headers[0]} | ${headers[1]} |`, '|---|---:|', ...rows.map(([key, value]) => `| ${key} | ${value} |`)].join('\n');
+  return [`| ${headers[0]} | ${headers[1]} |`, '|---|---:|', ...rows.map(([key, value]) => `| ${sanitizeTableCell(key)} | ${sanitizeTableCell(value)} |`)].join('\n');
+}
+
+function markdownTable(headers, rows) {
+  return [
+    `| ${headers.map((header) => sanitizeTableCell(header)).join(' | ')} |`,
+    `| ${headers.map(() => '---').join(' | ')} |`,
+    ...rows.map((row) => `| ${row.map((value) => sanitizeTableCell(value)).join(' | ')} |`)
+  ].join('\n');
+}
+
+function collectEnvironmentRows(files) {
+  return files
+    .filter((file) => (file.environment_variables || []).length > 0)
+    .map((file) => ({ path: file.path, variables: uniqueSorted(file.environment_variables) }))
+    .sort((left, right) => left.path.localeCompare(right.path));
+}
+
+function collectRoutes(files) {
+  return files
+    .flatMap((file) => (file.route_surfaces || []).map((route) => ({
+      file: file.path,
+      framework: route.framework || 'unknown',
+      target: route.target || 'unknown',
+      methods: route.methods || [],
+      path: route.path || 'unknown',
+      handler: route.handler || 'unknown'
+    })))
+    .sort((left, right) => {
+      if (left.file !== right.file) {
+        return left.file.localeCompare(right.file);
+      }
+
+      if (left.path !== right.path) {
+        return left.path.localeCompare(right.path);
+      }
+
+      return left.target.localeCompare(right.target);
+    });
+}
+
+function formatCodeList(values) {
+  return values.map((value) => code(value)).join(', ');
+}
+
+function uniqueSorted(values) {
+  return [...new Set(values || [])].sort((left, right) => String(left).localeCompare(String(right)));
+}
+
+function uniqueCount(values) {
+  return new Set(values || []).size;
+}
+
+function code(value) {
+  return `\`${String(value).replace(/`/g, '\\`')}\``;
+}
+
+function sanitizeTableCell(value) {
+  return String(value ?? '').replace(/\n/g, ' ').replace(/\|/g, '\\|');
 }
 
 function shortCommit(commit) {

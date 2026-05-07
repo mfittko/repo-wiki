@@ -4,7 +4,15 @@ import crypto from 'node:crypto';
 import { ensureDir, walkFiles, writeJson } from './utils/fs.js';
 import { getGitCommit, getGitRemote } from './utils/git.js';
 import { classifyPath, detectLanguage } from './language.js';
-import { detectRuntimeHints, extractImports, extractSymbols } from './extractors.js';
+import {
+  detectRuntimeHints,
+  extractEnvironmentVariables,
+  extractExportedSymbols,
+  extractImports,
+  extractRouteSurfaces,
+  extractSymbols
+} from './extractors.js';
+import { buildRepositoryAnalysis, extractPackageMetadata } from './repository-analysis.js';
 import { loadConfig } from './config.js';
 import { isDocumentationFile, createDocumentationCard } from './docs-ingestor.js';
 
@@ -30,6 +38,13 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     const kind = classifyPath(file.relative);
     const isTextCandidate = isLikelyText(file.relative, buffer);
     const content = isTextCandidate && buffer.length <= MAX_TEXT_BYTES ? buffer.toString('utf8') : '';
+    const packageMetadata = content ? extractPackageMetadata(file.relative, content) : null;
+    const imports = content ? extractImports(content, language) : [];
+    const symbols = content ? extractSymbols(content, language) : [];
+    const exportedSymbols = content ? extractExportedSymbols(content, language) : [];
+    const environmentVariables = content ? extractEnvironmentVariables(content, language) : [];
+    const routeSurfaces = content ? extractRouteSurfaces(file.relative, content, language) : [];
+    const runtimeHints = content ? detectRuntimeHints(file.relative, content, { environmentVariables, routeSurfaces }) : [];
 
     const card = {
       kind: 'source_card',
@@ -39,11 +54,15 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
       bytes: buffer.length,
       lines: content ? countLines(content) : null,
       sha256: hash,
-      imports: content ? extractImports(content, language) : [],
-      symbols: content ? extractSymbols(content, language) : [],
-      runtime_hints: content ? detectRuntimeHints(file.relative, content) : [],
+      imports,
+      symbols,
+      exported_symbols: exportedSymbols,
+      environment_variables: environmentVariables,
+      route_surfaces: routeSurfaces,
+      runtime_hints: runtimeHints,
+      ...(packageMetadata || {}),
       skipped_content: !content,
-      reasons: inferReasons(file.relative, kind, content)
+      reasons: inferReasons(file.relative, kind, content, { environmentVariables, routeSurfaces })
     };
 
     cards.push(card);
@@ -56,6 +75,8 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     }
   }
 
+  const analysis = buildRepositoryAnalysis(cards);
+
   const manifest = {
     schema_version: 1,
     mode,
@@ -67,6 +88,7 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     generated_at: new Date().toISOString(),
     config: { documentation: config.documentation, lint: config.lint, wiki: config.wiki },
     totals: summarize(cards, documentationCards),
+    analysis,
     documentation: {
       enabled: config.documentation?.ingest !== false,
       authority: config.documentation?.authority || 'secondary',
@@ -132,7 +154,7 @@ function isLikelyText(filePath, buffer) {
   return !sample.includes(0);
 }
 
-function inferReasons(filePath, category, content) {
+function inferReasons(filePath, category, content, metadata = {}) {
   const reasons = new Set([category]);
   const lower = filePath.toLowerCase();
 
@@ -140,9 +162,9 @@ function inferReasons(filePath, category, content) {
   if (lower.endsWith('readme.md')) reasons.add('readme');
   if (lower.includes('auth')) reasons.add('auth');
   if (lower.includes('billing') || lower.includes('payment')) reasons.add('billing-or-payment');
-  if (lower.includes('route') || lower.includes('controller')) reasons.add('api-surface');
+  if (lower.includes('route') || lower.includes('controller') || (metadata.routeSurfaces || []).length > 0) reasons.add('api-surface');
   if (lower.includes('migration') || lower.includes('schema')) reasons.add('data-model');
-  if (content && /process\.env\.[A-Z0-9_]+/.test(content)) reasons.add('configuration');
+  if ((metadata.environmentVariables || []).length > 0 || (content && /process\.env\.[A-Z0-9_]+/.test(content))) reasons.add('configuration');
 
   return [...reasons].sort();
 }
