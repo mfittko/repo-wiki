@@ -2,7 +2,7 @@
 
 ## Summary
 
-Implement diff-based wiki maintenance that scans only changed files, identifies affected wiki pages, and produces targeted page patches rather than full regeneration.
+Implement diff-based wiki maintenance that scans only changed files, identifies affected wiki pages, reconciles those pages with the current remote wiki state, and produces targeted page patches rather than full regeneration.
 
 ## Architecture
 
@@ -10,14 +10,17 @@ Implement diff-based wiki maintenance that scans only changed files, identifies 
 flowchart TD
   PrevCommit[Previous Compiled Commit] --> Diff[git diff base..head]
   HeadCommit[Current Commit] --> Diff
+  ExistingWiki[Current Wiki Checkout] --> Ownership[Generated Page Ownership Map]
   Diff --> Changed[Changed Files]
   Changed --> CardMap[Source Card Mapping]
   CardMap --> ImportGraph[Import Graph Lookup]
   ImportGraph --> AffectedCards[Affected Source Cards]
   AffectedCards --> PageMap[Page Frontmatter Mapping]
   PageMap --> AffectedPages[Affected Wiki Pages]
+  Ownership --> AffectedPages
   AffectedPages --> Patch[Targeted Page Patching]
-  Patch --> CrossLink[Cross-link Validation]
+  Patch --> Reconcile[Merge with Existing Wiki Pages]
+  Reconcile --> CrossLink[Cross-link Validation]
   CrossLink --> DebtReport[Debt Report Update]
   DebtReport --> Lint[Lint Gates]
   Lint -->|pass| Publish[Safe Publish]
@@ -56,6 +59,10 @@ stateDiagram-v2
 - Changed-file to source-card mapping
 - Affected-page identification via import graph and page frontmatter
 - Targeted page patching (update only affected sections)
+- Existing wiki checkout and page ownership manifest loading
+- Safe reconciliation of mixed human/generated pages during incremental runs
+- Safe deletion of obsolete generated pages that are no longer planned
+- Rename handling for generated pages with stable page identities
 - Re-run cross-link validation after patching
 - Re-run documentation debt report for affected docs
 - Safe publish after lint gates pass
@@ -65,6 +72,8 @@ stateDiagram-v2
 - Incremental run touches only pages affected by the diff
 - Cross-links remain valid after partial updates
 - Incremental output matches what a full bootstrap would produce for affected pages
+- Untouched human-owned wiki pages remain byte-stable across incremental runs
+- Obsolete generated pages are removed without deleting human-owned content
 - Runtime scales with change size, not repository size
 
 ## Dependencies
@@ -78,3 +87,5 @@ stateDiagram-v2
 - What triggers a full re-bootstrap vs incremental patch?
 - Should incremental mode track page staleness independently?
 - How to handle transitive dependency changes (A imports B, B changes)?
+- Where should generated-page ownership state live: frontmatter, sidecar manifest, or graph store?
+- When should reconcile mode escalate to manual review instead of auto-merging?

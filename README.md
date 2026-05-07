@@ -20,11 +20,15 @@ npx repo-wiki run --mode bootstrap --repo . --wiki .llmwiki/wiki
 
 ```bash
 npm install
+npm run build
 npm test
+npm run check
 npm run self:wiki
 npm run lint:docs
 npm run lint:local
 ```
+
+The local CLI and package verification flow runs against compiled output in `dist/`. `npm test` and `npm run check` both require a successful TypeScript build before tests run.
 
 ## Commands
 

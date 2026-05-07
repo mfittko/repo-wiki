@@ -18,7 +18,20 @@ import { isDocumentationFile, createDocumentationCard } from './docs-ingestor.js
 
 const MAX_TEXT_BYTES = 512_000;
 
-export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef }) {
+type ScannerOptions = {
+  mode: string;
+  repoPath: string;
+  outDir: string;
+  baseRef?: string;
+  headRef?: string;
+};
+
+type AnalysisMetadata = {
+  environmentVariables?: string[];
+  routeSurfaces?: Array<{ kind?: string; framework?: string; target?: string; methods?: string[]; path?: string; handler?: string | null }>;
+};
+
+export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef }: ScannerOptions) {
   const absoluteRepo = path.resolve(repoPath);
   const absoluteOut = path.resolve(outDir);
   await ensureDir(absoluteOut);
@@ -28,8 +41,8 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
   const commit = headRef || await getGitCommit(absoluteRepo);
   const remote = await getGitRemote(absoluteRepo);
   const files = await walkFiles(absoluteRepo);
-  const cards = [];
-  const documentationCards = [];
+  const cards: any[] = [];
+  const documentationCards: any[] = [];
 
   for (const file of files) {
     const buffer = await fs.readFile(file.absolute);
@@ -114,10 +127,10 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
   };
 }
 
-function summarize(cards, documentationCards = []) {
-  const languages = {};
-  const categories = {};
-  const runtimeHints = {};
+function summarize(cards: Array<{ language: string; category: string; runtime_hints: string[] }>, documentationCards: any[] = []) {
+  const languages: Record<string, number> = {};
+  const categories: Record<string, number> = {};
+  const runtimeHints: Record<string, number> = {};
 
   for (const card of cards) {
     languages[card.language] = (languages[card.language] || 0) + 1;
@@ -131,18 +144,18 @@ function summarize(cards, documentationCards = []) {
   return { languages, categories, runtime_hints: runtimeHints, documentation: summarizeDocumentation(documentationCards) };
 }
 
-function safeFileName(filePath) {
+function safeFileName(filePath: string) {
   return filePath.replace(/[^A-Za-z0-9._-]+/g, '__');
 }
 
-function countLines(content) {
+function countLines(content: string) {
   if (!content) {
     return 0;
   }
   return content.split('\n').length;
 }
 
-function isLikelyText(filePath, buffer) {
+function isLikelyText(filePath: string, buffer: Buffer) {
   const lower = filePath.toLowerCase();
   const binaryExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.pdf', '.zip', '.gz', '.tar', '.ico', '.woff', '.woff2', '.ttf', '.otf'];
 
@@ -154,7 +167,7 @@ function isLikelyText(filePath, buffer) {
   return !sample.includes(0);
 }
 
-function inferReasons(filePath, category, content, metadata = {}) {
+function inferReasons(filePath: string, category: string, content: string, metadata: AnalysisMetadata = {}) {
   const reasons = new Set([category]);
   const lower = filePath.toLowerCase();
 
@@ -169,8 +182,8 @@ function inferReasons(filePath, category, content, metadata = {}) {
   return [...reasons].sort();
 }
 
-function summarizeDocumentation(cards) {
-  const statuses = {};
+function summarizeDocumentation(cards: any[]) {
+  const statuses: Record<string, number> = {};
   let stale = 0;
   let claims = 0;
   let commands = 0;

@@ -107,7 +107,7 @@ function renderBuildTestAndRun(manifest) {
   const packageFiles = manifest.files.filter((file) => file.path.endsWith('package.json'));
   const ciFiles = manifest.files.filter((file) => file.category === 'ci');
   const packageScripts = (manifest.analysis?.package_scripts || []).filter((entry) => Object.keys(entry.scripts || {}).length > 0);
-  const scriptRows = packageScripts.flatMap((entry) => Object.entries(entry.scripts || {}).map(([name, command]) => [code(entry.path), entry.name ? code(entry.name) : 'unknown', code(name), code(command)]));
+  const scriptRows = packageScripts.flatMap((entry) => Object.entries(entry.scripts || {}).map(([name, command]) => [code(entry.path), entry.name ? code(entry.name) : 'unknown', code(name), code(String(command))]));
   const scriptsSection = scriptRows.length
     ? `## Package scripts\n\n- Package manifests with scripts: ${packageScripts.length}\n- Scripts detected: ${scriptRows.length}\n\n${markdownTable(['Manifest', 'Package', 'Script', 'Command'], scriptRows)}\n`
     : `## Package scripts\n\nNo package scripts were extracted from manifest analysis. Inspect package manifests, task runners, and CI workflows directly when confirming canonical commands.\n`;
@@ -238,8 +238,8 @@ function renderModulePage(manifest, module) {
   return `${frontmatter(manifest, { kind: 'module', module: module.name, source_paths: module.files.slice(0, 20) })}# ${module.name}\n\n## Purpose\n\nGenerated first-pass page for files grouped under ${module.name}. This should be refined by the LLM compiler using source cards and targeted source excerpts.\n\n## Signals\n\n- Files: ${module.files.length}\n- Categories: ${Object.keys(module.categories).join(', ') || 'unknown'}\n- Languages: ${Object.keys(module.languages).join(', ') || 'unknown'}\n- Runtime hints: ${Object.keys(module.runtime_hints).join(', ') || 'none'}\n- Reasons: ${module.important_reasons.join(', ') || 'none'}\n\n## Source files\n\n${sampleFiles || '- None'}\n\n## Related pages\n\n- ${wikiLink('Dependency-Map.md')}\n- ${wikiLink('Testing-Strategy.md')}\n- ${wikiLink('Open-Questions.md')}\n\n<!-- HUMAN_NOTES_START -->\n<!-- HUMAN_NOTES_END -->\n`;
 }
 
-function tableFromObject(object, headers) {
-  const rows = Object.entries(object || {}).sort((a, b) => b[1] - a[1]);
+function tableFromObject(object: Record<string, number> | undefined, headers: string[]) {
+  const rows = Object.entries(object || {}).sort((a, b) => Number(b[1]) - Number(a[1]));
   if (!rows.length) {
     return 'No entries detected.';
   }
@@ -247,7 +247,7 @@ function tableFromObject(object, headers) {
   return [`| ${headers[0]} | ${headers[1]} |`, '|---|---:|', ...rows.map(([key, value]) => `| ${sanitizeTableCell(key)} | ${sanitizeTableCell(value)} |`)].join('\n');
 }
 
-function markdownTable(headers, rows) {
+function markdownTable(headers: string[], rows: Array<Array<string | number>>) {
   return [
     `| ${headers.map((header) => sanitizeTableCell(header)).join(' | ')} |`,
     `| ${headers.map(() => '---').join(' | ')} |`,
@@ -255,14 +255,14 @@ function markdownTable(headers, rows) {
   ].join('\n');
 }
 
-function collectEnvironmentRows(files) {
+function collectEnvironmentRows(files: any[]) {
   return files
     .filter((file) => (file.environment_variables || []).length > 0)
     .map((file) => ({ path: file.path, variables: uniqueSorted(file.environment_variables) }))
     .sort((left, right) => left.path.localeCompare(right.path));
 }
 
-function collectRoutes(files) {
+function collectRoutes(files: any[]) {
   return files
     .flatMap((file) => (file.route_surfaces || []).map((route) => ({
       file: file.path,
@@ -285,30 +285,30 @@ function collectRoutes(files) {
     });
 }
 
-function formatCodeList(values) {
+function formatCodeList(values: Array<string | number>) {
   return values.map((value) => code(value)).join(', ');
 }
 
-function uniqueSorted(values) {
+function uniqueSorted(values: Array<string | number>) {
   return [...new Set(values || [])].sort((left, right) => String(left).localeCompare(String(right)));
 }
 
-function uniqueCount(values) {
+function uniqueCount(values: Array<string | number>) {
   return new Set(values || []).size;
 }
 
-function code(value) {
+function code(value: string | number) {
   return `\`${String(value).replace(/`/g, '\\`')}\``;
 }
 
-function sanitizeTableCell(value) {
+function sanitizeTableCell(value: string | number) {
   return String(value ?? '').replace(/\n/g, ' ').replace(/\|/g, '\\|');
 }
 
-function shortCommit(commit) {
+function shortCommit(commit: string) {
   return String(commit || 'unknown').slice(0, 8);
 }
 
-function escapeMermaid(value) {
+function escapeMermaid(value: string) {
   return String(value).replace(/[\[\]{}]/g, '').replace(/"/g, "'");
 }

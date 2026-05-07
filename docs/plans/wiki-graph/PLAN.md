@@ -2,7 +2,7 @@
 
 ## Summary
 
-Build a plugin-based knowledge graph system that models relationships between wiki pages, source modules, and documentation topics. The core graph is backend-agnostic — adapters translate it to different storage and rendering targets (GitHub Wiki, Neo4j, Confluence, Obsidian, flat JSON). The graph powers navigation generation, cross-link validation, agent query routing, and affected-page detection for incremental updates.
+Build a plugin-based knowledge graph system that models relationships between wiki pages, source modules, documentation topics, and ownership state. The core graph is backend-agnostic — adapters translate it to different storage and rendering targets (GitHub Wiki, Neo4j, Confluence, Obsidian, flat JSON). The graph powers navigation generation, cross-link validation, agent query routing, affected-page detection for incremental updates, and safe reconciliation with existing wikis.
 
 ## Architecture
 
@@ -39,6 +39,7 @@ flowchart TD
   Scanner[Production Scanner] --> ImportGraph[Import Graph]
   WikiPages[Wiki Pages] --> LinkExtract[Link Extraction]
   Frontmatter[Page Frontmatter] --> Metadata[Relationship Metadata]
+  OwnershipMarkers[Ownership + Preserve Markers] --> Metadata
 
   ImportGraph --> GraphBuilder[Graph Builder]
   LinkExtract --> GraphBuilder
@@ -48,6 +49,7 @@ flowchart TD
   CoreGraph --> NavGen[Navigation Generation]
   CoreGraph --> OrphanDetect[Orphan Detection]
   CoreGraph --> AffectedCalc[Affected Page Calculation]
+  CoreGraph --> Reconcile[Reconcile / Delete Decisions]
   CoreGraph --> AgentQuery[Agent Query Routing]
 ```
 
@@ -91,11 +93,13 @@ Each adapter type implements a minimal interface:
 
 ### Core graph model
 - Node types: page, module, source-file, documentation-topic
-- Edge types: links-to, depends-on, parent-of, related-to, supersedes, tests, documents
+- Edge types: links-to, depends-on, parent-of, related-to, supersedes, tests, documents, owns, preserves
 - Edge metadata: weight, direction, source (explicit link vs. inferred)
 - Graph construction from wiki content (extracted links, frontmatter)
+- Graph construction from existing wiki ownership metadata and preserved sections
 - Graph construction from source relationships (import graph → page graph)
 - Orphan and cluster detection
+- Generated/human/mixed page classification
 - Deterministic serialization format (JSON reference schema)
 
 ### Built-in adapters
@@ -116,10 +120,12 @@ Each adapter type implements a minimal interface:
 - Core graph model is independent of any specific wiki platform or storage backend
 - Swapping adapters requires only config changes, no code modifications
 - Every wiki page has explicit relationship metadata (inbound/outbound links, module associations)
+- Every wiki page can be classified as generated, human-owned, mixed, or unmanaged
 - Navigation artifacts are generated from the graph via the render adapter, not hardcoded
 - Orphan and under-connected pages are surfaced as lint warnings
 - Agents can query "what pages should I read for task X?" via the query adapter
 - Incremental mode uses the graph to determine affected pages from a source change
+- Reconcile and delete decisions can be derived from graph ownership data instead of filename heuristics
 - A new adapter can be added without modifying core graph code
 
 ## Configuration Example
@@ -157,3 +163,5 @@ Each adapter type implements a minimal interface:
 - What's the minimum adapter interface that covers all current use cases without over-abstracting?
 - Should adapters be npm packages, local files, or both?
 - How to handle adapter-specific features (e.g., Neo4j Cypher queries) without leaking into the core model?
+- Should preserved sections be modeled as subnodes, annotations, or opaque page metadata?
+- How should ownership transfer be represented when a human takes over a previously generated page?

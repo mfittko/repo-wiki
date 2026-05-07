@@ -7,12 +7,17 @@ const JAVASCRIPT_LANGUAGES = new Set([
 
 const ROUTE_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'all', 'use'];
 
-export function extractImports(content, language) {
+type RuntimeHintMetadata = {
+  routeSurfaces?: Array<{ kind?: string; framework?: string; target?: string; methods?: string[]; path?: string; handler?: string | null }>;
+  environmentVariables?: string[];
+};
+
+export function extractImports(content: string, language: string): string[] {
   if (!isJavaScriptLike(language)) {
     return [];
   }
 
-  const imports = new Set();
+  const imports = new Set<string>();
   const patterns = [
     /import\s+(?:[^'";]+\s+from\s+)?['"]([^'"]+)['"]/g,
     /export\s+[^'";]+\s+from\s+['"]([^'"]+)['"]/g,
@@ -28,12 +33,12 @@ export function extractImports(content, language) {
   return [...imports].sort();
 }
 
-export function extractSymbols(content, language) {
+export function extractSymbols(content: string, language: string): string[] {
   if (!isJavaScriptLike(language)) {
     return [];
   }
 
-  const symbols = new Set();
+  const symbols = new Set<string>();
   const patterns = [
     /export\s+async\s+function\s+([A-Za-z_$][\w$]*)/g,
     /export\s+function\s+([A-Za-z_$][\w$]*)/g,
@@ -54,7 +59,7 @@ export function extractSymbols(content, language) {
   return [...symbols].sort().slice(0, 50);
 }
 
-export function extractExportedSymbols(content, language) {
+export function extractExportedSymbols(content: string, language: string): Array<{ name: string; kind: string }> {
   if (!isJavaScriptLike(language)) {
     return [];
   }
@@ -98,12 +103,12 @@ export function extractExportedSymbols(content, language) {
     .slice(0, 50);
 }
 
-export function extractEnvironmentVariables(content, language) {
+export function extractEnvironmentVariables(content: string, language: string): string[] {
   if (!isJavaScriptLike(language)) {
     return [];
   }
 
-  const names = new Set();
+  const names = new Set<string>();
   const directPatterns = [
     /process\.env(?:\?\.|\.)\s*([A-Za-z_][A-Za-z0-9_]*)/g,
     /process\.env\s*\[\s*['"]([A-Za-z_][A-Za-z0-9_]*)['"]\s*\]/g,
@@ -123,7 +128,7 @@ export function extractEnvironmentVariables(content, language) {
   return [...names].sort();
 }
 
-export function extractRouteSurfaces(filePath, content, language) {
+export function extractRouteSurfaces(filePath: string, content: string, language: string): Array<{ kind: string; framework: string; target: string; methods: string[]; path: string; handler: string | null }> {
   if (!isJavaScriptLike(language)) {
     return [];
   }
@@ -192,7 +197,7 @@ export function extractRouteSurfaces(filePath, content, language) {
   return surfaces.sort(compareRouteSurfaces);
 }
 
-export function detectRuntimeHints(filePath, content, metadata = {}) {
+export function detectRuntimeHints(filePath: string, content: string, metadata: RuntimeHintMetadata = {}) {
   const hints = [];
   const lower = filePath.toLowerCase();
   const routeSurfaces = metadata.routeSurfaces || extractRouteSurfaces(filePath, content, 'JavaScript');

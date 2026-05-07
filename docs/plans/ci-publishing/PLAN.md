@@ -2,7 +2,7 @@
 
 ## Summary
 
-Production-ready GitHub Actions workflows and publishing infrastructure that safely pushes generated wiki content, enforces security policies, and supports both bootstrap and incremental post-merge flows.
+Production-ready GitHub Actions workflows and publishing infrastructure that safely pushes generated wiki content, enforces security policies, and supports bootstrap, reconcile, and incremental post-merge flows.
 
 ## Architecture
 
@@ -18,13 +18,15 @@ flowchart TD
 
   Checkout --> Install[npm ci]
   Install --> Test[npm test]
-  Test --> Generate[repo-wiki run]
-  Generate --> SecGate{Secret Gate}
+  Test --> FetchWiki[Fetch Existing Wiki State]
+  FetchWiki --> Generate[repo-wiki run]
+  Generate --> DiffReport[Generate Reconcile Diff]
+  DiffReport --> SecGate{Secret Gate}
   SecGate -->|secrets detected| Block[Block & Alert]
   SecGate -->|clean| LintGate{Lint Gate}
   LintGate -->|fail| Block
   LintGate -->|pass| ReviewGate{Review Required?}
-  ReviewGate -->|sensitive pages| HumanReview[Human Review]
+  ReviewGate -->|sensitive pages or merge conflicts| HumanReview[Human Review]
   ReviewGate -->|no| Publish[Push to Wiki]
   HumanReview -->|approved| Publish
   Publish --> Notify[Status Notification]
@@ -71,19 +73,27 @@ sequenceDiagram
 
 - GitHub Actions workflow for wiki generation on push to main
 - GitHub Actions workflow for manual/dispatch wiki bootstrap
+- Pull request and push verification workflow that runs the TypeScript build and test path before publication-oriented jobs
+- Reconcile-mode workflow for repositories with an existing wiki
 - Token management (GitHub App or fine-grained PAT)
 - Security gate: block publish on secret-like content detection
 - Optional human review gate for sensitive pages (auth, billing, deployment, security)
 - PR-based wiki publishing option (wiki PR instead of direct push)
+- Dry-run diff artifact showing created, updated, preserved, and deleted wiki pages
+- Safe deletion policy that only removes pages owned by repo-wiki
 - Artifact retention for unpublished wiki builds
+- Node dependency caching and TypeScript incremental build caching in CI
 - Status checks and notifications
 
 ## Success Criteria
 
 - Wiki auto-updates on merge to main with no manual intervention
+- Pull requests and protected branches can target a build-and-test status check for the canonical `npm run check` path
 - Secrets never reach published wiki pages
 - Untrusted PRs cannot trigger wiki publication
 - Failed lint gates block publication
+- Existing human-owned wiki content is preserved during reconcile publishes
+- Publish logs make page creation, update, preserve, and delete actions auditable
 - Clear audit trail of what was published and when
 
 ## Dependencies
@@ -97,3 +107,5 @@ sequenceDiagram
 - How to handle wiki publication failures (retry, alert, rollback)?
 - Should wiki publication be atomic (all pages or nothing) or incremental?
 - How to manage wiki git history (squash or preserve per-page commits)?
+- Should reconcile mode require an explicit opt-in flag before first publish to an existing wiki?
+- How should the workflow surface preserved human sections and blocked deletes in artifacts?

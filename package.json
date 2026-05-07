@@ -5,14 +5,16 @@
   "type": "module",
   "private": false,
   "bin": {
-    "repo-wiki": "./bin/repo-wiki.js"
+    "repo-wiki": "./dist/bin/repo-wiki.js"
   },
   "exports": {
-    ".": "./src/index.js"
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
   },
   "files": [
-    "bin/",
-    "src/",
+    "dist/",
     "docs/",
     "prompts/",
     ".llmwiki/schema.md",
@@ -25,18 +27,23 @@
     "node": ">=20"
   },
   "scripts": {
-    "repo-wiki": "node ./bin/repo-wiki.js",
-    "scan:bootstrap": "node ./bin/repo-wiki.js scan --mode bootstrap --repo . --out .llmwiki/run",
-    "plan:bootstrap": "node ./bin/repo-wiki.js plan --scan .llmwiki/run --out .llmwiki/bootstrap-plan.json",
-    "compile:local": "node ./bin/repo-wiki.js compile --scan .llmwiki/run --plan .llmwiki/bootstrap-plan.json --wiki .llmwiki/wiki",
-    "lint:local": "node ./bin/repo-wiki.js lint --wiki .llmwiki/wiki --scan .llmwiki/run",
-    "kb:bootstrap": "node ./bin/repo-wiki.js run --mode bootstrap --repo . --scan .llmwiki/run --plan .llmwiki/bootstrap-plan.json --wiki .llmwiki/wiki",
-    "kb:incremental": "node ./bin/repo-wiki.js run --mode incremental --repo . --scan .llmwiki/run --plan .llmwiki/incremental-plan.json --wiki .llmwiki/wiki",
-    "kb:publish": "node ./bin/repo-wiki.js publish --wiki .llmwiki/wiki",
+    "clean": "rm -rf dist .tsbuildinfo",
+    "build": "tsc --project tsconfig.json",
+    "test:compiled": "node --test dist/test/**/*.test.js",
+    "check": "npm run build && npm run test:compiled",
+    "test": "npm run check",
+    "repo-wiki": "npm run build --silent && node ./dist/bin/repo-wiki.js",
+    "scan:bootstrap": "npm run build --silent && node ./dist/bin/repo-wiki.js scan --mode bootstrap --repo . --out .llmwiki/run",
+    "plan:bootstrap": "npm run build --silent && node ./dist/bin/repo-wiki.js plan --scan .llmwiki/run --out .llmwiki/bootstrap-plan.json",
+    "compile:local": "npm run build --silent && node ./dist/bin/repo-wiki.js compile --scan .llmwiki/run --plan .llmwiki/bootstrap-plan.json --wiki .llmwiki/wiki",
+    "lint:local": "npm run build --silent && node ./dist/bin/repo-wiki.js lint --wiki .llmwiki/wiki --scan .llmwiki/run",
+    "kb:bootstrap": "npm run build --silent && node ./dist/bin/repo-wiki.js run --mode bootstrap --repo . --scan .llmwiki/run --plan .llmwiki/bootstrap-plan.json --wiki .llmwiki/wiki",
+    "kb:incremental": "npm run build --silent && node ./dist/bin/repo-wiki.js run --mode incremental --repo . --scan .llmwiki/run --plan .llmwiki/incremental-plan.json --wiki .llmwiki/wiki",
+    "kb:publish": "npm run build --silent && node ./dist/bin/repo-wiki.js publish --wiki .llmwiki/wiki",
     "self:wiki": "npm run kb:bootstrap",
-    "pack:check": "npm pack --dry-run",
-    "test": "node --test",
-    "lint:docs": "node ./bin/repo-wiki.js lint-docs --repo . --scan .llmwiki/run"
+    "pack:check": "npm run build --silent && npm pack --dry-run",
+    "lint:docs": "npm run build --silent && node ./dist/bin/repo-wiki.js lint-docs --repo . --scan .llmwiki/run",
+    "prepack": "npm run build"
   },
   "keywords": [
     "llm-wiki",
@@ -50,5 +57,10 @@
     "documentation-debt",
     "github-actions"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "types": "./dist/src/index.d.ts",
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "typescript": "^5.8.3"
+  }
 }

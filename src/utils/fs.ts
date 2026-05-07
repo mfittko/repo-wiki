@@ -1,26 +1,29 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 
-export async function ensureDir(dirPath) {
+type WalkFile = { absolute: string; relative: string };
+type WalkFilesOptions = { exclude?: string[] };
+
+export async function ensureDir(dirPath: string) {
   await fs.mkdir(dirPath, { recursive: true });
 }
 
-export async function readJson(filePath) {
+export async function readJson(filePath: string) {
   const raw = await fs.readFile(filePath, 'utf8');
   return JSON.parse(raw);
 }
 
-export async function writeJson(filePath, data) {
+export async function writeJson(filePath: string, data: unknown) {
   await ensureDir(path.dirname(filePath));
   await fs.writeFile(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
 }
 
-export async function writeText(filePath, content) {
+export async function writeText(filePath: string, content: string) {
   await ensureDir(path.dirname(filePath));
   await fs.writeFile(filePath, content.endsWith('\n') ? content : `${content}\n`, 'utf8');
 }
 
-export async function fileExists(filePath) {
+export async function fileExists(filePath: string) {
   try {
     await fs.access(filePath);
     return true;
@@ -29,11 +32,11 @@ export async function fileExists(filePath) {
   }
 }
 
-export async function walkFiles(rootDir, options = {}) {
+export async function walkFiles(rootDir: string, options: WalkFilesOptions = {}): Promise<WalkFile[]> {
   const exclude = options.exclude || defaultExcludes;
-  const files = [];
+  const files: WalkFile[] = [];
 
-  async function walk(current) {
+  async function walk(current: string) {
     const entries = await fs.readdir(current, { withFileTypes: true });
 
     for (const entry of entries) {
@@ -70,7 +73,7 @@ const defaultExcludes = [
   '.llmwiki/wiki'
 ];
 
-function shouldExclude(relative, name, exclude) {
+function shouldExclude(relative: string, name: string, exclude: string[]) {
   if (exclude.includes(name)) {
     return true;
   }
