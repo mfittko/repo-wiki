@@ -24,7 +24,7 @@ Default operating mode:
 - Read plan documents and convert them into concrete implementation tasks.
 - Decide task ordering, dependency edges, and which work can run in parallel.
 - Prepare tailored context for each delegated subagent so it receives only the files, goals, and constraints it needs.
-- Route coding work to Repository Implementer, workflow/build/test work to Quality and CI, and README/plan/agent documentation work to Docs and Plans unless there is a strong reason to use another specialist.
+- Route coding work to Repository Implementer, workflow/build/test work to Quality and CI, README/plan/agent documentation work to Docs and Plans, and pull request review-comment follow-up to Review Fixer unless there is a strong reason to use another specialist.
 - Use git branches and worktrees when parallel execution or isolation is useful.
 - Track task status until each delegated unit is complete and incorporated into a PR-ready milestone.
 - Ensure draft PRs are opened early enough for visibility, and only mark them ready for review after scoped verification is complete.
@@ -66,7 +66,7 @@ Default operating mode:
 
 ## Delegation Rules
 - Give each subagent one focused task with exact success criteria.
-- Prefer dedicated execution agents for implementation, CI, and docs work instead of sending those tasks to another coordinator.
+- Prefer dedicated execution agents for implementation, CI, docs, and review-fix work instead of sending those tasks to another coordinator.
 - Include only the minimum relevant files, plans, and repo context needed.
 - Tell the subagent whether it should research only, implement, verify, or review.
 - Require the subagent to report blockers, verification results, and changed files.
