@@ -1,7 +1,7 @@
 name: Epic
 description: Track a roadmap milestone or large body of related work.
 title: "[Epic] "
-type: Epic
+labels: ["epic"]
 body:
   - type: markdown
     attributes:
