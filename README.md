@@ -30,7 +30,7 @@ npm run lint:docs
 npm run lint:local
 ```
 
-The local CLI and package verification flow runs against compiled output in `dist/`. `npm test`, `npm run check`, and `npm run coverage` all require a successful TypeScript build before tests run. CI enforces a 95% line coverage gate on compiled source coverage. Changelog maintenance is automated with `scripts/update-changelog.mjs`: merged PR title/body metadata plus changed files feed `Unreleased` on `main`, and a release workflow rotates `Unreleased` into versioned sections.
+The local CLI and package verification flow runs against compiled output in `dist/`. `npm test`, `npm run check`, and `npm run coverage` all require a successful TypeScript build before tests run. CI enforces a 95% line coverage gate on compiled source coverage. Changelog maintenance is automated with `scripts/update-changelog.mjs`: merged PR title plus changed files feed `Unreleased` on `main`, and a release workflow rotates `Unreleased` into versioned sections.
 
 ## Commands
 

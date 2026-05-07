@@ -332,12 +332,96 @@ function updateUnreleased(changelog, entries) {
 function releaseUnreleased(changelog, version, date) {
   const { header, unreleasedBody, rest } = splitChangelog(changelog);
   const body = unreleasedBody.trim();
-  const releaseSection = body ? `## [${version}] - ${date}\n\n${body}` : `## [${version}] - ${date}`;
+  const existingRelease = findReleaseSection(rest, version);
 
-  return [header.trimEnd(), '## [Unreleased]', '', releaseSection, rest.trim()]
+  let releasedRest = rest.trim();
+
+  if (existingRelease) {
+    const mergedBody = mergeReleaseBodies(existingRelease.body, body);
+    const releaseSection = renderReleaseSection(existingRelease.heading, mergedBody);
+    releasedRest = `${rest.slice(0, existingRelease.start).trimEnd()}\n\n${releaseSection}\n\n${rest.slice(existingRelease.end).trimStart()}`
+      .trim();
+  } else {
+    const releaseSection = renderReleaseSection(`## [${version}] - ${date}`, body);
+    releasedRest = [releaseSection, rest.trim()].filter(Boolean).join('\n\n');
+  }
+
+  return [header.trimEnd(), '## [Unreleased]', '', releasedRest]
     .filter(Boolean)
     .join('\n\n')
     .replace(/\n{3,}/g, '\n\n') + '\n';
+}
+
+function findReleaseSection(rest, version) {
+  if (!rest.trim()) {
+    return null;
+  }
+
+  const headingPattern = new RegExp(`^## \\[${escapeRegExp(version)}\\](?:\\s+-\\s+.+)?$`, 'mu');
+  const match = headingPattern.exec(rest);
+  if (!match || match.index == null) {
+    return null;
+  }
+
+  const start = match.index;
+  const heading = match[0].trim();
+  const bodyStart = start + match[0].length;
+  const nextHeadingMatch = /\n##\s+/u.exec(rest.slice(bodyStart));
+  const end = nextHeadingMatch ? bodyStart + nextHeadingMatch.index + 1 : rest.length;
+  const body = rest.slice(bodyStart, end).trim();
+
+  return { start, end, heading, body };
+}
+
+function mergeReleaseBodies(existingBody, incomingBody) {
+  const currentBody = existingBody.trim();
+  const nextBody = incomingBody.trim();
+
+  if (!nextBody) {
+    return currentBody;
+  }
+
+  if (!currentBody) {
+    return nextBody;
+  }
+
+  if (currentBody === nextBody || currentBody.includes(nextBody)) {
+    return currentBody;
+  }
+
+  if (isCategoryBody(currentBody) && isCategoryBody(nextBody)) {
+    const current = parseCategoryBlocks(currentBody);
+    const incoming = parseCategoryBlocks(nextBody);
+
+    for (const category of CATEGORY_ORDER) {
+      const merged = current.get(category) || [];
+      for (const item of incoming.get(category) || []) {
+        if (!merged.includes(item)) {
+          merged.push(item);
+        }
+      }
+      if (merged.length) {
+        current.set(category, merged);
+      }
+    }
+
+    return renderCategoryBlocks(current);
+  }
+
+  return `${currentBody}\n\n${nextBody}`;
+}
+
+function isCategoryBody(body) {
+  const trimmed = body.trim();
+  if (!trimmed) {
+    return true;
+  }
+
+  return renderCategoryBlocks(parseCategoryBlocks(trimmed)) === trimmed;
+}
+
+function renderReleaseSection(heading, body) {
+  return body ? `${heading}\n\n${body}` : heading;
 }
 
 function splitChangelog(changelog) {
@@ -395,6 +479,10 @@ function renderCategoryBlocks(blocks) {
     .filter((category) => (blocks.get(category) || []).length > 0)
     .map((category) => [`### ${category}`, ...(blocks.get(category) || []).map((item) => `- ${item}`)].join('\n'))
     .join('\n\n');
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 }
 
 main().catch((error) => {

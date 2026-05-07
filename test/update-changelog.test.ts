@@ -76,9 +76,11 @@ if (args[0] === 'pr' && args[1] === 'view' && args[2] === '17') {
     assert.match(changelog, /Fix duplicate changelog entry handling\./);
 
     await runScript(['release', '--version', '0.2.0', '--date', '2026-05-07'], tempDir);
+    await runScript(['release', '--version', '0.2.0', '--date', '2026-05-07'], tempDir);
     changelog = await readFile(path.join(tempDir, 'CHANGELOG.md'), 'utf8');
     assert.match(changelog, /## \[Unreleased\]/);
-    assert.match(changelog, /## \[0\.2\.0\] - 2026-05-07/);
+    assert.equal((changelog.match(/## \[0\.2\.0\] - 2026-05-07/g) || []).length, 1);
+    assert.equal((changelog.match(/Fix duplicate changelog entry handling\./g) || []).length, 1);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
