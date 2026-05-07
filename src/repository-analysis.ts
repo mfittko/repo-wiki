@@ -2,7 +2,15 @@ import path from 'node:path';
 
 const RESOLVABLE_EXTENSIONS = ['.js', '.mjs', '.cjs', '.jsx', '.ts', '.tsx', '.json'];
 
-export function extractPackageMetadata(filePath, content) {
+type SourceCard = {
+  path: string;
+  category: string;
+  imports?: string[];
+  package_name?: string | null;
+  package_scripts?: Record<string, string>;
+};
+
+export function extractPackageMetadata(filePath: string, content: string): { package_name: string | null; package_scripts: Record<string, string> } | null {
   if (!filePath.toLowerCase().endsWith('package.json')) {
     return null;
   }
@@ -23,7 +31,7 @@ export function extractPackageMetadata(filePath, content) {
   }
 }
 
-export function buildRepositoryAnalysis(cards) {
+export function buildRepositoryAnalysis(cards: SourceCard[]) {
   const fileIndex = new Map(cards.map((card) => [card.path, card]));
   const packageScripts = cards
     .filter((card) => card.path.toLowerCase().endsWith('package.json'))
@@ -220,7 +228,7 @@ function normalizeScripts(value) {
     Object.entries(value)
       .filter(([name, command]) => typeof name === 'string' && typeof command === 'string')
       .sort(([left], [right]) => left.localeCompare(right))
-  );
+  ) as Record<string, string>;
 }
 
 function normalizeRepoPath(filePath) {

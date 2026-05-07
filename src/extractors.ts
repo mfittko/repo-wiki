@@ -197,7 +197,7 @@ export function extractRouteSurfaces(filePath: string, content: string, language
   return surfaces.sort(compareRouteSurfaces);
 }
 
-export function detectRuntimeHints(filePath: string, content: string, metadata: RuntimeHintMetadata = {}) {
+export function detectRuntimeHints(filePath: string, content: string, metadata: RuntimeHintMetadata = {}): string[] {
   const hints = [];
   const lower = filePath.toLowerCase();
   const routeSurfaces = metadata.routeSurfaces || extractRouteSurfaces(filePath, content, 'JavaScript');
