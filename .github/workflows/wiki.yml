@@ -1,0 +1,53 @@
+name: Compile repository wiki
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: bootstrap or incremental
+        required: true
+        default: bootstrap
+  push:
+    branches:
+      - main
+
+jobs:
+  compile-wiki:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 20
+
+      - run: npm ci
+
+      - name: Determine mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "MODE=${{ github.event.inputs.mode }}" >> "$GITHUB_ENV"
+          else
+            echo "MODE=incremental" >> "$GITHUB_ENV"
+          fi
+
+      - name: Scan
+        run: node ./bin/repo-wiki.js scan --mode "$MODE" --repo . --out .llmwiki/run
+
+      - name: Plan
+        run: node ./bin/repo-wiki.js plan --scan .llmwiki/run --out .llmwiki/plan.json
+
+      - name: Compile
+        run: node ./bin/repo-wiki.js compile --scan .llmwiki/run --plan .llmwiki/plan.json --wiki .llmwiki/wiki
+
+      - name: Lint
+        run: node ./bin/repo-wiki.js lint --wiki .llmwiki/wiki --scan .llmwiki/run
+
+      - name: Publish placeholder
+        if: github.ref == 'refs/heads/main'
+        run: node ./bin/repo-wiki.js publish --wiki .llmwiki/wiki

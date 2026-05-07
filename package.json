@@ -1,0 +1,54 @@
+{
+  "name": "repo-wiki",
+  "version": "0.2.0",
+  "description": "Node.js CLI and library for compiling any Git repository and its validated documentation into a GitHub Wiki knowledge base.",
+  "type": "module",
+  "private": false,
+  "bin": {
+    "repo-wiki": "./bin/repo-wiki.js"
+  },
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "docs/",
+    "prompts/",
+    ".llmwiki/schema.md",
+    ".llmwiki/config.json",
+    "README.md",
+    "AGENTS.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "repo-wiki": "node ./bin/repo-wiki.js",
+    "scan:bootstrap": "node ./bin/repo-wiki.js scan --mode bootstrap --repo . --out .llmwiki/run",
+    "plan:bootstrap": "node ./bin/repo-wiki.js plan --scan .llmwiki/run --out .llmwiki/bootstrap-plan.json",
+    "compile:local": "node ./bin/repo-wiki.js compile --scan .llmwiki/run --plan .llmwiki/bootstrap-plan.json --wiki .llmwiki/wiki",
+    "lint:local": "node ./bin/repo-wiki.js lint --wiki .llmwiki/wiki --scan .llmwiki/run",
+    "kb:bootstrap": "node ./bin/repo-wiki.js run --mode bootstrap --repo . --scan .llmwiki/run --plan .llmwiki/bootstrap-plan.json --wiki .llmwiki/wiki",
+    "kb:incremental": "node ./bin/repo-wiki.js run --mode incremental --repo . --scan .llmwiki/run --plan .llmwiki/incremental-plan.json --wiki .llmwiki/wiki",
+    "kb:publish": "node ./bin/repo-wiki.js publish --wiki .llmwiki/wiki",
+    "self:wiki": "npm run kb:bootstrap",
+    "pack:check": "npm pack --dry-run",
+    "test": "node --test",
+    "lint:docs": "node ./bin/repo-wiki.js lint-docs --repo . --scan .llmwiki/run"
+  },
+  "keywords": [
+    "llm-wiki",
+    "knowledge-base",
+    "github-wiki",
+    "repository-analysis",
+    "agent-context",
+    "codex",
+    "documentation-generator",
+    "markdown-lint",
+    "documentation-debt",
+    "github-actions"
+  ],
+  "license": "MIT"
+}

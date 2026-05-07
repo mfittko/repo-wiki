@@ -1,0 +1,10 @@
+node_modules/
+.llmwiki/run/
+.llmwiki/wiki/
+.llmwiki/bootstrap-plan.json
+coverage/
+dist/
+.DS_Store
+.env
+.env.*
+!.env.example
