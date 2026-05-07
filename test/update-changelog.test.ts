@@ -107,3 +107,31 @@ test('update-changelog skips documentation-only and test-only pull requests', as
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+
+test('update-changelog dry-run prints the updated changelog without writing it', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-changelog-dry-run-'));
+
+  try {
+    const metadataPath = path.join(tempDir, 'pr-metadata.json');
+    await writeFile(metadataPath, JSON.stringify({
+      title: 'Add changelog dry-run support',
+      body: 'This change adds a preview mode for changelog generation.',
+      files: [
+        { path: 'scripts/update-changelog.mjs' },
+        { path: 'test/update-changelog.test.ts' }
+      ]
+    }, null, 2), 'utf8');
+
+    await runScript(['ensure'], tempDir);
+    const before = await readFile(path.join(tempDir, 'CHANGELOG.md'), 'utf8');
+    const { stdout } = await runScript(['update', '--dry-run', '--pr-metadata-file', 'pr-metadata.json'], tempDir);
+    const after = await readFile(path.join(tempDir, 'CHANGELOG.md'), 'utf8');
+
+    assert.equal(after, before);
+    assert.match(stdout, /Add changelog dry-run support\./);
+    assert.match(stdout, /Expand automated test coverage for the updated behavior\./);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});

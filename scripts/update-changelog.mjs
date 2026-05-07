@@ -12,10 +12,11 @@ const NO_CHANGELOG_PATTERNS = [/^docs\//u, /^test\//u, /^README\.md$/u, /^CHANGE
 
 async function main() {
   const { command, options } = parseArgs(process.argv.slice(2));
+  const dryRun = options['dry-run'] === true;
 
   if (command === 'ensure') {
     const changelog = await ensureChangelog();
-    await writeChangelog(changelog);
+    await emitOrWriteChangelog(changelog, dryRun);
     return;
   }
 
@@ -29,13 +30,13 @@ async function main() {
 
     if (!derived.hasEntries) {
       const changelog = await ensureChangelog();
-      await writeChangelog(changelog);
+      await emitOrWriteChangelog(changelog, dryRun);
       return;
     }
 
     const changelog = await ensureChangelog();
     const updated = updateUnreleased(changelog, derived.entries);
-    await writeChangelog(updated);
+    await emitOrWriteChangelog(updated, dryRun);
     return;
   }
 
@@ -48,7 +49,7 @@ async function main() {
 
     const changelog = await ensureChangelog();
     const released = releaseUnreleased(changelog, version, date);
-    await writeChangelog(released);
+    await emitOrWriteChangelog(released, dryRun);
     return;
   }
 
@@ -58,6 +59,7 @@ async function main() {
 function parseArgs(args) {
   const [command = 'ensure', ...rest] = args;
   const options = {};
+  const booleanOptions = new Set(['dry-run']);
 
   for (let index = 0; index < rest.length; index += 1) {
     const token = rest[index];
@@ -66,6 +68,11 @@ function parseArgs(args) {
     }
 
     const key = token.slice(2);
+    if (booleanOptions.has(key)) {
+      options[key] = true;
+      continue;
+    }
+
     const value = rest[index + 1];
     if (!value || value.startsWith('--')) {
       throw new Error(`missing value for --${key}`);
@@ -128,11 +135,9 @@ async function fetchPullRequestMetadata(prNumber, repo) {
 function deriveChangelogEntries(metadata) {
   const entries = new Map(CATEGORY_ORDER.map((category) => [category, []]));
   const title = normalizeSentence(stripConventionalPrefix(metadata.title));
-  const body = String(metadata.body || '');
   const filePaths = metadata.files || [];
   const areas = detectChangedAreas(filePaths);
-  const summaryText = extractSummaryText(body);
-  const lowerText = `${metadata.title || ''}\n${summaryText}`.toLowerCase();
+  const lowerText = String(metadata.title || '').toLowerCase();
   const noChangelogReason = deriveNoChangelogReason(filePaths);
 
   if (noChangelogReason) {
@@ -222,38 +227,6 @@ function classifyPrimaryCategory(text) {
 function stripConventionalPrefix(title) {
   return String(title || '').replace(/^([a-z]+)(\([^)]+\))?!?:\s*/iu, '').trim();
 }
-
-function extractSummaryText(body) {
-  const lines = String(body || '').split('\n');
-  const kept = [];
-  let skipStructuredSection = false;
-
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
-
-    if (/^##\s+(Acceptance Criteria|Definition of Done|Non-goals)$/iu.test(line)) {
-      skipStructuredSection = true;
-      continue;
-    }
-
-    if (/^##\s+/u.test(line)) {
-      skipStructuredSection = false;
-    }
-
-    if (skipStructuredSection) {
-      continue;
-    }
-
-    if (!line || /^\|/u.test(line)) {
-      continue;
-    }
-
-    kept.push(line);
-  }
-
-  return kept.join(' ');
-}
-
 function normalizeSentence(value) {
   const trimmed = String(value || '').replace(/\s+/gu, ' ').trim();
   if (!trimmed) {
@@ -290,6 +263,15 @@ async function ensureChangelog() {
 
 async function writeChangelog(content) {
   await fs.writeFile(CHANGELOG_PATH, content, 'utf8');
+}
+
+async function emitOrWriteChangelog(content, dryRun) {
+  if (dryRun) {
+    process.stdout.write(content);
+    return;
+  }
+
+  await writeChangelog(content);
 }
 
 function normalizeChangelog(content) {

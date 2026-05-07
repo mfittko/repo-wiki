@@ -62,6 +62,7 @@ Default operating mode:
 - Update the narrowest correct documentation surface for the change: API docs, README, plan docs, workflow docs, or agent docs.
 - Require the final PR description to include only explicit acceptance criteria, definition of done items, and non-goals.
 - Require verification results, evidence, and merge-readiness status to be carried by the Review subagent verdict rather than the PR description.
+- Require the Review subagent verdict to include explicit acceptance-criteria and definition-of-done verification tables with status and evidence, while the PR description remains limited to acceptance criteria, definition of done, and non-goals.
 - Record whether automatic Copilot review is expected to trigger when the PR leaves draft, or whether that flow is blocked by repository settings.
 - If no documentation change is needed, record that explicitly in the PR summary.
 
