@@ -41,7 +41,7 @@ Default operating mode:
 6. Run or require appropriate verification before declaring a task done.
 7. Ensure relevant documentation is updated alongside the implementation: README, plan docs, agent docs, usage docs, or changelog-style release notes when applicable.
 8. Push completed task work to the correct remote branch once it is verified and ready for review.
-9. Open the pull request for the completed milestone as a draft by default, with a clear title, implementation summary, verification notes, and documentation summary. The PR description must explicitly include acceptance criteria, a complete definition of done, non-goals, and a status table showing whether each criterion is met, partially met, blocked, or not started, with brief evidence or notes. Immediately after creating the PR, spawn the Review subagent with the PR number or branch plus the relevant plan context so the branch gets an explicit product-and-engineering review against the PR description and plan. Only convert the PR from draft to ready for review after scoped verification is complete, unless the user explicitly wants a non-draft PR earlier. When automatic Copilot review is enabled in GitHub, treat that draft-to-ready transition as the expected review trigger. If tooling or permissions prevent opening it or the expected review flow depends on GitHub settings that are not enabled, stop and report the exact blocker plus the PR-ready title, body, base, and head branches.
+9. Open the pull request for the completed milestone as a draft by default. The PR description must contain only the implementation scope inputs needed for review: acceptance criteria, a complete definition of done, and non-goals. Do not put verdict status, pass/fail assessments, supporting evidence, or changelog content into the PR description; those belong in the Review subagent's verdict. Immediately after creating the PR, spawn the Review subagent with the PR number or branch plus the relevant plan context so the branch gets an explicit product-and-engineering review against the PR description and plan. Only convert the PR from draft to ready for review after scoped verification is complete, unless the user explicitly wants a non-draft PR earlier. When automatic Copilot review is enabled in GitHub, treat that draft-to-ready transition as the expected review trigger. If tooling or permissions prevent opening it or the expected review flow depends on GitHub settings that are not enabled, stop and report the exact blocker plus the PR-ready title, body, base, and head branches.
 10. Return a concise coordination summary: task breakdown, delegation decisions, branch/worktree mapping, completion state, PR status, review-subagent status, and anything still blocked.
 
 ## Worktree Policy
@@ -60,8 +60,8 @@ Default operating mode:
 ## Documentation Policy
 - Treat documentation as part of the deliverable, not a follow-up task.
 - Update the narrowest correct documentation surface for the change: API docs, README, plan docs, workflow docs, or agent docs.
-- Require the final PR description to state what documentation changed and what verification was run.
-- Require the final PR description to include explicit acceptance criteria, definition of done items, non-goals, and a status table with evidence or notes for each required area.
+- Require the final PR description to include only explicit acceptance criteria, definition of done items, and non-goals.
+- Require verification results, evidence, and merge-readiness status to be carried by the Review subagent verdict rather than the PR description.
 - Record whether automatic Copilot review is expected to trigger when the PR leaves draft, or whether that flow is blocked by repository settings.
 - If no documentation change is needed, record that explicitly in the PR summary.
 
@@ -81,7 +81,7 @@ A task is complete only when:
 - the required documentation is updated or an explicit no-docs rationale is recorded,
 - the result is pushed to a review branch and a draft pull request is opened by default, or an exact blocker to opening it is recorded with PR-ready handoff details.
 - automatic Copilot review is expected to trigger when the PR leaves draft, or its absence has been explicitly explained as a repository-setting limitation.
-- the PR description includes explicit acceptance criteria, a complete definition of done, non-goals, and a status table showing what is met versus still open.
+- the PR description includes explicit acceptance criteria, a complete definition of done, and non-goals, without verdict status, evidence, or changelog content.
 
 ## Output Format
 Return:

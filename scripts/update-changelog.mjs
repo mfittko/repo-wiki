@@ -8,6 +8,7 @@ const execFileAsync = promisify(execFile);
 const CATEGORY_ORDER = ['Added', 'Changed', 'Deprecated', 'Removed', 'Fixed', 'Security'];
 const CHANGELOG_PATH = path.resolve(process.cwd(), 'CHANGELOG.md');
 const DEFAULT_DATE = new Date().toISOString().slice(0, 10);
+const NO_CHANGELOG_PATTERNS = [/^docs\//u, /^test\//u, /^README\.md$/u, /^CHANGELOG\.md$/u];
 
 async function main() {
   const { command, options } = parseArgs(process.argv.slice(2));
@@ -19,15 +20,21 @@ async function main() {
   }
 
   if (command === 'update') {
-    const { body, source } = await resolvePullRequestBody(options);
-    const parsed = parsePrBodyEntries(body);
+    const { metadata, source } = await resolvePullRequestMetadata(options);
+    const derived = deriveChangelogEntries(metadata);
 
-    if (!parsed.hasEntries && !parsed.noChangelogReason) {
-      throw new Error(`No changelog entries found in ${source}. Add a ## Changelog section or record a no-changelog rationale.`);
+    if (!derived.hasEntries && !derived.noChangelogReason) {
+      throw new Error(`Could not derive changelog entries from ${source}. Update the PR title or description so the change is describable, or extend the derivation rules.`);
+    }
+
+    if (!derived.hasEntries) {
+      const changelog = await ensureChangelog();
+      await writeChangelog(changelog);
+      return;
     }
 
     const changelog = await ensureChangelog();
-    const updated = updateUnreleased(changelog, parsed.entries);
+    const updated = updateUnreleased(changelog, derived.entries);
     await writeChangelog(updated);
     return;
   }
@@ -71,28 +78,40 @@ function parseArgs(args) {
   return { command, options };
 }
 
-async function resolvePullRequestBody(options) {
-  if (options['pr-body-file']) {
-    const prBodyFile = path.resolve(process.cwd(), options['pr-body-file']);
+async function resolvePullRequestMetadata(options) {
+  if (options['pr-metadata-file']) {
+    const metadataPath = path.resolve(process.cwd(), options['pr-metadata-file']);
+    const raw = await fs.readFile(metadataPath, 'utf8');
     return {
-      body: await fs.readFile(prBodyFile, 'utf8'),
-      source: `PR body file ${prBodyFile}`
+      metadata: normalizePullRequestMetadata(JSON.parse(raw)),
+      source: `PR metadata file ${metadataPath}`
     };
   }
 
   if (options.pr) {
-    const metadata = await fetchPullRequestMetadata(options.pr, options.repo);
     return {
-      body: metadata.body || '',
+      metadata: await fetchPullRequestMetadata(options.pr, options.repo),
       source: `pull request #${options.pr}`
     };
   }
 
-  throw new Error('update requires either --pr-body-file <path> or --pr <number> [--repo owner/name]');
+  throw new Error('update requires either --pr-metadata-file <path> or --pr <number> [--repo owner/name]');
+}
+
+function normalizePullRequestMetadata(metadata) {
+  const files = Array.isArray(metadata.files) ? metadata.files : [];
+  return {
+    title: String(metadata.title || ''),
+    body: String(metadata.body || ''),
+    url: String(metadata.url || ''),
+    files: files
+      .map((file) => (typeof file === 'string' ? file : file?.path || file?.file || ''))
+      .filter(Boolean)
+  };
 }
 
 async function fetchPullRequestMetadata(prNumber, repo) {
-  const args = ['pr', 'view', String(prNumber), '--json', 'body,number,reviewDecision,title,url'];
+  const args = ['pr', 'view', String(prNumber), '--json', 'title,body,files,number,url'];
   if (repo) {
     args.push('--repo', repo);
   }
@@ -103,7 +122,157 @@ async function fetchPullRequestMetadata(prNumber, repo) {
     maxBuffer: 10 * 1024 * 1024
   });
 
-  return JSON.parse(stdout);
+  return normalizePullRequestMetadata(JSON.parse(stdout));
+}
+
+function deriveChangelogEntries(metadata) {
+  const entries = new Map(CATEGORY_ORDER.map((category) => [category, []]));
+  const title = normalizeSentence(stripConventionalPrefix(metadata.title));
+  const body = String(metadata.body || '');
+  const filePaths = metadata.files || [];
+  const areas = detectChangedAreas(filePaths);
+  const summaryText = extractSummaryText(body);
+  const lowerText = `${metadata.title || ''}\n${summaryText}`.toLowerCase();
+  const noChangelogReason = deriveNoChangelogReason(filePaths);
+
+  if (noChangelogReason) {
+    return { entries, noChangelogReason, hasEntries: false };
+  }
+
+  if (title) {
+    appendEntry(entries, classifyPrimaryCategory(lowerText), title);
+  }
+
+  if (areas.has('source') && !mentionsAny(lowerText, ['scanner', 'compiler', 'analysis', 'repository', 'cli'])) {
+    appendEntry(entries, 'Changed', 'Update the main repository implementation to match the pull request scope.');
+  }
+
+  if (areas.has('automation')) {
+    appendEntry(entries, 'Changed', 'Update build, CI, and release automation to support the change.');
+  }
+
+  if (areas.has('guidance')) {
+    appendEntry(entries, 'Changed', 'Clarify repository guidance and review workflow expectations.');
+  }
+
+  if (areas.has('tests')) {
+    appendEntry(entries, 'Changed', 'Expand automated test coverage for the updated behavior.');
+  }
+
+  const hasEntries = CATEGORY_ORDER.some((category) => (entries.get(category) || []).length > 0);
+  return { entries, noChangelogReason: '', hasEntries };
+}
+
+function deriveNoChangelogReason(filePaths) {
+  if (filePaths.length === 0) {
+    return 'No changed files were available to derive changelog entries.';
+  }
+
+  if (filePaths.every((filePath) => NO_CHANGELOG_PATTERNS.some((pattern) => pattern.test(filePath)))) {
+    return 'Documentation-only or test-only changes do not need a changelog entry.';
+  }
+
+  return '';
+}
+
+function detectChangedAreas(filePaths) {
+  const areas = new Set();
+
+  for (const filePath of filePaths) {
+    if (/^(src|bin)\//u.test(filePath)) {
+      areas.add('source');
+      continue;
+    }
+
+    if (/^test\//u.test(filePath)) {
+      areas.add('tests');
+      continue;
+    }
+
+    if (/^(\.github\/workflows\/|scripts\/|package(-lock)?\.json$|tsconfig\.json$)/u.test(filePath)) {
+      areas.add('automation');
+      continue;
+    }
+
+    if (/^(\.github\/agents\/|\.github\/skills\/|\.github\/pull_request_template\.md$|AGENTS\.md$)/u.test(filePath)) {
+      areas.add('guidance');
+      continue;
+    }
+  }
+
+  return areas;
+}
+
+function classifyPrimaryCategory(text) {
+  if (mentionsAny(text, ['security', 'secret', 'token', 'credential', 'auth', 'permission', 'policy'])) {
+    return 'Security';
+  }
+
+  if (mentionsAny(text, ['fix', 'bug', 'regression', 'error', 'failure', 'broken', 'correct', 'resolve'])) {
+    return 'Fixed';
+  }
+
+  if (mentionsAny(text, ['add', 'introduce', 'enable', 'create', 'support', 'initial', 'foundation', 'foundational', 'implement'])) {
+    return 'Added';
+  }
+
+  return 'Changed';
+}
+
+function stripConventionalPrefix(title) {
+  return String(title || '').replace(/^([a-z]+)(\([^)]+\))?!?:\s*/iu, '').trim();
+}
+
+function extractSummaryText(body) {
+  const lines = String(body || '').split('\n');
+  const kept = [];
+  let skipStructuredSection = false;
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    if (/^##\s+(Acceptance Criteria|Definition of Done|Non-goals)$/iu.test(line)) {
+      skipStructuredSection = true;
+      continue;
+    }
+
+    if (/^##\s+/u.test(line)) {
+      skipStructuredSection = false;
+    }
+
+    if (skipStructuredSection) {
+      continue;
+    }
+
+    if (!line || /^\|/u.test(line)) {
+      continue;
+    }
+
+    kept.push(line);
+  }
+
+  return kept.join(' ');
+}
+
+function normalizeSentence(value) {
+  const trimmed = String(value || '').replace(/\s+/gu, ' ').trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  return /[.!?]$/u.test(trimmed) ? trimmed : `${trimmed}.`;
+}
+
+function mentionsAny(text, candidates) {
+  return candidates.some((candidate) => text.includes(candidate));
+}
+
+function appendEntry(entries, category, item) {
+  const list = entries.get(category) || [];
+  if (!list.includes(item)) {
+    list.push(item);
+  }
+  entries.set(category, list);
 }
 
 async function ensureChangelog() {
@@ -147,38 +316,6 @@ function normalizeChangelog(content) {
   }
 
   return `${trimmed}\n`;
-}
-
-function parsePrBodyEntries(body) {
-  const section = extractSection(body, '## Changelog');
-  const entries = new Map(CATEGORY_ORDER.map((category) => [category, []]));
-  const noChangelogReason = extractNoChangelogReason(section);
-
-  if (!section) {
-    return { entries, noChangelogReason: '', hasEntries: false };
-  }
-
-  for (const category of CATEGORY_ORDER) {
-    entries.set(category, extractCategoryItems(section, category));
-  }
-
-  const hasEntries = CATEGORY_ORDER.some((category) => (entries.get(category) || []).length > 0);
-  return { entries, noChangelogReason, hasEntries };
-}
-
-function extractNoChangelogReason(section) {
-  if (!section) {
-    return '';
-  }
-
-  const match = section.match(/^-\s*No changelog update required:\s*(.+)$/im);
-  return match ? match[1].trim() : '';
-}
-
-function extractSection(markdown, heading) {
-  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = markdown.match(new RegExp(`(?:^|\\n)${escaped}\\n([\\s\\S]*?)(?=\\n##\\s|\\n#\\s|$)`));
-  return match ? match[1].trim() : '';
 }
 
 function updateUnreleased(changelog, entries) {
@@ -259,12 +396,12 @@ function extractCategoryItems(markdown, category) {
       continue;
     }
 
-    if (active && /^###\s+/.test(line)) {
+    if (active && /^###\s+/u.test(line)) {
       break;
     }
 
-    if (active && /^-\s+/.test(line)) {
-      items.push(line.replace(/^-\s+/, '').trim());
+    if (active && /^-\s+/u.test(line)) {
+      items.push(line.replace(/^-\s+/u, '').trim());
     }
   }
 

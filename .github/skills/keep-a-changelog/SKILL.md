@@ -1,6 +1,6 @@
 ---
 name: keep-a-changelog
-description: "Use when creating or maintaining CHANGELOG.md, converting merged PR changelog notes into Keep a Changelog 1.1.0 format, or cutting a release section from Unreleased. Keywords: changelog, CHANGELOG.md, Keep a Changelog, release notes, unreleased, changelog maintenance."
+description: "Use when creating or maintaining CHANGELOG.md, deriving Keep a Changelog 1.1.0 entries from merged pull request metadata, or cutting a release section from Unreleased. Keywords: changelog, CHANGELOG.md, Keep a Changelog, release notes, unreleased, changelog maintenance."
 user-invocable: false
 ---
 
@@ -9,19 +9,16 @@ user-invocable: false
 Use this skill after a pull request is merged to `main` or when cutting a release.
 
 ## Workflow
-1. Use `gh pr view <number> --json body,title,url` to inspect the merged PR body.
-2. Locate the `## Changelog` section in the PR body.
-3. If the PR explicitly states that no changelog update is required, confirm the rationale is credible and skip the file update.
-4. Otherwise, require categorized changelog bullets under Keep a Changelog headings.
-5. Run the repository script to update `CHANGELOG.md` from GitHub PR metadata:
+1. Use `gh pr view <number> --json title,body,files,url` to inspect the merged PR title, scope description, and changed files.
+2. Confirm that the PR title and description accurately describe the shipped change, because changelog entries are derived from that metadata plus the PR diff file list.
+3. Run the repository script to update `CHANGELOG.md` from GitHub PR metadata:
    - `node ./scripts/update-changelog.mjs update --pr <number> --repo <owner/repo>`
-6. Verify that `CHANGELOG.md` now contains the expected `Unreleased` entries without duplicates.
-7. When cutting a release, move `Unreleased` into a versioned section:
+4. Verify that `CHANGELOG.md` now contains the expected `Unreleased` entries without duplicates.
+5. If the script produces no entry, confirm that the change is documentation-only or test-only before accepting the no-op result.
+6. When cutting a release, move `Unreleased` into a versioned section:
    - `node ./scripts/update-changelog.mjs release --version <x.y.z> --date <YYYY-MM-DD>`
 
 ## Review Policy
-- Do not merge a PR that materially changes user-facing behavior, public API, developer workflow, CI or release workflow, or security posture without either:
-  - a valid `## Changelog` section with categorized entries, or
-  - an explicit and defensible no-changelog rationale.
-- Treat malformed changelog entries as a review issue, not as something to silently guess.
-- Keep entries concise, user-meaningful, and grouped under the standard Keep a Changelog categories.
+- Do not merge a PR that materially changes user-facing behavior, public API, developer workflow, CI or release workflow, or security posture unless its title and description describe the shipped change clearly enough for changelog derivation.
+- Treat vague PR titles or descriptions as a review issue, because changelog automation depends on them.
+- Keep PR descriptions scoped to acceptance criteria, definition of done, and non-goals, while still ensuring the title and high-level change description remain accurate.
