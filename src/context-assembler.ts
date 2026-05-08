@@ -300,9 +300,9 @@ function buildSourceExcerpt(card: any) {
 }
 
 function buildDocumentationExcerpt(card: any) {
-  const headingPreview = (card.headings || []).slice(0, DOC_EXCERPT_LIMITS.headings).map((heading: any) => heading.text).join(' > ');
-  const claimPreview = (card.claims || []).slice(0, DOC_EXCERPT_LIMITS.claims).map((claim: any) => claim.text).join(' || ');
-  const commandPreview = (card.validation?.commands || []).slice(0, DOC_EXCERPT_LIMITS.commands).join(', ');
+  const headingPreview = (card.headings || []).slice(0, DOC_EXCERPT_LIMITS.headings).map((heading: any) => redactSecretLikeText(heading.text)).join(' > ');
+  const claimPreview = (card.claims || []).slice(0, DOC_EXCERPT_LIMITS.claims).map((claim: any) => redactSecretLikeText(claim.text)).join(' || ');
+  const commandPreview = (card.validation?.commands || []).slice(0, DOC_EXCERPT_LIMITS.commands).map((command: string) => redactSecretLikeText(command)).join(', ');
   return [
     `path=${card.path}`,
     `status=${card.status || 'unknown'}`,
@@ -324,6 +324,23 @@ function truncateText(value: string, maxChars: number) {
 
 function estimateCardChars(pathValue: string, excerpt: string) {
   return String(pathValue).length + excerpt.length + CARD_OVERHEAD_CHARS;
+}
+
+const SECRET_LIKE_PATTERNS = [
+  /AKIA[0-9A-Z]{16}/g,
+  /-----BEGIN (?:RSA|DSA|EC|OPENSSH) PRIVATE KEY-----[\s\S]*?-----END (?:RSA|DSA|EC|OPENSSH) PRIVATE KEY-----/g,
+  /ghp_[A-Za-z0-9_]{30,}/g,
+  /xox[baprs]-[A-Za-z0-9-]{20,}/g,
+  /sk-[A-Za-z0-9]{20,}/g,
+  /([A-Z][A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD)\s*=\s*)([^\s'"`]+)/gi
+];
+
+function redactSecretLikeText(value: unknown) {
+  let output = String(value || '');
+  for (const pattern of SECRET_LIKE_PATTERNS) {
+    output = output.replace(pattern, (match, prefix) => prefix ? `${prefix}[REDACTED]` : '[REDACTED]');
+  }
+  return output;
 }
 
 function uniqueSorted(values: string[]) {

@@ -56,8 +56,8 @@ function createFixture() {
           authority: 'secondary',
           stale: false,
           headings: [{ text: 'Readme' }],
-          claims: [{ text: 'Use the CLI' }],
-          validation: { commands: ['repo-wiki run'] }
+          claims: [{ text: 'Use the CLI with ghp_123456789012345678901234567890123456' }],
+          validation: { commands: ['API_TOKEN=super-secret-value repo-wiki run'] }
         }
       ]
     },
@@ -131,6 +131,21 @@ test('assemblePageContext enforces truncation and tracks omitted inputs', () => 
   assert.ok(context.source_inputs[0].excerpt.endsWith('…'));
   assert.deepEqual(context.omitted.source_cards, ['src/b.ts']);
   assert.ok(context.omitted.excerpts.includes('source:src/a.ts'));
+});
+
+test('assemblePageContext redacts secret-like documentation excerpt values', () => {
+  const { manifest, plan } = createFixture();
+  const context = assemblePageContext({
+    manifest,
+    plan,
+    page: { path: 'Open-Questions.md', phase: 'foundation' }
+  });
+
+  const readme = context.documentation_inputs.find((doc: any) => doc.path === 'README.md');
+  assert.ok(readme, 'expected README documentation input');
+  assert.match(readme.excerpt, /\[REDACTED\]/);
+  assert.doesNotMatch(readme.excerpt, /ghp_123456789012345678901234567890123456/);
+  assert.doesNotMatch(readme.excerpt, /super-secret-value/);
 });
 
 test('assemblePageContext uses page-type selection for module and cross-cutting pages', () => {
