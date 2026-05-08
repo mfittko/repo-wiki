@@ -645,11 +645,61 @@ function stripRubyComments(content: string) {
 
 function extractRubyHeredocDelimiters(line: string) {
   const delimiters: string[] = [];
-  const code = stripRubyQuotedStrings(stripRubyInlineComment(line));
+  const code = stripRubyInlineComment(line);
+  let quote: '"' | "'" | '`' | null = null;
 
-  for (const match of code.matchAll(/<<[-~]?['"]?([A-Za-z_][A-Za-z0-9_]*)['"]?/g)) {
-    const delimiter = match[1];
-    const before = code.slice(0, match.index ?? 0).trimEnd();
+  for (let index = 0; index < code.length; index += 1) {
+    const current = code[index];
+
+    if (quote) {
+      if (current === '\\') {
+        index += 1;
+        continue;
+      }
+      if (current === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (current === '"' || current === "'" || current === '`') {
+      quote = current;
+      continue;
+    }
+
+    if (current !== '<' || code[index + 1] !== '<') {
+      continue;
+    }
+
+    const before = code.slice(0, index).trimEnd();
+    let cursor = index + 2;
+    if (code[cursor] === '-' || code[cursor] === '~') {
+      cursor += 1;
+    }
+
+    const hasWhitespace = /[ \t]/.test(code[cursor] || '');
+    while (/[ \t]/.test(code[cursor] || '')) {
+      cursor += 1;
+    }
+
+    const delimiterQuote = code[cursor] === '"' || code[cursor] === "'" ? code[cursor] : null;
+    if (hasWhitespace && !delimiterQuote) {
+      continue;
+    }
+
+    if (delimiterQuote) {
+      cursor += 1;
+    }
+
+    const match = /^[A-Za-z_][A-Za-z0-9_]*/.exec(code.slice(cursor));
+    if (!match) {
+      continue;
+    }
+
+    const delimiter = match[0];
+    if (delimiterQuote && code[cursor + delimiter.length] !== delimiterQuote) {
+      continue;
+    }
     if (delimiter === 'self' && /\bclass\s*$/.test(before)) {
       continue;
     }
@@ -741,7 +791,18 @@ function countRubyBlockOpeners(line: string) {
 }
 
 function countRubyEndKeywords(line: string) {
-  return line.match(/(?:^|;)\s*end\b/g)?.length || 0;
+  let count = 0;
+
+  for (const match of line.matchAll(/\bend\b/g)) {
+    const prefix = line.slice(0, match.index).trimEnd();
+    const previous = prefix[prefix.length - 1];
+    if (previous === ':' || previous === '.') {
+      continue;
+    }
+    count += 1;
+  }
+
+  return count;
 }
 
 function extractPythonImports(content: string): string[] {

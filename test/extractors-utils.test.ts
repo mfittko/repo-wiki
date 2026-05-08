@@ -283,6 +283,7 @@ module RepoWiki
     def run
       status = :end
       items << value
+      if ready then :ok end
       if true
         [1].each do |value|
           case value
@@ -316,6 +317,11 @@ logger.debug(<<~TEXT)
   def fake_method
   end
 TEXT
+
+query = <<~ 'RUBYSQL'
+  class IgnoredQuotedHeredoc
+  end
+RUBYSQL
 
 =begin
 require "ignored_block"
