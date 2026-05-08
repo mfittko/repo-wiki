@@ -3,6 +3,9 @@ import { fileExists, readJson } from './utils/fs.js';
 import { LLM_DEFAULTS } from './llm-provider.js';
 
 export const DEFAULT_CONFIG = {
+  source: {
+    suppress_nested_repositories: true
+  },
   documentation: {
     ingest: true,
     authority: 'secondary',

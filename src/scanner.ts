@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { ensureDir, walkFiles, writeJson } from './utils/fs.js';
+import { DEFAULT_WALK_EXCLUDES, ensureDir, walkFiles, writeJson } from './utils/fs.js';
 import { getGitCommit, getGitRemote } from './utils/git.js';
 import { classifyPath, detectLanguage } from './language.js';
 import {
@@ -45,7 +45,15 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
   const config = await loadConfig(absoluteRepo);
   const commit = headRef || await getGitCommit(absoluteRepo);
   const remote = await getGitRemote(absoluteRepo);
-  const files = await walkFiles(absoluteRepo);
+  const sourceExclude = Array.isArray(config?.source?.exclude) ? config.source.exclude : [];
+  const suppressedNestedRepositories: string[] = [];
+  const files = await walkFiles(absoluteRepo, {
+    additionalExclude: sourceExclude,
+    suppressNestedRepositories: config?.source?.suppress_nested_repositories !== false,
+    onSuppressNestedRepository(relativePath) {
+      suppressedNestedRepositories.push(relativePath);
+    }
+  });
   const cards: any[] = [];
   const documentationCards: any[] = [];
 
@@ -133,7 +141,17 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     base_ref: baseRef || null,
     head_ref: headRef || commit,
     generated_at: new Date().toISOString(),
-    config: { documentation: config.documentation, compiler: redactSecretConfig(config.compiler), lint: config.lint, wiki: config.wiki },
+    config: {
+      source: {
+        ...config.source,
+        effective_exclude: [...new Set([...DEFAULT_WALK_EXCLUDES, ...sourceExclude])],
+        suppressed_nested_repositories: [...new Set(suppressedNestedRepositories)].sort()
+      },
+      documentation: config.documentation,
+      compiler: redactSecretConfig(config.compiler),
+      lint: config.lint,
+      wiki: config.wiki
+    },
     totals: summarize(cards, documentationCards),
     analysis,
     documentation: {
