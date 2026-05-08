@@ -130,7 +130,17 @@ function formatDocCards(cards: DocCardContext[]): string {
 
 function existingContentBlock(existingContent?: string): string {
   if (!existingContent) return 'No existing wiki content (bootstrap mode).';
-  return `Existing wiki content to update:\n\`\`\`\n${existingContent}\n\`\`\``;
+  const fence = markdownFenceFor(existingContent);
+  return `Existing wiki content to update:\n${fence}\n${existingContent}\n${fence}`;
+}
+
+function markdownFenceFor(content: string): string {
+  const longestTildeRun = Math.max(0, ...Array.from(content.matchAll(/~+/g), (match) => match[0].length));
+  return '~'.repeat(Math.max(4, longestTildeRun + 1));
+}
+
+function assertUnreachable(value: never): never {
+  throw new Error(`Unsupported page archetype: ${String(value)}`);
 }
 
 // ── Archetype template builders ────────────────────────────────────────────
@@ -250,5 +260,7 @@ export function buildPrompt(archetype: PageArchetype, context: PromptContext): B
       return buildModulePrompt(context);
     case 'cross-cutting':
       return buildCrossCuttingPrompt(context);
+    default:
+      return assertUnreachable(archetype);
   }
 }

@@ -10,4 +10,4 @@ export { loadConfig, DEFAULT_CONFIG } from './config.js';
 export { buildPrompt, buildFoundationPrompt, buildModulePrompt, buildCrossCuttingPrompt } from './prompts.js';
 export type { PageArchetype, PromptContext, BuiltPrompt, SourceCardContext, DocCardContext, ModuleInfo } from './prompts.js';
 export { MockLLMProvider, OpenAICompatibleProvider, LLMProviderError, createProvider, resolveProviderConfig, buildRequest } from './llm-provider.js';
-export type { LLMProvider, LLMRequest, LLMResponse, LLMProviderConfig, ResolvedLLMProviderConfig } from './llm-provider.js';
+export type { LLMProvider, LLMRequest, LLMResponse, LLMProviderConfig, ResolvedLLMProviderConfig, BuildRequestOptions } from './llm-provider.js';

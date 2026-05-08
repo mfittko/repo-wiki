@@ -302,7 +302,7 @@ export interface ResolvedLLMProviderConfig extends LLMProviderConfig {
  * Create an `LLMProvider` from explicit configuration.
  *
  * - Omitting `config` (or setting `provider: "mock"`) returns the mock provider.
- * - Specifying an unknown provider without an API key throws
+ * - Specifying an OpenAI-compatible provider without an API key throws
  *   `LLMProviderError` with `code: "MISSING_API_KEY"`.
  * - Specifying an unknown provider name throws
  *   `LLMProviderError` with `code: "UNKNOWN_PROVIDER"`.
@@ -370,34 +370,49 @@ export function resolveProviderConfig(
 
 // ── Convenience builder ────────────────────────────────────────────────────
 
+export interface BuildRequestOptions extends Pick<LLMProviderConfig, 'systemPrompt' | 'temperature' | 'maxOutputTokens'> {
+  /** Optional completion-token budget for the provider. */
+  maxTokens?: number;
+}
+
 /**
  * Assemble an `LLMRequest` from a `PromptContext` using the standard prompt
  * templates.  Callers can then pass the result directly to
  * `provider.complete(request)`.
  *
- * @param archetype  - Page archetype that selects the prompt template.
- * @param context    - Assembled page context (source cards, doc cards, etc.).
- * @param maxTokens  - Optional completion-token budget for the provider.
- *                     When omitted the provider uses its own default limit.
- *                     Typical values: 2048 for module pages, 4096 for
- *                     foundation pages.  Check your provider's documentation
- *                     for valid ranges.
+ * @param archetype - Page archetype that selects the prompt template.
+ * @param context   - Assembled page context (source cards, doc cards, etc.).
+ * @param options   - Optional request-level prompt and generation settings.
  */
 export function buildRequest(
   archetype: PageArchetype,
   context: PromptContext,
+  options?: BuildRequestOptions,
+): LLMRequest;
+export function buildRequest(
+  archetype: PageArchetype,
+  context: PromptContext,
   maxTokens?: number,
+  config?: Pick<LLMProviderConfig, 'systemPrompt' | 'temperature' | 'maxOutputTokens'>,
+): LLMRequest;
+export function buildRequest(
+  archetype: PageArchetype,
+  context: PromptContext,
+  maxTokensOrOptions?: number | BuildRequestOptions,
   config: Pick<LLMProviderConfig, 'systemPrompt' | 'temperature' | 'maxOutputTokens'> = {},
 ): LLMRequest {
   const prompt = buildPrompt(archetype, context);
+  const options = typeof maxTokensOrOptions === 'object'
+    ? maxTokensOrOptions
+    : { ...config, maxTokens: maxTokensOrOptions };
   return {
     archetype,
     pageName: context.pageName,
     pageTitle: context.pageTitle,
-    systemPrompt: config.systemPrompt ?? prompt.system,
+    systemPrompt: options.systemPrompt ?? prompt.system,
     userPrompt: prompt.user,
-    maxTokens: maxTokens ?? config.maxOutputTokens,
-    temperature: config.temperature,
+    maxTokens: options.maxTokens ?? options.maxOutputTokens,
+    temperature: options.temperature,
   };
 }
 

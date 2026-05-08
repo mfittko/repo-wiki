@@ -240,10 +240,9 @@ test('resolveProviderConfig uses OpenAI-compatible provider for llm mode', () =>
   assert.equal(resolved.provider, 'openai-compatible');
 });
 
-test('OpenAICompatibleProvider posts chat-completions request', async () => {
-  const originalFetch = globalThis.fetch;
+test('OpenAICompatibleProvider posts chat-completions request', async (t) => {
   let captured: { url?: string; body?: any; authorization?: string } = {};
-  globalThis.fetch = (async (url: string, init: any) => {
+  t.mock.method(globalThis, 'fetch', (async (url: string, init: any) => {
     captured = {
       url,
       body: JSON.parse(String(init.body)),
@@ -253,22 +252,18 @@ test('OpenAICompatibleProvider posts chat-completions request', async () => {
       choices: [{ message: { content: '# Generated' } }],
       usage: { prompt_tokens: 10, completion_tokens: 2 },
     }), { status: 200, headers: { 'content-type': 'application/json' } });
-  }) as typeof fetch;
+  }) as typeof fetch);
 
-  try {
-    const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123', model: 'test-model', baseUrl: 'https://llm.example/v1' });
-    const response = await provider.complete(makeRequest({ maxTokens: 123, temperature: 0.4 }));
-    assert.equal(captured.url, 'https://llm.example/v1/chat/completions');
-    assert.equal(captured.authorization, 'Bearer key-123');
-    assert.equal(captured.body.model, 'test-model');
-    assert.equal(captured.body.max_tokens, 123);
-    assert.equal(captured.body.temperature, 0.4);
-    assert.equal(response.content, '# Generated');
-    assert.equal(response.promptTokens, 10);
-    assert.equal(response.completionTokens, 2);
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
+  const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123', model: 'test-model', baseUrl: 'https://llm.example/v1' });
+  const response = await provider.complete(makeRequest({ maxTokens: 123, temperature: 0.4 }));
+  assert.equal(captured.url, 'https://llm.example/v1/chat/completions');
+  assert.equal(captured.authorization, 'Bearer key-123');
+  assert.equal(captured.body.model, 'test-model');
+  assert.equal(captured.body.max_tokens, 123);
+  assert.equal(captured.body.temperature, 0.4);
+  assert.equal(response.content, '# Generated');
+  assert.equal(response.promptTokens, 10);
+  assert.equal(response.completionTokens, 2);
 });
 
 // ── buildRequest ───────────────────────────────────────────────────────────
@@ -292,6 +287,19 @@ test('buildRequest passes maxTokens through', () => {
   const ctx = makeContext();
   const req = buildRequest('foundation', ctx, 4096);
   assert.equal(req.maxTokens, 4096);
+});
+
+test('buildRequest accepts request options without positional maxTokens', () => {
+  const ctx = makeContext();
+  const req = buildRequest('foundation', ctx, {
+    systemPrompt: 'Custom system prompt.',
+    temperature: 0.2,
+    maxOutputTokens: 2048,
+  });
+
+  assert.equal(req.systemPrompt, 'Custom system prompt.');
+  assert.equal(req.temperature, 0.2);
+  assert.equal(req.maxTokens, 2048);
 });
 
 test('buildRequest user prompt includes source card paths', () => {
@@ -338,6 +346,21 @@ test('buildPrompt includes existing content when provided', () => {
   const ctx = makeContext({ existingContent: '# Old content\n\nSome previous text.' });
   const prompt = buildPrompt('module', ctx);
   assert.match(prompt.user, /Old content/);
+});
+
+test('buildPrompt wraps existing content with a fence that survives Markdown fences', () => {
+  const ctx = makeContext({ existingContent: '```ts\nconst value = true;\n```\n~~~~\nnotes\n~~~~' });
+  const prompt = buildPrompt('module', ctx);
+  assert.match(prompt.user, /~~~~~/);
+  assert.doesNotMatch(prompt.user, /Existing wiki content to update:\n```/);
+});
+
+test('buildPrompt throws clearly for invalid runtime archetypes', () => {
+  const ctx = makeContext();
+  assert.throws(
+    () => buildPrompt('invalid' as any, ctx),
+    /Unsupported page archetype: invalid/,
+  );
 });
 
 test('buildPrompt indicates bootstrap mode when no existing content', () => {
