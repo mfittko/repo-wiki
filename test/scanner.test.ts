@@ -47,9 +47,16 @@ test('scanRepository creates a manifest and source cards', async () => {
     ]);
 
     assert.deepEqual(result.manifest.analysis.dependency_graph.edges, [
+      { from: 'src/index.js', to: 'package:express', specifier: 'express' },
       { from: 'src/index.js', to: 'src/utils.js', specifier: './utils.js' },
       { from: 'test/index.test.js', to: 'src/index.js', specifier: '../src/index.js' }
     ]);
+    assert.deepEqual(result.manifest.analysis.dependency_graph.summary, {
+      edges: 3,
+      importers: 2,
+      imported_files: 2,
+      imported_packages: 1
+    });
 
     assert.deepEqual(result.manifest.analysis.test_to_source.mappings, [
       {

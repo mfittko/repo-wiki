@@ -1,3 +1,4 @@
+import { builtinModules } from 'node:module';
 import path from 'node:path';
 
 const RESOLVABLE_EXTENSIONS = ['.js', '.mjs', '.cjs', '.jsx', '.ts', '.tsx', '.json'];
@@ -9,6 +10,11 @@ type SourceCard = {
   package_name?: string | null;
   package_scripts?: Record<string, string>;
 };
+
+const FILE_NODE_PREFIX = 'file:';
+const PACKAGE_NODE_PREFIX = 'package:';
+const SCHEME_SPECIFIER_PATTERN = /^[A-Za-z][A-Za-z+.-]*:/;
+const NODE_BUILTIN_MODULES = new Set(builtinModules.map((moduleName) => moduleName.replace(/^node:/, '')));
 
 export function extractPackageMetadata(filePath: string, content: string): { package_name: string | null; package_scripts: Record<string, string> } | null {
   if (!filePath.toLowerCase().endsWith('package.json')) {
@@ -42,17 +48,20 @@ export function buildRepositoryAnalysis(cards: SourceCard[]) {
     }))
     .sort((left, right) => left.path.localeCompare(right.path));
 
-  const dependencyEdges = collectDependencyEdges(cards, fileIndex);
+  const dependencyGraph = collectDependencyGraph(cards, fileIndex);
+  const dependencyEdges = dependencyGraph.edges;
   const testMappings = buildTestMappings(cards, dependencyEdges, fileIndex);
 
   return {
     package_scripts: packageScripts,
     dependency_graph: {
+      nodes: dependencyGraph.nodes,
       edges: dependencyEdges,
       summary: {
         edges: dependencyEdges.length,
         importers: countUnique(dependencyEdges.map((edge) => edge.from)),
-        imported_files: countUnique(dependencyEdges.map((edge) => edge.to))
+        imported_files: countUnique(dependencyEdges.filter((edge) => !isPackageEdge(edge)).map((edge) => edge.to)),
+        imported_packages: countUnique(dependencyEdges.filter((edge) => isPackageEdge(edge)).map((edge) => edge.to))
       }
     },
     test_to_source: {
@@ -65,11 +74,13 @@ export function buildRepositoryAnalysis(cards: SourceCard[]) {
   };
 }
 
-function collectDependencyEdges(cards, fileIndex) {
+function collectDependencyGraph(cards, fileIndex) {
+  const nodes = new Map();
   const edges = [];
   const seen = new Set();
+  const orderedCards = [...cards].sort((left, right) => left.path.localeCompare(right.path));
 
-  for (const card of cards) {
+  for (const card of orderedCards) {
     for (const specifier of card.imports || []) {
       const target = resolveImportTarget(card.path, specifier, fileIndex);
 
@@ -77,17 +88,29 @@ function collectDependencyEdges(cards, fileIndex) {
         continue;
       }
 
-      const key = `${card.path}\u0000${target}\u0000${specifier}`;
+      const from = normalizeRepoPath(card.path);
+      const to = target.type === 'file' ? target.path : `${PACKAGE_NODE_PREFIX}${target.name}`;
+      const key = `${from}\u0000${to}\u0000${specifier}`;
       if (seen.has(key)) {
         continue;
       }
 
       seen.add(key);
-      edges.push({ from: card.path, to: target, specifier });
+      edges.push({ from, to, specifier });
+      nodes.set(`${FILE_NODE_PREFIX}${from}`, { id: `${FILE_NODE_PREFIX}${from}`, type: 'file', path: from });
+
+      if (target.type === 'file') {
+        nodes.set(`${FILE_NODE_PREFIX}${target.path}`, { id: `${FILE_NODE_PREFIX}${target.path}`, type: 'file', path: target.path });
+      } else {
+        nodes.set(`${PACKAGE_NODE_PREFIX}${target.name}`, { id: `${PACKAGE_NODE_PREFIX}${target.name}`, type: 'package', package: target.name });
+      }
     }
   }
 
-  return edges.sort(compareEdges);
+  return {
+    nodes: [...nodes.values()].sort(compareNodes),
+    edges: edges.sort(compareEdges)
+  };
 }
 
 function buildTestMappings(cards, dependencyEdges, fileIndex) {
@@ -174,13 +197,19 @@ function inferFilenameAffinitySources(testPath, fileIndex) {
 }
 
 function resolveImportTarget(importerPath, specifier, fileIndex) {
-  if (!specifier.startsWith('.')) {
+  if (!specifier) {
     return null;
   }
 
-  const importerDir = path.posix.dirname(importerPath);
-  const basePath = normalizeRepoPath(path.posix.join(importerDir, specifier));
-  return resolveCandidateTarget(basePath, fileIndex);
+  if (specifier.startsWith('.')) {
+    const importerDir = path.posix.dirname(importerPath);
+    const basePath = normalizeRepoPath(path.posix.join(importerDir, specifier));
+    const resolvedPath = resolveCandidateTarget(basePath, fileIndex);
+    return resolvedPath ? { type: 'file', path: resolvedPath } : null;
+  }
+
+  const packageName = resolvePackageSpecifier(specifier);
+  return packageName ? { type: 'package', name: packageName } : null;
 }
 
 function resolveStemTarget(stem, fileIndex) {
@@ -258,4 +287,40 @@ function compareEdges(left, right) {
   }
 
   return left.specifier.localeCompare(right.specifier);
+}
+
+function compareNodes(left, right) {
+  return left.id.localeCompare(right.id);
+}
+
+function isPackageEdge(edge) {
+  return typeof edge.to === 'string' && edge.to.startsWith(PACKAGE_NODE_PREFIX);
+}
+
+function resolvePackageSpecifier(specifier) {
+  if (!specifier || specifier.startsWith('node:') || specifier.startsWith('#') || specifier.startsWith('/')) {
+    return null;
+  }
+
+  if (SCHEME_SPECIFIER_PATTERN.test(specifier)) {
+    return null;
+  }
+
+  if (isNodeBuiltinSpecifier(specifier)) {
+    return null;
+  }
+
+  if (specifier.startsWith('@')) {
+    const parts = specifier.split('/');
+    const packageSegment = parts[1];
+    // Scoped package names require both scope and package segments (e.g. @scope/pkg).
+    return parts.length >= 2 && packageSegment && packageSegment.length > 0 ? `${parts[0]}/${packageSegment}` : null;
+  }
+
+  const [name] = specifier.split('/');
+  return name && name.length > 0 ? name : null;
+}
+
+function isNodeBuiltinSpecifier(specifier) {
+  return NODE_BUILTIN_MODULES.has(specifier);
 }
