@@ -16,7 +16,8 @@ const DEFAULT_CONFIG = {
       'coverage/**',
       '.llmwiki/run/**',
       '.llmwiki/wiki/**'
-    ]
+    ],
+    suppress_nested_repositories: true
   },
   documentation: {
     ingest: true,
@@ -62,7 +63,7 @@ const DEFAULT_CONFIG = {
   }
 };
 
-const DEFAULT_SCHEMA = `# LLM Wiki Schema\n\nThis file defines how this repository is compiled into GitHub Wiki pages by repo-wiki.\n\n## Source of truth\n\nThe repository at the pinned Git commit is authoritative. Generated wiki pages are derived artifacts.\n\n## Required generated pages\n\n- Home.md\n- _Sidebar.md\n- Index.md\n- Log.md\n- Agent-Context-Pack.md\n- Repository-Overview.md\n- Architecture.md\n- Build-Test-and-Run.md\n- Open-Questions.md\n- Documentation-Debt-Report.md\n\n## Documentation ingestion\n\nMarkdown documentation is ingested as secondary evidence by default. It can reveal intent and terminology, but operational or behavioral claims should be validated against code, tests, CI, configuration, or generated schemas. Stale or contradicted markdown is reported by \`repo-wiki lint-docs\`.\n\n## Rules\n\n- Prefer updating existing pages over creating new pages.\n- Preserve marked human-maintained sections.\n- Add uncertain claims to Open-Questions.md.\n- Cite source paths for material claims.\n- Do not copy secrets, tokens, private keys, or .env values.\n`;
+const DEFAULT_SCHEMA = `# LLM Wiki Schema\n\nThis file defines how this repository is compiled into GitHub Wiki pages by repo-wiki.\n\n## Source of truth\n\nThe repository at the pinned Git commit is authoritative. Generated wiki pages are derived artifacts.\n\n## Required generated pages\n\n- Home.md\n- _Sidebar.md\n- Index.md\n- Log.md\n- Agent-Context-Pack.md\n- Repository-Overview.md\n- Architecture.md\n- Build-Test-and-Run.md\n- Open-Questions.md\n- Documentation-Debt-Report.md\n\n## Source traversal\n\n- \`source.exclude\` is a path-oriented filter, not a full glob engine.\n- Exact paths and directory-style patterns such as \`tmp/**\` are supported.\n- Nested Git repository/worktree roots are suppressed by default and can be re-enabled with \`source.suppress_nested_repositories=false\`.\n\n## Documentation ingestion\n\nMarkdown documentation is ingested as secondary evidence by default. It can reveal intent and terminology, but operational or behavioral claims should be validated against code, tests, CI, configuration, or generated schemas. Stale or contradicted markdown is reported by \`repo-wiki lint-docs\`.\n\n## Rules\n\n- Prefer updating existing pages over creating new pages.\n- Preserve marked human-maintained sections.\n- Add uncertain claims to Open-Questions.md.\n- Cite source paths for material claims.\n- Do not copy secrets, tokens, private keys, or .env values.\n`;
 
 const AGENT_POINTER = `# Repository Wiki Knowledge Base\n\nThis repository can be compiled into a GitHub Wiki knowledge base with repo-wiki.\n\nRecommended local bootstrap:\n\n\`\`\`bash\nnpx repo-wiki run --mode bootstrap --repo . --scan .llmwiki/run --plan .llmwiki/bootstrap-plan.json --wiki .llmwiki/wiki\n\`\`\`\n\nBefore non-trivial changes, read the generated wiki entry points when available:\n\n1. .llmwiki/wiki/Agent-Context-Pack.md\n2. .llmwiki/wiki/Index.md\n3. The relevant module page\n4. .llmwiki/wiki/Documentation-Debt-Report.md when docs influenced an answer\n\nSource code at the current commit is authoritative if the wiki is stale.\n`;
 
