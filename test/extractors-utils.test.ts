@@ -234,6 +234,7 @@ test('language detection and classification cover the major path cases', () => {
   assert.equal(detectLanguage('src/module.py'), 'Python');
   assert.equal(detectLanguage('src/module.rb'), 'Ruby');
   assert.equal(detectLanguage('Gemfile'), 'Ruby');
+  assert.equal(detectLanguage('apps\\worker\\Gemfile'), 'Ruby');
   assert.equal(detectLanguage('Rakefile'), 'Ruby');
   assert.equal(detectLanguage('app/config.ru'), 'Ruby');
   assert.equal(detectLanguage('repo-wiki.gemspec'), 'Ruby');
@@ -241,6 +242,7 @@ test('language detection and classification cover the major path cases', () => {
 
   assert.equal(classifyPath('tests/foo.spec.ts'), 'test');
   assert.equal(classifyPath('spec/models/user_spec.rb'), 'test');
+  assert.equal(classifyPath('app\\spec\\models\\user_spec.rb'), 'test');
   assert.equal(classifyPath('src/models/user_test.rb'), 'test');
   assert.equal(classifyPath('.github/workflows/ci.yml'), 'ci');
   assert.equal(classifyPath('docs/guide.md'), 'docs');
@@ -255,16 +257,24 @@ test('ruby extraction captures requires, modules, classes, methods, singleton me
   const rubySource = `
 # require 'ignored'
 require "json"
+require 'openssl' if config.ssl?
 require_relative 'lib/service'
-require_relative("./support/helpers")
+require_relative("./support/helpers") unless production?
 
 module RepoWiki
   VERSION = "1.0.0"
+  TimeoutError = Class.new(StandardError)
   BANNER = <<~TEXT
     require "hidden"
     module Hidden
     end
   TEXT
+
+  class << self
+    def configure
+      true
+    end
+  end
 
   class Scanner
     DEFAULT_LIMIT ||= 50
@@ -312,8 +322,14 @@ end
 
 class Worker
   def perform!
+    while ready do
+      tick
+    end
     true
   end
+end
+
+class Other
 end
 
 def top_level_method?
@@ -321,15 +337,18 @@ def top_level_method?
 end
 `;
 
-  assert.deepEqual(extractImports(rubySource, 'Ruby'), ['./lib/service', './support/helpers', 'json']);
+  assert.deepEqual(extractImports(rubySource, 'Ruby'), ['./lib/service', './support/helpers', 'json', 'openssl']);
   assert.deepEqual(extractSymbols(rubySource, 'Ruby'), [
+    'Other',
     'RepoWiki',
+    'RepoWiki.configure',
     'RepoWiki::BANNER',
     'RepoWiki::Scanner',
     'RepoWiki::Scanner#run',
     'RepoWiki::Scanner.build',
     'RepoWiki::Scanner.from_config',
     'RepoWiki::Scanner::DEFAULT_LIMIT',
+    'RepoWiki::TimeoutError',
     'RepoWiki::VERSION',
     'Worker',
     'Worker#perform!',

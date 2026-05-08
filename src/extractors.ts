@@ -436,14 +436,14 @@ function extractRubyImports(content: string): string[] {
   const imports = new Set<string>();
   const code = stripRubyComments(content);
 
-  for (const match of code.matchAll(/(?:^|\n)[ \t]*require[ \t]*(?:\([ \t]*)?['"]([^'"\n]+)['"][ \t]*\)?/g)) {
+  for (const match of code.matchAll(/(?:^|\n)[ \t]*require[ \t]*(?:\([ \t]*)?['"]([^'"\n]+)['"]/g)) {
     const specifier = match[1].trim();
     if (specifier) {
       imports.add(specifier);
     }
   }
 
-  for (const match of code.matchAll(/(?:^|\n)[ \t]*require_relative[ \t]*(?:\([ \t]*)?['"]([^'"\n]+)['"][ \t]*\)?/g)) {
+  for (const match of code.matchAll(/(?:^|\n)[ \t]*require_relative[ \t]*(?:\([ \t]*)?['"]([^'"\n]+)['"]/g)) {
     const specifier = match[1].trim();
     if (!specifier) {
       continue;
@@ -473,7 +473,7 @@ function extractRubySymbols(content: string): string[] {
     }
 
     if (/^class\s+<<\s*self\b/.test(line)) {
-      scopeStack.push({ kind: 'singleton', name: currentRubyClassScope(scopeStack) });
+      scopeStack.push({ kind: 'singleton', name: currentRubyNamespace(scopeStack) });
     } else {
       const classMatch = line.match(/^class\s+([A-Z][A-Za-z0-9_]*(?:::[A-Z][A-Za-z0-9_]*)*)\b/);
       if (classMatch) {
@@ -511,7 +511,7 @@ function extractRubySymbols(content: string): string[] {
       scopeStack.push({ kind: 'def', name: null });
     }
 
-    const constantMatch = line.match(/^([A-Z][A-Z0-9_]*)(?:\s*=(?!=)|\s*\|\|=)/);
+    const constantMatch = line.match(/^([A-Z][A-Za-z0-9_]*)(?:\s*=(?!=)|\s*\|\|=)/);
     if (constantMatch) {
       symbols.add(qualifyRubyConstant(constantMatch[1], scopeStack));
     }
@@ -703,12 +703,15 @@ function stripRubyQuotedStrings(line: string) {
 function countRubyBlockOpeners(line: string) {
   const normalized = line.trim();
   let count = 0;
+  const opensKeywordBlock = /^(?:if|unless|case|begin|for|while|until)\b/.test(normalized);
 
-  if (/^(?:if|unless|case|begin|for|while|until)\b/.test(normalized)) {
+  if (opensKeywordBlock) {
     count += 1;
   }
 
-  count += normalized.match(/\bdo\b/g)?.length || 0;
+  if (!opensKeywordBlock) {
+    count += normalized.match(/\bdo\b/g)?.length || 0;
+  }
 
   return count;
 }

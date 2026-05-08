@@ -27,7 +27,7 @@ const extensionMap = new Map([
 
 export function detectLanguage(filePath) {
   const lower = filePath.toLowerCase();
-  const base = lower.includes('/') ? lower.slice(lower.lastIndexOf('/') + 1) : lower;
+  const base = lower.split(/[\\/]/).pop() || lower;
 
   if (lower.endsWith('dockerfile') || lower.includes('/dockerfile')) {
     return 'Dockerfile';
@@ -43,9 +43,9 @@ export function detectLanguage(filePath) {
 
 export function classifyPath(filePath) {
   const lower = filePath.toLowerCase();
-  const isRubyTestFile = /(?:^|\/)spec\/.+\.rb$/.test(lower) || /_test\.rb$/.test(lower);
+  const isRubyTestFile = /(?:^|[\\/])spec[\\/].+\.rb$/.test(lower) || /_test\.rb$/.test(lower);
 
-  if (lower.includes('/test/') || lower.includes('/tests/') || /\.(test|spec)\.[mc]?[jt]sx?$/.test(lower) || isRubyTestFile) {
+  if (/[\\/]test[\\/]/.test(lower) || /[\\/]tests[\\/]/.test(lower) || /\.(test|spec)\.[mc]?[jt]sx?$/.test(lower) || isRubyTestFile) {
     return 'test';
   }
 
