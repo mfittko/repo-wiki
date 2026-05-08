@@ -194,7 +194,7 @@ function inferFilenameAffinitySources(testPath, fileIndex) {
 }
 
 function resolveImportTarget(importerPath, specifier, fileIndex) {
-  if (typeof specifier !== 'string' || specifier.length === 0) {
+  if (!specifier) {
     return null;
   }
 
@@ -305,9 +305,10 @@ function resolvePackageSpecifier(specifier) {
 
   if (specifier.startsWith('@')) {
     const parts = specifier.split('/');
+    // Scoped package names require both scope and package segments (e.g. @scope/pkg).
     return parts.length >= 2 ? `${parts[0]}/${parts[1]}` : null;
   }
 
   const [name] = specifier.split('/');
-  return name || null;
+  return name ? name : null;
 }
