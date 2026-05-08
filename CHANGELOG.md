@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Compiler wiki pages** — dependency map, configuration, HTTP routes, and testing-strategy pages rendered from scanner analysis output
 - Build scanner analysis foundation, TypeScript migration, and CI enforcement.
 - Add repo guidance and simplify agent names.
+- add issue task template and backlog note.
 
 ### Changed
 - Node.js engine requirement raised to `>=24`; removed unsafe incremental cache from scanner
