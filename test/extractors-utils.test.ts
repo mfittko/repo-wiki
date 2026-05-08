@@ -8,6 +8,8 @@ import {
   extractEnvironmentVariables,
   extractExportedSymbols,
   extractImports,
+  extractMigrationSurfaces,
+  extractModelSurfaces,
   extractRouteSurfaces,
   extractSymbols
 } from '../src/extractors.js';
@@ -59,6 +61,32 @@ test('extractors cover imports, exports, env vars, routes, and runtime hints', (
   assert.ok(exported.some((entry) => entry.name === 'Shape' && entry.kind === 'interface'));
   assert.ok(exported.some((entry) => entry.name === 'State' && entry.kind === 'enum'));
   assert.deepEqual(extractEnvironmentVariables(richSource, 'TypeScript'), ['API_KEY', 'PORT', 'VITE_HOST']);
+  assert.deepEqual(extractMigrationSurfaces('src/query.sql', 'SQL'), []);
+  assert.deepEqual(extractMigrationSurfaces('db/migrations/V2__add_orders_table.sql', 'SQL'), [
+    { kind: 'sql-migration', id: '2', name: 'add orders table' }
+  ]);
+  assert.deepEqual(extractMigrationSurfaces('prisma/migrations/20250507120000_create_users/migration.sql', 'SQL'), [
+    { kind: 'prisma-migration', id: '20250507120000', name: 'create users' }
+  ]);
+  assert.deepEqual(extractModelSurfaces('prisma/schema.prisma', `
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+model User { id Int @id }
+model AuditLog { id Int @id }
+`, 'Text'), [
+    { name: 'AuditLog', kind: 'model', framework: 'prisma' },
+    { name: 'User', kind: 'model', framework: 'prisma' }
+  ]);
+  const ormModels = extractModelSurfaces('src/models/account.ts', `
+@Entity()
+export class AccountEntity {}
+class Session extends Model {}
+const User = sequelize.define('User', {});
+const Profile = mongoose.model('Profile', profileSchema);
+`, 'TypeScript');
+  assert.ok(ormModels.some((entry) => entry.framework === 'typeorm' && entry.kind === 'entity' && entry.name === 'AccountEntity'));
+  assert.ok(ormModels.some((entry) => entry.framework === 'sequelize' && entry.kind === 'model' && entry.name === 'Session'));
+  assert.ok(ormModels.some((entry) => entry.framework === 'sequelize' && entry.kind === 'model' && entry.name === 'User'));
+  assert.ok(ormModels.some((entry) => entry.framework === 'mongoose' && entry.kind === 'model' && entry.name === 'Profile'));
 
   assert.deepEqual(extractRouteSurfaces('src/server.ts', richSource, 'TypeScript'), [
     {
@@ -102,6 +130,10 @@ test('extractors cover imports, exports, env vars, routes, and runtime hints', (
     routeSurfaces: extractRouteSurfaces('src/server.ts', richSource, 'TypeScript'),
     environmentVariables: extractEnvironmentVariables(richSource, 'TypeScript')
   }), ['background-work', 'deployment', 'environment-variable', 'http-route']);
+  assert.deepEqual(detectRuntimeHints('prisma/migrations/20250507120000_create_users/migration.sql', '-- migration', {
+    migrationSurfaces: extractMigrationSurfaces('prisma/migrations/20250507120000_create_users/migration.sql', 'SQL')
+  }), ['data-model', 'database-migration']);
+  assert.deepEqual(detectRuntimeHints('src/models/account.ts', 'class Session extends Model {}', {}), ['data-model', 'orm-model']);
 });
 
 test('AST symbol extraction covers default exports, type-only declarations, and invalid source recovery', () => {
@@ -178,6 +210,7 @@ test('language detection and classification cover the major path cases', () => {
   assert.equal(classifyPath('.github/workflows/ci.yml'), 'ci');
   assert.equal(classifyPath('docs/guide.md'), 'docs');
   assert.equal(classifyPath('db/migrations/001.sql'), 'data');
+  assert.equal(classifyPath('prisma/schema.prisma'), 'data');
   assert.equal(classifyPath('ops/infra/main.tf'), 'infra');
   assert.equal(classifyPath('package-lock.json'), 'package');
   assert.equal(classifyPath('src/index.ts'), 'source');

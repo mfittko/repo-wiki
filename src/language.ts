@@ -48,7 +48,7 @@ export function classifyPath(filePath) {
     return 'docs';
   }
 
-  if (lower.includes('/migrations/') || lower.endsWith('.sql')) {
+  if (lower.includes('/migrations/') || lower.includes('/prisma/migrations/') || lower.endsWith('.sql') || lower.endsWith('schema.prisma')) {
     return 'data';
   }
 
