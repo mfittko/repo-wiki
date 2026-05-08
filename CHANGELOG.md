@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add repo guidance and simplify agent names.
 - add issue task template and backlog note.
 - Add AST-backed TypeScript/JavaScript symbol extraction in scanner.
+- add Go source extraction support.
 
 ### Changed
 - Node.js engine requirement raised to `>=24`; removed unsafe incremental cache from scanner
@@ -27,3 +28,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update build, CI, and release automation to support the change.
 - Clarify repository guidance and review workflow expectations.
 - Expand automated test coverage for the updated behavior.
+- Update the main repository implementation to match the pull request scope.
