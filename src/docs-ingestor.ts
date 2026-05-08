@@ -22,16 +22,23 @@ export type CommandClassification = {
  */
 export function extractCiCommands(content: string): string[] {
   const commands: string[] = [];
-  for (const line of content.split('\n')) {
+  const lines = content.split('\n');
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
     // Match both `- run: <cmd>` (list item) and `  run: <cmd>` (property)
-    const runMatch = /^\s+(?:-\s+)?run:\s+(.+)$/.exec(line);
+    const runMatch = /^(\s+)(?:-\s+)?run:\s+(.+)$/.exec(line);
     if (runMatch) {
-      commands.push(...extractWorkflowCommandParts(runMatch[1]));
+      const { parts, lastLineIndex } = extractWorkflowCommandValue(runMatch[2], lines, index, runMatch[1].length);
+      commands.push(...parts);
+      index = lastLineIndex;
+      continue;
     }
     // Match `command: <cmd>` matrix fields
-    const cmdMatch = /^\s+command:\s+(.+)$/.exec(line);
+    const cmdMatch = /^(\s+)command:\s+(.+)$/.exec(line);
     if (cmdMatch) {
-      commands.push(...extractWorkflowCommandParts(cmdMatch[1]));
+      const { parts, lastLineIndex } = extractWorkflowCommandValue(cmdMatch[2], lines, index, cmdMatch[1].length);
+      commands.push(...parts);
+      index = lastLineIndex;
     }
   }
   return [...new Set(commands)];
@@ -39,8 +46,8 @@ export function extractCiCommands(content: string): string[] {
 
 /**
  * Merge package scripts from all package.json entries in a manifest's analysis.
- * Later entries overwrite earlier ones on key collision (monorepo root-last order
- * is determined by the manifest's sorted package_scripts array).
+ * Later entries overwrite earlier ones on key collision, following the manifest's
+ * sorted package_scripts array order.
  */
 export function mergePackageScripts(manifest: { analysis?: { package_scripts?: Array<{ scripts?: Record<string, string> }> } }): Record<string, string> {
   const result: Record<string, string> = {};
@@ -195,10 +202,30 @@ export function validateDocClaims({ claims, content, filePath }) {
   };
 }
 
+function extractWorkflowCommandValue(value: string, lines: string[], lineIndex: number, baseIndent: number): { parts: string[]; lastLineIndex: number } {
+  if (/^[|>](?:[+-]?\d*|\d*[+-]?)$/.test(value.trim())) {
+    const blockLines: string[] = [];
+    let lastLineIndex = lineIndex;
+    for (let index = lineIndex + 1; index < lines.length; index += 1) {
+      const line = lines[index];
+      if (line.trim() && leadingSpaces(line) <= baseIndent) break;
+      lastLineIndex = index;
+      if (line.trim()) blockLines.push(line.trim());
+    }
+    return { parts: blockLines.flatMap((line) => extractWorkflowCommandParts(line)), lastLineIndex };
+  }
+
+  return { parts: extractWorkflowCommandParts(value), lastLineIndex: lineIndex };
+}
+
 function extractWorkflowCommandParts(command: string): string[] {
   const unquoted = command.trim().replace(/^["']|["']$/g, '');
   if (!unquoted || unquoted.includes('${{')) return [];
   return splitShellCommand(unquoted, false);
+}
+
+function leadingSpaces(line: string): number {
+  return /^ */.exec(line)?.[0].length || 0;
 }
 
 function parseNpmRunScript(command: string): string | undefined {

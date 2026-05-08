@@ -107,6 +107,14 @@ jobs:
         run: echo \${{ matrix.foo }}
       - name: Matrix step
         run: \${{ matrix.task.command }}
+      - name: Block script
+        run: |-
+          npm run block
+          bash scripts/block.sh && python tools/block.py
+          echo \${{ matrix.skip }}
+      - name: Folded script
+        run: >
+          ./folded-check
   matrix:
     task:
       - name: Check
@@ -121,6 +129,10 @@ jobs:
   assert.ok(cmds.includes('bash scripts/check.sh'));
   assert.ok(cmds.includes('python tools/check.py'));
   assert.ok(cmds.includes('./local-check'));
+  assert.ok(cmds.includes('npm run block'));
+  assert.ok(cmds.includes('bash scripts/block.sh'));
+  assert.ok(cmds.includes('python tools/block.py'));
+  assert.ok(cmds.includes('./folded-check'));
   assert.ok(cmds.includes('npm run check'));
   assert.ok(cmds.includes('npm run pack:check'));
   // Template expressions anywhere in the command should be excluded

@@ -175,7 +175,7 @@ ${rows.join('\n') || '| No documentation files scanned | | | | | | |'}
 
 ## Command validation
 
-Commands extracted from documentation code blocks, validated against \`package.json\` scripts. Run \`lint-docs\` for CI workflow validation.
+Commands extracted from documentation code blocks, validated against \`package.json\` scripts. Run \`repo-wiki lint-docs\` (or \`npm run lint:docs\`) for CI workflow validation.
 
 - Validated: ${validatedCmds.length}
 - Missing (script not in package.json): ${missingCmds.length}
