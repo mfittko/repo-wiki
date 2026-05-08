@@ -36,7 +36,7 @@ test('buildRepositoryAnalysis resolves imports, deduplicates edges, and maps fil
     {
       path: 'src/index.ts',
       category: 'source',
-      imports: ['./utils', './utils', '../lib/feature', 'node:fs']
+      imports: ['./utils', './utils', '../lib/feature', 'express', 'node:fs']
     },
     {
       path: 'src/utils.ts',
@@ -101,10 +101,21 @@ test('buildRepositoryAnalysis resolves imports, deduplicates edges, and maps fil
 
   assert.deepEqual(analysis.dependency_graph.edges, [
     { from: 'src/index.ts', to: 'lib/feature/index.ts', specifier: '../lib/feature' },
+    { from: 'src/index.ts', to: 'package:express', specifier: 'express' },
     { from: 'src/index.ts', to: 'src/utils.ts', specifier: './utils' },
     { from: 'test/helper.test.ts', to: 'src/helpers.ts', specifier: '../src/helpers.ts' },
     { from: 'test/helper.test.ts', to: 'test/index.test.ts', specifier: '../test/index.test.ts' },
     { from: 'test/index.test.ts', to: 'src/index.ts', specifier: '../src/index' }
+  ]);
+
+  assert.deepEqual(analysis.dependency_graph.nodes, [
+    { id: 'file:lib/feature/index.ts', path: 'lib/feature/index.ts', type: 'file' },
+    { id: 'file:src/helpers.ts', path: 'src/helpers.ts', type: 'file' },
+    { id: 'file:src/index.ts', path: 'src/index.ts', type: 'file' },
+    { id: 'file:src/utils.ts', path: 'src/utils.ts', type: 'file' },
+    { id: 'file:test/helper.test.ts', path: 'test/helper.test.ts', type: 'file' },
+    { id: 'file:test/index.test.ts', path: 'test/index.test.ts', type: 'file' },
+    { id: 'package:express', package: 'express', type: 'package' }
   ]);
 
   assert.deepEqual(analysis.test_to_source.mappings, [
@@ -116,12 +127,36 @@ test('buildRepositoryAnalysis resolves imports, deduplicates edges, and maps fil
   ]);
 
   assert.deepEqual(analysis.dependency_graph.summary, {
-    edges: 5,
+    edges: 6,
     importers: 3,
-    imported_files: 5
+    imported_files: 5,
+    imported_packages: 1
   });
   assert.deepEqual(analysis.test_to_source.summary, {
     mapped_tests: 5,
     source_files: 4
   });
+});
+
+test('buildRepositoryAnalysis resolves package subpaths and remains deterministic across card orderings', () => {
+  const cards = [
+    { path: 'src/main.ts', category: 'source', imports: ['./feature', '@scope/toolkit/runtime', 'lodash/fp'] },
+    { path: 'src/feature/index.ts', category: 'source', imports: [] }
+  ];
+
+  const forward = buildRepositoryAnalysis(cards as any);
+  const reversed = buildRepositoryAnalysis([...cards].reverse() as any);
+
+  assert.deepEqual(forward.dependency_graph.edges, [
+    { from: 'src/main.ts', to: 'package:@scope/toolkit', specifier: '@scope/toolkit/runtime' },
+    { from: 'src/main.ts', to: 'package:lodash', specifier: 'lodash/fp' },
+    { from: 'src/main.ts', to: 'src/feature/index.ts', specifier: './feature' }
+  ]);
+  assert.deepEqual(forward.dependency_graph.summary, {
+    edges: 3,
+    importers: 1,
+    imported_files: 1,
+    imported_packages: 2
+  });
+  assert.deepEqual(forward.dependency_graph, reversed.dependency_graph);
 });
