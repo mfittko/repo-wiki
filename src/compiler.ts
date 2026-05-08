@@ -1,8 +1,10 @@
 import path from 'node:path';
+import { promises as fs } from 'node:fs';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { assembleAllPageContexts } from './context-assembler.js';
 import { ensureDir, readJson, writeText } from './utils/fs.js';
 import { classifyDocumentedCommands, mergePackageScripts } from './docs-ingestor.js';
+import { detectPageState, extractHumanNotes, injectHumanNotes } from './page-ownership.js';
 
 export async function compileWiki({ scanDir, planFile, wikiDir }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
@@ -45,8 +47,38 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
     }
   }
 
-  for (const [file, content] of pages) {
-    await writeText(path.join(wikiDir, file), content);
+  let skipped = 0;
+
+  for (const [file, newContent] of pages) {
+    const filePath = path.join(wikiDir, file);
+    let existingContent: string | null = null;
+
+    try {
+      existingContent = await fs.readFile(filePath, 'utf8');
+    } catch {
+      // File does not exist yet – this is a fresh page.
+    }
+
+    if (existingContent !== null) {
+      const state = detectPageState(existingContent);
+
+      // Human-owned pages are never overwritten by the compiler.
+      if (state === 'human-owned') {
+        skipped++;
+        continue;
+      }
+
+      // Preserve any human notes that exist in the current page.
+      const notes = extractHumanNotes(existingContent);
+      if (notes.trim().length > 0) {
+        const withNotes = injectHumanNotes(newContent, notes);
+        // Update page_state to "mixed" since human notes are present.
+        await writeText(filePath, withNotes.replace(/^page_state: "generated"/m, 'page_state: "mixed"'));
+        continue;
+      }
+    }
+
+    await writeText(filePath, newContent);
   }
 
   return {
@@ -54,6 +86,7 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
     summary: {
       wikiDir,
       pages: pages.size,
+      skipped,
       commit: manifest.commit,
       contexts: pageContexts.length
     }
@@ -65,6 +98,7 @@ function frontmatter(manifest, extra = {}) {
     source_repo: manifest.remote,
     source_commit: manifest.commit,
     compiled_at: new Date().toISOString(),
+    page_state: 'generated',
     ...extra
   };
 
