@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MockLLMProvider,
+  OpenAICompatibleProvider,
   LLMProviderError,
   createProvider,
+  resolveProviderConfig,
   buildRequest,
 } from '../src/llm-provider.js';
 import {
@@ -160,6 +162,17 @@ test('createProvider with unknown provider and no apiKey throws MISSING_API_KEY'
   );
 });
 
+test('createProvider with openai-compatible and apiKey returns hosted provider', () => {
+  const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123' });
+  assert.equal(provider.name, 'openai-compatible');
+  assert.ok(provider instanceof OpenAICompatibleProvider);
+});
+
+test('createProvider accepts openai alias for OpenAI-compatible provider', () => {
+  const provider = createProvider({ provider: 'openai', apiKey: 'key-123' });
+  assert.equal(provider.name, 'openai-compatible');
+});
+
 test('createProvider with unknown provider and apiKey throws UNKNOWN_PROVIDER', () => {
   const config: LLMProviderConfig = { provider: 'unknown-llm', apiKey: 'key-123' };
   assert.throws(
@@ -171,6 +184,73 @@ test('createProvider with unknown provider and apiKey throws UNKNOWN_PROVIDER', 
       return true;
     },
   );
+});
+
+test('resolveProviderConfig applies CI environment overrides without exposing api key', () => {
+  const resolved = resolveProviderConfig(
+    {
+      provider: 'mock',
+      base_url: 'https://config.example/v1',
+      model: 'config-model',
+      api_key_env: 'CONFIG_KEY',
+      system_prompt: 'config prompt',
+      temperature: 0.2,
+      max_output_tokens: 1000,
+      timeout_ms: 10000,
+      retries: 1,
+    },
+    {
+      LLMWIKI_COMPILER_MODE: 'llm',
+      LLMWIKI_LLM_BASE_URL: 'https://env.example/v1',
+      LLMWIKI_LLM_MODEL: 'env-model',
+      LLMWIKI_LLM_API_KEY: 'secret-key',
+      LLMWIKI_LLM_SYSTEM_PROMPT: 'env prompt',
+      LLMWIKI_LLM_TEMPERATURE: '0.3',
+      LLMWIKI_LLM_MAX_OUTPUT_TOKENS: '2000',
+    },
+  );
+
+  assert.equal(resolved.provider, 'openai-compatible');
+  assert.equal(resolved.baseUrl, 'https://env.example/v1');
+  assert.equal(resolved.model, 'env-model');
+  assert.equal(resolved.apiKey, 'secret-key');
+  assert.equal(resolved.apiKeyEnv, 'LLMWIKI_LLM_API_KEY');
+  assert.equal(resolved.systemPrompt, 'env prompt');
+  assert.equal(resolved.temperature, 0.3);
+  assert.equal(resolved.maxOutputTokens, 2000);
+  assert.equal(resolved.timeoutMs, 10000);
+  assert.equal(resolved.retries, 1);
+});
+
+test('OpenAICompatibleProvider posts chat-completions request', async () => {
+  const originalFetch = globalThis.fetch;
+  let captured: { url?: string; body?: any; authorization?: string } = {};
+  globalThis.fetch = (async (url: string, init: any) => {
+    captured = {
+      url,
+      body: JSON.parse(String(init.body)),
+      authorization: init.headers.authorization,
+    };
+    return new Response(JSON.stringify({
+      choices: [{ message: { content: '# Generated' } }],
+      usage: { prompt_tokens: 10, completion_tokens: 2 },
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
+  }) as typeof fetch;
+
+  try {
+    const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123', model: 'test-model', baseUrl: 'https://llm.example/v1' });
+    const response = await provider.complete(makeRequest({ maxTokens: 123, temperature: 0.4 }));
+    assert.equal(captured.url, 'https://llm.example/v1/chat/completions');
+    assert.equal(captured.authorization, 'Bearer key-123');
+    assert.equal(captured.body.model, 'test-model');
+    assert.equal(captured.body.max_tokens, 123);
+    assert.equal(captured.body.temperature, 0.4);
+    assert.equal(response.content, '# Generated');
+    assert.equal(response.promptTokens, 10);
+    assert.equal(response.completionTokens, 2);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 // ── buildRequest ───────────────────────────────────────────────────────────

@@ -9,10 +9,11 @@
  *   const provider = createProvider();                  // defaults to mock
  *   const provider = createProvider({ provider: 'mock' });
  *
- * Usage (future hosted provider, not yet implemented):
- *   const provider = createProvider({ provider: 'openai', apiKey: '...' });
+ * Usage (OpenAI-compatible hosted provider):
+ *   const provider = createProvider({ provider: 'openai-compatible', apiKey: '...', model: '...' });
  */
 
+import { readFileSync } from 'node:fs';
 import { type PageArchetype, type PromptContext, buildPrompt } from './prompts.js';
 
 export type { PageArchetype };
@@ -34,6 +35,8 @@ export interface LLMRequest {
   userPrompt: string;
   /** Optional token budget for the completion. */
   maxTokens?: number;
+  /** Optional sampling temperature. */
+  temperature?: number;
 }
 
 /** Output returned by an LLM provider after synthesis. */
@@ -102,6 +105,114 @@ export class MockLLMProvider implements LLMProvider {
   }
 }
 
+/** OpenAI-compatible chat-completions provider. */
+export class OpenAICompatibleProvider implements LLMProvider {
+  readonly name = 'openai-compatible';
+  readonly baseUrl: string;
+  readonly model: string;
+  readonly timeoutMs: number;
+  readonly retries: number;
+  private readonly apiKey: string;
+
+  constructor(config: Required<Pick<LLMProviderConfig, 'apiKey' | 'model' | 'baseUrl' | 'timeoutMs' | 'retries'>>) {
+    this.apiKey = config.apiKey;
+    this.model = config.model;
+    this.baseUrl = config.baseUrl.replace(/\/+$/, '');
+    this.timeoutMs = config.timeoutMs;
+    this.retries = config.retries;
+  }
+
+  async complete(request: LLMRequest): Promise<LLMResponse> {
+    const body = {
+      model: this.model,
+      messages: [
+        { role: 'system', content: request.systemPrompt },
+        { role: 'user', content: request.userPrompt }
+      ],
+      ...(request.maxTokens !== undefined ? { max_tokens: request.maxTokens } : {}),
+      ...(request.temperature !== undefined ? { temperature: request.temperature } : {})
+    };
+
+    const payload = await this.postWithRetries(body);
+    const content = payload?.choices?.[0]?.message?.content;
+    if (typeof content !== 'string' || !content.trim()) {
+      throw new LLMProviderError('OpenAI-compatible provider returned an empty completion.', this.name, 'EMPTY_RESPONSE');
+    }
+
+    return {
+      content,
+      provider: this.name,
+      promptTokens: numberOrUndefined(payload?.usage?.prompt_tokens),
+      completionTokens: numberOrUndefined(payload?.usage?.completion_tokens)
+    };
+  }
+
+  private async postWithRetries(body: unknown): Promise<any> {
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= this.retries; attempt += 1) {
+      try {
+        return await this.post(body);
+      } catch (error) {
+        lastError = error;
+        if (!(error instanceof LLMProviderError) || !error.retryable || attempt === this.retries) {
+          throw error;
+        }
+        await sleep(Math.min(1000 * 2 ** attempt, 8000));
+      }
+    }
+    throw lastError;
+  }
+
+  private async post(body: unknown): Promise<any> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${this.apiKey}`,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(body),
+        signal: controller.signal
+      });
+
+      const text = await response.text();
+      let json: any = null;
+      if (text) {
+        try {
+          json = JSON.parse(text);
+        } catch {
+          throw new LLMProviderError('OpenAI-compatible provider returned non-JSON response.', this.name, 'INVALID_JSON', response.status >= 500);
+        }
+      }
+
+      if (!response.ok) {
+        const retryable = response.status === 408 || response.status === 409 || response.status === 429 || response.status >= 500;
+        throw new LLMProviderError(
+          `OpenAI-compatible provider request failed with HTTP ${response.status}.`,
+          this.name,
+          `HTTP_${response.status}`,
+          retryable
+        );
+      }
+
+      return json;
+    } catch (error) {
+      if (error instanceof LLMProviderError) throw error;
+      const retryable = error instanceof Error && error.name === 'AbortError';
+      throw new LLMProviderError(
+        retryable ? 'OpenAI-compatible provider request timed out.' : 'OpenAI-compatible provider request failed.',
+        this.name,
+        retryable ? 'TIMEOUT' : 'REQUEST_FAILED',
+        retryable
+      );
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+}
+
 function buildMockContent(request: LLMRequest): string {
   const lines: string[] = [
     '---',
@@ -141,10 +252,48 @@ export interface LLMProviderConfig {
   provider?: string;
   /** API key required by hosted providers. Not used by the mock provider. */
   apiKey?: string;
+  /** Environment variable that contains the hosted provider API key. */
+  apiKeyEnv?: string;
+  /** JSON config alias for `apiKeyEnv`. */
+  api_key_env?: string;
   /** Model identifier passed to hosted providers. */
   model?: string;
   /** Optional base URL override for self-hosted or proxy endpoints. */
   baseUrl?: string;
+  /** JSON config alias for `baseUrl`. */
+  base_url?: string;
+  /** Optional system prompt override. */
+  systemPrompt?: string;
+  /** JSON config alias for `systemPrompt`. */
+  system_prompt?: string;
+  /** Optional file containing a system prompt override. */
+  systemPromptFile?: string;
+  /** JSON config alias for `systemPromptFile`. */
+  system_prompt_file?: string;
+  /** Optional sampling temperature. */
+  temperature?: number;
+  /** Optional output-token budget. */
+  maxOutputTokens?: number;
+  /** JSON config alias for `maxOutputTokens`. */
+  max_output_tokens?: number;
+  /** Hosted provider request timeout in milliseconds. */
+  timeoutMs?: number;
+  /** JSON config alias for `timeoutMs`. */
+  timeout_ms?: number;
+  /** Number of retries for retryable hosted provider failures. */
+  retries?: number;
+}
+
+export interface ResolvedLLMProviderConfig extends LLMProviderConfig {
+  provider: string;
+  model: string;
+  baseUrl: string;
+  apiKeyEnv: string;
+  systemPrompt: string;
+  temperature: number;
+  maxOutputTokens: number;
+  timeoutMs: number;
+  retries: number;
 }
 
 // ── Factory ────────────────────────────────────────────────────────────────
@@ -162,27 +311,61 @@ export interface LLMProviderConfig {
  * back to an unexpected behaviour.
  */
 export function createProvider(config: LLMProviderConfig = {}): LLMProvider {
-  const providerName = config.provider ?? 'mock';
+  const resolved = resolveProviderConfig(config);
+  const providerName = resolved.provider;
 
   if (providerName === 'mock') {
     return new MockLLMProvider();
   }
 
-  if (!config.apiKey) {
-    throw new LLMProviderError(
-      `Provider "${providerName}" requires an API key. ` +
-        `Set apiKey in the provider config, or use provider="mock" for tests and CI.`,
-      providerName,
-      'MISSING_API_KEY',
-    );
+  if (providerName === 'openai-compatible' || providerName === 'openai') {
+    if (!resolved.apiKey) {
+      throw new LLMProviderError(
+        `Provider "${providerName}" requires an API key. ` +
+          `Set ${resolved.apiKeyEnv}, pass apiKey, or use provider="mock" for tests and CI.`,
+        providerName,
+        'MISSING_API_KEY',
+      );
+    }
+    return new OpenAICompatibleProvider({
+      apiKey: resolved.apiKey,
+      model: resolved.model,
+      baseUrl: resolved.baseUrl,
+      timeoutMs: resolved.timeoutMs,
+      retries: resolved.retries
+    });
   }
 
-  // Hosted provider implementations will be added here in future issues.
   throw new LLMProviderError(
-    `Unknown provider: "${providerName}". Supported providers: mock.`,
+    `Unknown provider: "${providerName}". Supported providers: mock, openai-compatible.`,
     providerName,
     'UNKNOWN_PROVIDER',
   );
+}
+
+/** Resolve provider configuration from defaults, explicit config, and env vars. */
+export function resolveProviderConfig(
+  config: LLMProviderConfig = {},
+  env: NodeJS.ProcessEnv = process.env,
+): ResolvedLLMProviderConfig {
+  const apiKeyEnv = env.LLMWIKI_LLM_API_KEY ? 'LLMWIKI_LLM_API_KEY' : (config.apiKeyEnv ?? config.api_key_env ?? 'LLMWIKI_LLM_API_KEY');
+  const systemPromptFile = env.LLMWIKI_LLM_SYSTEM_PROMPT_FILE ?? config.systemPromptFile ?? config.system_prompt_file;
+  const systemPrompt = env.LLMWIKI_LLM_SYSTEM_PROMPT ?? readPromptFileIfSet(systemPromptFile) ?? config.systemPrompt ?? config.system_prompt ?? 'You compile source-grounded GitHub Wiki pages.';
+
+  return {
+    ...config,
+    provider: env.LLMWIKI_LLM_PROVIDER ?? providerForMode(env.LLMWIKI_COMPILER_MODE) ?? config.provider ?? 'mock',
+    apiKey: env[apiKeyEnv] ?? config.apiKey,
+    apiKeyEnv,
+    model: env.LLMWIKI_LLM_MODEL ?? config.model ?? 'gpt-4.1-mini',
+    baseUrl: env.LLMWIKI_LLM_BASE_URL ?? config.baseUrl ?? config.base_url ?? 'https://api.openai.com/v1',
+    systemPrompt,
+    systemPromptFile,
+    temperature: parseNumber(env.LLMWIKI_LLM_TEMPERATURE, config.temperature ?? 0.1),
+    maxOutputTokens: parseInteger(env.LLMWIKI_LLM_MAX_OUTPUT_TOKENS, config.maxOutputTokens ?? config.max_output_tokens ?? 4000),
+    timeoutMs: parseInteger(env.LLMWIKI_LLM_TIMEOUT_MS, config.timeoutMs ?? config.timeout_ms ?? 60000),
+    retries: parseInteger(env.LLMWIKI_LLM_RETRIES, config.retries ?? 2)
+  };
 }
 
 // ── Convenience builder ────────────────────────────────────────────────────
@@ -204,14 +387,49 @@ export function buildRequest(
   archetype: PageArchetype,
   context: PromptContext,
   maxTokens?: number,
+  config: Pick<LLMProviderConfig, 'systemPrompt' | 'temperature' | 'maxOutputTokens'> = {},
 ): LLMRequest {
   const prompt = buildPrompt(archetype, context);
   return {
     archetype,
     pageName: context.pageName,
     pageTitle: context.pageTitle,
-    systemPrompt: prompt.system,
+    systemPrompt: config.systemPrompt ?? prompt.system,
     userPrompt: prompt.user,
-    maxTokens,
+    maxTokens: maxTokens ?? config.maxOutputTokens,
+    temperature: config.temperature,
   };
+}
+
+function providerForMode(mode?: string): string | undefined {
+  return mode === 'llm' ? 'openai-compatible' : undefined;
+}
+
+function parseNumber(value: string | undefined, fallback: number): number {
+  if (value === undefined || value === '') return fallback;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function parseInteger(value: string | undefined, fallback: number): number {
+  if (value === undefined || value === '') return fallback;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function readPromptFileIfSet(filePath?: string): string | undefined {
+  if (!filePath) return undefined;
+  try {
+    return readFileSync(filePath, 'utf8');
+  } catch {
+    return undefined;
+  }
+}
+
+function numberOrUndefined(value: unknown): number | undefined {
+  return typeof value === 'number' ? value : undefined;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }

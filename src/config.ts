@@ -14,6 +14,20 @@ export const DEFAULT_CONFIG = {
     fail_on_stale_docs: false,
     fail_on_conflicting_docs: true
   },
+  compiler: {
+    mode: 'deterministic',
+    llm: {
+      provider: 'mock',
+      base_url: 'https://api.openai.com/v1',
+      model: 'gpt-4.1-mini',
+      api_key_env: 'LLMWIKI_LLM_API_KEY',
+      system_prompt: 'You compile source-grounded GitHub Wiki pages.',
+      temperature: 0.1,
+      max_output_tokens: 4000,
+      timeout_ms: 60000,
+      retries: 2
+    }
+  },
   wiki: {
     max_pages: 500,
     preserve_human_sections: true
