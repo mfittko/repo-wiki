@@ -2,6 +2,7 @@ import path from 'node:path';
 import { promises as fs } from 'node:fs';
 
 const GENERATED_OUTPUT_ROOTS = new Set(['.llmwiki', 'coverage', 'dist', 'build', 'node_modules']);
+const COMMON_ENV_VAR_NAMES = new Set(['CI', 'HOME', 'PATH', 'PORT', 'SHELL', 'TERM', 'USER']);
 
 export type PathResolution = {
   valid: boolean;
@@ -100,22 +101,34 @@ export function collectKnownEnvironmentVariables(manifest: any) {
   return names;
 }
 
-function collectConfigEnvironmentVariables(value: any, names: Set<string>) {
+function collectConfigEnvironmentVariables(value: any, names: Set<string>, envKeyContext = false) {
   if (typeof value === 'string') {
-    if (/^[A-Z][A-Z0-9_]{2,}$/.test(value)) {
+    if (envKeyContext && isLikelyEnvironmentVariableName(value)) {
       names.add(value);
     }
     return;
   }
   if (Array.isArray(value)) {
-    for (const entry of value) collectConfigEnvironmentVariables(entry, names);
+    for (const entry of value) collectConfigEnvironmentVariables(entry, names, envKeyContext);
     return;
   }
   if (value && typeof value === 'object') {
-    for (const entry of Object.values(value)) {
-      collectConfigEnvironmentVariables(entry, names);
+    for (const [key, entry] of Object.entries(value)) {
+      collectConfigEnvironmentVariables(entry, names, envKeyContext || isEnvironmentVariableConfigKey(key));
     }
   }
+}
+
+function isLikelyEnvironmentVariableName(value: string) {
+  if (!/^[A-Z][A-Z0-9_]{1,}$/.test(value)) return false;
+  if (COMMON_ENV_VAR_NAMES.has(value)) return true;
+  return value.includes('_');
+}
+
+function isEnvironmentVariableConfigKey(key: string) {
+  return /(?:^|[_-])env(?:s|[_-]?vars?)?(?:$|[_-])/i.test(key)
+    || /environment[_-]?variables?/i.test(key)
+    || /env$/i.test(key);
 }
 
 function isPathInside(root: string, target: string) {

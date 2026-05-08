@@ -443,8 +443,10 @@ function extractHeadings(content) {
 
 function extractMarkdownLinks(content) {
   const links = [];
-  for (const match of content.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {
-    links.push(match[1]);
+  for (const line of content.split('\n')) {
+    for (const target of extractMarkdownLinkTargets(line)) {
+      links.push(cleanDocumentedPathTarget(target));
+    }
   }
   return [...new Set(links)].slice(0, 200);
 }
