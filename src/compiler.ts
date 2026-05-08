@@ -1,10 +1,12 @@
 import path from 'node:path';
 import { hasDataModelSignals } from './data-model-signals.js';
+import { assembleAllPageContexts } from './context-assembler.js';
 import { ensureDir, readJson, writeText } from './utils/fs.js';
 
 export async function compileWiki({ scanDir, planFile, wikiDir }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
   const plan = await readJson(planFile);
+  const pageContexts = assembleAllPageContexts({ manifest, plan });
   await ensureDir(wikiDir);
 
   const pages = new Map();
@@ -50,7 +52,8 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
     summary: {
       wikiDir,
       pages: pages.size,
-      commit: manifest.commit
+      commit: manifest.commit,
+      contexts: pageContexts.length
     }
   };
 }
