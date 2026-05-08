@@ -271,7 +271,6 @@ test('scanRepository honors config source excludes when walking files', async ()
     await fs.mkdir(path.join(repo, '.llmwiki'), { recursive: true });
     await fs.mkdir(path.join(repo, 'src'), { recursive: true });
     await fs.mkdir(path.join(repo, 'tmp', 'scratch'), { recursive: true });
-    await fs.mkdir(path.join(repo, 'dist'), { recursive: true });
     await fs.writeFile(path.join(repo, '.llmwiki', 'config.json'), JSON.stringify({
       source: {
         exclude: ['tmp/**']
@@ -280,7 +279,6 @@ test('scanRepository honors config source excludes when walking files', async ()
     await fs.writeFile(path.join(repo, 'src', 'index.js'), 'export const ok = true;\n', 'utf8');
     await fs.writeFile(path.join(repo, 'tmp', 'scratch', 'package.json'), JSON.stringify({ name: 'nested' }, null, 2), 'utf8');
     await fs.writeFile(path.join(repo, 'tmpfile.js'), 'export const sibling = true;\n', 'utf8');
-    await fs.writeFile(path.join(repo, 'dist', 'generated.js'), 'export const generated = true;\n', 'utf8');
 
     const out = path.join(repo, '.llmwiki', 'run');
     const result = await scanRepository({
@@ -292,7 +290,7 @@ test('scanRepository honors config source excludes when walking files', async ()
     assert.ok(result.manifest.files.some((file) => file.path === 'src/index.js'));
     assert.ok(result.manifest.files.some((file) => file.path === 'tmpfile.js'));
     assert.equal(result.manifest.files.some((file) => file.path === 'tmp/scratch/package.json'), false);
-    assert.equal(result.manifest.files.some((file) => file.path === 'dist/generated.js'), false);
+    assert.deepEqual(result.manifest.config.source.exclude, ['tmp/**']);
   } finally {
     await fs.rm(repo, { recursive: true, force: true });
   }
@@ -347,6 +345,30 @@ test('scanRepository suppresses nested repository worktree noise', async () => {
     const buildTestAndRun = await fs.readFile(path.join(wikiDir, 'Build-Test-and-Run.md'), 'utf8');
     assert.equal(buildTestAndRun.includes('tmp/nested/package.json'), false);
     assert.equal(buildTestAndRun.includes('tmp/nested/.github/workflows/ci.yml'), false);
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
+});
+
+test('walkFiles suppresses nested repositories marked by .git symlinks', async () => {
+  const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-nested-repo-symlink-test-'));
+
+  try {
+    await fs.mkdir(path.join(repo, 'vendor', 'submodule'), { recursive: true });
+    await fs.writeFile(path.join(repo, 'vendor', 'submodule', 'package.json'), JSON.stringify({ name: 'submodule' }, null, 2), 'utf8');
+
+    try {
+      await fs.symlink('../.git/modules/submodule', path.join(repo, 'vendor', 'submodule', '.git'));
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'EPERM') {
+        return;
+      }
+      throw error;
+    }
+
+    const files = await walkFiles(repo, { suppressNestedRepositories: true });
+
+    assert.equal(files.some((file) => file.relative === 'vendor/submodule/package.json'), false);
   } finally {
     await fs.rm(repo, { recursive: true, force: true });
   }

@@ -73,7 +73,7 @@ export async function walkFiles(rootDir: string, options: WalkFilesOptions = {})
 }
 
 function hasGitMarker(entries: import('node:fs').Dirent[]) {
-  return entries.some((entry) => entry.name === '.git' && (entry.isDirectory() || entry.isFile()));
+  return entries.some((entry) => entry.name === '.git' && (entry.isDirectory() || entry.isFile() || entry.isSymbolicLink()));
 }
 
 const defaultExcludes = [

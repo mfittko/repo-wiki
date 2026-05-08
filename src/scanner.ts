@@ -133,7 +133,7 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     base_ref: baseRef || null,
     head_ref: headRef || commit,
     generated_at: new Date().toISOString(),
-    config: { documentation: config.documentation, lint: config.lint, wiki: config.wiki },
+    config: { source: config.source, documentation: config.documentation, lint: config.lint, wiki: config.wiki },
     totals: summarize(cards, documentationCards),
     analysis,
     documentation: {
