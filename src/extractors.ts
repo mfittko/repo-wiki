@@ -360,11 +360,13 @@ export function detectRuntimeHints(filePath: string, content: string, metadata: 
 
   if (migrationSurfaces.length > 0) {
     hints.push('database-migration');
-    hints.push('data-model');
   }
 
   if (modelSurfaces.length > 0) {
     hints.push('orm-model');
+  }
+
+  if (migrationSurfaces.length > 0 || modelSurfaces.length > 0) {
     hints.push('data-model');
   }
 
