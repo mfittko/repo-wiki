@@ -103,8 +103,17 @@ test('extractGoPackage returns null for non-Go languages', () => {
   assert.equal(extractGoPackage('package utils', 'Python'), null);
 });
 
-test('extractGoPackage ignores package-like words in comments', () => {
-  const src = '// This package is great.\n// package fake\npackage real\n';
+test('extractGoPackage ignores package-like words in comments and strings', () => {
+  const src = [
+    '// This package is great.',
+    '// package fake',
+    'const doc = "package stringlit"',
+    'const raw = `',
+    'package rawlit',
+    '`',
+    'package real',
+    ''
+  ].join('\n');
   assert.equal(extractGoPackage(src, 'Go'), 'real');
 });
 
@@ -130,6 +139,16 @@ test('extractImports handles single import only', () => {
 test('extractImports handles aliased and blank imports', () => {
   const src = `package main\nimport (\n\t_ "log"\n\talias "net/http"\n)\n`;
   assert.deepEqual(extractImports(src, 'Go'), ['log', 'net/http']);
+});
+
+test('extractImports does not truncate Go import blocks on comment parentheses', () => {
+  const src = `package main
+import (
+	"fmt" // note: this comment has ) in it
+	"net/http"
+)
+`;
+  assert.deepEqual(extractImports(src, 'Go'), ['fmt', 'net/http']);
 });
 
 test('extractImports returns empty for Go file with no imports', () => {
@@ -303,10 +322,10 @@ test('extractExportedSymbols captures all identifiers in comma-separated const a
 var Alpha, Beta int
 const Gamma, Delta = 1, 2
 var (
-\tOne, Two int
+	One, Two int
 )
 const (
-\tThree, Four = 3, 4
+	Three, Four = 3, 4
 )
 `;
   const exported = extractExportedSymbols(src, 'Go');
@@ -319,6 +338,21 @@ const (
   assert.ok(names.includes('Two') && exported.find((e) => e.name === 'Two')?.kind === 'var');
   assert.ok(names.includes('Three') && exported.find((e) => e.name === 'Three')?.kind === 'const');
   assert.ok(names.includes('Four') && exported.find((e) => e.name === 'Four')?.kind === 'const');
+});
+
+test('extractSymbols ignores commas in Go var and const right-hand side expressions', () => {
+  const src = `package p
+var Alpha = foo(Bar, Baz)
+const Gamma = join(Delta, Epsilon)
+var (
+	One = makePair(Two, Three)
+)
+const (
+	Four = choose(Five, Six)
+)
+`;
+  const symbols = extractSymbols(src, 'Go');
+  assert.deepEqual(symbols, ['Alpha', 'Four', 'Gamma', 'One']);
 });
 
 
