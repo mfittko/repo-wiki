@@ -181,22 +181,35 @@ function buildAffectedPageGraph(manifest: any, modules: any[], pages: any[]) {
     }
   }
 
+  // Index: test file path → Set of covered source file paths
+  const testToCoveredSources = new Map<string, Set<string>>();
+  for (const mapping of manifest.analysis?.test_to_source?.mappings || []) {
+    if (mapping.test && Array.isArray(mapping.sources)) {
+      testToCoveredSources.set(mapping.test, new Set(mapping.sources));
+    }
+  }
+
   // Set of wiki pages that are actually planned
   const plannedPages = new Set(pages.map((p) => p.path));
 
-  const entries = new Map<string, { pages: Set<string>; reasons: Set<string> }>();
+  // Internal structure: source → page → Set<reason>
+  const entries = new Map<string, Map<string, Set<string>>>();
 
-  function addPage(source: string, wikPage: string, reason: string) {
-    if (!plannedPages.has(wikPage)) {
+  function addPage(source: string, wikiPage: string, reason: string) {
+    if (!plannedPages.has(wikiPage)) {
       return;
     }
-    let entry = entries.get(source);
-    if (!entry) {
-      entry = { pages: new Set(), reasons: new Set() };
-      entries.set(source, entry);
+    let pageMap = entries.get(source);
+    if (!pageMap) {
+      pageMap = new Map();
+      entries.set(source, pageMap);
     }
-    entry.pages.add(wikPage);
-    entry.reasons.add(reason);
+    let reasons = pageMap.get(wikiPage);
+    if (!reasons) {
+      reasons = new Set();
+      pageMap.set(wikiPage, reasons);
+    }
+    reasons.add(reason);
   }
 
   for (const card of manifest.files || []) {
@@ -216,9 +229,16 @@ function buildAffectedPageGraph(manifest: any, modules: any[], pages: any[]) {
       }
     }
 
-    // Test files → Testing-Strategy.md
+    // Test files → Testing-Strategy.md and covered source module pages
     if (card.category === 'test') {
       addPage(source, 'Testing-Strategy.md', 'test_coverage');
+
+      for (const coveredSource of testToCoveredSources.get(source) || []) {
+        const coveredSlug = fileToModuleSlug.get(coveredSource);
+        if (coveredSlug) {
+          addPage(source, coveredSlug, 'test_covered_module');
+        }
+      }
     }
 
     // Files participating in the dependency graph → Dependency-Map.md
@@ -258,11 +278,12 @@ function buildAffectedPageGraph(manifest: any, modules: any[], pages: any[]) {
   }
 
   const sourceToPagesArray = [...entries.entries()]
-    .filter(([, entry]) => entry.pages.size > 0)
-    .map(([source, entry]) => ({
+    .filter(([, pageMap]) => pageMap.size > 0)
+    .map(([source, pageMap]) => ({
       source,
-      pages: [...entry.pages].sort(),
-      reasons: [...entry.reasons].sort()
+      pages: [...pageMap.entries()]
+        .map(([page, reasons]) => ({ page, reasons: [...reasons].sort() }))
+        .sort((a, b) => a.page.localeCompare(b.page))
     }))
     .sort((a, b) => a.source.localeCompare(b.source));
 

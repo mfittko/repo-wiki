@@ -146,11 +146,11 @@ test('createBootstrapPlan builds affected_page_graph mapping source files to wik
     await mkdir(scanDir, { recursive: true });
 
     // Fixture:
-    //   apps/api/server.ts  → Service api module (no imports; imported by others)
-    //   apps/api/routes.ts  → Service api module (has route surfaces)
+    //   apps/api/server.ts  → Service api module (no imports; imported by client + test + routes)
+    //   apps/api/routes.ts  → Service api module (has route surfaces; imports server.ts - same module)
     //   apps/api/config.ts  → Service api module (has environment variables + auth reason)
-    //   apps/web/client.ts  → Service web module (imports apps/api/server.ts)
-    //   test/server.test.ts → test file (imports apps/api/server.ts)
+    //   apps/web/client.ts  → Service web module (imports apps/api/server.ts cross-module)
+    //   test/server.test.ts → test file (imports apps/api/server.ts; covers apps/api/server.ts)
     //   docs/guide.md       → doc card (Documentation-Debt-Report.md)
     //   prisma/schema.prisma→ data file (has model surfaces → Data-Model-and-Migrations.md)
     await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
@@ -265,6 +265,15 @@ test('createBootstrapPlan builds affected_page_graph mapping source files to wik
             // Same-module import: api/routes.ts (Service api) imports api/server.ts (same module)
             { from: 'apps/api/routes.ts', to: 'apps/api/server.ts', specifier: './server' }
           ]
+        },
+        test_to_source: {
+          mappings: [
+            {
+              test: 'test/server.test.ts',
+              sources: ['apps/api/server.ts'],
+              heuristics: ['imports']
+            }
+          ]
         }
       },
       documentation: {
@@ -290,72 +299,103 @@ test('createBootstrapPlan builds affected_page_graph mapping source files to wik
     assert.ok(typeof plan.affected_page_graph.summary.mapped_sources === 'number');
     assert.ok(typeof plan.affected_page_graph.summary.total_page_references === 'number');
 
+    // Helper: look up a source entry and build a page→reasons map for easy assertions
     const bySource = new Map(plan.affected_page_graph.source_to_pages.map((e: any) => [e.source, e]));
+    function pageReasons(entry: any, pageName: string): string[] {
+      const found = entry?.pages.find((p: any) => p.page === pageName);
+      return found ? found.reasons : [];
+    }
+    function pageNames(entry: any): string[] {
+      return (entry?.pages || []).map((p: any) => p.page);
+    }
 
     // Direct module change: apps/api/server.ts belongs to Service-api module
     const apiServer: any = bySource.get('apps/api/server.ts');
     assert.ok(apiServer, 'apps/api/server.ts should have affected pages');
-    assert.ok(apiServer.pages.includes('Service-api.md'), 'direct_module: server.ts is in Service api');
-    assert.ok(apiServer.reasons.includes('direct_module'), 'should carry direct_module reason');
+    assert.ok(pageReasons(apiServer, 'Service-api.md').includes('direct_module'),
+      'direct_module: server.ts is in Service api');
 
     // Import-transitive: client.ts (in Service web) imports server.ts → Service-web.md affected
-    assert.ok(apiServer.pages.includes('Service-web.md'), 'import_transitive: importing module page affected');
-    assert.ok(apiServer.reasons.includes('import_transitive'), 'should carry import_transitive reason');
+    assert.ok(pageReasons(apiServer, 'Service-web.md').includes('import_transitive'),
+      'import_transitive: importing module page affected when importer is in a different module');
 
     // Same-module import (routes.ts → server.ts, both in Service api) must NOT produce import_transitive
-    // for Service-api.md; direct_module already covers that page, so reasons must stay clean
-    assert.equal(apiServer.pages.filter((pg: string) => pg === 'Service-api.md').length, 1,
+    // for Service-api.md; the page appears only once with only direct_module
+    assert.equal(pageNames(apiServer).filter((pg: string) => pg === 'Service-api.md').length, 1,
       'Service-api.md must appear exactly once even when imported within the same module');
-    assert.ok(!apiServer.reasons.includes('import_transitive') ||
-      !apiServer.pages.every((pg: string) => pg !== 'Service-web.md'),
-      'import_transitive reason must come from a cross-module importer only');
+    assert.ok(!pageReasons(apiServer, 'Service-api.md').includes('import_transitive'),
+      'import_transitive must not appear on Service-api.md when the importer (routes.ts) is in the same module');
 
     // Dependency map: server.ts is imported by others
-    assert.ok(apiServer.pages.includes('Dependency-Map.md'), 'dependency_change: server.ts is in dep graph');
-    assert.ok(apiServer.reasons.includes('dependency_change'));
+    assert.ok(pageReasons(apiServer, 'Dependency-Map.md').includes('dependency_change'),
+      'dependency_change: server.ts is imported so it participates in the dep graph');
 
     // Web module: client.ts has imports → direct + dependency_change
     const webClient: any = bySource.get('apps/web/client.ts');
     assert.ok(webClient, 'apps/web/client.ts should have affected pages');
-    assert.ok(webClient.pages.includes('Service-web.md'), 'direct_module: client.ts is in Service web');
-    assert.ok(webClient.pages.includes('Dependency-Map.md'), 'dependency_change: client.ts has imports');
-    assert.ok(!webClient.pages.includes('Service-api.md'), 'client.ts should not directly affect api module page');
+    assert.ok(pageReasons(webClient, 'Service-web.md').includes('direct_module'),
+      'direct_module: client.ts is in Service web');
+    assert.ok(pageReasons(webClient, 'Dependency-Map.md').includes('dependency_change'),
+      'dependency_change: client.ts has imports');
+    assert.ok(!pageNames(webClient).includes('Service-api.md'),
+      'client.ts should not directly affect api module page');
 
     // Cross-cutting routes: routes.ts has route surfaces → API-HTTP-Routes.md
     const apiRoutes: any = bySource.get('apps/api/routes.ts');
     assert.ok(apiRoutes, 'apps/api/routes.ts should have affected pages');
-    assert.ok(apiRoutes.pages.includes('API-HTTP-Routes.md'), 'cross_cutting_routes: routes file affects HTTP routes page');
-    assert.ok(apiRoutes.reasons.includes('cross_cutting_routes'));
+    assert.ok(pageReasons(apiRoutes, 'API-HTTP-Routes.md').includes('cross_cutting_routes'),
+      'cross_cutting_routes: routes file affects HTTP routes page');
 
     // Cross-cutting config + security: config.ts has env vars and auth reason
     const apiConfig: any = bySource.get('apps/api/config.ts');
     assert.ok(apiConfig, 'apps/api/config.ts should have affected pages');
-    assert.ok(apiConfig.pages.includes('Configuration-and-Environment.md'), 'cross_cutting_config: env vars present');
-    assert.ok(apiConfig.reasons.includes('cross_cutting_config'));
-    assert.ok(apiConfig.pages.includes('Security-and-Secrets.md'), 'cross_cutting_security: auth reason present');
-    assert.ok(apiConfig.reasons.includes('cross_cutting_security'));
+    assert.ok(pageReasons(apiConfig, 'Configuration-and-Environment.md').includes('cross_cutting_config'),
+      'cross_cutting_config: env vars present');
+    assert.ok(pageReasons(apiConfig, 'Security-and-Secrets.md').includes('cross_cutting_security'),
+      'cross_cutting_security: auth reason present');
 
-    // Test file change → Testing-Strategy.md
+    // Test file change → Testing-Strategy.md AND covered source module pages
     const testFile: any = bySource.get('test/server.test.ts');
     assert.ok(testFile, 'test file should have affected pages');
-    assert.ok(testFile.pages.includes('Testing-Strategy.md'), 'test_coverage: test file affects Testing-Strategy.md');
-    assert.ok(testFile.reasons.includes('test_coverage'));
+    assert.ok(pageReasons(testFile, 'Testing-Strategy.md').includes('test_coverage'),
+      'test_coverage: test file affects Testing-Strategy.md');
+    // test_to_source maps server.test.ts → apps/api/server.ts (in Service api)
+    // so changing the test should also flag the covered module page
+    assert.ok(pageReasons(testFile, 'Service-api.md').includes('test_covered_module'),
+      'test_covered_module: test file affects the module page of the source files it covers');
+    assert.ok(!pageReasons(testFile, 'Service-api.md').includes('direct_module'),
+      'test file should not claim direct_module on the covered source module page');
 
     // Documentation file change → Documentation-Debt-Report.md
     const docFile: any = bySource.get('docs/guide.md');
     assert.ok(docFile, 'documentation file should have affected pages');
-    assert.ok(docFile.pages.includes('Documentation-Debt-Report.md'), 'docs_debt: doc file affects Documentation-Debt-Report.md');
-    assert.ok(docFile.reasons.includes('docs_debt'));
+    assert.ok(pageReasons(docFile, 'Documentation-Debt-Report.md').includes('docs_debt'),
+      'docs_debt: doc file affects Documentation-Debt-Report.md');
 
     // Data model file change → Data-Model-and-Migrations.md
     const schemaFile: any = bySource.get('prisma/schema.prisma');
     assert.ok(schemaFile, 'data model file should have affected pages');
-    assert.ok(schemaFile.pages.includes('Data-Model-and-Migrations.md'), 'cross_cutting_data_model: model surfaces present');
-    assert.ok(schemaFile.reasons.includes('cross_cutting_data_model'));
+    assert.ok(pageReasons(schemaFile, 'Data-Model-and-Migrations.md').includes('cross_cutting_data_model'),
+      'cross_cutting_data_model: model surfaces present');
 
     // source_to_pages is deterministically sorted by source path
     const sources: string[] = plan.affected_page_graph.source_to_pages.map((e: any) => e.source);
     assert.deepEqual(sources, [...sources].sort(), 'source_to_pages must be sorted by source path');
+
+    // Each page entry's reasons array must itself be sorted
+    for (const entry of plan.affected_page_graph.source_to_pages) {
+      for (const pageEntry of entry.pages) {
+        assert.deepEqual(pageEntry.reasons, [...pageEntry.reasons].sort(),
+          `reasons for ${entry.source} → ${pageEntry.page} must be sorted`);
+      }
+    }
+
+    // pages within each source entry must be sorted by page name
+    for (const entry of plan.affected_page_graph.source_to_pages) {
+      const names = entry.pages.map((p: any) => p.page);
+      assert.deepEqual(names, [...names].sort(),
+        `pages for ${entry.source} must be sorted by page name`);
+    }
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
