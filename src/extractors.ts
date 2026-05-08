@@ -546,7 +546,7 @@ function extractRubySymbols(content: string): string[] {
       scopeStack.push({ kind: 'block', name: null });
     }
 
-    const endCount = normalizedLine.match(/\bend\b/g)?.length || 0;
+    const endCount = countRubyEndKeywords(normalizedLine);
     for (let index = 0; index < endCount; index += 1) {
       if (scopeStack.length > 0) {
         scopeStack.pop();
@@ -647,7 +647,7 @@ function extractRubyHeredocDelimiters(line: string) {
   const delimiters: string[] = [];
   const code = stripRubyQuotedStrings(stripRubyInlineComment(line));
 
-  for (const match of code.matchAll(/<<[-~]?\s*['"]?([A-Za-z_][A-Za-z0-9_]*)['"]?/g)) {
+  for (const match of code.matchAll(/<<[-~]?['"]?([A-Za-z_][A-Za-z0-9_]*)['"]?/g)) {
     const delimiter = match[1];
     const before = code.slice(0, match.index ?? 0).trimEnd();
     if (delimiter === 'self' && /\bclass\s*$/.test(before)) {
@@ -738,6 +738,10 @@ function countRubyBlockOpeners(line: string) {
   }
 
   return count;
+}
+
+function countRubyEndKeywords(line: string) {
+  return line.match(/(?:^|;)\s*end\b/g)?.length || 0;
 }
 
 function extractPythonImports(content: string): string[] {

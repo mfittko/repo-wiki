@@ -281,6 +281,8 @@ module RepoWiki
     DEFAULT_LIMIT ||= 50
 
     def run
+      status = :end
+      items << value
       if true
         [1].each do |value|
           case value
@@ -330,6 +332,9 @@ class Worker
   end
 end
 
+class AfterAppend
+end
+
 class Other
 end
 
@@ -340,6 +345,7 @@ end
 
   assert.deepEqual(extractImports(rubySource, 'Ruby'), ['./lib/service', './support/helpers', 'json', 'openssl']);
   assert.deepEqual(extractSymbols(rubySource, 'Ruby'), [
+    'AfterAppend',
     'Other',
     'RepoWiki',
     'RepoWiki.configure',
