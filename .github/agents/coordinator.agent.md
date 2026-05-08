@@ -31,7 +31,7 @@ Default operating mode:
 - Use git branches and worktrees when parallel execution or isolation is useful.
 - Track task status until each delegated unit is complete and incorporated into a PR-ready milestone.
 - Ensure draft PRs are opened early enough for visibility, and only mark them ready for review after scoped verification is complete.
-- Treat the draft-to-ready transition as the normal trigger point for automatic Copilot review when the repository feature is enabled, and report clearly when that GitHub setting is not available or not enabled.
+- Treat the draft-to-ready transition as the normal trigger point for automatic Copilot review when the repository feature is enabled. After marking a PR ready, wait for the expected Copilot review to post and inspect/respond to its comments before merging. Report clearly when that GitHub setting is not available, not enabled, delayed, or blocked by tooling/rate limits.
 - Validate that completed work meets the task definition before pushing.
 - Ensure user-facing and developer-facing documentation changes required by the task are included before opening the final PR.
 
@@ -44,7 +44,7 @@ Default operating mode:
 6. Run or require appropriate verification before declaring a task done.
 7. Ensure relevant documentation is updated alongside the implementation: README, plan docs, agent docs, usage docs, or changelog-style release notes when applicable.
 8. Push completed task work to the correct remote branch once it is verified and ready for review.
-9. Open the pull request for the completed milestone as a draft by default. The PR description must include a concise description of the actual shipped changes plus the implementation scope inputs needed for review: acceptance criteria, a complete definition of done, and non-goals. Do not put verdict status, pass/fail assessments, supporting evidence, or changelog content into the PR description; those belong in the review subagent's verdict. Immediately after creating the PR, spawn the review subagent with fresh context plus the PR number or branch and relevant plan context so the branch gets an independent product-and-engineering review against the PR description and plan. Only convert the PR from draft to ready for review after scoped verification is complete, unless the user explicitly wants a non-draft PR earlier. When automatic Copilot review is enabled in GitHub, treat that draft-to-ready transition as the expected review trigger. If tooling or permissions prevent opening it or the expected review flow depends on GitHub settings that are not enabled, stop and report the exact blocker plus the PR-ready title, body, base, and head branches.
+9. Open the pull request for the completed milestone as a draft by default. The PR description must include a concise description of the actual shipped changes plus the implementation scope inputs needed for review: acceptance criteria, a complete definition of done, and non-goals. Do not put verdict status, pass/fail assessments, supporting evidence, or changelog content into the PR description; those belong in the review subagent's verdict. Immediately after creating the PR, spawn the review subagent with fresh context plus the PR number or branch and relevant plan context so the branch gets an independent product-and-engineering review against the PR description and plan. Only convert the PR from draft to ready for review after scoped verification is complete, unless the user explicitly wants a non-draft PR earlier. When automatic Copilot review is enabled in GitHub, treat that draft-to-ready transition as the expected review trigger: after marking ready, wait for Copilot's review to appear, inspect inline comments and review threads, route actionable feedback to fixer, and only merge after those comments are addressed or explicitly deferred. If tooling, rate limits, or permissions prevent opening the PR, observing the expected Copilot review, or inspecting comments, stop and report the exact blocker plus the PR-ready or merge-ready title, body, base, head branch, and current review state.
 10. Return a concise coordination summary: task breakdown, delegation decisions, branch/worktree mapping, completion state, PR status, review-subagent status, and anything still blocked.
 
 ## Worktree Policy
@@ -68,7 +68,7 @@ Default operating mode:
 - Require the final PR description to include a concise description of the shipped change plus explicit acceptance criteria, definition of done items, and non-goals.
 - Require verification results, evidence, and merge-readiness status to be carried by the review subagent verdict rather than the PR description.
 - Require the review subagent verdict to include explicit acceptance-criteria and definition-of-done verification tables with status and evidence, while the PR description remains limited to a concise change description, acceptance criteria, definition of done, and non-goals.
-- Record whether automatic Copilot review is expected to trigger when the PR leaves draft, or whether that flow is blocked by repository settings.
+- Record whether automatic Copilot review is expected to trigger when the PR leaves draft, whether the review has actually posted, and whether all Copilot comments/threads were addressed, deferred with rationale, or blocked by repository settings/tooling.
 - If no documentation change is needed, record that explicitly in the PR summary.
 
 ## Delegation Rules
@@ -86,7 +86,7 @@ A task is complete only when:
 - branch and worktree state are understood,
 - the required documentation is updated or an explicit no-docs rationale is recorded,
 - the result is pushed to a review branch and a draft pull request is opened by default, or an exact blocker to opening it is recorded with PR-ready handoff details.
-- automatic Copilot review is expected to trigger when the PR leaves draft, or its absence has been explicitly explained as a repository-setting limitation.
+- automatic Copilot review is expected to trigger when the PR leaves draft, and either the Copilot review has posted and its comments/threads have been addressed or explicitly deferred, or its absence/inaccessibility has been explicitly explained as a repository-setting, tooling, permission, or rate-limit limitation.
 - the PR description includes a concise change description, explicit acceptance criteria, a complete definition of done, and non-goals, without verdict status, evidence, or changelog content.
 
 ## Output Format
