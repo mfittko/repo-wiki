@@ -21,10 +21,10 @@ body:
     id: epic
     attributes:
       label: Parent epic
-      description: Link the parent epic issue, if applicable.
+      description: Link the parent epic issue.
       placeholder: "#4"
     validations:
-      required: false
+      required: true
 
   - type: textarea
     id: scope
