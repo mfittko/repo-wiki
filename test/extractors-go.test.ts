@@ -270,8 +270,58 @@ type Set[T comparable] struct{ m map[T]struct{} }
 });
 
 // ---------------------------------------------------------------------------
-// Caching: calling symbols then exported_symbols with the same content
+// Comma-separated const/var declarations
 // ---------------------------------------------------------------------------
+test('extractSymbols captures all identifiers in comma-separated const and var declarations', () => {
+  const src = `package p
+var Alpha, Beta int
+const Gamma, Delta = 1, 2
+var (
+\tOne, Two int
+)
+const (
+\tThree, Four = 3, 4
+)
+`;
+  const symbols = extractSymbols(src, 'Go');
+  // single-line var
+  assert.ok(symbols.includes('Alpha'), 'Alpha from single var');
+  assert.ok(symbols.includes('Beta'), 'Beta from single var');
+  // single-line const
+  assert.ok(symbols.includes('Gamma'), 'Gamma from single const');
+  assert.ok(symbols.includes('Delta'), 'Delta from single const');
+  // var block multi-name
+  assert.ok(symbols.includes('One'), 'One from var block');
+  assert.ok(symbols.includes('Two'), 'Two from var block');
+  // const block multi-name
+  assert.ok(symbols.includes('Three'), 'Three from const block');
+  assert.ok(symbols.includes('Four'), 'Four from const block');
+});
+
+test('extractExportedSymbols captures all identifiers in comma-separated const and var declarations', () => {
+  const src = `package p
+var Alpha, Beta int
+const Gamma, Delta = 1, 2
+var (
+\tOne, Two int
+)
+const (
+\tThree, Four = 3, 4
+)
+`;
+  const exported = extractExportedSymbols(src, 'Go');
+  const names = exported.map((e) => e.name);
+  assert.ok(names.includes('Alpha') && exported.find((e) => e.name === 'Alpha')?.kind === 'var');
+  assert.ok(names.includes('Beta') && exported.find((e) => e.name === 'Beta')?.kind === 'var');
+  assert.ok(names.includes('Gamma') && exported.find((e) => e.name === 'Gamma')?.kind === 'const');
+  assert.ok(names.includes('Delta') && exported.find((e) => e.name === 'Delta')?.kind === 'const');
+  assert.ok(names.includes('One') && exported.find((e) => e.name === 'One')?.kind === 'var');
+  assert.ok(names.includes('Two') && exported.find((e) => e.name === 'Two')?.kind === 'var');
+  assert.ok(names.includes('Three') && exported.find((e) => e.name === 'Three')?.kind === 'const');
+  assert.ok(names.includes('Four') && exported.find((e) => e.name === 'Four')?.kind === 'const');
+});
+
+
 test('extractSymbols and extractExportedSymbols share cached Go declarations', () => {
   const src = `package cache\n\nfunc Foo() {}\nfunc bar() {}\n`;
   const symbols = extractSymbols(src, 'Go');

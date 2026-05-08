@@ -709,30 +709,40 @@ function computeGoDeclarations(content: string): GoDeclarations {
     addSymbol(name, kind);
   }
 
-  // Single const declaration: const Name ...
-  for (const match of content.matchAll(/^const\s+([A-Za-z_]\w*)\b/mg)) {
-    addSymbol(match[1], 'const');
-  }
-
-  // Single var declaration: var Name ...
-  for (const match of content.matchAll(/^var\s+([A-Za-z_]\w*)\b/mg)) {
-    addSymbol(match[1], 'var');
-  }
-
-  // Const block: const (\n  Name ...\n)
-  // The lazy [\s\S]*? stops at the first ) that is at the start of a line (^, m flag),
-  // which is gofmt's convention for closing parentheses.
-  for (const match of content.matchAll(/^const\s*\(([\s\S]*?)^\)/mg)) {
-    for (const nameMatch of match[1].matchAll(/^[ \t]+([A-Za-z_]\w*)\b/mg)) {
-      addSymbol(nameMatch[1], 'const');
+  // Single const declaration: const Name1, Name2, ... [type] [= ...]
+  // Skip block form (starts with `(`). Capture the full identifier list and parse it.
+  for (const match of content.matchAll(/^const\s+(?!\()(.+)/mg)) {
+    for (const name of parseGoNameList(match[1])) {
+      addSymbol(name, 'const');
     }
   }
 
-  // Var block: var (\n  Name ...\n)
+  // Single var declaration: var Name1, Name2, ... [type] [= ...]
+  // Skip block form (starts with `(`). Capture the full identifier list and parse it.
+  for (const match of content.matchAll(/^var\s+(?!\()(.+)/mg)) {
+    for (const name of parseGoNameList(match[1])) {
+      addSymbol(name, 'var');
+    }
+  }
+
+  // Const block: const (\n  Name1, Name2, ...\n)
+  // The lazy [\s\S]*? stops at the first ) that is at the start of a line (^, m flag),
+  // which is gofmt's convention for closing parentheses.
+  for (const match of content.matchAll(/^const\s*\(([\s\S]*?)^\)/mg)) {
+    for (const lineMatch of match[1].matchAll(/^[ \t]+(.+)/mg)) {
+      for (const name of parseGoNameList(lineMatch[1])) {
+        addSymbol(name, 'const');
+      }
+    }
+  }
+
+  // Var block: var (\n  Name1, Name2, ...\n)
   // Same lazy-stop-at-line-start-) strategy as the const block above.
   for (const match of content.matchAll(/^var\s*\(([\s\S]*?)^\)/mg)) {
-    for (const nameMatch of match[1].matchAll(/^[ \t]+([A-Za-z_]\w*)\b/mg)) {
-      addSymbol(nameMatch[1], 'var');
+    for (const lineMatch of match[1].matchAll(/^[ \t]+(.+)/mg)) {
+      for (const name of parseGoNameList(lineMatch[1])) {
+        addSymbol(name, 'var');
+      }
     }
   }
 
@@ -742,4 +752,29 @@ function computeGoDeclarations(content: string): GoDeclarations {
       .sort((a, b) => a.name.localeCompare(b.name) || a.kind.localeCompare(b.kind))
       .slice(0, 50)
   };
+}
+
+/**
+ * Parse a comma-separated identifier list from the head of a Go const/var declaration.
+ *
+ * Examples:
+ *   "Alpha, Beta int"       → ["Alpha", "Beta"]
+ *   "Gamma, Delta = 1, 2"  → ["Gamma", "Delta"]
+ *   "statusInternal = 500"  → ["statusInternal"]
+ *
+ * Splitting on commas and stopping at the first segment that does not begin with
+ * an identifier handles both plain lists and lists that are followed by a type or
+ * assignment.  The comma after `=` in `A, B = 1, 2` starts a value, not a name,
+ * so `2` fails the identifier test and the loop terminates.
+ */
+function parseGoNameList(segment: string): string[] {
+  const names: string[] = [];
+  for (const part of segment.split(',')) {
+    const m = part.trimStart().match(/^([A-Za-z_]\w*)/);
+    if (!m) {
+      break;
+    }
+    names.push(m[1]);
+  }
+  return names;
 }
