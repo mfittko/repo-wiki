@@ -36,6 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Update the main repository implementation to match the pull request scope.
 - map tests to source modules — E2E coverage gaps + Related tests in module pages.
 - LLM provider boundary and prompt templates.
+- validate documented commands against package.json and CI workflows.
 
 ### Fixed
 - Complete deterministic scanner coverage for NestJS, Koa, tRPC, GraphQL, and OpenAPI API surfaces (including GraphQL field-config resolver mapping).
