@@ -719,14 +719,17 @@ function computeGoDeclarations(content: string): GoDeclarations {
     addSymbol(match[1], 'var');
   }
 
-  // Const block: const (\n  Name ...\n)  — closing ) must be on its own line (gofmt)
+  // Const block: const (\n  Name ...\n)
+  // The lazy [\s\S]*? stops at the first ) that is at the start of a line (^, m flag),
+  // which is gofmt's convention for closing parentheses.
   for (const match of content.matchAll(/^const\s*\(([\s\S]*?)^\)/mg)) {
     for (const nameMatch of match[1].matchAll(/^[ \t]+([A-Za-z_]\w*)\b/mg)) {
       addSymbol(nameMatch[1], 'const');
     }
   }
 
-  // Var block: var (\n  Name ...\n)  — closing ) must be on its own line (gofmt)
+  // Var block: var (\n  Name ...\n)
+  // Same lazy-stop-at-line-start-) strategy as the const block above.
   for (const match of content.matchAll(/^var\s*\(([\s\S]*?)^\)/mg)) {
     for (const nameMatch of match[1].matchAll(/^[ \t]+([A-Za-z_]\w*)\b/mg)) {
       addSymbol(nameMatch[1], 'var');
