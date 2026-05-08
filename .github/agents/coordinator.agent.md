@@ -60,6 +60,7 @@ Default operating mode:
 - Default to draft pull requests first, then mark ready for review only after verification passes and the milestone is genuinely reviewable.
 - If work started on `main` and has become non-trivial, move to a task branch before declaring the milestone complete unless the user explicitly requests a direct-to-`main` workflow.
 - When creating or editing issue/PR descriptions or comments, prefer `--body-file` / `-F` or stdin over inline shell strings; use heredocs or temp files for multi-line content and do not interpolate untrusted text directly into shell commands.
+- To assign Copilot to a GitHub issue, use `gh issue edit <number> --add-assignee copilot-swe-agent`. Do not attempt `@github-copilot` mention comments — those do not trigger Copilot task assignment.
 
 ## Documentation Policy
 - Treat documentation as part of the deliverable, not a follow-up task.
