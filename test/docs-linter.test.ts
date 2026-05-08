@@ -5,7 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { scanRepository } from '../src/scanner.js';
 import { lintDocs } from '../src/docs-linter.js';
-import { classifyDocumentedCommands, extractCiCommands } from '../src/docs-ingestor.js';
+import { classifyDocumentedCommands, extractCiCommands, extractDocumentedFilePaths } from '../src/docs-ingestor.js';
 import { compileWiki } from '../src/compiler.js';
 
 test('documentation ingestion produces documentation cards and lint issues', async () => {
@@ -31,12 +31,21 @@ test('documentation ingestion produces documentation cards and lint issues', asy
     const readmeCard = scan.manifest.documentation.files.find((doc) => doc.path === 'README.md');
     assert.ok(readmeCard.validation.env_vars.includes('MY_API_TOKEN'));
     assert.ok(readmeCard.links.includes('docs/old.md'));
+    assert.ok(readmeCard.file_paths.some((reference) => reference.path === 'docs/old.md'));
 
     const lint = await lintDocs({ scanDir, repoPath: dir });
     assert.ok(lint.summary.warnings + lint.summary.errors >= 1);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test('extractDocumentedFilePaths extracts deterministic markdown link and inline code path references', () => {
+  const refs = extractDocumentedFilePaths('# Paths\n\nSee [plan](docs/PLAN.md), `src/cli.ts`, and `npm run build`.\n\n```bash\ncat missing.md\n```\n');
+  assert.deepEqual(refs, [
+    { path: 'docs/PLAN.md', line: 3, source: 'link' },
+    { path: 'src/cli.ts', line: 3, source: 'inline_code' }
+  ]);
 });
 
 test('classifyDocumentedCommands validates known package scripts, flags missing scripts, and marks unknowns', () => {
@@ -216,6 +225,75 @@ test('lintDocs and Documentation Debt Report validate exact commands from CI wor
     await compileWiki({ scanDir, planFile, wikiDir });
     const report = await readFile(path.join(wikiDir, 'Documentation-Debt-Report.md'), 'utf8');
     assert.match(report, /\| `npm run ci-only` \| ✅ validated \| CI workflow \|/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintDocs reports broken documented file paths and unvalidated environment variables', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-path-env-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await mkdir(path.join(dir, 'src'), { recursive: true });
+    await mkdir(path.join(dir, 'docs', 'plans'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: {
+        ingest: true,
+        include: ['README.md'],
+        exclude: [],
+        stale_after_days: 9999
+      }
+    }), 'utf8');
+    await writeFile(path.join(dir, 'src', 'app.js'), "export const mode = process.env.APP_MODE;\nconst baseUrl = optionalEnv(env, 'LLMWIKI_LLM_BASE_URL');\n", 'utf8');
+    await writeFile(path.join(dir, 'docs', 'plans', 'README.md'), '# Plans\n', 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee `src/app.js`, `docs/plans/`, `docs/missing.md`, and configure APP_MODE, MISSING_TOKEN, or LLMWIKI_LLM_BASE_URL.\n', 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    const brokenPathIssues = lint.issues.filter((i) => i.code === 'broken-documented-file-path');
+    assert.equal(brokenPathIssues.length, 1);
+    assert.match(brokenPathIssues[0].message, /README\.md:3 references missing repository path docs\/missing\.md/);
+
+    const envIssues = lint.issues.filter((i) => i.code === 'unvalidated-env-var');
+    assert.equal(envIssues.length, 1);
+    assert.match(envIssues[0].message, /MISSING_TOKEN/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('Documentation Debt Report includes file path and environment variable validation', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-debt-path-env-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await mkdir(path.join(dir, 'src'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: {
+        ingest: true,
+        include: ['README.md'],
+        exclude: [],
+        stale_after_days: 9999
+      }
+    }), 'utf8');
+    await writeFile(path.join(dir, 'src', 'app.js'), 'export const mode = process.env.APP_MODE;\n', 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee `src/app.js` and `docs/missing.md`. Configure APP_MODE and MISSING_TOKEN.\n', 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+    const wikiDir = path.join(dir, '.llmwiki', 'wiki');
+    const planFile = path.join(dir, '.llmwiki', 'plan.json');
+    await writeFile(planFile, JSON.stringify({ pages: [], modules: [] }), 'utf8');
+    await compileWiki({ scanDir, planFile, wikiDir });
+
+    const report = await readFile(path.join(wikiDir, 'Documentation-Debt-Report.md'), 'utf8');
+    assert.match(report, /## File path validation/);
+    assert.match(report, /\| `README\.md:3` \| `src\/app\.js` \| ✅ valid \| `src\/app\.js` \|/);
+    assert.match(report, /\| `README\.md:3` \| `docs\/missing\.md` \| ❌ missing \| not found \|/);
+    assert.match(report, /## Environment variable validation/);
+    assert.match(report, /\| `README\.md` \| `APP_MODE` \| ✅ validated \|/);
+    assert.match(report, /\| `README\.md` \| `MISSING_TOKEN` \| ❓ unvalidated \|/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

@@ -215,7 +215,8 @@ export function extractEnvironmentVariables(content: string, language: string): 
     /process\.env(?:\?\.|\.)\s*([A-Za-z_][A-Za-z0-9_]*)/g,
     /process\.env\s*\[\s*['"]([A-Za-z_][A-Za-z0-9_]*)['"]\s*\]/g,
     /import\.meta\.env(?:\?\.|\.)\s*([A-Za-z_][A-Za-z0-9_]*)/g,
-    /import\.meta\.env\s*\[\s*['"]([A-Za-z_][A-Za-z0-9_]*)['"]\s*\]/g
+    /import\.meta\.env\s*\[\s*['"]([A-Za-z_][A-Za-z0-9_]*)['"]\s*\]/g,
+    /\b(?:optionalEnv|requiredEnv)\s*\(\s*[A-Za-z_$][\w$]*\s*,\s*['"]([A-Za-z_][A-Za-z0-9_]*)['"]\s*\)/g
   ];
 
   for (const pattern of directPatterns) {

@@ -17,6 +17,12 @@ export type CommandClassification = {
   script_name?: string;
 };
 
+export type DocumentedFilePath = {
+  path: string;
+  line: number;
+  source: 'link' | 'inline_code';
+};
+
 /**
  * Extract npm/shell commands from CI workflow YAML content.
  * Parses `run:` lines and `command:` matrix fields.
@@ -129,6 +135,7 @@ export async function createDocumentationCard({ file, content, config, repoPath 
   const headings = extractHeadings(content);
   const links = extractMarkdownLinks(content);
   const codeBlocks = extractCodeBlocks(content);
+  const filePaths = extractDocumentedFilePaths(content);
   const claims = extractDocumentationClaims(content);
   const validation = validateDocClaims({ claims, content, filePath: file.relative });
   const ageDays = Math.floor((Date.now() - stats.mtimeMs) / 86_400_000);
@@ -146,6 +153,7 @@ export async function createDocumentationCard({ file, content, config, repoPath 
     headings,
     links,
     code_blocks: codeBlocks,
+    file_paths: filePaths,
     claims,
     validation,
     status: stale ? 'stale' : validation.contradictions.length ? 'contradicted' : validation.validated.length ? 'partially_validated' : 'unvalidated'
@@ -183,7 +191,7 @@ export function validateDocClaims({ claims, content, filePath }) {
   }
 
   for (const match of content.matchAll(/\b[A-Z][A-Z0-9_]{2,}\b/g)) {
-    if (/(_KEY|_TOKEN|_SECRET|_URL|_HOST|_PORT|_ID)$/i.test(match[0])) envVars.push(match[0]);
+    if (isEnvironmentVariableMention(match[0])) envVars.push(match[0]);
   }
 
   for (const claim of claims) {
@@ -208,6 +216,12 @@ export function validateDocClaims({ claims, content, filePath }) {
       file: filePath
     }
   };
+}
+
+function isEnvironmentVariableMention(value: string) {
+  if (!value.includes('_')) return false;
+  if (/^(README|TODO|HTTP|HTTPS|JSON|YAML|CLI|API)$/.test(value)) return false;
+  return /^[A-Z][A-Z0-9_]{2,}$/.test(value);
 }
 
 function extractWorkflowCommandValue(value: string, lines: string[], lineIndex: number, baseIndent: number): { parts: string[]; lastLineIndex: number } {
@@ -299,6 +313,69 @@ function splitShellCommand(command: string, recognizedOnly = true): string[] {
   parts.push(current.trim());
 
   return parts.filter((part) => part && (!recognizedOnly || /^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(part)));
+}
+
+export function extractDocumentedFilePaths(content: string): DocumentedFilePath[] {
+  const results: DocumentedFilePath[] = [];
+  const seen = new Set<string>();
+  const lines = content.split('\n');
+  let inFence = false;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (/^\s*```/.test(line)) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+
+    for (const match of line.matchAll(/!?\[[^\]]*\]\(([^)]+)\)/g)) {
+      const target = cleanPathCandidate(match[1]);
+      if (isDocumentedPathCandidate(target, true)) {
+        pushDocumentedPath(results, seen, { path: target, line: index + 1, source: 'link' });
+      }
+    }
+
+    for (const match of line.matchAll(/`([^`]+)`/g)) {
+      const target = cleanPathCandidate(match[1]);
+      if (isDocumentedPathCandidate(target, false)) {
+        pushDocumentedPath(results, seen, { path: target, line: index + 1, source: 'inline_code' });
+      }
+    }
+  }
+
+  return results.slice(0, 200);
+}
+
+function pushDocumentedPath(results: DocumentedFilePath[], seen: Set<string>, value: DocumentedFilePath) {
+  const key = `${value.path}\0${value.line}\0${value.source}`;
+  if (!seen.has(key)) {
+    seen.add(key);
+    results.push(value);
+  }
+}
+
+function cleanPathCandidate(value: string) {
+  return value
+    .trim()
+    .replace(/^<|>$/g, '')
+    .split('#')[0]
+    .split('?')[0]
+    .replace(/^['"]|['"]$/g, '')
+    .trim();
+}
+
+function isDocumentedPathCandidate(value: string, fromLink: boolean) {
+  if (!value || value.startsWith('#') || /^(https?:|mailto:|tel:)/i.test(value)) return false;
+  if (/[{}*]/.test(value)) return false;
+  if (/\s/.test(value)) return false;
+  if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(value)) return false;
+  if (value.startsWith('/')) return false;
+  if (value.includes('..')) return true;
+  if (value.startsWith('./') || value.startsWith('../')) return true;
+  if (value.includes('/')) return true;
+  if (fromLink) return true;
+  return /^(?:[A-Z]+\.)?[^/]+\.(?:md|mdx|markdown|ts|tsx|js|jsx|mjs|cjs|json|ya?ml|toml|rs|go|py|rb|java|kt|cs|php|prisma|sql|sh|bash|env|txt)$/i.test(value);
 }
 
 function extractHeadings(content) {

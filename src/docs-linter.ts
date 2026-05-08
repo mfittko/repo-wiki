@@ -10,6 +10,9 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
   const issues = [];
   const docs = manifest.documentation?.files || [];
   const repoRoot = path.resolve(repoPath);
+  const manifestFiles = new Set<string>((manifest.files || []).map((file) => normalizeRepoPath(file.path)));
+  const manifestDirectories = collectManifestDirectories(manifestFiles);
+  const knownEnvVars = collectKnownEnvironmentVariables(manifest);
 
   // Collect merged package scripts from manifest analysis
   const allPackageScripts = mergePackageScripts(manifest);
@@ -60,6 +63,27 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
       }
     }
 
+    for (const reference of doc.file_paths || []) {
+      const resolved = resolveDocumentedPath(reference.path, doc.path, manifestFiles, manifestDirectories);
+      if (!resolved.valid) {
+        issues.push(issue(
+          config.lint?.broken_file_references || 'warning',
+          'broken-documented-file-path',
+          `${doc.path}:${reference.line} references missing repository path ${reference.path}.`
+        ));
+      }
+    }
+
+    for (const envVar of doc.validation?.env_vars || []) {
+      if (!knownEnvVars.has(envVar)) {
+        issues.push(issue(
+          config.lint?.unvalidated_env_vars || 'warning',
+          'unvalidated-env-var',
+          `${doc.path} mentions ${envVar}, but scanner/config analysis did not find matching source usage.`
+        ));
+      }
+    }
+
     for (const link of doc.links || []) {
       if (link.startsWith('http') || link.startsWith('#') || link.startsWith('mailto:')) continue;
       const target = link.split('#')[0];
@@ -91,4 +115,65 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
 function issue(level, code, message) {
   const normalized = level === 'error' ? 'error' : 'warning';
   return { level: normalized, code, message };
+}
+
+function resolveDocumentedPath(referencePath: string, docPath: string, files: Set<string>, directories: Set<string>) {
+  const candidates = candidateRepoPaths(referencePath, docPath);
+  for (const candidate of candidates) {
+    if (files.has(candidate) || directories.has(candidate)) {
+      return { valid: true, path: candidate };
+    }
+  }
+  return { valid: false, path: candidates[0] || referencePath };
+}
+
+function candidateRepoPaths(referencePath: string, docPath: string) {
+  const cleaned = normalizeRepoPath(referencePath.replace(/^\.\//, ''));
+  const docRelative = normalizeRepoPath(path.posix.normalize(path.posix.join(path.posix.dirname(normalizeRepoPath(docPath)), referencePath)));
+  return [...new Set([cleaned, docRelative].filter((candidate) => candidate && candidate !== '.'))];
+}
+
+function normalizeRepoPath(filePath: string) {
+  return String(filePath || '').replaceAll('\\', '/').replace(/^\/+/, '').replace(/\/+$/, '');
+}
+
+function collectManifestDirectories(files: Set<string>) {
+  const dirs = new Set<string>();
+  for (const file of files) {
+    let current = path.posix.dirname(file);
+    while (current && current !== '.') {
+      dirs.add(current);
+      current = path.posix.dirname(current);
+    }
+  }
+  return dirs;
+}
+
+function collectKnownEnvironmentVariables(manifest) {
+  const names = new Set<string>();
+  for (const file of manifest.files || []) {
+    for (const name of file.environment_variables || []) {
+      names.add(name);
+    }
+  }
+  collectConfigEnvironmentVariables(manifest.config, names);
+  return names;
+}
+
+function collectConfigEnvironmentVariables(value, names: Set<string>) {
+  if (typeof value === 'string') {
+    if (/^[A-Z][A-Z0-9_]{2,}$/.test(value)) {
+      names.add(value);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    for (const entry of value) collectConfigEnvironmentVariables(entry, names);
+    return;
+  }
+  if (value && typeof value === 'object') {
+    for (const entry of Object.values(value)) {
+      collectConfigEnvironmentVariables(entry, names);
+    }
+  }
 }

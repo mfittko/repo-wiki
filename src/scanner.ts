@@ -130,7 +130,7 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     base_ref: baseRef || null,
     head_ref: headRef || commit,
     generated_at: new Date().toISOString(),
-    config: { documentation: config.documentation, lint: config.lint, wiki: config.wiki },
+    config: { documentation: config.documentation, compiler: config.compiler, lint: config.lint, wiki: config.wiki },
     totals: summarize(cards, documentationCards),
     analysis,
     documentation: {
@@ -221,6 +221,7 @@ function summarizeDocumentation(cards: any[]) {
   let claims = 0;
   let commands = 0;
   let envVars = 0;
+  let filePaths = 0;
 
   for (const card of cards || []) {
     statuses[card.status] = (statuses[card.status] || 0) + 1;
@@ -228,7 +229,8 @@ function summarizeDocumentation(cards: any[]) {
     claims += card.claims?.length || 0;
     commands += card.validation?.commands?.length || 0;
     envVars += card.validation?.env_vars?.length || 0;
+    filePaths += card.file_paths?.length || 0;
   }
 
-  return { files: cards.length, statuses, stale, claims, commands, env_vars: envVars };
+  return { files: cards.length, statuses, stale, claims, commands, env_vars: envVars, file_paths: filePaths };
 }
