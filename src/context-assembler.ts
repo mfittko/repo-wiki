@@ -30,7 +30,6 @@ const DOC_EXCERPT_LIMITS = {
   claims: 2,
   commands: 3
 };
-const CARD_OVERHEAD_CHARS = 48;
 
 export function assembleAllPageContexts({ manifest, plan, budget }: { manifest: any; plan: any; budget?: Partial<PageContextBudget> }) {
   return (plan?.pages || []).map((page: any) => assemblePageContext({ manifest, plan, page, budget }));
@@ -65,7 +64,15 @@ export function assemblePageContext({ manifest, plan, page, budget }: AssemblePa
       omitted.excerpts.push(`source:${card.path}`);
     }
 
-    const estimatedChars = estimateCardChars(card.path, truncatedExcerpt.value);
+    const sourceInput = {
+      path: card.path,
+      category: card.category,
+      language: card.language,
+      reasons: uniqueSorted(card.reasons || []),
+      runtime_hints: uniqueSorted(card.runtime_hints || []),
+      excerpt: truncatedExcerpt.value
+    };
+    const estimatedChars = estimateInputChars(sourceInput);
     if (usedChars + estimatedChars > limits.maxChars) {
       omitted.source_cards.push(card.path);
       omitted.reasons.push('max_chars_exceeded');
@@ -73,14 +80,7 @@ export function assemblePageContext({ manifest, plan, page, budget }: AssemblePa
     }
 
     usedChars += estimatedChars;
-    source_inputs.push({
-      path: card.path,
-      category: card.category,
-      language: card.language,
-      reasons: uniqueSorted(card.reasons || []),
-      runtime_hints: uniqueSorted(card.runtime_hints || []),
-      excerpt: truncatedExcerpt.value
-    });
+    source_inputs.push(sourceInput);
   }
 
   for (const card of selectedDocs) {
@@ -95,7 +95,14 @@ export function assemblePageContext({ manifest, plan, page, budget }: AssemblePa
       omitted.excerpts.push(`docs:${card.path}`);
     }
 
-    const estimatedChars = estimateCardChars(card.path, truncatedExcerpt.value);
+    const documentationInput = {
+      path: card.path,
+      status: card.status,
+      authority: card.authority,
+      stale: Boolean(card.stale),
+      excerpt: truncatedExcerpt.value
+    };
+    const estimatedChars = estimateInputChars(documentationInput);
     if (usedChars + estimatedChars > limits.maxChars) {
       omitted.documentation_cards.push(card.path);
       omitted.reasons.push('max_chars_exceeded');
@@ -103,13 +110,7 @@ export function assemblePageContext({ manifest, plan, page, budget }: AssemblePa
     }
 
     usedChars += estimatedChars;
-    documentation_inputs.push({
-      path: card.path,
-      status: card.status,
-      authority: card.authority,
-      stale: Boolean(card.stale),
-      excerpt: truncatedExcerpt.value
-    });
+    documentation_inputs.push(documentationInput);
   }
 
   if (selectedSources.length > limits.maxSourceCards) {
@@ -325,8 +326,8 @@ function truncateText(value: string, maxChars: number) {
   return { value: `${value.slice(0, maxChars - 1)}…`, truncated: true };
 }
 
-function estimateCardChars(pathValue: string, excerpt: string) {
-  return String(pathValue).length + excerpt.length + CARD_OVERHEAD_CHARS;
+function estimateInputChars(input: unknown) {
+  return JSON.stringify(input).length;
 }
 
 const SECRET_LIKE_PATTERNS = [
@@ -341,7 +342,7 @@ const SECRET_LIKE_PATTERNS = [
 function redactSecretLikeText(value: unknown) {
   let output = String(value || '');
   for (const pattern of SECRET_LIKE_PATTERNS) {
-    output = output.replace(pattern, (match, prefix) => prefix ? `${prefix}[REDACTED]` : '[REDACTED]');
+    output = output.replace(pattern, (_match, prefix) => typeof prefix === 'string' ? `${prefix}[REDACTED]` : '[REDACTED]');
   }
   return output;
 }

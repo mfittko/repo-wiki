@@ -147,6 +147,7 @@ test('assemblePageContext redacts secret-like documentation excerpt values', () 
   const readme = context.documentation_inputs.find((doc: any) => doc.path === 'README.md');
   assert.ok(readme, 'expected README documentation input');
   assert.match(readme.excerpt, /\[REDACTED\]/);
+  assert.doesNotMatch(readme.excerpt, /\d+\[REDACTED\]/);
   assert.doesNotMatch(readme.excerpt, /ghp_[A-Za-z0-9_]+/);
   assert.doesNotMatch(readme.excerpt, /super-secret-value/);
 });
@@ -182,7 +183,7 @@ test('assemblePageContext tracks documentation omissions from character budget a
     plan,
     page: { path: 'Open-Questions.md', phase: 'foundation' },
     budget: {
-      maxChars: 80,
+      maxChars: 110,
       maxDocumentationCards: 10,
       maxExcerptChars: 1
     }
@@ -190,6 +191,8 @@ test('assemblePageContext tracks documentation omissions from character budget a
 
   assert.equal(context.documentation_inputs.length, 1);
   assert.equal(context.documentation_inputs[0].excerpt, '…');
+  assert.equal(context.budget.usedChars, JSON.stringify(context.documentation_inputs[0]).length);
+  assert.ok(context.budget.usedChars <= context.budget.maxChars);
   assert.deepEqual(context.omitted.documentation_cards, ['docs/guide.md']);
   assert.ok(context.omitted.excerpts.includes('docs:README.md'));
   assert.ok(context.omitted.reasons.includes('max_chars_exceeded'));
