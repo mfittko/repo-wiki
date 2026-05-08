@@ -7,6 +7,7 @@ const JAVASCRIPT_LANGUAGES = new Set([
   'TypeScript React'
 ]);
 const PYTHON_LANGUAGE = 'Python';
+const RUBY_LANGUAGE = 'Ruby';
 const SYMBOL_LIMIT = 50;
 
 const GO_LANGUAGE = 'Go';
@@ -70,6 +71,10 @@ export function extractImports(content: string, language: string): string[] {
     return extractPythonImports(content);
   }
 
+  if (isRuby(language)) {
+    return extractRubyImports(content);
+  }
+
   if (!isJavaScriptLike(language)) {
     return [];
   }
@@ -101,6 +106,10 @@ export function extractSymbols(content: string, language: string): string[] {
 
   if (isPython(language)) {
     return extractPythonSymbols(content);
+  }
+
+  if (isRuby(language)) {
+    return extractRubySymbols(content);
   }
 
   if (!isJavaScriptLike(language)) {
@@ -441,6 +450,294 @@ function isJavaScriptLike(language) {
 
 function isPython(language: string) {
   return language === PYTHON_LANGUAGE;
+}
+
+function isRuby(language: string) {
+  return language === RUBY_LANGUAGE;
+}
+
+function extractRubyImports(content: string): string[] {
+  const imports = new Set<string>();
+  const code = stripRubyComments(content);
+
+  for (const match of code.matchAll(/(?:^|\n)[ \t]*require[ \t]*(?:\([ \t]*)?['"]([^'"\n]+)['"]/g)) {
+    const specifier = match[1].trim();
+    if (specifier) {
+      imports.add(specifier);
+    }
+  }
+
+  for (const match of code.matchAll(/(?:^|\n)[ \t]*require_relative[ \t]*(?:\([ \t]*)?['"]([^'"\n]+)['"]/g)) {
+    const specifier = match[1].trim();
+    if (!specifier) {
+      continue;
+    }
+    imports.add(specifier.startsWith('.') ? specifier : `./${specifier}`);
+  }
+
+  return [...imports].sort();
+}
+
+function extractRubySymbols(content: string): string[] {
+  const symbols = new Set<string>();
+  const scopeStack: Array<{ kind: 'module' | 'class' | 'singleton' | 'def' | 'block'; name: string | null }> = [];
+  const lines = stripRubyComments(content).split(/\r?\n/);
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (!line) {
+      continue;
+    }
+
+    const moduleMatch = line.match(/^module\s+([A-Z][A-Za-z0-9_]*(?:::[A-Z][A-Za-z0-9_]*)*)\b/);
+    if (moduleMatch) {
+      const name = resolveRubyScopedName(moduleMatch[1], scopeStack);
+      symbols.add(name);
+      scopeStack.push({ kind: 'module', name });
+    }
+
+    if (/^class\s+<<\s*self\b/.test(line)) {
+      scopeStack.push({ kind: 'singleton', name: currentRubyNamespace(scopeStack) });
+    } else {
+      const classMatch = line.match(/^class\s+([A-Z][A-Za-z0-9_]*(?:::[A-Z][A-Za-z0-9_]*)*)\b/);
+      if (classMatch) {
+        const name = resolveRubyScopedName(classMatch[1], scopeStack);
+        symbols.add(name);
+        scopeStack.push({ kind: 'class', name });
+      }
+    }
+
+    const defMatch = line.match(/^def\s+((?:self|[A-Z][A-Za-z0-9_:]*)\.)?([A-Za-z_][A-Za-z0-9_]*[!?=]?|[+\-*/%<>=~`|^&]+)(?=\s|$|;)/);
+    if (defMatch) {
+      const receiverPrefix = defMatch[1];
+      const methodName = defMatch[2];
+      let methodSymbol = methodName;
+
+      if (receiverPrefix) {
+        const receiverRaw = receiverPrefix.slice(0, -1);
+        const receiver = receiverRaw === 'self'
+          ? (currentRubyClassScope(scopeStack) || currentRubyNamespace(scopeStack) || 'self')
+          : resolveRubyScopedName(receiverRaw, scopeStack);
+        methodSymbol = `${receiver}.${methodName}`;
+      } else {
+        const singletonScope = currentRubySingletonScope(scopeStack);
+        if (singletonScope) {
+          methodSymbol = `${singletonScope}.${methodName}`;
+        } else {
+          const classScope = currentRubyClassScope(scopeStack);
+          if (classScope) {
+            methodSymbol = `${classScope}#${methodName}`;
+          }
+        }
+      }
+
+      symbols.add(methodSymbol);
+      scopeStack.push({ kind: 'def', name: null });
+    }
+
+    const constantMatch = line.match(/^([A-Z][A-Za-z0-9_]*)(?:\s*=(?!=)|\s*\|\|=)/);
+    if (constantMatch) {
+      symbols.add(qualifyRubyConstant(constantMatch[1], scopeStack));
+    }
+
+    const normalizedLine = stripRubyQuotedStrings(line);
+    const blockOpenerCount = countRubyBlockOpeners(normalizedLine);
+    for (let index = 0; index < blockOpenerCount; index += 1) {
+      scopeStack.push({ kind: 'block', name: null });
+    }
+
+    const endCount = normalizedLine.match(/\bend\b/g)?.length || 0;
+    for (let index = 0; index < endCount; index += 1) {
+      if (scopeStack.length > 0) {
+        scopeStack.pop();
+      }
+    }
+  }
+
+  return [...symbols].sort().slice(0, SYMBOL_LIMIT);
+}
+
+function resolveRubyScopedName(name: string, scopeStack: Array<{ kind: 'module' | 'class' | 'singleton' | 'def' | 'block'; name: string | null }>) {
+  const normalized = name.replace(/^::/, '');
+  if (normalized.includes('::')) {
+    return normalized;
+  }
+
+  const namespace = currentRubyNamespace(scopeStack);
+  return namespace ? `${namespace}::${normalized}` : normalized;
+}
+
+function currentRubyNamespace(scopeStack: Array<{ kind: 'module' | 'class' | 'singleton' | 'def' | 'block'; name: string | null }>) {
+  for (let index = scopeStack.length - 1; index >= 0; index -= 1) {
+    const scope = scopeStack[index];
+    if ((scope.kind === 'module' || scope.kind === 'class') && scope.name) {
+      return scope.name;
+    }
+  }
+  return null;
+}
+
+function currentRubyClassScope(scopeStack: Array<{ kind: 'module' | 'class' | 'singleton' | 'def' | 'block'; name: string | null }>) {
+  for (let index = scopeStack.length - 1; index >= 0; index -= 1) {
+    const scope = scopeStack[index];
+    if (scope.kind === 'class' && scope.name) {
+      return scope.name;
+    }
+  }
+  return null;
+}
+
+function currentRubySingletonScope(scopeStack: Array<{ kind: 'module' | 'class' | 'singleton' | 'def' | 'block'; name: string | null }>) {
+  for (let index = scopeStack.length - 1; index >= 0; index -= 1) {
+    const scope = scopeStack[index];
+    if (scope.kind === 'singleton') {
+      return scope.name;
+    }
+  }
+  return null;
+}
+
+function qualifyRubyConstant(name: string, scopeStack: Array<{ kind: 'module' | 'class' | 'singleton' | 'def' | 'block'; name: string | null }>) {
+  const namespace = currentRubyNamespace(scopeStack);
+  return namespace ? `${namespace}::${name}` : name;
+}
+
+function stripRubyComments(content: string) {
+  const lines = content.split(/\r?\n/);
+  const strippedLines: string[] = [];
+  let inBlockComment = false;
+  const heredocDelimiters: string[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (heredocDelimiters.length > 0) {
+      if (trimmed === heredocDelimiters[0]) {
+        heredocDelimiters.shift();
+      }
+      strippedLines.push('');
+      continue;
+    }
+
+    if (inBlockComment) {
+      if (/^\s*=end\b/.test(line)) {
+        inBlockComment = false;
+      }
+      strippedLines.push('');
+      continue;
+    }
+
+    if (/^\s*=begin\b/.test(line)) {
+      inBlockComment = true;
+      strippedLines.push('');
+      continue;
+    }
+
+    for (const delimiter of extractRubyHeredocDelimiters(line)) {
+      heredocDelimiters.push(delimiter);
+    }
+
+    strippedLines.push(stripRubyInlineComment(line));
+  }
+
+  return strippedLines.join('\n');
+}
+
+function extractRubyHeredocDelimiters(line: string) {
+  const delimiters: string[] = [];
+  const code = stripRubyQuotedStrings(stripRubyInlineComment(line));
+
+  for (const match of code.matchAll(/<<[-~]?\s*['"]?([A-Za-z_][A-Za-z0-9_]*)['"]?/g)) {
+    const delimiter = match[1];
+    const before = code.slice(0, match.index ?? 0).trimEnd();
+    if (delimiter === 'self' && /\bclass\s*$/.test(before)) {
+      continue;
+    }
+    delimiters.push(delimiter);
+  }
+
+  return delimiters;
+}
+
+function stripRubyInlineComment(line: string) {
+  let result = '';
+  let quote: '"' | "'" | '`' | null = null;
+
+  for (let charIndex = 0; charIndex < line.length; charIndex += 1) {
+    const current = line[charIndex];
+
+    if (quote) {
+      result += current;
+      if (current === '\\') {
+        charIndex += 1;
+        result += line[charIndex] || '';
+        continue;
+      }
+      if (current === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (current === '"' || current === "'" || current === '`') {
+      quote = current;
+      result += current;
+      continue;
+    }
+
+    if (current === '#') {
+      break;
+    }
+
+    result += current;
+  }
+
+  return result;
+}
+
+function stripRubyQuotedStrings(line: string) {
+  let result = '';
+  let quote: '"' | "'" | '`' | null = null;
+
+  for (let charIndex = 0; charIndex < line.length; charIndex += 1) {
+    const current = line[charIndex];
+
+    if (quote) {
+      if (current === '\\') {
+        charIndex += 1;
+        continue;
+      }
+      if (current === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (current === '"' || current === "'" || current === '`') {
+      quote = current;
+      continue;
+    }
+
+    result += current;
+  }
+
+  return result;
+}
+
+function countRubyBlockOpeners(line: string) {
+  const normalized = line.trim();
+  let count = 0;
+  const opensKeywordBlock = /^(?:if|unless|case|begin|for|while|until)\b/.test(normalized);
+
+  if (opensKeywordBlock) {
+    count += 1;
+  }
+
+  if (!opensKeywordBlock) {
+    count += normalized.match(/\bdo\b/g)?.length || 0;
+  }
+
+  return count;
 }
 
 function extractPythonImports(content: string): string[] {

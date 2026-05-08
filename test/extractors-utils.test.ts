@@ -233,9 +233,18 @@ test('language detection and classification cover the major path cases', () => {
   assert.equal(detectLanguage('src/component.tsx'), 'TypeScript React');
   assert.equal(detectLanguage('src/module.py'), 'Python');
   assert.equal(detectLanguage('src/lib.rs'), 'Rust');
+  assert.equal(detectLanguage('src/module.rb'), 'Ruby');
+  assert.equal(detectLanguage('Gemfile'), 'Ruby');
+  assert.equal(detectLanguage('apps\\worker\\Gemfile'), 'Ruby');
+  assert.equal(detectLanguage('Rakefile'), 'Ruby');
+  assert.equal(detectLanguage('app/config.ru'), 'Ruby');
+  assert.equal(detectLanguage('repo-wiki.gemspec'), 'Ruby');
   assert.equal(detectLanguage('README'), 'Text');
 
   assert.equal(classifyPath('tests/foo.spec.ts'), 'test');
+  assert.equal(classifyPath('spec/models/user_spec.rb'), 'test');
+  assert.equal(classifyPath('app\\spec\\models\\user_spec.rb'), 'test');
+  assert.equal(classifyPath('src/models/user_test.rb'), 'test');
   assert.equal(classifyPath('.github/workflows/ci.yml'), 'ci');
   assert.equal(classifyPath('docs/guide.md'), 'docs');
   assert.equal(classifyPath('db/migrations/001.sql'), 'data');
@@ -243,6 +252,128 @@ test('language detection and classification cover the major path cases', () => {
   assert.equal(classifyPath('ops/infra/main.tf'), 'infra');
   assert.equal(classifyPath('package-lock.json'), 'package');
   assert.equal(classifyPath('src/index.ts'), 'source');
+});
+
+test('ruby extraction captures requires, modules, classes, methods, singleton methods, constants, and malformed fallback', () => {
+  const rubySource = `
+# require 'ignored'
+require "json"
+require 'openssl' if config.ssl?
+require_relative 'lib/service'
+require_relative("./support/helpers") unless production?
+
+module RepoWiki
+  VERSION = "1.0.0"
+  TimeoutError = Class.new(StandardError)
+  BANNER = <<~TEXT
+    require "hidden"
+    module Hidden
+    end
+  TEXT
+
+  class << self
+    def configure
+      true
+    end
+  end
+
+  class Scanner
+    DEFAULT_LIMIT ||= 50
+
+    def run
+      if true
+        [1].each do |value|
+          case value
+          when 1
+            true
+          end
+        end
+      end
+      true
+    end
+
+    def self.build
+      new
+    end
+
+    class << self
+      def from_config
+        build
+      end
+    end
+  end
+end
+
+execute <<~SQL
+  require "ignored_sql"
+  module IgnoredSql
+  end
+SQL
+
+logger.debug(<<~TEXT)
+  def fake_method
+  end
+TEXT
+
+=begin
+require "ignored_block"
+class IgnoredBlock
+end
+=end
+
+class Worker
+  def perform!
+    while ready do
+      tick
+    end
+    true
+  end
+end
+
+class Other
+end
+
+def top_level_method?
+  true
+end
+`;
+
+  assert.deepEqual(extractImports(rubySource, 'Ruby'), ['./lib/service', './support/helpers', 'json', 'openssl']);
+  assert.deepEqual(extractSymbols(rubySource, 'Ruby'), [
+    'Other',
+    'RepoWiki',
+    'RepoWiki.configure',
+    'RepoWiki::BANNER',
+    'RepoWiki::Scanner',
+    'RepoWiki::Scanner#run',
+    'RepoWiki::Scanner.build',
+    'RepoWiki::Scanner.from_config',
+    'RepoWiki::Scanner::DEFAULT_LIMIT',
+    'RepoWiki::TimeoutError',
+    'RepoWiki::VERSION',
+    'Worker',
+    'Worker#perform!',
+    'top_level_method?'
+  ]);
+
+  const malformedRuby = `
+module Broken
+  class Worker
+    def perform
+      true
+def self.recover
+  true
+BROKEN_CONST = 1
+`;
+
+  assert.doesNotThrow(() => extractSymbols(malformedRuby, 'Ruby'));
+  assert.deepEqual(extractSymbols(malformedRuby, 'Ruby'), [
+    'Broken',
+    'Broken::Worker',
+    'Broken::Worker#perform',
+    'Broken::Worker.recover',
+    'Broken::Worker::BROKEN_CONST'
+  ]);
 });
 
 test('python extraction captures imports, classes, functions, async functions, constants, and malformed input fallback', () => {

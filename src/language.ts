@@ -15,6 +15,9 @@ const extensionMap = new Map([
   ['.java', 'Java'],
   ['.kt', 'Kotlin'],
   ['.rb', 'Ruby'],
+  ['.rake', 'Ruby'],
+  ['.ru', 'Ruby'],
+  ['.gemspec', 'Ruby'],
   ['.php', 'PHP'],
   ['.cs', 'C#'],
   ['.sql', 'SQL'],
@@ -24,9 +27,14 @@ const extensionMap = new Map([
 
 export function detectLanguage(filePath) {
   const lower = filePath.toLowerCase();
+  const base = lower.split(/[\\/]/).pop() || lower;
 
   if (lower.endsWith('dockerfile') || lower.includes('/dockerfile')) {
     return 'Dockerfile';
+  }
+
+  if (base === 'gemfile' || base === 'rakefile') {
+    return 'Ruby';
   }
 
   const ext = lower.includes('.') ? lower.slice(lower.lastIndexOf('.')) : '';
@@ -35,8 +43,9 @@ export function detectLanguage(filePath) {
 
 export function classifyPath(filePath) {
   const lower = filePath.toLowerCase();
+  const isRubyTestFile = /(?:^|[\\/])spec[\\/].+\.rb$/.test(lower) || /_test\.rb$/.test(lower);
 
-  if (lower.includes('/test/') || lower.includes('/tests/') || /\.(test|spec)\.[mc]?[jt]sx?$/.test(lower)) {
+  if (/[\\/]test[\\/]/.test(lower) || /[\\/]tests[\\/]/.test(lower) || /\.(test|spec)\.[mc]?[jt]sx?$/.test(lower) || isRubyTestFile) {
     return 'test';
   }
 
