@@ -232,6 +232,7 @@ test('language detection and classification cover the major path cases', () => {
   assert.equal(detectLanguage('Dockerfile'), 'Dockerfile');
   assert.equal(detectLanguage('src/component.tsx'), 'TypeScript React');
   assert.equal(detectLanguage('src/module.py'), 'Python');
+  assert.equal(detectLanguage('src/lib.rs'), 'Rust');
   assert.equal(detectLanguage('README'), 'Text');
 
   assert.equal(classifyPath('tests/foo.spec.ts'), 'test');

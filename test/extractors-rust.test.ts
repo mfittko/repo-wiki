@@ -1,0 +1,136 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { promises as fs } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { extractImports, extractSymbols, extractExportedSymbols } from '../src/extractors.js';
+import { scanRepository } from '../src/scanner.js';
+
+const rustSource = `
+use std::collections::{HashMap, HashSet};
+use crate::models::{self, User as DomainUser};
+use super::helpers::*;
+pub use serde::{Deserialize, Serialize};
+
+pub mod api;
+mod internal;
+
+pub struct Service;
+struct Local;
+
+pub enum Status { Ready, Busy }
+enum LocalState { Init }
+
+pub trait Handler {
+    fn handle(&self);
+}
+trait PrivateTrait {}
+
+pub const MAX_RETRIES: usize = 3;
+const CACHE_KEY: &str = "cache:key";
+
+pub static APP_NAME: &str = "repo-wiki";
+static mut COUNTER: usize = 0;
+
+pub async fn run() {}
+fn helper() {}
+
+impl Service {
+    pub fn new() -> Self { Service }
+}
+
+impl Handler for Service {
+    fn handle(&self) {}
+}
+
+impl<T> From<T> for Service where T: Into<String> {
+    fn from(_value: T) -> Self { Service }
+}
+`;
+
+test('extractImports returns deterministic Rust use metadata', () => {
+  assert.deepEqual(extractImports(rustSource, 'Rust'), [
+    'crate::models',
+    'crate::models::User',
+    'serde::Deserialize',
+    'serde::Serialize',
+    'std::collections::HashMap',
+    'std::collections::HashSet',
+    'super::helpers::*'
+  ]);
+});
+
+test('extractSymbols and extractExportedSymbols extract Rust items and impl blocks', () => {
+  const symbols = extractSymbols(rustSource, 'Rust');
+  assert.ok(symbols.includes('Service'));
+  assert.ok(symbols.includes('Status'));
+  assert.ok(symbols.includes('Handler'));
+  assert.ok(symbols.includes('api'));
+  assert.ok(symbols.includes('MAX_RETRIES'));
+  assert.ok(symbols.includes('APP_NAME'));
+  assert.ok(symbols.includes('COUNTER'));
+  assert.ok(symbols.includes('run'));
+  assert.ok(symbols.includes('helper'));
+  assert.ok(symbols.includes('impl Service'));
+  assert.ok(symbols.includes('impl Service for Handler'));
+  assert.ok(symbols.includes('impl Service for From<T>'));
+
+  const exported = extractExportedSymbols(rustSource, 'Rust');
+  assert.deepEqual(exported, [
+    { name: 'api', kind: 'mod' },
+    { name: 'APP_NAME', kind: 'static' },
+    { name: 'Handler', kind: 'trait' },
+    { name: 'MAX_RETRIES', kind: 'const' },
+    { name: 'run', kind: 'fn' },
+    { name: 'Service', kind: 'struct' },
+    { name: 'Status', kind: 'enum' }
+  ]);
+});
+
+test('Rust extraction is parse-error tolerant', () => {
+  const malformed = `
+pub fn still_works() {}
+impl Broken {
+pub struct Recovered;
+use crate::broken::{self, Item;
+`;
+
+  assert.doesNotThrow(() => extractImports(malformed, 'Rust'));
+  assert.doesNotThrow(() => extractSymbols(malformed, 'Rust'));
+  assert.doesNotThrow(() => extractExportedSymbols(malformed, 'Rust'));
+
+  assert.ok(extractSymbols(malformed, 'Rust').includes('still_works'));
+  assert.ok(extractSymbols(malformed, 'Rust').includes('Recovered'));
+});
+
+test('scanRepository produces Rust source cards with import and item metadata', async () => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-rust-test-'));
+
+  try {
+    await fs.mkdir(path.join(dir, 'src'), { recursive: true });
+    await fs.writeFile(path.join(dir, 'src', 'lib.rs'), rustSource, 'utf8');
+
+    const out = path.join(dir, '.llmwiki', 'run');
+    const result = await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: out });
+    const card = result.manifest.files.find((file) => file.path === 'src/lib.rs');
+
+    assert.ok(card, 'lib.rs card should exist');
+    assert.equal(card.language, 'Rust');
+    assert.deepEqual(card.imports, [
+      'crate::models',
+      'crate::models::User',
+      'serde::Deserialize',
+      'serde::Serialize',
+      'std::collections::HashMap',
+      'std::collections::HashSet',
+      'super::helpers::*'
+    ]);
+    assert.ok(card.symbols.includes('Service'));
+    assert.ok(card.symbols.includes('impl Service'));
+    assert.ok(card.symbols.includes('impl Service for Handler'));
+    assert.ok(card.exported_symbols.some((entry) => entry.name === 'Service' && entry.kind === 'struct'));
+    assert.ok(card.exported_symbols.some((entry) => entry.name === 'run' && entry.kind === 'fn'));
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});

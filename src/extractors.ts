@@ -10,6 +10,7 @@ const PYTHON_LANGUAGE = 'Python';
 const SYMBOL_LIMIT = 50;
 
 const GO_LANGUAGE = 'Go';
+const RUST_LANGUAGE = 'Rust';
 
 const ROUTE_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'all', 'use'];
 const NEST_ROUTE_DECORATORS = ['Get', 'Post', 'Put', 'Patch', 'Delete', 'Options', 'Head', 'All'];
@@ -34,6 +35,12 @@ type GoDeclarations = {
   exported: Array<{ name: string; kind: string }>;
 };
 
+type RustDeclarations = {
+  imports: string[];
+  allSymbols: string[];
+  exported: Array<{ name: string; kind: string }>;
+};
+
 let lastJavaScriptAstMetadata: {
   content: string;
   language: string;
@@ -45,9 +52,18 @@ let lastGoDeclarations: {
   declarations: GoDeclarations;
 } | null = null;
 
+let lastRustDeclarations: {
+  content: string;
+  declarations: RustDeclarations;
+} | null = null;
+
 export function extractImports(content: string, language: string): string[] {
   if (language === GO_LANGUAGE) {
     return extractGoImports(content);
+  }
+
+  if (language === RUST_LANGUAGE) {
+    return getRustDeclarations(content).imports;
   }
 
   if (isPython(language)) {
@@ -77,6 +93,10 @@ export function extractImports(content: string, language: string): string[] {
 export function extractSymbols(content: string, language: string): string[] {
   if (language === GO_LANGUAGE) {
     return getGoDeclarations(content).allSymbols;
+  }
+
+  if (language === RUST_LANGUAGE) {
+    return getRustDeclarations(content).allSymbols;
   }
 
   if (isPython(language)) {
@@ -118,6 +138,10 @@ export function extractSymbols(content: string, language: string): string[] {
 export function extractExportedSymbols(content: string, language: string): Array<{ name: string; kind: string }> {
   if (language === GO_LANGUAGE) {
     return getGoDeclarations(content).exported;
+  }
+
+  if (language === RUST_LANGUAGE) {
+    return getRustDeclarations(content).exported;
   }
 
   if (!isJavaScriptLike(language)) {
@@ -1875,4 +1899,349 @@ function parseGoNameList(segment: string): string[] {
     names.push(m[1]);
   }
   return names;
+}
+
+function getRustDeclarations(content: string): RustDeclarations {
+  if (lastRustDeclarations?.content === content) {
+    return lastRustDeclarations.declarations;
+  }
+
+  const declarations = computeRustDeclarations(content);
+  lastRustDeclarations = { content, declarations };
+  return declarations;
+}
+
+function computeRustDeclarations(content: string): RustDeclarations {
+  const code = stripRustCommentsAndLiterals(content);
+  const imports = new Set<string>();
+  const symbols = new Set<string>();
+  const exported: Array<{ name: string; kind: string }> = [];
+  const seenExported = new Set<string>();
+
+  const addSymbol = (name: string, kind: string, isExported = false) => {
+    symbols.add(name);
+    if (isExported) {
+      pushExportedSymbol(exported, seenExported, { name, kind });
+    }
+  };
+
+  for (const match of code.matchAll(/^(?:pub(?:\([^)]*\))?\s+)?use\s+([\s\S]*?);/mg)) {
+    for (const specifier of expandRustUseSpec(match[1])) {
+      imports.add(specifier);
+    }
+  }
+
+  for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:unsafe\s+)?(?:const\s+)?fn\s+([A-Za-z_]\w*)\b/mg)) {
+    addSymbol(match[2], 'fn', Boolean(match[1]));
+  }
+
+  for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?struct\s+([A-Za-z_]\w*)\b/mg)) {
+    addSymbol(match[2], 'struct', Boolean(match[1]));
+  }
+
+  for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?enum\s+([A-Za-z_]\w*)\b/mg)) {
+    addSymbol(match[2], 'enum', Boolean(match[1]));
+  }
+
+  for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?(?:unsafe\s+)?trait\s+([A-Za-z_]\w*)\b/mg)) {
+    addSymbol(match[2], 'trait', Boolean(match[1]));
+  }
+
+  for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?mod\s+([A-Za-z_]\w*)\b/mg)) {
+    addSymbol(match[2], 'mod', Boolean(match[1]));
+  }
+
+  for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?const\s+([A-Za-z_]\w*)\b/mg)) {
+    addSymbol(match[2], 'const', Boolean(match[1]));
+  }
+
+  for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?static(?:\s+mut)?\s+([A-Za-z_]\w*)\b/mg)) {
+    addSymbol(match[2], 'static', Boolean(match[1]));
+  }
+
+  for (const match of code.matchAll(/^impl(?:\s*<[^>{;]*>)?\s+([\s\S]*?)\{/mg)) {
+    const implName = normalizeRustImplName(match[1]);
+    if (implName) {
+      addSymbol(implName, 'impl');
+    }
+  }
+
+  return {
+    imports: [...imports].sort(),
+    allSymbols: [...symbols].sort().slice(0, SYMBOL_LIMIT),
+    exported: exported
+      .sort((left, right) => left.name.localeCompare(right.name) || left.kind.localeCompare(right.kind))
+      .slice(0, SYMBOL_LIMIT)
+  };
+}
+
+function stripRustCommentsAndLiterals(content: string): string {
+  let output = '';
+  let index = 0;
+  let blockCommentDepth = 0;
+
+  while (index < content.length) {
+    const char = content[index];
+    const next = content[index + 1];
+
+    if (blockCommentDepth > 0) {
+      if (char === '/' && next === '*') {
+        blockCommentDepth += 1;
+        output += '  ';
+        index += 2;
+        continue;
+      }
+
+      if (char === '*' && next === '/') {
+        blockCommentDepth -= 1;
+        output += '  ';
+        index += 2;
+        continue;
+      }
+
+      output += char === '\n' ? '\n' : ' ';
+      index += 1;
+      continue;
+    }
+
+    if (char === '/' && next === '/') {
+      output += '  ';
+      index += 2;
+      while (index < content.length && content[index] !== '\n') {
+        output += ' ';
+        index += 1;
+      }
+      continue;
+    }
+
+    if (char === '/' && next === '*') {
+      blockCommentDepth = 1;
+      output += '  ';
+      index += 2;
+      continue;
+    }
+
+    if (char === '"' || (char === 'r' && isRustRawStringStart(content, index))) {
+      const end = findRustStringEnd(content, index);
+      output += ' ';
+      for (let cursor = index + 1; cursor < end; cursor += 1) {
+        output += content[cursor] === '\n' ? '\n' : ' ';
+      }
+      if (end < content.length) {
+        output += ' ';
+      }
+      index = Math.min(end + 1, content.length);
+      continue;
+    }
+
+    output += char;
+    index += 1;
+  }
+
+  return output;
+}
+
+function isRustRawStringStart(content: string, index: number) {
+  if (content[index] !== 'r') {
+    return false;
+  }
+
+  let cursor = index + 1;
+  while (cursor < content.length && content[cursor] === '#') {
+    cursor += 1;
+  }
+  return content[cursor] === '"';
+}
+
+function findRustStringEnd(content: string, start: number) {
+  if (content[start] === '"') {
+    let cursor = start + 1;
+    while (cursor < content.length) {
+      if (content[cursor] === '\\') {
+        cursor += 2;
+        continue;
+      }
+      if (content[cursor] === '"') {
+        return cursor;
+      }
+      cursor += 1;
+    }
+    return content.length;
+  }
+
+  if (!isRustRawStringStart(content, start)) {
+    return start;
+  }
+
+  let cursor = start + 1;
+  while (content[cursor] === '#') {
+    cursor += 1;
+  }
+  const hashes = content.slice(start + 1, cursor);
+  cursor += 1; // opening quote
+  const endDelimiter = `"${hashes}`;
+  const end = content.indexOf(endDelimiter, cursor);
+  return end >= 0 ? end + endDelimiter.length - 1 : content.length;
+}
+
+function expandRustUseSpec(spec: string): string[] {
+  const imports = new Set<string>();
+
+  const expand = (segment: string, prefix = '') => {
+    const trimmed = segment.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    const groups = splitTopLevel(trimmed, ',');
+    if (groups.length > 1) {
+      for (const group of groups) {
+        expand(group, prefix);
+      }
+      return;
+    }
+
+    const braceIndex = findTopLevelBrace(trimmed);
+    if (braceIndex >= 0) {
+      const beforeBrace = trimmed.slice(0, braceIndex).replace(/::\s*$/, '').trim();
+      const inner = trimmed.slice(braceIndex + 1, findMatchingBrace(trimmed, braceIndex));
+      const nextPrefix = beforeBrace ? joinRustPath(prefix, beforeBrace) : prefix;
+      for (const child of splitTopLevel(inner, ',')) {
+        expand(child, nextPrefix);
+      }
+      return;
+    }
+
+    const withoutAlias = trimmed.replace(/\s+as\s+[A-Za-z_]\w*\s*$/, '').trim();
+    const value = withoutAlias === 'self'
+      ? prefix
+      : joinRustPath(prefix, withoutAlias);
+
+    if (value) {
+      imports.add(normalizeRustPath(value));
+    }
+  };
+
+  expand(spec);
+  return [...imports].sort();
+}
+
+function splitTopLevel(value: string, delimiter: string): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let depthParen = 0;
+  let depthBracket = 0;
+  let depthBrace = 0;
+  let depthAngle = 0;
+
+  for (const char of value) {
+    if (char === '(') depthParen += 1;
+    else if (char === ')' && depthParen > 0) depthParen -= 1;
+    else if (char === '[') depthBracket += 1;
+    else if (char === ']' && depthBracket > 0) depthBracket -= 1;
+    else if (char === '{') depthBrace += 1;
+    else if (char === '}' && depthBrace > 0) depthBrace -= 1;
+    else if (char === '<') depthAngle += 1;
+    else if (char === '>' && depthAngle > 0) depthAngle -= 1;
+
+    if (
+      char === delimiter
+      && depthParen === 0
+      && depthBracket === 0
+      && depthBrace === 0
+      && depthAngle === 0
+    ) {
+      parts.push(current);
+      current = '';
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (current) {
+    parts.push(current);
+  }
+
+  return parts;
+}
+
+function findTopLevelBrace(value: string) {
+  let depthParen = 0;
+  let depthBracket = 0;
+  let depthAngle = 0;
+
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+
+    if (char === '(') depthParen += 1;
+    else if (char === ')' && depthParen > 0) depthParen -= 1;
+    else if (char === '[') depthBracket += 1;
+    else if (char === ']' && depthBracket > 0) depthBracket -= 1;
+    else if (char === '<') depthAngle += 1;
+    else if (char === '>' && depthAngle > 0) depthAngle -= 1;
+    else if (char === '{' && depthParen === 0 && depthBracket === 0 && depthAngle === 0) {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+function findMatchingBrace(value: string, openIndex: number) {
+  let depth = 0;
+  for (let index = openIndex; index < value.length; index += 1) {
+    const char = value[index];
+    if (char === '{') {
+      depth += 1;
+    } else if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return index;
+      }
+    }
+  }
+  return value.length - 1;
+}
+
+function joinRustPath(prefix: string, suffix: string) {
+  const normalizedSuffix = normalizeRustPath(suffix);
+  if (!normalizedSuffix) {
+    return normalizeRustPath(prefix);
+  }
+  if (!prefix) {
+    return normalizedSuffix;
+  }
+  if (normalizedSuffix.startsWith('::')) {
+    return normalizedSuffix;
+  }
+  return normalizeRustPath(`${prefix}::${normalizedSuffix}`);
+}
+
+function normalizeRustPath(pathValue: string) {
+  return pathValue
+    .replace(/\s+/g, '')
+    .replace(/:+/g, '::')
+    .replace(/;+$/, '')
+    .trim();
+}
+
+function normalizeRustImplName(raw: string) {
+  const compact = raw.replace(/\s+/g, ' ').trim();
+  if (!compact) {
+    return null;
+  }
+
+  const withoutWhere = compact.replace(/\s+where\s+[\s\S]*$/, '').trim();
+  const forIndex = withoutWhere.indexOf(' for ');
+  if (forIndex >= 0) {
+    const traitName = withoutWhere.slice(0, forIndex).trim();
+    const typeName = withoutWhere.slice(forIndex + 5).trim();
+    if (!traitName || !typeName) {
+      return null;
+    }
+    return `impl ${typeName} for ${traitName}`;
+  }
+
+  return `impl ${withoutWhere}`;
 }
