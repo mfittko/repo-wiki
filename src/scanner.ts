@@ -8,6 +8,7 @@ import {
   detectRuntimeHints,
   extractEnvironmentVariables,
   extractExportedSymbols,
+  extractGoPackage,
   extractImports,
   extractRouteSurfaces,
   extractSymbols
@@ -59,6 +60,7 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
       content = isTextCandidate ? buffer.toString('utf8') : '';
     }
     const packageMetadata = content ? extractPackageMetadata(file.relative, content) : null;
+    const goPackage = (language === 'Go' && content) ? extractGoPackage(content, language) : null;
     const imports = content ? extractImports(content, language) : [];
     const symbols = content ? extractSymbols(content, language) : [];
     const exportedSymbols = content ? extractExportedSymbols(content, language) : [];
@@ -81,6 +83,7 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
       route_surfaces: routeSurfaces,
       runtime_hints: runtimeHints,
       ...(packageMetadata || {}),
+      ...(goPackage !== null ? { go_package: goPackage } : {}),
       skipped_content: !content,
       reasons: inferReasons(file.relative, kind, content, { environmentVariables, routeSurfaces })
     };

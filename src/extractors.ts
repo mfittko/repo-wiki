@@ -7,6 +7,8 @@ const JAVASCRIPT_LANGUAGES = new Set([
   'TypeScript React'
 ]);
 
+const GO_LANGUAGE = 'Go';
+
 const ROUTE_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'all', 'use'];
 
 type RuntimeHintMetadata = {
@@ -19,13 +21,27 @@ type JavaScriptAstMetadata = {
   exported: Array<{ name: string; kind: string }>;
 };
 
+type GoDeclarations = {
+  allSymbols: string[];
+  exported: Array<{ name: string; kind: string }>;
+};
+
 let lastJavaScriptAstMetadata: {
   content: string;
   language: string;
   metadata: JavaScriptAstMetadata | null;
 } | null = null;
 
+let lastGoDeclarations: {
+  content: string;
+  declarations: GoDeclarations;
+} | null = null;
+
 export function extractImports(content: string, language: string): string[] {
+  if (language === GO_LANGUAGE) {
+    return extractGoImports(content);
+  }
+
   if (!isJavaScriptLike(language)) {
     return [];
   }
@@ -47,6 +63,10 @@ export function extractImports(content: string, language: string): string[] {
 }
 
 export function extractSymbols(content: string, language: string): string[] {
+  if (language === GO_LANGUAGE) {
+    return getGoDeclarations(content).allSymbols;
+  }
+
   if (!isJavaScriptLike(language)) {
     return [];
   }
@@ -80,6 +100,10 @@ export function extractSymbols(content: string, language: string): string[] {
 }
 
 export function extractExportedSymbols(content: string, language: string): Array<{ name: string; kind: string }> {
+  if (language === GO_LANGUAGE) {
+    return getGoDeclarations(content).exported;
+  }
+
   if (!isJavaScriptLike(language)) {
     return [];
   }
@@ -249,6 +273,16 @@ export function detectRuntimeHints(filePath: string, content: string, metadata: 
   }
 
   return [...new Set(hints)].sort();
+}
+
+export function extractGoPackage(content: string, language: string): string | null {
+  if (language !== GO_LANGUAGE) {
+    return null;
+  }
+
+  const code = stripGoCommentsAndLiterals(content);
+  const match = code.match(/^\s*package\s+([A-Za-z_]\w*)\b/m);
+  return match ? match[1] : null;
 }
 
 function isJavaScriptLike(language) {
@@ -619,4 +653,223 @@ function compareRouteSurfaces(left, right) {
   }
 
   return (left.handler || '').localeCompare(right.handler || '');
+}
+
+function stripGoComments(content: string): string {
+  let output = '';
+  let index = 0;
+
+  while (index < content.length) {
+    const char = content[index];
+    const next = content[index + 1];
+
+    if (char === '/' && next === '/') {
+      output += '  ';
+      index += 2;
+      while (index < content.length && content[index] !== '\n') {
+        output += ' ';
+        index += 1;
+      }
+      continue;
+    }
+
+    if (char === '/' && next === '*') {
+      output += '  ';
+      index += 2;
+      while (index < content.length && !(content[index] === '*' && content[index + 1] === '/')) {
+        output += content[index] === '\n' ? '\n' : ' ';
+        index += 1;
+      }
+      if (index < content.length) {
+        output += '  ';
+        index += 2;
+      }
+      continue;
+    }
+
+    output += char;
+    index += 1;
+  }
+
+  return output;
+}
+
+function stripGoCommentsAndLiterals(content: string): string {
+  const withoutComments = stripGoComments(content);
+  let output = '';
+  let index = 0;
+
+  while (index < withoutComments.length) {
+    const char = withoutComments[index];
+
+    if (char === '`') {
+      output += ' ';
+      index += 1;
+      while (index < withoutComments.length && withoutComments[index] !== '`') {
+        output += withoutComments[index] === '\n' ? '\n' : ' ';
+        index += 1;
+      }
+      if (index < withoutComments.length) {
+        output += ' ';
+        index += 1;
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      const quote = char;
+      output += ' ';
+      index += 1;
+      while (index < withoutComments.length) {
+        const current = withoutComments[index];
+        if (current === '\\') {
+          output += ' ';
+          index += 1;
+          if (index < withoutComments.length) {
+            output += withoutComments[index] === '\n' ? '\n' : ' ';
+            index += 1;
+          }
+          continue;
+        }
+        output += current === '\n' ? '\n' : ' ';
+        index += 1;
+        if (current === quote) {
+          break;
+        }
+      }
+      continue;
+    }
+
+    output += char;
+    index += 1;
+  }
+
+  return output;
+}
+
+function extractGoImports(content: string): string[] {
+  const imports = new Set<string>();
+  const code = stripGoComments(content);
+
+  // Single import: import "path"
+  for (const match of code.matchAll(/^\s*import\s+"([^"]+)"/mg)) {
+    imports.add(match[1]);
+  }
+
+  // Block import: import (\n  "path1"\n  alias "path2"\n)
+  for (const match of code.matchAll(/^\s*import\s*\(([\s\S]*?)^\s*\)/mg)) {
+    for (const pathMatch of match[1].matchAll(/"([^"]+)"/g)) {
+      imports.add(pathMatch[1]);
+    }
+  }
+
+  return [...imports].sort();
+}
+
+function getGoDeclarations(content: string): GoDeclarations {
+  if (lastGoDeclarations?.content === content) {
+    return lastGoDeclarations.declarations;
+  }
+
+  const declarations = computeGoDeclarations(content);
+  lastGoDeclarations = { content, declarations };
+  return declarations;
+}
+
+function computeGoDeclarations(content: string): GoDeclarations {
+  const code = stripGoCommentsAndLiterals(content);
+  const symbols = new Set<string>();
+  const exported: Array<{ name: string; kind: string }> = [];
+  const seenExported = new Set<string>();
+
+  const addSymbol = (name: string, kind: string) => {
+    symbols.add(name);
+    if (/^[A-Z]/.test(name)) {
+      pushExportedSymbol(exported, seenExported, { name, kind });
+    }
+  };
+
+  // Functions and methods: func [(receiver)] Name( or Name[ or Name{
+  for (const match of code.matchAll(/^func\s+(?:\([^)]*\)\s+)?([A-Za-z_]\w*)\s*[([{]/mg)) {
+    addSymbol(match[1], 'func');
+  }
+
+  // Type declarations: type Name [TypeParams] struct / interface / other
+  for (const match of code.matchAll(/^type\s+([A-Za-z_]\w*)(?:\[[^\]]*\])?\s+(struct|interface|[^\s{])/mg)) {
+    const name = match[1];
+    const typeWord = match[2];
+    const kind = typeWord === 'struct' ? 'struct'
+      : typeWord === 'interface' ? 'interface'
+      : 'type';
+    addSymbol(name, kind);
+  }
+
+  // Single const declaration: const Name1, Name2, ... [type] [= ...]
+  // Skip block form (starts with `(`). Capture the full identifier list and parse it.
+  for (const match of code.matchAll(/^const\s+(?!\()(.+)/mg)) {
+    for (const name of parseGoNameList(match[1])) {
+      addSymbol(name, 'const');
+    }
+  }
+
+  // Single var declaration: var Name1, Name2, ... [type] [= ...]
+  // Skip block form (starts with `(`). Capture the full identifier list and parse it.
+  for (const match of code.matchAll(/^var\s+(?!\()(.+)/mg)) {
+    for (const name of parseGoNameList(match[1])) {
+      addSymbol(name, 'var');
+    }
+  }
+
+  // Const block: const (\n  Name1, Name2, ...\n)
+  // The lazy [\s\S]*? stops at the first ) that is at the start of a line (^, m flag),
+  // which is gofmt's convention for closing parentheses.
+  for (const match of code.matchAll(/^const\s*\(([\s\S]*?)^\s*\)/mg)) {
+    for (const lineMatch of match[1].matchAll(/^[ \t]+(.+)/mg)) {
+      for (const name of parseGoNameList(lineMatch[1])) {
+        addSymbol(name, 'const');
+      }
+    }
+  }
+
+  // Var block: var (\n  Name1, Name2, ...\n)
+  // Same lazy-stop-at-line-start-) strategy as the const block above.
+  for (const match of code.matchAll(/^var\s*\(([\s\S]*?)^\s*\)/mg)) {
+    for (const lineMatch of match[1].matchAll(/^[ \t]+(.+)/mg)) {
+      for (const name of parseGoNameList(lineMatch[1])) {
+        addSymbol(name, 'var');
+      }
+    }
+  }
+
+  return {
+    allSymbols: [...symbols].sort().slice(0, 50),
+    exported: exported
+      .sort((a, b) => a.name.localeCompare(b.name) || a.kind.localeCompare(b.kind))
+      .slice(0, 50)
+  };
+}
+
+/**
+ * Parse a comma-separated identifier list from the head of a Go const/var declaration.
+ *
+ * Examples:
+ *   "Alpha, Beta int"       → ["Alpha", "Beta"]
+ *   "Gamma, Delta = 1, 2"  → ["Gamma", "Delta"]
+ *   "statusInternal = 500"  → ["statusInternal"]
+ *
+ * Only the declaration head before `=` is inspected, so commas in right-hand
+ * side expressions such as `var A = foo(bar, baz)` are not interpreted as
+ * additional declaration names.
+ */
+function parseGoNameList(segment: string): string[] {
+  const names: string[] = [];
+  const declarationHead = segment.split('=')[0];
+  for (const part of declarationHead.split(',')) {
+    const m = part.trimStart().match(/^([A-Za-z_]\w*)/);
+    if (!m) {
+      break;
+    }
+    names.push(m[1]);
+  }
+  return names;
 }
