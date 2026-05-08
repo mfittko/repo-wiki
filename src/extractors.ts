@@ -1,3 +1,5 @@
+import * as ts from 'typescript';
+
 const JAVASCRIPT_LANGUAGES = new Set([
   'JavaScript',
   'JavaScript React',
@@ -38,8 +40,13 @@ export function extractSymbols(content: string, language: string): string[] {
     return [];
   }
 
-  const symbols = new Set<string>();
-  const patterns = [
+  const ast = extractJavaScriptAstMetadata(content, language);
+  if (ast) {
+    return [...ast.symbols].sort().slice(0, 50);
+  }
+
+  const fallbackSymbols = new Set<string>();
+  const fallbackPatterns = [
     /export\s+async\s+function\s+([A-Za-z_$][\w$]*)/g,
     /export\s+function\s+([A-Za-z_$][\w$]*)/g,
     /export\s+class\s+([A-Za-z_$][\w$]*)/g,
@@ -50,18 +57,25 @@ export function extractSymbols(content: string, language: string): string[] {
     /class\s+([A-Za-z_$][\w$]*)/g
   ];
 
-  for (const pattern of patterns) {
+  for (const pattern of fallbackPatterns) {
     for (const match of content.matchAll(pattern)) {
-      symbols.add(match[1]);
+      fallbackSymbols.add(match[1]);
     }
   }
 
-  return [...symbols].sort().slice(0, 50);
+  return [...fallbackSymbols].sort().slice(0, 50);
 }
 
 export function extractExportedSymbols(content: string, language: string): Array<{ name: string; kind: string }> {
   if (!isJavaScriptLike(language)) {
     return [];
+  }
+
+  const ast = extractJavaScriptAstMetadata(content, language);
+  if (ast) {
+    return [...ast.exported]
+      .sort((left, right) => left.name.localeCompare(right.name) || left.kind.localeCompare(right.kind))
+      .slice(0, 50);
   }
 
   const exported = [];
@@ -224,6 +238,136 @@ export function detectRuntimeHints(filePath: string, content: string, metadata: 
 
 function isJavaScriptLike(language) {
   return JAVASCRIPT_LANGUAGES.has(language);
+}
+
+function extractJavaScriptAstMetadata(content: string, language: string) {
+  try {
+    const sourceFile = ts.createSourceFile(
+      language.startsWith('TypeScript') ? 'module.ts' : 'module.js',
+      content,
+      ts.ScriptTarget.Latest,
+      true,
+      language === 'TypeScript React'
+        ? ts.ScriptKind.TSX
+        : language === 'TypeScript'
+          ? ts.ScriptKind.TS
+          : language === 'JavaScript React'
+            ? ts.ScriptKind.JSX
+            : ts.ScriptKind.JS
+    );
+
+    const symbols = new Set<string>();
+    const exported: Array<{ name: string; kind: string }> = [];
+    const seenExported = new Set<string>();
+
+    for (const statement of sourceFile.statements) {
+      if (ts.isFunctionDeclaration(statement)) {
+        if (statement.name) {
+          symbols.add(statement.name.text);
+          if (hasExportModifier(statement)) {
+            pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'function' });
+          }
+        } else if (hasDefaultModifier(statement)) {
+          symbols.add('default');
+          pushExportedSymbol(exported, seenExported, { name: 'default', kind: 'function' });
+        }
+        continue;
+      }
+
+      if (ts.isClassDeclaration(statement)) {
+        if (statement.name) {
+          symbols.add(statement.name.text);
+          if (hasExportModifier(statement)) {
+            pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'class' });
+          }
+        } else if (hasDefaultModifier(statement)) {
+          symbols.add('default');
+          pushExportedSymbol(exported, seenExported, { name: 'default', kind: 'class' });
+        }
+        continue;
+      }
+
+      if (ts.isInterfaceDeclaration(statement)) {
+        symbols.add(statement.name.text);
+        if (hasExportModifier(statement)) {
+          pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'interface' });
+        }
+        continue;
+      }
+
+      if (ts.isTypeAliasDeclaration(statement)) {
+        symbols.add(statement.name.text);
+        if (hasExportModifier(statement)) {
+          pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'type' });
+        }
+        continue;
+      }
+
+      if (ts.isEnumDeclaration(statement)) {
+        symbols.add(statement.name.text);
+        if (hasExportModifier(statement)) {
+          pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'enum' });
+        }
+        continue;
+      }
+
+      if (ts.isVariableStatement(statement)) {
+        const kind = statement.declarationList.flags & ts.NodeFlags.Const
+          ? 'const'
+          : statement.declarationList.flags & ts.NodeFlags.Let
+            ? 'let'
+            : 'var';
+        for (const declaration of statement.declarationList.declarations) {
+          if (ts.isIdentifier(declaration.name)) {
+            symbols.add(declaration.name.text);
+            if (hasExportModifier(statement)) {
+              pushExportedSymbol(exported, seenExported, { name: declaration.name.text, kind });
+            }
+          }
+        }
+        continue;
+      }
+
+      if (ts.isExportAssignment(statement) && !statement.isExportEquals) {
+        symbols.add('default');
+        pushExportedSymbol(exported, seenExported, {
+          name: 'default',
+          kind: inferDefaultExportKind(statement.expression)
+        });
+        continue;
+      }
+
+      if (ts.isExportDeclaration(statement) && statement.exportClause && ts.isNamedExports(statement.exportClause)) {
+        for (const element of statement.exportClause.elements) {
+          pushExportedSymbol(exported, seenExported, { name: element.name.text, kind: 'named-export' });
+        }
+      }
+    }
+
+    return { symbols, exported };
+  } catch {
+    return null;
+  }
+}
+
+function hasExportModifier(node) {
+  return ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword);
+}
+
+function hasDefaultModifier(node) {
+  return ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword);
+}
+
+function inferDefaultExportKind(expression) {
+  if (ts.isFunctionExpression(expression) || ts.isArrowFunction(expression)) {
+    return 'function';
+  }
+
+  if (ts.isClassExpression(expression)) {
+    return 'class';
+  }
+
+  return 'default';
 }
 
 function pushExportedSymbol(exported, seen, symbol) {

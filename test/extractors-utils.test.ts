@@ -47,7 +47,7 @@ test('extractors cover imports, exports, env vars, routes, and runtime hints', (
   assert.deepEqual(extractRouteSurfaces('routes.py', 'print(1)', 'Python'), []);
 
   assert.deepEqual(extractImports(richSource, 'TypeScript'), ['../legacy.cjs', './helper.js', 'lib']);
-  assert.deepEqual(extractSymbols(richSource, 'TypeScript'), ['GET', 'Service', 'count', 'flag', 'runTask', 'value']);
+  assert.deepEqual(extractSymbols(richSource, 'TypeScript'), ['GET', 'Name', 'Service', 'Shape', 'State', 'api', 'count', 'default', 'dep', 'flag', 'router', 'runTask', 'value']);
   const exported = extractExportedSymbols(richSource, 'TypeScript');
   assert.ok(exported.some((entry) => entry.name === 'default' && entry.kind === 'function'));
   assert.ok(exported.some((entry) => entry.name === 'default' && entry.kind === 'class'));
@@ -102,6 +102,47 @@ test('extractors cover imports, exports, env vars, routes, and runtime hints', (
     routeSurfaces: extractRouteSurfaces('src/server.ts', richSource, 'TypeScript'),
     environmentVariables: extractEnvironmentVariables(richSource, 'TypeScript')
   }), ['background-work', 'deployment', 'environment-variable', 'http-route']);
+});
+
+test('AST symbol extraction covers default exports, type-only declarations, and invalid source recovery', () => {
+  const jsSource = `
+const localValue = 1;
+function helper() { return localValue; }
+class Service {}
+export default helper;
+export const answer = 42;
+`;
+
+  assert.deepEqual(extractSymbols(jsSource, 'JavaScript'), ['Service', 'answer', 'default', 'helper', 'localValue']);
+  assert.deepEqual(extractExportedSymbols(jsSource, 'JavaScript'), [
+    { name: 'answer', kind: 'const' },
+    { name: 'default', kind: 'default' }
+  ]);
+
+  const tsSource = `
+type InternalType = { id: string };
+interface InternalShape { value: number }
+export type ApiType = InternalType;
+export interface ApiShape extends InternalShape {}
+`;
+
+  assert.deepEqual(extractSymbols(tsSource, 'TypeScript'), ['ApiShape', 'ApiType', 'InternalShape', 'InternalType']);
+  assert.deepEqual(extractExportedSymbols(tsSource, 'TypeScript'), [
+    { name: 'ApiShape', kind: 'interface' },
+    { name: 'ApiType', kind: 'type' }
+  ]);
+
+  const invalidSource = `
+export function workingOne() {}
+export const value = 1
+export default (
+`;
+  assert.deepEqual(extractSymbols(invalidSource, 'TypeScript'), ['default', 'value', 'workingOne']);
+  assert.deepEqual(extractExportedSymbols(invalidSource, 'TypeScript'), [
+    { name: 'default', kind: 'default' },
+    { name: 'value', kind: 'const' },
+    { name: 'workingOne', kind: 'function' }
+  ]);
 });
 
 test('language detection and classification cover the major path cases', () => {
