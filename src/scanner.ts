@@ -1,7 +1,7 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { ensureDir, walkFiles, writeJson } from './utils/fs.js';
+import { DEFAULT_WALK_EXCLUDES, ensureDir, walkFiles, writeJson } from './utils/fs.js';
 import { getGitCommit, getGitRemote } from './utils/git.js';
 import { classifyPath, detectLanguage } from './language.js';
 import {
@@ -45,8 +45,9 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
   const config = await loadConfig(absoluteRepo);
   const commit = headRef || await getGitCommit(absoluteRepo);
   const remote = await getGitRemote(absoluteRepo);
+  const sourceExclude = Array.isArray(config?.source?.exclude) ? config.source.exclude : [];
   const files = await walkFiles(absoluteRepo, {
-    additionalExclude: Array.isArray(config?.source?.exclude) ? config.source.exclude : undefined,
+    additionalExclude: sourceExclude,
     suppressNestedRepositories: config?.source?.suppress_nested_repositories !== false
   });
   const cards: any[] = [];
@@ -133,7 +134,15 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     base_ref: baseRef || null,
     head_ref: headRef || commit,
     generated_at: new Date().toISOString(),
-    config: { source: config.source, documentation: config.documentation, lint: config.lint, wiki: config.wiki },
+    config: {
+      source: {
+        ...config.source,
+        effective_exclude: [...new Set([...DEFAULT_WALK_EXCLUDES, ...sourceExclude])]
+      },
+      documentation: config.documentation,
+      lint: config.lint,
+      wiki: config.wiki
+    },
     totals: summarize(cards, documentationCards),
     analysis,
     documentation: {

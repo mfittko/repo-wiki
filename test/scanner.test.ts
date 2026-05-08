@@ -291,6 +291,8 @@ test('scanRepository honors config source excludes when walking files', async ()
     assert.ok(result.manifest.files.some((file) => file.path === 'tmpfile.js'));
     assert.equal(result.manifest.files.some((file) => file.path === 'tmp/scratch/package.json'), false);
     assert.deepEqual(result.manifest.config.source.exclude, ['tmp/**']);
+    assert.ok(result.manifest.config.source.effective_exclude.includes('node_modules'));
+    assert.ok(result.manifest.config.source.effective_exclude.includes('tmp/**'));
   } finally {
     await fs.rm(repo, { recursive: true, force: true });
   }
@@ -395,6 +397,7 @@ test('scanRepository can include nested repository content when configured', asy
     });
 
     assert.ok(result.manifest.files.some((file) => file.path === 'vendor/submodule/package.json'));
+    assert.equal(result.manifest.config.source.suppress_nested_repositories, false);
   } finally {
     await fs.rm(repo, { recursive: true, force: true });
   }

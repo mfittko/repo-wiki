@@ -1,11 +1,12 @@
 import { promises as fs } from 'node:fs';
+import type { Dirent } from 'node:fs';
 import path from 'node:path';
 
 type WalkFile = { absolute: string; relative: string };
 type WalkFilesOptions = {
   /** Replace the built-in traversal excludes. */
   exclude?: string[];
-  /** Add caller-specific excludes while preserving built-in traversal excludes. */
+  /** Append excludes to the active list (either `exclude` or the defaults). */
   additionalExclude?: string[];
   /** Skip nested Git repository/worktree roots discovered below rootDir. */
   suppressNestedRepositories?: boolean;
@@ -40,7 +41,7 @@ export async function fileExists(filePath: string) {
 }
 
 export async function walkFiles(rootDir: string, options: WalkFilesOptions = {}): Promise<WalkFile[]> {
-  const exclude = [...new Set([...(options.exclude || defaultExcludes), ...(options.additionalExclude || [])])];
+  const exclude = [...new Set([...(options.exclude || DEFAULT_WALK_EXCLUDES), ...(options.additionalExclude || [])])];
   const files: WalkFile[] = [];
   const absoluteRoot = path.resolve(rootDir);
 
@@ -72,11 +73,11 @@ export async function walkFiles(rootDir: string, options: WalkFilesOptions = {})
   return files;
 }
 
-function hasGitMarker(entries: import('node:fs').Dirent[]) {
+function hasGitMarker(entries: Dirent[]): boolean {
   return entries.some((entry) => entry.name === '.git' && (entry.isDirectory() || entry.isFile() || entry.isSymbolicLink()));
 }
 
-const defaultExcludes = [
+export const DEFAULT_WALK_EXCLUDES = [
   '.git',
   'node_modules',
   'dist',
