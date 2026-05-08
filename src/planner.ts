@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { hasDataModelSignals } from './data-model-signals.js';
 import { readJson, writeJson } from './utils/fs.js';
 
 export async function createBootstrapPlan({ scanDir, outFile }) {
@@ -140,7 +141,7 @@ function createPagePlan(manifest, modules) {
     crossCutting.push(page('API-HTTP-Routes.md', 'cross-cutting', 'Detected HTTP routing surfaces.'));
   }
 
-  if (manifest.totals.categories?.data) {
+  if (hasDataModelSignals(manifest)) {
     crossCutting.push(page('Data-Model-and-Migrations.md', 'cross-cutting', 'Data models, migrations, and schema-related files.'));
   }
 
@@ -151,7 +152,7 @@ function page(path, phase, purpose, moduleName = null) {
   return { path, phase, purpose, moduleName };
 }
 
-function slugify(value) {
+function slugify(value: string): string {
   return value
     .replace(/[^A-Za-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'Page';

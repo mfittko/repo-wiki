@@ -10,6 +10,8 @@ import {
   extractExportedSymbols,
   extractGoPackage,
   extractImports,
+  extractMigrationSurfaces,
+  extractModelSurfaces,
   extractRouteSurfaces,
   extractSymbols
 } from './extractors.js';
@@ -30,6 +32,8 @@ type ScannerOptions = {
 type AnalysisMetadata = {
   environmentVariables?: string[];
   routeSurfaces?: Array<{ kind?: string; framework?: string; target?: string; methods?: string[]; path?: string; handler?: string | null }>;
+  migrationSurfaces?: Array<{ kind: string; id: string | null; name: string | null }>;
+  modelSurfaces?: Array<{ name: string; kind: string; framework: string }>;
 };
 
 export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef }: ScannerOptions) {
@@ -66,7 +70,20 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     const exportedSymbols = content ? extractExportedSymbols(content, language) : [];
     const environmentVariables = content ? extractEnvironmentVariables(content, language) : [];
     const routeSurfaces = content ? extractRouteSurfaces(file.relative, content, language) : [];
-    const runtimeHints = content ? detectRuntimeHints(file.relative, content, { environmentVariables, routeSurfaces }) : [];
+    const migrationSurfaces = extractMigrationSurfaces(file.relative, language);
+    const modelSurfaces = content ? extractModelSurfaces(file.relative, content, language) : [];
+    let runtimeHints: string[] = [];
+    if (content) {
+      runtimeHints = detectRuntimeHints(file.relative, content, {
+        language,
+        environmentVariables,
+        routeSurfaces,
+        migrationSurfaces,
+        modelSurfaces
+      });
+    } else if (migrationSurfaces.length > 0) {
+      runtimeHints = detectRuntimeHints(file.relative, '', { language, migrationSurfaces, modelSurfaces });
+    }
 
     const card = {
       kind: 'source_card',
@@ -81,11 +98,13 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
       exported_symbols: exportedSymbols,
       environment_variables: environmentVariables,
       route_surfaces: routeSurfaces,
+      migration_surfaces: migrationSurfaces,
+      model_surfaces: modelSurfaces,
       runtime_hints: runtimeHints,
       ...(packageMetadata || {}),
       ...(goPackage !== null ? { go_package: goPackage } : {}),
       skipped_content: !content,
-      reasons: inferReasons(file.relative, kind, content, { environmentVariables, routeSurfaces })
+      reasons: inferReasons(file.relative, kind, content, { environmentVariables, routeSurfaces, migrationSurfaces, modelSurfaces })
     };
 
     cards.push(card);
@@ -186,7 +205,9 @@ function inferReasons(filePath: string, category: string, content: string, metad
   if (lower.includes('auth')) reasons.add('auth');
   if (lower.includes('billing') || lower.includes('payment')) reasons.add('billing-or-payment');
   if (lower.includes('route') || lower.includes('controller') || (metadata.routeSurfaces || []).length > 0) reasons.add('api-surface');
-  if (lower.includes('migration') || lower.includes('schema')) reasons.add('data-model');
+  if (lower.includes('migration') || lower.includes('schema') || (metadata.migrationSurfaces || []).length > 0 || (metadata.modelSurfaces || []).length > 0) reasons.add('data-model');
+  if ((metadata.migrationSurfaces || []).length > 0) reasons.add('database-migration');
+  if ((metadata.modelSurfaces || []).length > 0) reasons.add('orm-model');
   if ((metadata.environmentVariables || []).length > 0 || (content && /process\.env\.[A-Z0-9_]+/.test(content))) reasons.add('configuration');
 
   return [...reasons].sort();

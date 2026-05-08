@@ -15,8 +15,11 @@ const MAX_GRAPHQL_RESOLVER_BODY_LENGTH = 2000;
 const MAX_OPENAPI_REGISTER_BODY_LENGTH = 1000;
 
 type RuntimeHintMetadata = {
+  language?: string;
   routeSurfaces?: Array<{ kind?: string; framework?: string; target?: string; methods?: string[]; path?: string; handler?: string | null }>;
   environmentVariables?: string[];
+  migrationSurfaces?: Array<{ kind: string; id: string | null; name: string | null }>;
+  modelSurfaces?: Array<{ name: string; kind: string; framework: string }>;
 };
 
 type JavaScriptAstMetadata = {
@@ -258,11 +261,100 @@ export function extractRouteSurfaces(filePath: string, content: string, language
   return surfaces.sort(compareRouteSurfaces);
 }
 
+export function extractMigrationSurfaces(filePath: string, language: string): Array<{ kind: string; id: string | null; name: string | null }> {
+  const normalized = normalizePath(filePath);
+  const lower = normalized.toLowerCase();
+  const isSqlLike = language === 'SQL' || lower.endsWith('.sql');
+  const inMigrationDirectory = /(^|\/)(?:db\/)?migrations?\//.test(lower) || /(^|\/)prisma\/migrations\//.test(lower);
+
+  if (!isSqlLike) {
+    return [];
+  }
+
+  const baseName = normalized.split('/').pop() || normalized;
+  const extensionless = baseName.replace(/\.[^.]+$/, '');
+  const looksLikeMigrationFile =
+    /^v\d+(?:[._]\d+)*__.+$/i.test(extensionless) ||
+    /^\d{3,}[._-].+$/i.test(extensionless) ||
+    /^.+\.(?:up|down)$/i.test(extensionless) ||
+    /^migration$/i.test(extensionless);
+
+  if (!inMigrationDirectory && !looksLikeMigrationFile) {
+    return [];
+  }
+
+  const prismaMigration = normalized.match(/(?:^|\/)prisma\/migrations\/([^/]+)\/migration\.sql$/i);
+  if (prismaMigration) {
+    const folder = prismaMigration[1];
+    return [{
+      kind: 'prisma-migration',
+      id: extractMigrationId(folder),
+      name: cleanMigrationName(folder)
+    }];
+  }
+
+  const flywayMatch = extensionless.match(/^v([0-9][0-9._]*)__(.+)$/i);
+  if (flywayMatch) {
+    return [{
+      kind: 'sql-migration',
+      id: flywayMatch[1].replace(/_/g, '.'),
+      name: cleanMigrationName(flywayMatch[2])
+    }];
+  }
+
+  return [{
+    kind: 'sql-migration',
+    id: extractMigrationId(extensionless),
+    name: cleanMigrationName(extensionless)
+  }];
+}
+
+export function extractModelSurfaces(filePath: string, content: string, language: string): Array<{ name: string; kind: string; framework: string }> {
+  const surfaces: Array<{ name: string; kind: string; framework: string }> = [];
+  const seen = new Set<string>();
+  const lower = filePath.toLowerCase();
+
+  if (lower.endsWith('schema.prisma')) {
+    for (const match of content.matchAll(/(?:^|\n)\s*model\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{/g)) {
+      pushModelSurface(surfaces, seen, { name: match[1], kind: 'model', framework: 'prisma' });
+    }
+  }
+
+  if (isJavaScriptLike(language)) {
+    const hasSequelizeSignal = /\bfrom\s+['"]sequelize['"]|require\(\s*['"]sequelize['"]\s*\)|\bsequelize\s*\./.test(content);
+
+    for (const match of content.matchAll(/@Entity(?:\s*\([^)]*\))?(?:\s*@[\w$]+(?:\s*\([^)]*\))?)*\s*(?:export\s+)?class\s+([A-Za-z_$][\w$]*)/g)) {
+      pushModelSurface(surfaces, seen, { name: match[1], kind: 'entity', framework: 'typeorm' });
+    }
+
+    if (hasSequelizeSignal) {
+      for (const match of content.matchAll(/\bclass\s+([A-Za-z_$][\w$]*)\s+extends\s+Model\b/g)) {
+        pushModelSurface(surfaces, seen, { name: match[1], kind: 'model', framework: 'sequelize' });
+      }
+    }
+
+    for (const match of content.matchAll(/sequelize\s*\.\s*define\s*\(\s*['"`]([A-Za-z_$][\w$]*)['"`]/g)) {
+      pushModelSurface(surfaces, seen, { name: match[1], kind: 'model', framework: 'sequelize' });
+    }
+
+    for (const match of content.matchAll(/mongoose\s*\.\s*model\s*\(\s*['"`]([A-Za-z_$][\w$]*)['"`]/g)) {
+      pushModelSurface(surfaces, seen, { name: match[1], kind: 'model', framework: 'mongoose' });
+    }
+  }
+
+  return surfaces
+    .sort((left, right) => left.name.localeCompare(right.name) || left.framework.localeCompare(right.framework) || left.kind.localeCompare(right.kind))
+    .slice(0, 50);
+}
+
 export function detectRuntimeHints(filePath: string, content: string, metadata: RuntimeHintMetadata = {}): string[] {
   const hints = [];
   const lower = filePath.toLowerCase();
-  const routeSurfaces = metadata.routeSurfaces || extractRouteSurfaces(filePath, content, 'JavaScript');
-  const environmentVariables = metadata.environmentVariables || extractEnvironmentVariables(content, 'JavaScript');
+  const language = metadata.language || inferRuntimeHintLanguage(filePath);
+  const routeSurfaces = metadata.routeSurfaces || extractRouteSurfaces(filePath, content, language);
+  const environmentVariables = metadata.environmentVariables || extractEnvironmentVariables(content, language);
+  const migrationSurfaces = metadata.migrationSurfaces || extractMigrationSurfaces(filePath, language);
+  const modelSurfaces = metadata.modelSurfaces || extractModelSurfaces(filePath, content, language);
 
   if (routeSurfaces.length > 0) {
     hints.push('http-route');
@@ -270,6 +362,18 @@ export function detectRuntimeHints(filePath: string, content: string, metadata: 
 
   if (environmentVariables.length > 0) {
     hints.push('environment-variable');
+  }
+
+  if (migrationSurfaces.length > 0) {
+    hints.push('database-migration');
+  }
+
+  if (modelSurfaces.length > 0) {
+    hints.push('orm-model');
+  }
+
+  if (migrationSurfaces.length > 0 || modelSurfaces.length > 0) {
+    hints.push('data-model');
   }
 
   if (/cron|schedule|queue|worker|job/i.test(filePath + '\n' + content.slice(0, 2000))) {
@@ -291,6 +395,10 @@ export function extractGoPackage(content: string, language: string): string | nu
   const code = stripGoCommentsAndLiterals(content);
   const match = code.match(/^\s*package\s+([A-Za-z_]\w*)\b/m);
   return match ? match[1] : null;
+}
+
+function inferRuntimeHintLanguage(filePath: string) {
+  return filePath.toLowerCase().endsWith('.sql') ? 'SQL' : 'JavaScript';
 }
 
 function isJavaScriptLike(language) {
@@ -998,6 +1106,41 @@ function inferFileRoutePath(filePath) {
   }
 
   return null;
+}
+
+function normalizePath(filePath: string): string {
+  return filePath.replace(/\\/g, '/');
+}
+
+function extractMigrationId(value: string): string | null {
+  const match = value.match(/^(\d{3,})/);
+  return match ? match[1] : null;
+}
+
+function cleanMigrationName(value: string): string | null {
+  const readable = value
+    .replace(/^v\d+(?:[._]\d+)*__/i, '')
+    .replace(/^(\d{3,})(?:[._-]+)?/i, '')
+    .replace(/\.(?:up|down)$/i, '')
+    .replace(/^migration[._-]?/i, '')
+    .replace(/[_-]+/g, ' ')
+    .trim();
+
+  return readable || null;
+}
+
+function pushModelSurface(
+  surfaces: Array<{ name: string; kind: string; framework: string }>,
+  seen: Set<string>,
+  surface: { name: string; kind: string; framework: string }
+) {
+  const key = `${surface.framework}\u0000${surface.kind}\u0000${surface.name}`;
+  if (seen.has(key)) {
+    return;
+  }
+
+  seen.add(key);
+  surfaces.push(surface);
 }
 
 function pushRouteSurface(surfaces, seen, surface) {

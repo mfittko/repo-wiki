@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { hasDataModelSignals } from './data-model-signals.js';
 import { ensureDir, readJson, writeText } from './utils/fs.js';
 
 export async function compileWiki({ scanDir, planFile, wikiDir }) {
@@ -28,7 +29,7 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
     pages.set('API-HTTP-Routes.md', renderHttpRoutes(manifest));
   }
 
-  if (manifest.totals.categories?.data) {
+  if (shouldRenderDataModelPage(manifest, plan)) {
     pages.set('Data-Model-and-Migrations.md', renderDataModel(manifest));
   }
 
@@ -311,4 +312,8 @@ function shortCommit(commit: string) {
 
 function escapeMermaid(value: string) {
   return String(value).replace(/[\[\]{}]/g, '').replace(/"/g, "'");
+}
+
+function shouldRenderDataModelPage(manifest: any, plan: any): boolean {
+  return hasDataModelSignals(manifest) || (plan.pages || []).some((page) => page.path === 'Data-Model-and-Migrations.md');
 }

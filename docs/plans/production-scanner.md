@@ -97,7 +97,7 @@ Decisions recorded during the foundation phase of this epic:
 
 1. **Regex extraction instead of AST parser**: The foundation phase uses regex-based extraction (`content.matchAll(…)`) rather than an AST parser (ts-morph / @swc/core / tree-sitter). This is a deliberate scope reduction for the initial phase; AST parsing is deferred to a follow-up.
 
-2. **DB/ORM detection deferred**: Database migration and ORM model detection was not implemented in this phase. Deferred to a follow-up task.
+2. **DB/ORM detection (deterministic baseline)**: Scanner now performs deterministic path and regex-based detection for common migration files (`migrations/**`, SQL migration naming patterns, Prisma migrations) and model/entity declarations (Prisma `model`, TypeORM `@Entity`, Sequelize/Mongoose patterns). It records only safe metadata (paths, migration ids/names, model/entity names, hints) without copying SQL bodies or secret-like values.
 
 3. **Affected-page graph deferred**: `baseRef`/`headRef` options are scaffolded but ignored; the affected-page graph for incremental mode is deferred to the incremental-mode epic.
 

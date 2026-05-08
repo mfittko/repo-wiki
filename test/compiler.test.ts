@@ -203,3 +203,40 @@ test('compileWiki falls back cleanly when richer analysis is absent', async () =
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+test('compileWiki renders data-model page for ORM-only manifests', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'orm123456789',
+    mode: 'bootstrap',
+    totals: {
+      languages: { TypeScript: 1 },
+      categories: { source: 1 },
+      runtime_hints: { 'data-model': 1, 'orm-model': 1 }
+    },
+    files: [
+      {
+        path: 'src/models/user.entity.ts',
+        category: 'source',
+        language: 'TypeScript',
+        imports: [],
+        runtime_hints: ['data-model', 'orm-model'],
+        reasons: ['data-model', 'orm-model'],
+        model_surfaces: [{ name: 'UserEntity', kind: 'entity', framework: 'typeorm' }]
+      }
+    ]
+  };
+
+  const plan = createPlan();
+  plan.pages.push({ path: 'Data-Model-and-Migrations.md', phase: 'cross-cutting', purpose: 'Data models and migrations.' });
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+    const dataPage = await fs.readFile(path.join(wikiDir, 'Data-Model-and-Migrations.md'), 'utf8');
+    assert.match(dataPage, /Data Model and Migrations/);
+    assert.match(dataPage, /src\/models\/user\.entity\.ts/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});

@@ -102,3 +102,64 @@ test('scanRepository creates a manifest and source cards', async () => {
     await fs.rm(repo, { recursive: true, force: true });
   }
 });
+
+test('scanRepository extracts migration and ORM model metadata without leaking file bodies', async () => {
+  const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-data-model-test-'));
+
+  try {
+    await fs.mkdir(path.join(repo, 'prisma', 'migrations', '20240101120000_init'), { recursive: true });
+    await fs.mkdir(path.join(repo, 'src', 'models'), { recursive: true });
+    await fs.writeFile(path.join(repo, 'package.json'), JSON.stringify({ name: 'fixture-repo' }, null, 2));
+    await fs.writeFile(path.join(repo, 'prisma', 'schema.prisma'), `
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id Int @id
+}
+
+model AuditLog {
+  id Int @id
+}
+`, 'utf8');
+    await fs.writeFile(path.join(repo, 'prisma', 'migrations', '20240101120000_init', 'migration.sql'), 'CREATE TABLE users(id int);\n', 'utf8');
+    await fs.writeFile(path.join(repo, 'src', 'models', 'account.ts'), `
+import { Entity } from 'typeorm';
+import { Model } from 'sequelize';
+@Entity()
+export class AccountEntity {}
+export class Session extends Model {}
+`, 'utf8');
+
+    const out = path.join(repo, '.llmwiki', 'run');
+    const result = await scanRepository({ mode: 'bootstrap', repoPath: repo, outDir: out });
+
+    const migrationCard = result.manifest.files.find((file) => file.path === 'prisma/migrations/20240101120000_init/migration.sql');
+    assert.ok(migrationCard);
+    assert.deepEqual(migrationCard.migration_surfaces, [
+      { kind: 'prisma-migration', id: '20240101120000', name: 'init' }
+    ]);
+    assert.ok(migrationCard.runtime_hints.includes('database-migration'));
+    assert.ok(migrationCard.runtime_hints.includes('data-model'));
+
+    const schemaCard = result.manifest.files.find((file) => file.path === 'prisma/schema.prisma');
+    assert.ok(schemaCard);
+    assert.deepEqual(schemaCard.model_surfaces, [
+      { name: 'AuditLog', kind: 'model', framework: 'prisma' },
+      { name: 'User', kind: 'model', framework: 'prisma' }
+    ]);
+    assert.ok(schemaCard.runtime_hints.includes('orm-model'));
+
+    const modelCard = result.manifest.files.find((file) => file.path === 'src/models/account.ts');
+    assert.ok(modelCard);
+    assert.ok(modelCard.model_surfaces.some((entry) => entry.name === 'AccountEntity' && entry.framework === 'typeorm'));
+    assert.ok(modelCard.model_surfaces.some((entry) => entry.name === 'Session' && entry.framework === 'sequelize'));
+    assert.ok(modelCard.reasons.includes('data-model'));
+
+    assert.equal(JSON.stringify(result.manifest).includes('DATABASE_URL'), false);
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
+});

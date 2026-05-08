@@ -97,3 +97,42 @@ test('createBootstrapPlan groups modules and emits cross-cutting pages from mani
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('createBootstrapPlan emits data-model page for ORM-only signal paths', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-plan-orm-'));
+  const scanDir = path.join(dir, 'scan');
+  const outFile = path.join(dir, 'bootstrap-plan.json');
+
+  try {
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      mode: 'bootstrap',
+      repo_path: dir,
+      remote: 'origin',
+      commit: 'abc123',
+      totals: {
+        runtime_hints: { 'orm-model': 1 },
+        categories: { source: 1 }
+      },
+      files: [
+        {
+          path: 'src/models/user.entity.ts',
+          category: 'source',
+          language: 'TypeScript',
+          runtime_hints: ['data-model', 'orm-model'],
+          reasons: ['data-model', 'orm-model'],
+          model_surfaces: [{ name: 'UserEntity', kind: 'entity', framework: 'typeorm' }],
+          bytes: 100
+        }
+      ]
+    }, null, 2), 'utf8');
+
+    const result = await createBootstrapPlan({ scanDir, outFile });
+    const plan = await readJson(outFile);
+
+    assert.equal(result.summary.outFile, outFile);
+    assert.ok(plan.pages.some((page: any) => page.path === 'Data-Model-and-Migrations.md'));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
