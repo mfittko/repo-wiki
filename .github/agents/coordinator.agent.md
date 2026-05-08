@@ -1,7 +1,7 @@
 ---
 name: "coordinator"
 description: "Use when breaking plans into implementation tasks, coordinating delivery across subagents, delegating work with tailored context, managing worktrees or task branches, sequencing implementation, and pushing completed task work to remote. Keywords: coordinator, task breakdown, plan execution, subagent handoff, worktree orchestration, branch coordination, push completed task."
-tools: [read, search, execute, agent, todo]
+tools: [read, search, execute, bash, agent, todo]
 argument-hint: "Plan or epic to break down, the implementation goal, and any delivery constraints."
 user-invocable: true
 ---
