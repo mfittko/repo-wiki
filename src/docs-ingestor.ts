@@ -70,7 +70,7 @@ export function classifyDocumentedCommands(
   packageScripts: Record<string, string>,
   ciCommands: string[]
 ): CommandClassification[] {
-  return commands.map((command) => classifyCommand(command, packageScripts, ciCommands));
+  return commands.flatMap((command) => splitShellCommand(command).map((part) => classifyCommand(part, packageScripts, ciCommands)));
 }
 
 function classifyCommand(
@@ -172,7 +172,7 @@ export function validateDocClaims({ claims, content, filePath }) {
       for (const line of block.content.split('\n')) {
         const trimmed = line.trim().replace(/^[$>]\s*/, '');
         if (/^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(trimmed)) {
-          commands.push(trimmed);
+          commands.push(...splitShellCommand(trimmed));
         }
       }
     }
@@ -204,6 +204,13 @@ export function validateDocClaims({ claims, content, filePath }) {
       file: filePath
     }
   };
+}
+
+function splitShellCommand(command: string): string[] {
+  return command
+    .split(/\s*(?:&&|\|\||;)\s*/)
+    .map((part) => part.trim())
+    .filter((part) => /^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(part));
 }
 
 function extractHeadings(content) {

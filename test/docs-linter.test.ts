@@ -57,6 +57,14 @@ test('classifyDocumentedCommands validates known package scripts, flags missing 
   assert.equal(npmTest[0].status, 'validated');
   assert.equal(npmTest[0].script_name, 'test');
 
+  // Chained commands are classified independently so later missing scripts are not hidden
+  const chained = classifyDocumentedCommands(['npm run build && npm run deploy'], packageScripts, []);
+  assert.equal(chained.length, 2);
+  assert.equal(chained[0].script_name, 'build');
+  assert.equal(chained[0].status, 'validated');
+  assert.equal(chained[1].script_name, 'deploy');
+  assert.equal(chained[1].status, 'missing');
+
   // Unrecognised command without CI match → unvalidated
   const unknown = classifyDocumentedCommands(['docker compose up'], packageScripts, []);
   assert.equal(unknown[0].status, 'unvalidated');
@@ -116,8 +124,8 @@ test('lintDocs reports missing-package-script for commands not in package.json',
         stale_after_days: 9999
       }
     }), 'utf8');
-    // Document a script that does NOT exist in package.json
-    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nRun the deploy script:\n\n```bash\nnpm run deploy\n```\n', 'utf8');
+    // Document a script that does NOT exist in package.json after a valid script in a chained command
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nRun the deploy script:\n\n```bash\nnpm run build && npm run deploy\n```\n', 'utf8');
     await writeFile(path.join(dir, 'package.json'), JSON.stringify({ scripts: { test: 'node --test', build: 'tsc' } }), 'utf8');
 
     const scanDir = path.join(dir, '.llmwiki', 'run');
