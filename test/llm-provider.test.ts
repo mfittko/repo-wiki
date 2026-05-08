@@ -222,6 +222,24 @@ test('resolveProviderConfig applies CI environment overrides without exposing ap
   assert.equal(resolved.retries, 1);
 });
 
+test('resolveProviderConfig lets deterministic mode override hosted provider config', () => {
+  const resolved = resolveProviderConfig(
+    { provider: 'openai-compatible', apiKey: 'secret-key' },
+    { LLMWIKI_COMPILER_MODE: 'deterministic' },
+  );
+
+  assert.equal(resolved.provider, 'mock');
+});
+
+test('resolveProviderConfig uses OpenAI-compatible provider for llm mode', () => {
+  const resolved = resolveProviderConfig(
+    { provider: 'mock' },
+    { LLMWIKI_COMPILER_MODE: 'llm' },
+  );
+
+  assert.equal(resolved.provider, 'openai-compatible');
+});
+
 test('OpenAICompatibleProvider posts chat-completions request', async () => {
   const originalFetch = globalThis.fetch;
   let captured: { url?: string; body?: any; authorization?: string } = {};

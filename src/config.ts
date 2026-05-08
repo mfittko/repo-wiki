@@ -17,7 +17,7 @@ export const DEFAULT_CONFIG = {
   compiler: {
     mode: 'deterministic',
     llm: {
-      provider: 'mock',
+      provider: 'openai-compatible',
       base_url: 'https://api.openai.com/v1',
       model: 'gpt-4.1-mini',
       api_key_env: 'LLMWIKI_LLM_API_KEY',

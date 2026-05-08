@@ -402,7 +402,9 @@ export function buildRequest(
 }
 
 function providerForMode(mode?: string): string | undefined {
-  return mode === 'llm' ? 'openai-compatible' : undefined;
+  if (mode === 'llm') return 'openai-compatible';
+  if (mode === 'deterministic') return 'mock';
+  return undefined;
 }
 
 function parseNumber(value: string | undefined, fallback: number): number {
