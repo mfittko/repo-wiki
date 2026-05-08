@@ -138,6 +138,7 @@ const Profile = mongoose.model('Profile', profileSchema);
     migrationSurfaces: extractMigrationSurfaces('prisma/migrations/20250507120000_create_users/migration.sql', 'SQL')
   }), ['data-model', 'database-migration']);
   assert.deepEqual(detectRuntimeHints('src/models/account.ts', "import { Model } from 'sequelize';\nclass Session extends Model {}", {}), ['data-model', 'orm-model']);
+  assert.deepEqual(detectRuntimeHints('migrations/001_create_users.py', '', {}), []);
 });
 
 test('AST symbol extraction covers default exports, type-only declarations, and invalid source recovery', () => {

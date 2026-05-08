@@ -75,13 +75,14 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     let runtimeHints: string[] = [];
     if (content) {
       runtimeHints = detectRuntimeHints(file.relative, content, {
+        language,
         environmentVariables,
         routeSurfaces,
         migrationSurfaces,
         modelSurfaces
       });
     } else if (migrationSurfaces.length > 0) {
-      runtimeHints = detectRuntimeHints(file.relative, '', { migrationSurfaces, modelSurfaces });
+      runtimeHints = detectRuntimeHints(file.relative, '', { language, migrationSurfaces, modelSurfaces });
     }
 
     const card = {

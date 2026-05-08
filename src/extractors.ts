@@ -15,6 +15,7 @@ const MAX_GRAPHQL_RESOLVER_BODY_LENGTH = 2000;
 const MAX_OPENAPI_REGISTER_BODY_LENGTH = 1000;
 
 type RuntimeHintMetadata = {
+  language?: string;
   routeSurfaces?: Array<{ kind?: string; framework?: string; target?: string; methods?: string[]; path?: string; handler?: string | null }>;
   environmentVariables?: string[];
   migrationSurfaces?: Array<{ kind: string; id: string | null; name: string | null }>;
@@ -349,10 +350,11 @@ export function extractModelSurfaces(filePath: string, content: string, language
 export function detectRuntimeHints(filePath: string, content: string, metadata: RuntimeHintMetadata = {}): string[] {
   const hints = [];
   const lower = filePath.toLowerCase();
-  const routeSurfaces = metadata.routeSurfaces || extractRouteSurfaces(filePath, content, 'JavaScript');
-  const environmentVariables = metadata.environmentVariables || extractEnvironmentVariables(content, 'JavaScript');
-  const migrationSurfaces = metadata.migrationSurfaces || extractMigrationSurfaces(filePath, 'SQL');
-  const modelSurfaces = metadata.modelSurfaces || extractModelSurfaces(filePath, content, 'JavaScript');
+  const language = metadata.language || inferRuntimeHintLanguage(filePath);
+  const routeSurfaces = metadata.routeSurfaces || extractRouteSurfaces(filePath, content, language);
+  const environmentVariables = metadata.environmentVariables || extractEnvironmentVariables(content, language);
+  const migrationSurfaces = metadata.migrationSurfaces || extractMigrationSurfaces(filePath, language);
+  const modelSurfaces = metadata.modelSurfaces || extractModelSurfaces(filePath, content, language);
 
   if (routeSurfaces.length > 0) {
     hints.push('http-route');
@@ -393,6 +395,10 @@ export function extractGoPackage(content: string, language: string): string | nu
   const code = stripGoCommentsAndLiterals(content);
   const match = code.match(/^\s*package\s+([A-Za-z_]\w*)\b/m);
   return match ? match[1] : null;
+}
+
+function inferRuntimeHintLanguage(filePath: string) {
+  return filePath.toLowerCase().endsWith('.sql') ? 'SQL' : 'JavaScript';
 }
 
 function isJavaScriptLike(language) {

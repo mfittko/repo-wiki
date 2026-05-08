@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { hasDataModelSignals } from './data-model-signals.js';
 import { readJson, writeJson } from './utils/fs.js';
 
 export async function createBootstrapPlan({ scanDir, outFile }) {
@@ -149,22 +150,6 @@ function createPagePlan(manifest, modules) {
 
 function page(path, phase, purpose, moduleName = null) {
   return { path, phase, purpose, moduleName };
-}
-
-function hasDataModelSignals(manifest: any): boolean {
-  if (manifest.totals.categories?.data) {
-    return true;
-  }
-
-  if (manifest.totals.runtime_hints?.['data-model'] || manifest.totals.runtime_hints?.['orm-model'] || manifest.totals.runtime_hints?.['database-migration']) {
-    return true;
-  }
-
-  return (manifest.files || []).some((file) =>
-    file.reasons?.includes('data-model') ||
-    (file.migration_surfaces || []).length > 0 ||
-    (file.model_surfaces || []).length > 0
-  );
 }
 
 function slugify(value: string): string {
