@@ -49,6 +49,7 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
   }
 
   return {
+    contexts: pageContexts,
     summary: {
       wikiDir,
       pages: pages.size,

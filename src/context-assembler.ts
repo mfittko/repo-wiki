@@ -130,7 +130,7 @@ export function assemblePageContext({ manifest, plan, page, budget }: AssemblePa
     },
     budget: {
       ...limits,
-      used_chars: usedChars
+      usedChars
     },
     source_paths,
     source_inputs,
@@ -157,16 +157,16 @@ function pageType(page: { phase?: string }) {
 
 function normalizeBudget(budget?: Partial<PageContextBudget>): PageContextBudget {
   return {
-    maxChars: normalizePositiveInt(budget?.maxChars, DEFAULT_BUDGET.maxChars),
-    maxSourceCards: normalizePositiveInt(budget?.maxSourceCards, DEFAULT_BUDGET.maxSourceCards),
-    maxDocumentationCards: normalizePositiveInt(budget?.maxDocumentationCards, DEFAULT_BUDGET.maxDocumentationCards),
-    maxExcerptChars: normalizePositiveInt(budget?.maxExcerptChars, DEFAULT_BUDGET.maxExcerptChars)
+    maxChars: normalizeNonNegativeInt(budget?.maxChars, DEFAULT_BUDGET.maxChars),
+    maxSourceCards: normalizeNonNegativeInt(budget?.maxSourceCards, DEFAULT_BUDGET.maxSourceCards),
+    maxDocumentationCards: normalizeNonNegativeInt(budget?.maxDocumentationCards, DEFAULT_BUDGET.maxDocumentationCards),
+    maxExcerptChars: normalizeNonNegativeInt(budget?.maxExcerptChars, DEFAULT_BUDGET.maxExcerptChars)
   };
 }
 
-function normalizePositiveInt(value: unknown, fallback: number) {
+function normalizeNonNegativeInt(value: unknown, fallback: number) {
   const number = typeof value === 'number' ? Math.floor(value) : Number.NaN;
-  return Number.isFinite(number) && number > 0 ? number : fallback;
+  return Number.isFinite(number) && number >= 0 ? number : fallback;
 }
 
 function selectSourceCards({ sourceCards, manifest, plan, page }: { sourceCards: any[]; manifest: any; plan: any; page: any }) {
@@ -283,7 +283,7 @@ function dependencyGraphParticipants(manifest: any) {
 }
 
 function sortByPath(items: any[]) {
-  return [...items].sort((left, right) => String(left.path || '').localeCompare(String(right.path || '')));
+  return [...items].sort((left, right) => compareStrings(String(left.path || ''), String(right.path || '')));
 }
 
 function buildSourceExcerpt(card: any) {
@@ -316,7 +316,10 @@ function truncateText(value: string, maxChars: number) {
   if (value.length <= maxChars) {
     return { value, truncated: false };
   }
-  if (maxChars <= 1) {
+  if (maxChars <= 0) {
+    return { value: '', truncated: true };
+  }
+  if (maxChars === 1) {
     return { value: '…', truncated: true };
   }
   return { value: `${value.slice(0, maxChars - 1)}…`, truncated: true };
@@ -344,5 +347,15 @@ function redactSecretLikeText(value: unknown) {
 }
 
 function uniqueSorted(values: string[]) {
-  return [...new Set(values || [])].sort((left, right) => left.localeCompare(right));
+  return [...new Set(values || [])].sort(compareStrings);
+}
+
+function compareStrings(left: string, right: string) {
+  if (left < right) {
+    return -1;
+  }
+  if (left > right) {
+    return 1;
+  }
+  return 0;
 }

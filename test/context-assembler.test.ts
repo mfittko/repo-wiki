@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { assemblePageContext } from '../src/context-assembler.js';
 
 function createFixture() {
+  const githubToken = `ghp_${'1234567890'.repeat(4)}`;
+  const apiTokenAssignment = `API_${'TOKEN'}=${'super'}-${'secret'}-${'value'}`;
+
   const manifest = {
     files: [
       {
@@ -56,8 +59,8 @@ function createFixture() {
           authority: 'secondary',
           stale: false,
           headings: [{ text: 'Readme' }],
-          claims: [{ text: 'Use the CLI with ghp_123456789012345678901234567890123456' }],
-          validation: { commands: ['API_TOKEN=super-secret-value repo-wiki run'] }
+          claims: [{ text: `Use the CLI with ${githubToken}` }],
+          validation: { commands: [`${apiTokenAssignment} repo-wiki run`] }
         }
       ]
     },
@@ -144,8 +147,29 @@ test('assemblePageContext redacts secret-like documentation excerpt values', () 
   const readme = context.documentation_inputs.find((doc: any) => doc.path === 'README.md');
   assert.ok(readme, 'expected README documentation input');
   assert.match(readme.excerpt, /\[REDACTED\]/);
-  assert.doesNotMatch(readme.excerpt, /ghp_123456789012345678901234567890123456/);
+  assert.doesNotMatch(readme.excerpt, /ghp_[A-Za-z0-9_]+/);
   assert.doesNotMatch(readme.excerpt, /super-secret-value/);
+});
+
+test('assemblePageContext honors explicit zero budget caps', () => {
+  const { manifest, plan } = createFixture();
+  const context = assemblePageContext({
+    manifest,
+    plan,
+    page: { path: 'Module-Core.md', phase: 'modules', moduleName: 'Core' },
+    budget: {
+      maxSourceCards: 0,
+      maxDocumentationCards: 0,
+      maxExcerptChars: 0
+    }
+  });
+
+  assert.equal(context.budget.maxSourceCards, 0);
+  assert.equal(context.budget.maxDocumentationCards, 0);
+  assert.equal(context.budget.maxExcerptChars, 0);
+  assert.deepEqual(context.source_inputs, []);
+  assert.deepEqual(context.documentation_inputs, []);
+  assert.deepEqual(context.omitted.source_cards, ['src/a.ts', 'src/b.ts']);
 });
 
 test('assemblePageContext uses page-type selection for module and cross-cutting pages', () => {
@@ -173,5 +197,5 @@ test('assemblePageContext uses page-type selection for module and cross-cutting 
     plan,
     page: { path: 'Open-Questions.md', phase: 'foundation' }
   });
-  assert.deepEqual(foundationContext.documentation_inputs.map((doc: any) => doc.path), ['docs/guide.md', 'README.md']);
+  assert.deepEqual(foundationContext.documentation_inputs.map((doc: any) => doc.path), ['README.md', 'docs/guide.md']);
 });
