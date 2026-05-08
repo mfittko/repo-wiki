@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { isGeneratedOutputReference } from './docs-validation.js';
 
 const DOC_EXTENSIONS = ['.md', '.mdx', '.markdown'];
 
@@ -371,6 +372,7 @@ function isDocumentedPathCandidate(value: string, fromLink: boolean) {
   if (/\s/.test(value)) return false;
   if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(value)) return false;
   if (value.startsWith('/')) return false;
+  if (isGeneratedOutputReference(value)) return false;
   if (value.includes('..')) return true;
   if (value.startsWith('./') || value.startsWith('../')) return true;
   if (value.includes('/')) return true;

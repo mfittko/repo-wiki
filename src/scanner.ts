@@ -130,7 +130,7 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     base_ref: baseRef || null,
     head_ref: headRef || commit,
     generated_at: new Date().toISOString(),
-    config: { documentation: config.documentation, compiler: config.compiler, lint: config.lint, wiki: config.wiki },
+    config: { documentation: config.documentation, compiler: redactSecretConfig(config.compiler), lint: config.lint, wiki: config.wiki },
     totals: summarize(cards, documentationCards),
     analysis,
     documentation: {
@@ -156,6 +156,29 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
       outDir: absoluteOut
     }
   };
+}
+
+function redactSecretConfig(value: any): any {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactSecretConfig(entry));
+  }
+
+  if (value && typeof value === 'object') {
+    const redacted: Record<string, any> = {};
+    for (const [key, entry] of Object.entries(value)) {
+      redacted[key] = isSecretConfigKey(key) ? '[REDACTED]' : redactSecretConfig(entry);
+    }
+    return redacted;
+  }
+
+  return value;
+}
+
+function isSecretConfigKey(key: string) {
+  if (/(?:^|[_-])env$/i.test(key)) {
+    return false;
+  }
+  return /(?:api[_-]?key|token|secret|password|credential)/i.test(key);
 }
 
 function summarize(cards: Array<{ language: string; category: string; runtime_hints: string[] }>, documentationCards: any[] = []) {

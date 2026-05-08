@@ -260,3 +260,37 @@ end
     await fs.rm(repo, { recursive: true, force: true });
   }
 });
+
+test('scanRepository redacts secret-bearing compiler config fields from manifest', async () => {
+  const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-secret-config-'));
+  try {
+    await fs.mkdir(path.join(repo, '.llmwiki'), { recursive: true });
+    await fs.writeFile(path.join(repo, '.llmwiki', 'config.json'), JSON.stringify({
+      compiler: {
+        mode: 'llm',
+        llm: {
+          apiKey: 'plain-secret-key',
+          api_key: 'snake-secret-key',
+          provider_token: 'provider-secret-token',
+          api_key_env: 'SAFE_ENV_NAME',
+          model: 'safe-model-name'
+        }
+      }
+    }), 'utf8');
+    await fs.writeFile(path.join(repo, 'README.md'), '# Demo\n', 'utf8');
+
+    const result = await scanRepository({
+      mode: 'bootstrap',
+      repoPath: repo,
+      outDir: path.join(repo, '.llmwiki', 'run')
+    });
+
+    assert.equal(result.manifest.config.compiler.llm.apiKey, '[REDACTED]');
+    assert.equal(result.manifest.config.compiler.llm.api_key, '[REDACTED]');
+    assert.equal(result.manifest.config.compiler.llm.provider_token, '[REDACTED]');
+    assert.equal(result.manifest.config.compiler.llm.api_key_env, 'SAFE_ENV_NAME');
+    assert.equal(result.manifest.config.compiler.llm.model, 'safe-model-name');
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
+});

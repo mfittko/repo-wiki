@@ -41,7 +41,7 @@ test('documentation ingestion produces documentation cards and lint issues', asy
 });
 
 test('extractDocumentedFilePaths extracts deterministic markdown link and inline code path references', () => {
-  const refs = extractDocumentedFilePaths('# Paths\n\nSee [plan](docs/PLAN.md), `src/cli.ts`, and `npm run build`.\n\n```bash\ncat missing.md\n```\n');
+  const refs = extractDocumentedFilePaths('# Paths\n\nSee [plan](docs/PLAN.md), `src/cli.ts`, `dist/`, and `npm run build`.\n\n```bash\ncat missing.md\n```\n');
   assert.deepEqual(refs, [
     { path: 'docs/PLAN.md', line: 3, source: 'link' },
     { path: 'src/cli.ts', line: 3, source: 'inline_code' }

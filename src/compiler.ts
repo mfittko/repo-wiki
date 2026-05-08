@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { assembleAllPageContexts } from './context-assembler.js';
 import { ensureDir, readJson, writeText } from './utils/fs.js';
+import { collectKnownEnvironmentVariables, collectManifestDirectories, normalizeRepoPath, resolveDocumentedPathFromManifest } from './docs-validation.js';
 import { classifyDocumentedCommands, mergePackageScripts } from './docs-ingestor.js';
 import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-ownership.js';
 
@@ -199,7 +200,7 @@ function renderDocumentationDebtReport(manifest) {
   const filePathFindings = docs.flatMap((doc) => (doc.file_paths || []).map((reference) => ({
     doc: doc.path,
     ...reference,
-    ...resolveDocumentedPath(reference.path, doc.path, manifestFiles, manifestDirectories)
+    ...resolveDocumentedPathFromManifest(reference.path, doc.path, manifestFiles, manifestDirectories)
   })));
   const validFilePaths = filePathFindings.filter((finding) => finding.valid);
   const brokenFilePaths = filePathFindings.filter((finding) => !finding.valid);
@@ -213,11 +214,11 @@ function renderDocumentationDebtReport(manifest) {
     const source = c.source === 'package_scripts' ? 'package.json' : c.source === 'ci_workflow' ? 'CI workflow' : 'unknown';
     return `| \`${c.command}\` | ${badge} | ${source} |`;
   });
-  const filePathRows = filePathFindings.map((finding) => {
+  const filePathRows = filePathFindings.slice(0, 200).map((finding) => {
     const badge = finding.valid ? '✅ valid' : '❌ missing';
     return `| \`${finding.doc}:${finding.line}\` | \`${finding.path}\` | ${badge} | ${finding.valid ? `\`${finding.path}\`` : 'not found'} |`;
   });
-  const envRows = envFindings.map((finding) => {
+  const envRows = envFindings.slice(0, 200).map((finding) => {
     const badge = finding.valid ? '✅ validated' : '❓ unvalidated';
     return `| \`${finding.doc}\` | \`${finding.name}\` | ${badge} |`;
   });
@@ -265,7 +266,7 @@ Repository file and directory references extracted from markdown links and inlin
 - Valid: ${validFilePaths.length}
 - Missing: ${brokenFilePaths.length}
 
-${filePathRows.length > 0 ? `| Documentation location | Reference | Status | Resolved path |\n|---|---|---|---|\n${filePathRows.join('\n')}` : '- No file path references extracted from documentation.'}
+${filePathRows.length > 0 ? `| Documentation location | Reference | Status | Resolved path |\n|---|---|---|---|\n${filePathRows.join('\n')}${filePathFindings.length > filePathRows.length ? `\n\n_Showing first ${filePathRows.length} of ${filePathFindings.length} file path findings._` : ''}` : '- No file path references extracted from documentation.'}
 
 ## Environment variable validation
 
@@ -274,7 +275,7 @@ Environment variable names extracted from documentation are validated against sc
 - Validated: ${validatedEnvVars.length}
 - Unvalidated: ${unvalidatedEnvVars.length}
 
-${envRows.length > 0 ? `| Documentation file | Variable | Status |\n|---|---|---|\n${envRows.join('\n')}` : '- No environment variable mentions extracted from documentation.'}
+${envRows.length > 0 ? `| Documentation file | Variable | Status |\n|---|---|---|\n${envRows.join('\n')}${envFindings.length > envRows.length ? `\n\n_Showing first ${envRows.length} of ${envFindings.length} environment variable findings._` : ''}` : '- No environment variable mentions extracted from documentation.'}
 
 ## Stale documentation candidates
 
@@ -408,67 +409,6 @@ function markdownTable(headers: string[], rows: Array<Array<string | number>>) {
     `| ${headers.map(() => '---').join(' | ')} |`,
     ...rows.map((row) => `| ${row.map((value) => sanitizeTableCell(value)).join(' | ')} |`)
   ].join('\n');
-}
-
-function resolveDocumentedPath(referencePath: string, docPath: string, files: Set<string>, directories: Set<string>) {
-  const candidates = candidateRepoPaths(referencePath, docPath);
-  for (const candidate of candidates) {
-    if (files.has(candidate) || directories.has(candidate)) {
-      return { valid: true, path: candidate };
-    }
-  }
-  return { valid: false, path: candidates[0] || referencePath };
-}
-
-function candidateRepoPaths(referencePath: string, docPath: string) {
-  const cleaned = normalizeRepoPath(referencePath.replace(/^\.\//, ''));
-  const docRelative = normalizeRepoPath(path.posix.normalize(path.posix.join(path.posix.dirname(normalizeRepoPath(docPath)), referencePath)));
-  return [...new Set([cleaned, docRelative].filter((candidate) => candidate && candidate !== '.'))];
-}
-
-function normalizeRepoPath(filePath: string) {
-  return String(filePath || '').replaceAll('\\', '/').replace(/^\/+/, '').replace(/\/+$/, '');
-}
-
-function collectManifestDirectories(files: Set<string>) {
-  const dirs = new Set<string>();
-  for (const file of files) {
-    let current = path.posix.dirname(file);
-    while (current && current !== '.') {
-      dirs.add(current);
-      current = path.posix.dirname(current);
-    }
-  }
-  return dirs;
-}
-
-function collectKnownEnvironmentVariables(manifest: any) {
-  const names = new Set<string>();
-  for (const file of manifest.files || []) {
-    for (const name of file.environment_variables || []) {
-      names.add(name);
-    }
-  }
-  collectConfigEnvironmentVariables(manifest.config, names);
-  return names;
-}
-
-function collectConfigEnvironmentVariables(value: any, names: Set<string>) {
-  if (typeof value === 'string') {
-    if (/^[A-Z][A-Z0-9_]{2,}$/.test(value)) {
-      names.add(value);
-    }
-    return;
-  }
-  if (Array.isArray(value)) {
-    for (const entry of value) collectConfigEnvironmentVariables(entry, names);
-    return;
-  }
-  if (value && typeof value === 'object') {
-    for (const entry of Object.values(value)) {
-      collectConfigEnvironmentVariables(entry, names);
-    }
-  }
 }
 
 function collectEnvironmentRows(files: any[]) {
