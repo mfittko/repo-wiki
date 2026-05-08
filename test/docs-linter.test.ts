@@ -5,6 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { scanRepository } from '../src/scanner.js';
 import { lintDocs } from '../src/docs-linter.js';
+import { classifyDocumentedCommands, extractCiCommands } from '../src/docs-ingestor.js';
 
 test('documentation ingestion produces documentation cards and lint issues', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-docs-'));
@@ -29,6 +30,130 @@ test('documentation ingestion produces documentation cards and lint issues', asy
 
     const lint = await lintDocs({ scanDir, repoPath: dir });
     assert.ok(lint.summary.warnings + lint.summary.errors >= 1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('classifyDocumentedCommands validates known package scripts, flags missing scripts, and marks unknowns', () => {
+  const packageScripts = { test: 'node --test', build: 'tsc', lint: 'eslint .' };
+
+  // Known npm run script → validated
+  const knownRun = classifyDocumentedCommands(['npm run build'], packageScripts, []);
+  assert.equal(knownRun.length, 1);
+  assert.equal(knownRun[0].status, 'validated');
+  assert.equal(knownRun[0].source, 'package_scripts');
+  assert.equal(knownRun[0].script_name, 'build');
+
+  // Missing npm run script → missing
+  const missingRun = classifyDocumentedCommands(['npm run deploy'], packageScripts, []);
+  assert.equal(missingRun.length, 1);
+  assert.equal(missingRun[0].status, 'missing');
+  assert.equal(missingRun[0].source, 'package_scripts');
+  assert.equal(missingRun[0].script_name, 'deploy');
+
+  // npm test lifecycle → validated when test script exists
+  const npmTest = classifyDocumentedCommands(['npm test'], packageScripts, []);
+  assert.equal(npmTest[0].status, 'validated');
+  assert.equal(npmTest[0].script_name, 'test');
+
+  // Unrecognised command without CI match → unvalidated
+  const unknown = classifyDocumentedCommands(['docker compose up'], packageScripts, []);
+  assert.equal(unknown[0].status, 'unvalidated');
+  assert.equal(unknown[0].source, 'unknown');
+});
+
+test('classifyDocumentedCommands validates CI workflow commands', () => {
+  const packageScripts = {};
+  const ciCommands = ['npm run check', 'npm run coverage'];
+
+  const ciValidated = classifyDocumentedCommands(['npm run check'], packageScripts, ciCommands);
+  // npm run check is not in packageScripts, so it is 'missing' from package_scripts perspective
+  assert.equal(ciValidated[0].status, 'missing');
+
+  // A non-npm command that appears verbatim in CI is validated against CI
+  const dockerCmd = classifyDocumentedCommands(['docker build .'], packageScripts, ['docker build .']);
+  assert.equal(dockerCmd[0].status, 'validated');
+  assert.equal(dockerCmd[0].source, 'ci_workflow');
+});
+
+test('extractCiCommands parses run: and command: fields from workflow YAML', () => {
+  const yaml = `
+jobs:
+  test:
+    steps:
+      - run: npm ci
+      - name: Lint
+        run: npm run lint:code
+      - name: Matrix step
+        run: \${{ matrix.task.command }}
+  matrix:
+    task:
+      - name: Check
+        command: npm run check
+      - name: Pack
+        command: npm run pack:check
+`;
+
+  const cmds = extractCiCommands(yaml);
+  assert.ok(cmds.includes('npm ci'));
+  assert.ok(cmds.includes('npm run lint:code'));
+  assert.ok(cmds.includes('npm run check'));
+  assert.ok(cmds.includes('npm run pack:check'));
+  // Template expression should be excluded
+  assert.ok(!cmds.some((c) => c.startsWith('${{') ));
+});
+
+test('lintDocs reports missing-package-script for commands not in package.json', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-cmd-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: {
+        ingest: true,
+        include: ['README.md'],
+        exclude: [],
+        stale_after_days: 9999
+      }
+    }), 'utf8');
+    // Document a script that does NOT exist in package.json
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nRun the deploy script:\n\n```bash\nnpm run deploy\n```\n', 'utf8');
+    await writeFile(path.join(dir, 'package.json'), JSON.stringify({ scripts: { test: 'node --test', build: 'tsc' } }), 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    const missingIssues = lint.issues.filter((i) => i.code === 'missing-package-script');
+    assert.ok(missingIssues.length >= 1, 'expected at least one missing-package-script issue');
+    assert.ok(missingIssues[0].message.includes('deploy'), 'issue message should name the missing script');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintDocs does not report missing-package-script for validated scripts', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-valid-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: {
+        ingest: true,
+        include: ['README.md'],
+        exclude: [],
+        stale_after_days: 9999
+      }
+    }), 'utf8');
+    // Document a script that EXISTS in package.json
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nBuild the project:\n\n```bash\nnpm run build\n```\n', 'utf8');
+    await writeFile(path.join(dir, 'package.json'), JSON.stringify({ scripts: { build: 'tsc' } }), 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    const missingIssues = lint.issues.filter((i) => i.code === 'missing-package-script');
+    assert.equal(missingIssues.length, 0, 'should not report missing-package-script for a known script');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

@@ -3,6 +3,101 @@ import path from 'node:path';
 
 const DOC_EXTENSIONS = ['.md', '.mdx', '.markdown'];
 
+// Npm lifecycle commands that map directly to package.json scripts
+const NPM_LIFECYCLE_SCRIPTS = new Set(['test', 'start', 'stop', 'restart']);
+
+export type CommandStatus = 'validated' | 'missing' | 'unvalidated';
+export type CommandSource = 'package_scripts' | 'ci_workflow' | 'unknown';
+
+export type CommandClassification = {
+  command: string;
+  status: CommandStatus;
+  source: CommandSource;
+  script_name?: string;
+};
+
+/**
+ * Extract npm/shell commands from CI workflow YAML content.
+ * Parses `run:` lines and `command:` matrix fields.
+ */
+export function extractCiCommands(content: string): string[] {
+  const commands: string[] = [];
+  for (const line of content.split('\n')) {
+    // Match both `- run: <cmd>` (list item) and `  run: <cmd>` (property)
+    const runMatch = /^\s+(?:-\s+)?run:\s+(.+)$/.exec(line);
+    if (runMatch) {
+      const cmd = runMatch[1].trim().replace(/^["']|["']$/g, '');
+      if (!cmd.startsWith('${{')) {
+        for (const part of cmd.split('&&')) {
+          const trimmed = part.trim();
+          if (/^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(trimmed)) {
+            commands.push(trimmed);
+          }
+        }
+      }
+    }
+    // Match `command: <cmd>` matrix fields
+    const cmdMatch = /^\s+command:\s+(.+)$/.exec(line);
+    if (cmdMatch) {
+      const cmd = cmdMatch[1].trim().replace(/^["']|["']$/g, '');
+      if (!cmd.startsWith('${{') && /^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(cmd)) {
+        commands.push(cmd);
+      }
+    }
+  }
+  return [...new Set(commands)];
+}
+
+/**
+ * Classify documented commands against known package scripts and CI commands.
+ * Returns each command with a validation status: validated, missing, or unvalidated.
+ */
+export function classifyDocumentedCommands(
+  commands: string[],
+  packageScripts: Record<string, string>,
+  ciCommands: string[]
+): CommandClassification[] {
+  return commands.map((command) => classifyCommand(command, packageScripts, ciCommands));
+}
+
+function classifyCommand(
+  command: string,
+  packageScripts: Record<string, string>,
+  ciCommands: string[]
+): CommandClassification {
+  // npm run <scriptName>
+  const npmRunMatch = /^npm\s+run\s+(\S+)/.exec(command);
+  if (npmRunMatch) {
+    const scriptName = npmRunMatch[1];
+    return {
+      command,
+      status: scriptName in packageScripts ? 'validated' : 'missing',
+      source: 'package_scripts',
+      script_name: scriptName
+    };
+  }
+
+  // npm test / npm start / npm stop / npm restart (lifecycle commands)
+  const lifecycleMatch = /^npm\s+(test|start|stop|restart)\b/.exec(command);
+  if (lifecycleMatch) {
+    const scriptName = lifecycleMatch[1];
+    return {
+      command,
+      status: scriptName in packageScripts ? 'validated' : 'unvalidated',
+      source: 'package_scripts',
+      script_name: scriptName
+    };
+  }
+
+  // Check if command appears verbatim in CI workflow commands
+  const normalized = command.trim();
+  if (ciCommands.some((ci) => ci.trim() === normalized)) {
+    return { command, status: 'validated', source: 'ci_workflow' };
+  }
+
+  return { command, status: 'unvalidated', source: 'unknown' };
+}
+
 export function isDocumentationFile(filePath, config) {
   const lower = filePath.toLowerCase();
   if (!DOC_EXTENSIONS.some((ext) => lower.endsWith(ext))) return false;

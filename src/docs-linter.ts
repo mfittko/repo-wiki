@@ -2,6 +2,7 @@ import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { readJson } from './utils/fs.js';
 import { loadConfig } from './config.js';
+import { classifyDocumentedCommands, extractCiCommands } from './docs-ingestor.js';
 
 export async function lintDocs({ scanDir, repoPath = '.' }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
@@ -9,6 +10,27 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
   const issues = [];
   const docs = manifest.documentation?.files || [];
   const repoRoot = path.resolve(repoPath);
+
+  // Collect merged package scripts from manifest analysis
+  const allPackageScripts: Record<string, string> = {};
+  for (const pkg of manifest.analysis?.package_scripts || []) {
+    Object.assign(allPackageScripts, pkg.scripts || {});
+  }
+
+  // Collect CI commands from workflow YAML files
+  const ciCommands: string[] = [];
+  const workflowsDir = path.join(repoRoot, '.github', 'workflows');
+  try {
+    const workflowFiles = await fs.readdir(workflowsDir);
+    for (const wf of workflowFiles) {
+      if (wf.endsWith('.yml') || wf.endsWith('.yaml')) {
+        const content = await fs.readFile(path.join(workflowsDir, wf), 'utf8');
+        ciCommands.push(...extractCiCommands(content));
+      }
+    }
+  } catch {
+    // No .github/workflows directory — acceptable
+  }
 
   for (const doc of docs) {
     if (doc.stale) {
@@ -19,6 +41,21 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
     }
     if (doc.claims?.length && doc.status === 'unvalidated') {
       issues.push(issue(config.lint?.unvalidated_doc_claims || 'warning', 'unvalidated-documentation-claims', `${doc.path} has documentation claims with no validation signal.`));
+    }
+
+    // Validate documented commands against package scripts and CI workflows
+    const docCommands: string[] = doc.validation?.commands || [];
+    if (docCommands.length > 0) {
+      const classified = classifyDocumentedCommands(docCommands, allPackageScripts, ciCommands);
+      for (const cls of classified) {
+        if (cls.status === 'missing' && cls.source === 'package_scripts') {
+          issues.push(issue(
+            config.lint?.missing_package_scripts || 'warning',
+            'missing-package-script',
+            `${doc.path} documents 'npm run ${cls.script_name}' but script '${cls.script_name}' is not defined in package.json.`
+          ));
+        }
+      }
     }
 
     for (const link of doc.links || []) {
