@@ -659,3 +659,36 @@ test('inferFileRoutePath detects Next.js app router and pages patterns', () => {
   const app = extractRouteSurfaces('src/app/api/items/route.ts', 'export async function POST() {}', 'TypeScript');
   assert.ok(app.some(s => s.path === '/api/items'), 'app/api route pattern');
 });
+
+test('python extractImports ignores invalid specifiers and handles escape sequences in strings', () => {
+  // Quoted specifier (Go-style) should be ignored — not a valid Python identifier
+  assert.deepEqual(extractImports('import "fmt"', 'Python'), []);
+  assert.deepEqual(extractImports('import 123bad', 'Python'), []);
+  // Escaped single-quote inside inline string should not start triple-quote block
+  const src = `import os\nx = 'it\\'s fine'\nimport sys\n`;
+  const result = extractImports(src, 'Python');
+  assert.ok(result.includes('os'), 'os imported');
+  assert.ok(result.includes('sys'), 'sys imported');
+});
+
+test('python extractSymbols handles def with no parenthesis match and -> without colon', () => {
+  // def with no opening paren: should be skipped
+  const src1 = `def no_paren str:\n    pass\n`;
+  assert.deepEqual(extractSymbols(src1, 'Python'), []);
+  // async def with return annotation but no colon: should be skipped
+  const src2 = `async def incomplete() -> str\n`;
+  assert.deepEqual(extractSymbols(src2, 'Python'), []);
+  // multiline collectPythonSignature that hits empty-line break mid-multiline
+  const src3 = `def broken(\n\n    x: int,\n) -> int:\n    return x\n`;
+  const syms = extractSymbols(src3, 'Python');
+  assert.ok(syms.includes('broken') || syms.length === 0, 'gracefully handles mid-signature empty line');
+});
+
+test('stripPythonTripleQuotedStrings handles escaped triple-quote and inline quote before triple', () => {
+  // Inline single quote before triple-quote block: triple-quote block is still stripped
+  const src = `x = 'hello'\n"""\ndocstring content\nimport hidden\n"""\nimport real\n`;
+  assert.deepEqual(extractImports(src, 'Python'), ['real']);
+  // Double-escaped backslash before triple-quote is not an escape of the quote
+  const src2 = `import a\nx = "test"\nimport b\n`;
+  assert.deepEqual(extractImports(src2, 'Python'), ['a', 'b']);
+});

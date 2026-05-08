@@ -437,7 +437,7 @@ function extractPythonImports(content: string): string[] {
     if (importMatch) {
       for (const entry of importMatch[1].split(',')) {
         const specifier = entry.trim().split(/\s+as\s+/i)[0]?.trim();
-        if (specifier) {
+        if (specifier && /^[A-Za-z_][\w.]*$/.test(specifier)) {
           imports.add(specifier);
         }
       }

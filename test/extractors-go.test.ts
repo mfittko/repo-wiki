@@ -408,3 +408,24 @@ func Divide(a, b int) (int, error) {
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+test('extractGoPackage ignores package-like words in escaped string and rune literals', () => {
+  // Exercises the escape-in-string branch of stripGoCommentsAndLiterals (double-quote strings)
+  const src = [
+    'const s = "pack\\\"age fake"',    // escaped quote inside string
+    'const r = \'\\\'\'',             // rune literal with escaped quote
+    'package real',
+    ''
+  ].join('\n');
+  assert.equal(extractGoPackage(src, 'Go'), 'real');
+});
+
+test('extractGoPackage handles block comment with embedded string', () => {
+  // Exercises block comment stripping with string-like content inside
+  const src = [
+    '/* "package inside block comment" */',
+    'package real',
+    ''
+  ].join('\n');
+  assert.equal(extractGoPackage(src, 'Go'), 'real');
+});
