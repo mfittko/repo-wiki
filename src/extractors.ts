@@ -421,8 +421,9 @@ function isPython(language: string) {
 
 function extractPythonImports(content: string): string[] {
   const imports = new Set<string>();
+  const lines = stripPythonTripleQuotedStrings(content).split(/\r?\n/);
 
-  for (const rawLine of content.split(/\r?\n/)) {
+  for (const rawLine of lines) {
     if (!isTopLevelLine(rawLine)) {
       continue;
     }
@@ -454,8 +455,10 @@ function extractPythonImports(content: string): string[] {
 
 function extractPythonSymbols(content: string): string[] {
   const symbols = new Set<string>();
+  const lines = stripPythonTripleQuotedStrings(content).split(/\r?\n/);
 
-  for (const rawLine of content.split(/\r?\n/)) {
+  for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+    const rawLine = lines[lineIndex];
     if (!isTopLevelLine(rawLine)) {
       continue;
     }
@@ -465,15 +468,19 @@ function extractPythonSymbols(content: string): string[] {
       continue;
     }
 
-    const asyncFunction = findPythonFunctionName(line, true);
+    const asyncSignature = collectPythonSignature(lines, lineIndex);
+    const asyncFunction = findPythonFunctionName(asyncSignature.signature, true);
     if (asyncFunction) {
       symbols.add(asyncFunction);
+      lineIndex = asyncSignature.endLineIndex;
       continue;
     }
 
-    const functionName = findPythonFunctionName(line, false);
+    const functionSignature = collectPythonSignature(lines, lineIndex);
+    const functionName = findPythonFunctionName(functionSignature.signature, false);
     if (functionName) {
       symbols.add(functionName);
+      lineIndex = functionSignature.endLineIndex;
       continue;
     }
 
@@ -523,6 +530,77 @@ function stripInlineComment(line: string) {
 
 function isTopLevelLine(line: string) {
   return /^\S/.test(line);
+}
+
+function stripPythonTripleQuotedStrings(content: string) {
+  let result = '';
+  let tripleQuote: "'''" | '"""' | null = null;
+
+  for (let charIndex = 0; charIndex < content.length; charIndex += 1) {
+    const current = content[charIndex];
+
+    if (tripleQuote) {
+      if (content.startsWith(tripleQuote, charIndex)) {
+        tripleQuote = null;
+        charIndex += 2;
+      } else if (current === '\n') {
+        result += '\n';
+      }
+      continue;
+    }
+
+    if (content.startsWith("'''", charIndex)) {
+      tripleQuote = "'''";
+      charIndex += 2;
+      continue;
+    }
+
+    if (content.startsWith('"""', charIndex)) {
+      tripleQuote = '"""';
+      charIndex += 2;
+      continue;
+    }
+
+    result += current;
+  }
+
+  return result;
+}
+
+function collectPythonSignature(lines: string[], startLineIndex: number) {
+  const signatureParts: string[] = [];
+  let lineIndex = startLineIndex;
+  let consumedUntil = startLineIndex;
+  let parenthesesDepth = 0;
+  let sawColon = false;
+
+  for (; lineIndex < lines.length; lineIndex += 1) {
+    const sourceLine = lines[lineIndex];
+    const currentLine = stripInlineComment(sourceLine).trim();
+    if (!currentLine) {
+      if (lineIndex > startLineIndex) {
+        break;
+      }
+      continue;
+    }
+
+    if (lineIndex > startLineIndex && isTopLevelLine(sourceLine) && parenthesesDepth <= 0) {
+      break;
+    }
+
+    signatureParts.push(currentLine);
+    consumedUntil = lineIndex;
+    parenthesesDepth += countParenthesisDelta(currentLine);
+    sawColon = sawColon || hasTopLevelColon(currentLine);
+    if (sawColon && parenthesesDepth <= 0) {
+      break;
+    }
+  }
+
+  return {
+    signature: signatureParts.join(' '),
+    endLineIndex: consumedUntil
+  };
 }
 
 function findPythonFunctionName(line: string, isAsyncFunction: boolean) {
@@ -675,6 +753,97 @@ function findMatchingParenthesis(line: string, startOffset: number) {
   }
 
   return -1;
+}
+
+function countParenthesisDelta(line: string) {
+  let quote: '"' | "'" | null = null;
+  let depth = 0;
+
+  for (let charIndex = 0; charIndex < line.length; charIndex += 1) {
+    const current = line[charIndex];
+
+    if (quote) {
+      if (current === '\\') {
+        charIndex += 1;
+        continue;
+      }
+      if (current === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (current === '"' || current === "'") {
+      quote = current;
+      continue;
+    }
+
+    if (current === '(') {
+      depth += 1;
+    } else if (current === ')') {
+      depth -= 1;
+    }
+  }
+
+  return depth;
+}
+
+function hasTopLevelColon(line: string) {
+  let quote: '"' | "'" | null = null;
+  let parenthesesDepth = 0;
+  let bracketDepth = 0;
+  let braceDepth = 0;
+
+  for (let charIndex = 0; charIndex < line.length; charIndex += 1) {
+    const current = line[charIndex];
+
+    if (quote) {
+      if (current === '\\') {
+        charIndex += 1;
+        continue;
+      }
+      if (current === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (current === '"' || current === "'") {
+      quote = current;
+      continue;
+    }
+
+    if (current === '(') {
+      parenthesesDepth += 1;
+      continue;
+    }
+    if (current === ')' && parenthesesDepth > 0) {
+      parenthesesDepth -= 1;
+      continue;
+    }
+    if (current === '[') {
+      bracketDepth += 1;
+      continue;
+    }
+    if (current === ']' && bracketDepth > 0) {
+      bracketDepth -= 1;
+      continue;
+    }
+    if (current === '{') {
+      braceDepth += 1;
+      continue;
+    }
+    if (current === '}' && braceDepth > 0) {
+      braceDepth -= 1;
+      continue;
+    }
+
+    if (current === ':' && parenthesesDepth === 0 && bracketDepth === 0 && braceDepth === 0) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function extractJavaScriptAstMetadata(content: string, language: string): JavaScriptAstMetadata | null {

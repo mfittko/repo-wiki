@@ -224,6 +224,13 @@ test('language detection and classification cover the major path cases', () => {
 
 test('python extraction captures imports, classes, functions, async functions, constants, and malformed input fallback', () => {
   const pythonSource = `
+"""
+import fake_mod
+from fake_pkg import hidden
+def fake():
+    return 0
+"""
+
 import os
 import pkg.mod as mod, json
 from collections import defaultdict
@@ -242,10 +249,20 @@ def helper(name: str):
 
 async def fetch_data():
     return None
+
+def multi_line(
+    name: str,
+) -> str:
+    return name
+
+async def multi_async(
+    value: int,
+):
+    return value
 `;
 
   assert.deepEqual(extractImports(pythonSource, 'Python'), ['.local.module', 'collections', 'json', 'os', 'pkg.mod']);
-  assert.deepEqual(extractSymbols(pythonSource, 'Python'), ['CONSTANT', 'MAX_RETRIES', 'SPECIAL_TOKEN', 'Service', 'fetch_data', 'helper']);
+  assert.deepEqual(extractSymbols(pythonSource, 'Python'), ['CONSTANT', 'MAX_RETRIES', 'SPECIAL_TOKEN', 'Service', 'fetch_data', 'helper', 'multi_async', 'multi_line']);
 
   const malformedSource = `
 import requests
