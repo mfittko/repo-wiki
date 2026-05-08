@@ -72,11 +72,17 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     const routeSurfaces = content ? extractRouteSurfaces(file.relative, content, language) : [];
     const migrationSurfaces = extractMigrationSurfaces(file.relative, language);
     const modelSurfaces = content ? extractModelSurfaces(file.relative, content, language) : [];
-    const runtimeHints = content
-      ? detectRuntimeHints(file.relative, content, { environmentVariables, routeSurfaces, migrationSurfaces, modelSurfaces })
-      : migrationSurfaces.length > 0
-        ? detectRuntimeHints(file.relative, '', { migrationSurfaces, modelSurfaces })
-        : [];
+    let runtimeHints: string[] = [];
+    if (content) {
+      runtimeHints = detectRuntimeHints(file.relative, content, {
+        environmentVariables,
+        routeSurfaces,
+        migrationSurfaces,
+        modelSurfaces
+      });
+    } else if (migrationSurfaces.length > 0) {
+      runtimeHints = detectRuntimeHints(file.relative, '', { migrationSurfaces, modelSurfaces });
+    }
 
     const card = {
       kind: 'source_card',
