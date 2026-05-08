@@ -196,3 +196,7 @@ async def run_job():
     assert.ok(pythonCard);
     assert.deepEqual(pythonCard.imports, ['collections', 'os']);
     assert.deepEqual(pythonCard.symbols, ['SETTING', 'Service', 'helper', 'run_job']);
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
+});
