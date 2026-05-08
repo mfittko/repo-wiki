@@ -287,8 +287,10 @@ function extractJavaScriptAstMetadata(content: string, language: string): JavaSc
         if (statement.name) {
           const name = statement.name.text;
           symbols.add(name);
-          if (modifierFlags.exported) {
-            pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'function' });
+          if (modifierFlags.defaultExport) {
+            pushExportedSymbol(exported, seenExported, { name: 'default', kind: 'function' });
+          } else if (modifierFlags.exported) {
+            pushExportedSymbol(exported, seenExported, { name, kind: 'function' });
           }
         } else if (modifierFlags.defaultExport) {
           symbols.add('default');
@@ -301,8 +303,10 @@ function extractJavaScriptAstMetadata(content: string, language: string): JavaSc
         if (statement.name) {
           const name = statement.name.text;
           symbols.add(name);
-          if (modifierFlags.exported) {
-            pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'class' });
+          if (modifierFlags.defaultExport) {
+            pushExportedSymbol(exported, seenExported, { name: 'default', kind: 'class' });
+          } else if (modifierFlags.exported) {
+            pushExportedSymbol(exported, seenExported, { name, kind: 'class' });
           }
         } else if (modifierFlags.defaultExport) {
           symbols.add('default');

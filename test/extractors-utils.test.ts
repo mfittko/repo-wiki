@@ -127,6 +127,22 @@ function helper() { return 1; }
     { name: 'default', kind: 'function' }
   ]);
 
+  const namedDefaultFunctionSource = `
+export default function createService() {}
+`;
+  assert.deepEqual(extractSymbols(namedDefaultFunctionSource, 'JavaScript'), ['createService']);
+  assert.deepEqual(extractExportedSymbols(namedDefaultFunctionSource, 'JavaScript'), [
+    { name: 'default', kind: 'function' }
+  ]);
+
+  const namedDefaultClassSource = `
+export default class Service {}
+`;
+  assert.deepEqual(extractSymbols(namedDefaultClassSource, 'JavaScript'), ['Service']);
+  assert.deepEqual(extractExportedSymbols(namedDefaultClassSource, 'JavaScript'), [
+    { name: 'default', kind: 'class' }
+  ]);
+
   const tsSource = `
 type InternalType = { id: string };
 interface InternalShape { value: number }
