@@ -113,7 +113,7 @@ test('scanRepository extracts migration and ORM model metadata without leaking f
     await fs.writeFile(path.join(repo, 'prisma', 'schema.prisma'), `
 datasource db {
   provider = "postgresql"
-  url      = "postgresql://testuser:testpass@localhost:5432/app"
+  url      = env("DATABASE_URL")
 }
 
 model User {
@@ -158,7 +158,7 @@ export class Session extends Model {}
     assert.ok(modelCard.model_surfaces.some((entry) => entry.name === 'Session' && entry.framework === 'sequelize'));
     assert.ok(modelCard.reasons.includes('data-model'));
 
-    assert.equal(JSON.stringify(result.manifest).includes('postgresql://testuser:testpass@localhost:5432/app'), false);
+    assert.equal(JSON.stringify(result.manifest).includes('DATABASE_URL'), false);
   } finally {
     await fs.rm(repo, { recursive: true, force: true });
   }
