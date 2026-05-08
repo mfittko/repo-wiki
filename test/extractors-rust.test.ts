@@ -73,6 +73,26 @@ use foo::{Baz as _, Qux as LocalQux};
   ]);
 });
 
+test('extractExportedSymbols handles Rust public use re-export edge cases', () => {
+  const source = `
+pub use crate::models::{self, User as DomainUser, Role as _, nested::{self, Item}, *};
+pub use ::outer::Name;
+pub use crate::*;
+pub use crate::;
+pub use crate::One, crate::Two;
+`;
+
+  assert.deepEqual(extractExportedSymbols(source, 'Rust'), [
+    { name: 'DomainUser', kind: 're-export' },
+    { name: 'Item', kind: 're-export' },
+    { name: 'models', kind: 're-export' },
+    { name: 'Name', kind: 're-export' },
+    { name: 'nested', kind: 're-export' },
+    { name: 'One', kind: 're-export' },
+    { name: 'Two', kind: 're-export' }
+  ]);
+});
+
 test('extractSymbols and extractExportedSymbols extract Rust items and impl blocks', () => {
   const symbols = extractSymbols(rustSource, 'Rust');
   assert.ok(symbols.includes('Deserialize'));
@@ -108,6 +128,7 @@ test('Rust extraction is parse-error tolerant', () => {
   const malformed = `
 pub fn still_works() {}
 impl Broken {
+impl for Broken {}
 pub struct Recovered;
 use crate::broken::{self, Item;
 `;
