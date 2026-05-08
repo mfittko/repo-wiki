@@ -69,7 +69,10 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     const imports = content ? extractImports(content, language) : [];
     const symbols = content ? extractSymbols(content, language) : [];
     const exportedSymbols = content ? extractExportedSymbols(content, language) : [];
-    const environmentVariables = content ? extractEnvironmentVariables(content, language) : [];
+    const environmentVariables = content ? mergeEnvironmentVariables(
+      extractEnvironmentVariables(content, language),
+      extractConfiguredEnvironmentVariables(file.relative, content)
+    ) : [];
     const routeSurfaces = content ? extractRouteSurfaces(file.relative, content, language) : [];
     const migrationSurfaces = extractMigrationSurfaces(file.relative, language);
     const modelSurfaces = content ? extractModelSurfaces(file.relative, content, language) : [];
@@ -199,6 +202,37 @@ function summarize(cards: Array<{ language: string; category: string; runtime_hi
   }
 
   return { languages, categories, runtime_hints: runtimeHints, documentation: summarizeDocumentation(documentationCards) };
+}
+
+function mergeEnvironmentVariables(...groups: string[][]) {
+  return [...new Set(groups.flat())].sort();
+}
+
+function extractConfiguredEnvironmentVariables(filePath: string, content: string) {
+  const lower = filePath.toLowerCase();
+  const names = new Set<string>();
+
+  if (/(^|\/)\.env(?:\.|$)/.test(lower) || lower.endsWith('/.env') || lower === '.env') {
+    for (const line of content.split('\n')) {
+      const match = /^\s*(?:export\s+)?([A-Z][A-Z0-9_]{2,})\s*=/.exec(line);
+      if (match) names.add(match[1]);
+    }
+  }
+
+  if (lower.endsWith('dockerfile') || lower.includes('/dockerfile')) {
+    for (const line of content.split('\n')) {
+      const match = /^\s*(?:ENV|ARG)\s+([A-Z][A-Z0-9_]{2,})(?:\s|=|$)/i.exec(line);
+      if (match) names.add(match[1]);
+    }
+  }
+
+  if (/\.(ya?ml|json|toml)$/.test(lower) || lower.includes('schema') || lower.includes('config')) {
+    for (const match of content.matchAll(/\b([A-Z][A-Z0-9_]{2,})\b\s*[:=]/g)) {
+      names.add(match[1]);
+    }
+  }
+
+  return [...names].sort();
 }
 
 function safeFileName(filePath: string) {

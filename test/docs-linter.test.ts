@@ -42,7 +42,7 @@ test('documentation ingestion produces documentation cards and lint issues', asy
 });
 
 test('extractDocumentedFilePaths extracts deterministic markdown link and inline code path references', () => {
-  const refs = extractDocumentedFilePaths('# Paths\n\nSee [plan](docs/PLAN.md), [titled](docs/TITLE.md "Title"), `src/cli.ts`, `../README.md`, `dist/`, `1..2`, and `npm run build`.\n\n```bash\ncat missing.md\n```\n');
+  const refs = extractDocumentedFilePaths('# Paths\n\nSee [plan](docs/PLAN.md), [titled](docs/TITLE.md "Title"), `src/cli.ts`, `../README.md`, `dist/`, `1..2`, and `npm run build`.\n\n```bash\ncat missing.md\n```\n\n~~~bash\ncat also-missing.md\n~~~\n');
   assert.deepEqual(refs, [
     { path: 'docs/PLAN.md', line: 3, source: 'link' },
     { path: 'docs/TITLE.md', line: 3, source: 'link' },
@@ -216,7 +216,7 @@ test('lintDocs and Documentation Debt Report validate exact commands from CI wor
         stale_after_days: 9999
       }
     }), 'utf8');
-    await writeFile(path.join(dir, 'README.md'), '# Demo\n\n```bash\nnpm run ci-only\ndocker build .\n```\n', 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\n```bash\nnpm run ci-only\ndocker login --password supersecretvalue\ndocker build .\n```\n', 'utf8');
     await writeFile(path.join(dir, 'package.json'), JSON.stringify({ scripts: {} }), 'utf8');
 
     const scanDir = path.join(dir, '.llmwiki', 'run');
@@ -232,6 +232,8 @@ test('lintDocs and Documentation Debt Report validate exact commands from CI wor
     await compileWiki({ scanDir, planFile, wikiDir });
     const report = await readFile(path.join(wikiDir, 'Documentation-Debt-Report.md'), 'utf8');
     assert.match(report, /\| `npm run ci-only` \| ✅ validated \| CI workflow \|/);
+    assert.match(report, /`docker login --password \[REDACTED\]`/);
+    assert.doesNotMatch(report, /supersecretvalue/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
@@ -246,23 +248,26 @@ test('lintDocs reports broken documented file paths, broken image links, and unv
     await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
       documentation: {
         ingest: true,
-        include: ['README.md'],
+        include: ['README.md', 'docs/**/*.md'],
         exclude: [],
         stale_after_days: 9999
       }
     }), 'utf8');
     await writeFile(path.join(dir, 'src', 'app.js'), "export const mode = process.env.APP_MODE;\nconst baseUrl = optionalEnv(env, 'LLMWIKI_LLM_BASE_URL');\n", 'utf8');
+    await writeFile(path.join(dir, '.env.example'), 'EXAMPLE_MODE=on\n', 'utf8');
     await writeFile(path.join(dir, 'docs', 'plans', 'README.md'), '# Plans\n', 'utf8');
-    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee `src/app.js`, `docs/plans/`, `docs/missing.md`, ![missing](assets/missing.png), and configure APP_MODE, MISSING_TOKEN, or LLMWIKI_LLM_BASE_URL.\n', 'utf8');
+    await writeFile(path.join(dir, 'docs', 'guide.md'), '# Guide\n\n[local readme](README.md)\n', 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee `src/app.js`, `docs/plans/`, `docs/missing.md`, ![missing](assets/missing.png), and configure APP_MODE, EXAMPLE_MODE, MISSING_TOKEN, or LLMWIKI_LLM_BASE_URL.\n', 'utf8');
 
     const scanDir = path.join(dir, '.llmwiki', 'run');
     await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
 
     const lint = await lintDocs({ scanDir, repoPath: dir });
     const brokenPathIssues = lint.issues.filter((i) => i.code === 'broken-documented-file-path');
-    assert.equal(brokenPathIssues.length, 2);
+    assert.equal(brokenPathIssues.length, 3);
     assert.ok(brokenPathIssues.some((item) => /README\.md:3 references missing repository path docs\/missing\.md/.test(item.message)));
     assert.ok(brokenPathIssues.some((item) => /README\.md:3 references missing repository path assets\/missing\.png/.test(item.message)));
+    assert.ok(brokenPathIssues.some((item) => /docs\/guide\.md:3 references missing repository path README\.md/.test(item.message)));
 
     const envIssues = lint.issues.filter((i) => i.code === 'unvalidated-env-var');
     assert.equal(envIssues.length, 1);

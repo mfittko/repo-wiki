@@ -2,7 +2,7 @@ import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { readJson } from './utils/fs.js';
 import { loadConfig } from './config.js';
-import { collectKnownEnvironmentVariables, resolveDocumentedPathOnDisk } from './docs-validation.js';
+import { cleanDocumentedPathTarget, collectKnownEnvironmentVariables, resolveDocumentedPathOnDisk } from './docs-validation.js';
 import { classifyDocumentedCommands, extractCiCommands, mergePackageScripts } from './docs-ingestor.js';
 
 export async function lintDocs({ scanDir, repoPath = '.' }) {
@@ -65,9 +65,9 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
 
     const validatedLinkTargets = new Set<string>();
     for (const reference of doc.file_paths || []) {
-      const resolved = await resolveDocumentedPathOnDisk(reference.path, doc.path, repoRoot, pathAccessCache);
+      const resolved = await resolveDocumentedPathOnDisk(reference.path, doc.path, repoRoot, pathAccessCache, reference.source);
       if (reference.source === 'link') {
-        validatedLinkTargets.add(cleanDocumentLinkTarget(reference.path));
+        validatedLinkTargets.add(cleanDocumentedPathTarget(reference.path));
       }
       if (!resolved.valid) {
         issues.push(issue(
@@ -90,7 +90,7 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
 
     for (const link of doc.links || []) {
       if (link.startsWith('http') || link.startsWith('#') || link.startsWith('mailto:')) continue;
-      const target = cleanDocumentLinkTarget(link);
+      const target = cleanDocumentedPathTarget(link);
       if (!target || validatedLinkTargets.has(target)) continue;
       const resolved = await resolveDocumentedPathOnDisk(target, doc.path, repoRoot, pathAccessCache);
       if (!resolved.valid) {
@@ -119,12 +119,3 @@ function issue(level, code, message) {
   return { level: normalized, code, message };
 }
 
-function cleanDocumentLinkTarget(value: string) {
-  const withoutAngleBrackets = value.trim().replace(/^<|>$/g, '');
-  const withoutTitle = withoutAngleBrackets.replace(/\s+(?:"[^"]*"|'[^']*'|\([^)]*\))$/, '');
-  return withoutTitle
-    .split('#')[0]
-    .split('?')[0]
-    .replace(/^['"]|['"]$/g, '')
-    .trim();
-}

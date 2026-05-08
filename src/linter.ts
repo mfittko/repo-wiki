@@ -19,7 +19,9 @@ const SECRET_PATTERNS = [
   /-----BEGIN (RSA|DSA|EC|OPENSSH) PRIVATE KEY-----/,
   /ghp_[A-Za-z0-9_]{30,}/,
   /xox[baprs]-[A-Za-z0-9-]{20,}/,
-  /sk-[A-Za-z0-9]{20,}/
+  /sk-[A-Za-z0-9]{20,}/,
+  /authorization:\s*bearer\s+[^\s"']{8,}/i,
+  /(?:token|password|api[_-]?key|secret)=[^\s&]{8,}/i
 ];
 
 export async function lintWiki({ wikiDir, scanDir }: { wikiDir: string; scanDir: string }) {

@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { isGeneratedOutputReference } from './docs-validation.js';
+import { cleanDocumentedPathTarget, hasParentDirectorySegment, isGeneratedOutputReference } from './docs-validation.js';
 
 const DOC_EXTENSIONS = ['.md', '.mdx', '.markdown'];
 
@@ -320,25 +320,26 @@ export function extractDocumentedFilePaths(content: string): DocumentedFilePath[
   const results: DocumentedFilePath[] = [];
   const seen = new Set<string>();
   const lines = content.split('\n');
-  let inFence = false;
+  let fenceMarker: '`' | '~' | '' = '';
 
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
-    if (/^\s*```/.test(line)) {
-      inFence = !inFence;
+    const fenceMatch = /^\s*(```+|~~~+)/.exec(line);
+    if (fenceMatch && (!fenceMarker || fenceMatch[1][0] === fenceMarker)) {
+      fenceMarker = fenceMarker ? '' : fenceMatch[1][0] as '`' | '~';
       continue;
     }
-    if (inFence) continue;
+    if (fenceMarker) continue;
 
     for (const match of line.matchAll(/!?\[[^\]]*\]\(([^)]+)\)/g)) {
-      const target = cleanPathCandidate(match[1]);
+      const target = cleanDocumentedPathTarget(match[1]);
       if (isDocumentedPathCandidate(target, true)) {
         pushDocumentedPath(results, seen, { path: target, line: index + 1, source: 'link' });
       }
     }
 
     for (const match of line.matchAll(/`([^`]+)`/g)) {
-      const target = cleanPathCandidate(match[1]);
+      const target = cleanDocumentedPathTarget(match[1]);
       if (isDocumentedPathCandidate(target, false)) {
         pushDocumentedPath(results, seen, { path: target, line: index + 1, source: 'inline_code' });
       }
@@ -356,16 +357,6 @@ function pushDocumentedPath(results: DocumentedFilePath[], seen: Set<string>, va
   }
 }
 
-function cleanPathCandidate(value: string) {
-  const withoutAngleBrackets = value.trim().replace(/^<|>$/g, '');
-  const withoutTitle = withoutAngleBrackets.replace(/\s+(?:"[^"]*"|'[^']*'|\([^)]*\))$/, '');
-  return withoutTitle
-    .split('#')[0]
-    .split('?')[0]
-    .replace(/^['"]|['"]$/g, '')
-    .trim();
-}
-
 function isDocumentedPathCandidate(value: string, fromLink: boolean) {
   if (!value || value.startsWith('#') || /^(https?:|mailto:|tel:)/i.test(value)) return false;
   if (/[{}*]/.test(value)) return false;
@@ -378,10 +369,6 @@ function isDocumentedPathCandidate(value: string, fromLink: boolean) {
   if (value.includes('/')) return true;
   if (fromLink) return true;
   return /^(?:[A-Z]+\.)?[^/]+\.(?:md|mdx|markdown|ts|tsx|js|jsx|mjs|cjs|json|ya?ml|toml|rs|go|py|rb|java|kt|cs|php|prisma|sql|sh|bash|env|txt)$/i.test(value);
-}
-
-function hasParentDirectorySegment(value: string) {
-  return /(^|\/)\.\.(\/|$)/.test(value.replaceAll('\\', '/'));
 }
 
 function extractHeadings(content) {

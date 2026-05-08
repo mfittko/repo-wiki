@@ -8,6 +8,8 @@ export type PathResolution = {
   path: string;
 };
 
+export type DocumentedPathSource = 'link' | 'inline_code';
+
 export function normalizeRepoPath(filePath: string) {
   return String(filePath || '').replaceAll('\\', '/').replace(/^\/+/, '').replace(/\/+$/, '');
 }
@@ -21,15 +23,19 @@ export function isGeneratedOutputReference(filePath: string) {
   return GENERATED_OUTPUT_ROOTS.has(root);
 }
 
-export function candidateRepoPaths(referencePath: string, docPath: string) {
+export function candidateRepoPaths(referencePath: string, docPath: string, source: DocumentedPathSource = 'inline_code') {
   const normalizedReference = normalizeRepoPath(referencePath);
-  const cleaned = normalizeRepoPath(normalizedReference.replace(/^\.\//, ''));
   const docRelative = normalizeRepoPath(path.posix.normalize(path.posix.join(path.posix.dirname(normalizeRepoPath(docPath)), normalizedReference)));
+  if (source === 'link') {
+    return [docRelative].filter((candidate) => candidate && candidate !== '.');
+  }
+
+  const cleaned = normalizeRepoPath(normalizedReference.replace(/^\.\//, ''));
   return [...new Set([cleaned, docRelative].filter((candidate) => candidate && candidate !== '.'))];
 }
 
-export async function resolveDocumentedPathOnDisk(referencePath: string, docPath: string, repoRoot: string, accessCache: Map<string, boolean> = new Map()): Promise<PathResolution> {
-  const candidates = candidateRepoPaths(referencePath, docPath);
+export async function resolveDocumentedPathOnDisk(referencePath: string, docPath: string, repoRoot: string, accessCache: Map<string, boolean> = new Map(), source: DocumentedPathSource = 'inline_code'): Promise<PathResolution> {
+  const candidates = candidateRepoPaths(referencePath, docPath, source);
   const absoluteRoot = path.resolve(repoRoot);
 
   for (const candidate of candidates) {
@@ -61,8 +67,8 @@ export async function resolveDocumentedPathOnDisk(referencePath: string, docPath
   return { valid: false, path: candidates[0] || referencePath };
 }
 
-export function resolveDocumentedPathFromManifest(referencePath: string, docPath: string, manifestFiles: Set<string>, manifestDirectories = collectManifestDirectories(manifestFiles)): PathResolution {
-  const candidates = candidateRepoPaths(referencePath, docPath);
+export function resolveDocumentedPathFromManifest(referencePath: string, docPath: string, manifestFiles: Set<string>, manifestDirectories = collectManifestDirectories(manifestFiles), source: DocumentedPathSource = 'inline_code'): PathResolution {
+  const candidates = candidateRepoPaths(referencePath, docPath, source);
   for (const candidate of candidates) {
     if (isGeneratedOutputReference(candidate) || manifestFiles.has(candidate) || manifestDirectories.has(candidate)) {
       return { valid: true, path: candidate };
@@ -117,6 +123,16 @@ function isPathInside(root: string, target: string) {
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
 }
 
-function hasParentDirectorySegment(filePath: string) {
+export function cleanDocumentedPathTarget(value: string) {
+  const withoutAngleBrackets = value.trim().replace(/^<|>$/g, '');
+  const withoutTitle = withoutAngleBrackets.replace(/\s+(?:"[^"]*"|'[^']*'|\([^)]*\))$/, '');
+  return withoutTitle
+    .split('#')[0]
+    .split('?')[0]
+    .replace(/^['"]|['"]$/g, '')
+    .trim();
+}
+
+export function hasParentDirectorySegment(filePath: string) {
   return /(^|\/)\.\.(\/|$)/.test(filePath.replaceAll('\\', '/'));
 }

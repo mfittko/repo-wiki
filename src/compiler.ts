@@ -198,7 +198,7 @@ function renderDocumentationDebtReport(manifest) {
   const manifestFiles = new Set<string>((manifest.files || []).map((file) => normalizeRepoPath(file.path)));
   const manifestDirectories = collectManifestDirectories(manifestFiles);
   const filePathFindings = docs.flatMap((doc) => (doc.file_paths || []).map((reference) => {
-    const resolved = resolveDocumentedPathFromManifest(reference.path, doc.path, manifestFiles, manifestDirectories);
+    const resolved = resolveDocumentedPathFromManifest(reference.path, doc.path, manifestFiles, manifestDirectories, reference.source);
     return {
       doc: doc.path,
       line: reference.line,
@@ -218,15 +218,20 @@ function renderDocumentationDebtReport(manifest) {
   const commandRows = classified.map((c) => {
     const badge = c.status === 'validated' ? '✅ validated' : c.status === 'missing' ? '❌ missing' : '❓ unvalidated';
     const source = c.source === 'package_scripts' ? 'package.json' : c.source === 'ci_workflow' ? 'CI workflow' : 'unknown';
-    return `| \`${c.command}\` | ${badge} | ${source} |`;
+    return tableRow([code(redactSensitiveText(c.command)), badge, source]);
   });
   const filePathRows = filePathFindings.slice(0, 200).map((finding) => {
     const badge = finding.valid ? '✅ valid' : '❌ missing';
-    return `| \`${finding.doc}:${finding.line}\` | \`${finding.reference_path}\` | ${badge} | ${finding.valid ? `\`${finding.resolved_path}\`` : 'not found'} |`;
+    return tableRow([
+      code(`${finding.doc}:${finding.line}`),
+      code(finding.reference_path),
+      badge,
+      finding.valid ? code(finding.resolved_path) : 'not found'
+    ]);
   });
   const envRows = envFindings.slice(0, 200).map((finding) => {
     const badge = finding.valid ? '✅ validated' : '❓ unvalidated';
-    return `| \`${finding.doc}\` | \`${finding.name}\` | ${badge} |`;
+    return tableRow([code(finding.doc), code(finding.name), badge]);
   });
 
   return `${frontmatter(manifest, { kind: 'documentation_debt_report', documentation_authority: manifest.documentation?.authority || 'secondary' })}# Documentation Debt Report
@@ -411,10 +416,14 @@ function tableFromObject(object: Record<string, number> | undefined, headers: st
 
 function markdownTable(headers: string[], rows: Array<Array<string | number>>) {
   return [
-    `| ${headers.map((header) => sanitizeTableCell(header)).join(' | ')} |`,
+    tableRow(headers),
     `| ${headers.map(() => '---').join(' | ')} |`,
-    ...rows.map((row) => `| ${row.map((value) => sanitizeTableCell(value)).join(' | ')} |`)
+    ...rows.map((row) => tableRow(row))
   ].join('\n');
+}
+
+function tableRow(cells: Array<string | number>) {
+  return `| ${cells.map((cell) => sanitizeTableCell(cell)).join(' | ')} |`;
 }
 
 function collectEnvironmentRows(files: any[]) {
@@ -464,7 +473,14 @@ function code(value: string | number) {
 }
 
 function sanitizeTableCell(value: string | number) {
-  return String(value ?? '').replace(/\n/g, ' ').replace(/\|/g, '\\|');
+  return String(value ?? '').replace(/[\r\n]+/g, ' ').replace(/\|/g, '\\|').trim();
+}
+
+function redactSensitiveText(value: string | number) {
+  return String(value ?? '')
+    .replace(/(authorization:\s*bearer\s+)[^\s"']+/ig, '$1[REDACTED]')
+    .replace(/((?:--?token|--?password|--?api[-_]?key|--?secret)(?:=|\s+))[^\s"']+/ig, '$1[REDACTED]')
+    .replace(/((?:token|password|api[_-]?key|secret)=)[^\s&]+/ig, '$1[REDACTED]');
 }
 
 function shortCommit(commit: string) {
