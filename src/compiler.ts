@@ -28,7 +28,7 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
     pages.set('API-HTTP-Routes.md', renderHttpRoutes(manifest));
   }
 
-  if (manifest.totals.categories?.data) {
+  if (shouldRenderDataModelPage(manifest, plan)) {
     pages.set('Data-Model-and-Migrations.md', renderDataModel(manifest));
   }
 
@@ -311,4 +311,16 @@ function shortCommit(commit: string) {
 
 function escapeMermaid(value: string) {
   return String(value).replace(/[\[\]{}]/g, '').replace(/"/g, "'");
+}
+
+function shouldRenderDataModelPage(manifest, plan) {
+  if (manifest.totals.categories?.data || manifest.totals.runtime_hints?.['data-model'] || manifest.totals.runtime_hints?.['orm-model'] || manifest.totals.runtime_hints?.['database-migration']) {
+    return true;
+  }
+
+  if ((manifest.files || []).some((file) => file.reasons?.includes('data-model') || (file.model_surfaces || []).length > 0 || (file.migration_surfaces || []).length > 0)) {
+    return true;
+  }
+
+  return (plan.pages || []).some((page) => page.path === 'Data-Model-and-Migrations.md');
 }

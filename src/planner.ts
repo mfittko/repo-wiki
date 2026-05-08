@@ -140,7 +140,7 @@ function createPagePlan(manifest, modules) {
     crossCutting.push(page('API-HTTP-Routes.md', 'cross-cutting', 'Detected HTTP routing surfaces.'));
   }
 
-  if (manifest.totals.categories?.data) {
+  if (hasDataModelSignals(manifest)) {
     crossCutting.push(page('Data-Model-and-Migrations.md', 'cross-cutting', 'Data models, migrations, and schema-related files.'));
   }
 
@@ -149,6 +149,22 @@ function createPagePlan(manifest, modules) {
 
 function page(path, phase, purpose, moduleName = null) {
   return { path, phase, purpose, moduleName };
+}
+
+function hasDataModelSignals(manifest) {
+  if (manifest.totals.categories?.data) {
+    return true;
+  }
+
+  if (manifest.totals.runtime_hints?.['data-model'] || manifest.totals.runtime_hints?.['orm-model'] || manifest.totals.runtime_hints?.['database-migration']) {
+    return true;
+  }
+
+  return (manifest.files || []).some((file) =>
+    file.reasons?.includes('data-model') ||
+    (file.migration_surfaces || []).length > 0 ||
+    (file.model_surfaces || []).length > 0
+  );
 }
 
 function slugify(value) {

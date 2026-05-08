@@ -79,11 +79,15 @@ model AuditLog { id Int @id }
   const ormModels = extractModelSurfaces('src/models/account.ts', `
 @Entity()
 export class AccountEntity {}
+@Entity('users')
+@Index(['email'])
+export class UserEntity {}
 class Session extends Model {}
 const User = sequelize.define('User', {});
 const Profile = mongoose.model('Profile', profileSchema);
 `, 'TypeScript');
   assert.ok(ormModels.some((entry) => entry.framework === 'typeorm' && entry.kind === 'entity' && entry.name === 'AccountEntity'));
+  assert.ok(ormModels.some((entry) => entry.framework === 'typeorm' && entry.kind === 'entity' && entry.name === 'UserEntity'));
   assert.ok(ormModels.some((entry) => entry.framework === 'sequelize' && entry.kind === 'model' && entry.name === 'Session'));
   assert.ok(ormModels.some((entry) => entry.framework === 'sequelize' && entry.kind === 'model' && entry.name === 'User'));
   assert.ok(ormModels.some((entry) => entry.framework === 'mongoose' && entry.kind === 'model' && entry.name === 'Profile'));

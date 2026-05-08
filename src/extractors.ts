@@ -322,7 +322,7 @@ export function extractModelSurfaces(filePath: string, content: string, language
   if (isJavaScriptLike(language)) {
     const hasSequelizeSignal = /\bfrom\s+['"]sequelize['"]|require\(\s*['"]sequelize['"]\s*\)|\bsequelize\s*\./.test(content);
 
-    for (const match of content.matchAll(/@Entity(?:\s*\([^)]*\))?\s*(?:export\s+)?class\s+([A-Za-z_$][\w$]*)/g)) {
+    for (const match of content.matchAll(/@Entity(?:\s*\([^)]*\))?(?:\s*@[\w$]+(?:\s*\([^)]*\))?)*\s*(?:export\s+)?class\s+([A-Za-z_$][\w$]*)/g)) {
       pushModelSurface(surfaces, seen, { name: match[1], kind: 'entity', framework: 'typeorm' });
     }
 
