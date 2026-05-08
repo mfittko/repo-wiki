@@ -75,6 +75,26 @@ test('detectPageState returns "human-owned" when owned_by is "human"', () => {
   assert.equal(detectPageState(content), 'human-owned');
 });
 
+test('detectPageState recognizes unquoted and single-quoted human ownership frontmatter', () => {
+  const unquotedPageState = [
+    '---',
+    'source_commit: "abc123"',
+    'page_state: human-owned',
+    '---',
+    ''
+  ].join('\n');
+  const singleQuotedOwner = [
+    '---',
+    'source_commit: "abc123"',
+    "owned_by: 'human'",
+    '---',
+    ''
+  ].join('\n');
+
+  assert.equal(detectPageState(unquotedPageState), 'human-owned');
+  assert.equal(detectPageState(singleQuotedOwner), 'human-owned');
+});
+
 test('detectPageState returns "unmanaged" when source_commit is absent', () => {
   assert.equal(detectPageState(unmanagedPage()), 'unmanaged');
 });

@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { compileWiki } from '../src/compiler.js';
+import { extractHumanNotes } from '../src/page-ownership.js';
 
 function createPlan() {
   return {
@@ -431,8 +432,56 @@ test('compileWiki preserves HUMAN_NOTES content byte-for-byte on recompilation',
     await compileWiki({ scanDir, planFile, wikiDir });
 
     const secondPage = await fs.readFile(path.join(wikiDir, 'Module-Utils.md'), 'utf8');
-    assert.match(secondPage, /This was written by a human\./);
+    assert.equal(extractHumanNotes(secondPage), humanNotes);
     assert.match(secondPage, /page_state: "mixed"/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki preserves whitespace-only HUMAN_NOTES without marking the page mixed', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'abc123',
+    mode: 'bootstrap',
+    totals: { languages: { JavaScript: 1 }, categories: { source: 1 }, runtime_hints: {} },
+    files: [{ path: 'src/utils.js', category: 'source', language: 'JavaScript', imports: [], runtime_hints: [], reasons: ['source'] }],
+    analysis: { package_scripts: [], dependency_graph: { edges: [], summary: {} }, test_to_source: { mappings: [], summary: {} } }
+  };
+
+  const plan = {
+    pages: createPlan().pages,
+    modules: [
+      {
+        slug: 'Module-Utils',
+        name: 'Utils',
+        files: ['src/utils.js'],
+        categories: { source: 1 },
+        languages: { JavaScript: 1 },
+        runtime_hints: {},
+        important_reasons: ['source']
+      }
+    ]
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+
+    const firstPage = await fs.readFile(path.join(wikiDir, 'Module-Utils.md'), 'utf8');
+    const whitespaceNotes = '\n  \t  \n';
+    const pageWithWhitespaceNotes = firstPage.replace(
+      '<!-- HUMAN_NOTES_START -->\n<!-- HUMAN_NOTES_END -->',
+      `<!-- HUMAN_NOTES_START -->${whitespaceNotes}<!-- HUMAN_NOTES_END -->`
+    );
+    await fs.writeFile(path.join(wikiDir, 'Module-Utils.md'), pageWithWhitespaceNotes, 'utf8');
+
+    await compileWiki({ scanDir, planFile, wikiDir });
+
+    const secondPage = await fs.readFile(path.join(wikiDir, 'Module-Utils.md'), 'utf8');
+    assert.equal(extractHumanNotes(secondPage), whitespaceNotes);
+    assert.match(secondPage, /page_state: "generated"/);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

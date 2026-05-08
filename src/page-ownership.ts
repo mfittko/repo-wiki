@@ -28,7 +28,7 @@ export function detectPageState(content: string): PageState {
   const frontmatter = extractFrontmatter(content);
 
   // Explicit human-ownership declarations take the highest priority.
-  if (/^page_state:\s*"human-owned"/m.test(frontmatter) || /^owned_by:\s*"human"/m.test(frontmatter)) {
+  if (/^page_state:\s*['"]?human-owned['"]?\s*$/m.test(frontmatter) || /^owned_by:\s*['"]?human['"]?\s*$/m.test(frontmatter)) {
     return 'human-owned';
   }
 

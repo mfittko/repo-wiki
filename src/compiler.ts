@@ -55,7 +55,10 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
 
     try {
       existingContent = await fs.readFile(filePath, 'utf8');
-    } catch {
+    } catch (error) {
+      if (!isNodeError(error) || error.code !== 'ENOENT') {
+        throw error;
+      }
       // File does not exist yet – this is a fresh page.
     }
 
@@ -70,10 +73,13 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
 
       // Preserve any human notes that exist in the current page.
       const notes = extractHumanNotes(existingContent);
-      if (notes.trim().length > 0) {
-        const withNotes = preserveHumanNotes(newContent, notes);
-        // Update page_state to "mixed" since human notes are present.
-        await writeText(filePath, withNotes.replace(/^page_state: "generated"/m, 'page_state: "mixed"'));
+      if (notes.length > 0) {
+        let withNotes = preserveHumanNotes(newContent, notes);
+        if (notes.trim().length > 0) {
+          // Update page_state to "mixed" since human notes are present.
+          withNotes = withNotes.replace(/^page_state: "generated"/m, 'page_state: "mixed"');
+        }
+        await writeText(filePath, withNotes);
         continue;
       }
     }
@@ -91,6 +97,10 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
       contexts: pageContexts.length
     }
   };
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error;
 }
 
 function frontmatter(manifest, extra = {}) {
