@@ -14,6 +14,17 @@ type RuntimeHintMetadata = {
   environmentVariables?: string[];
 };
 
+type JavaScriptAstMetadata = {
+  symbols: Set<string>;
+  exported: Array<{ name: string; kind: string }>;
+};
+
+let lastJavaScriptAstMetadata: {
+  content: string;
+  language: string;
+  metadata: JavaScriptAstMetadata | null;
+} | null = null;
+
 export function extractImports(content: string, language: string): string[] {
   if (!isJavaScriptLike(language)) {
     return [];
@@ -244,7 +255,11 @@ function isJavaScriptLike(language) {
   return JAVASCRIPT_LANGUAGES.has(language);
 }
 
-function extractJavaScriptAstMetadata(content: string, language: string) {
+function extractJavaScriptAstMetadata(content: string, language: string): JavaScriptAstMetadata | null {
+  if (lastJavaScriptAstMetadata?.content === content && lastJavaScriptAstMetadata.language === language) {
+    return lastJavaScriptAstMetadata.metadata;
+  }
+
   try {
     const sourceFile = ts.createSourceFile(
       language.startsWith('TypeScript') ? 'module.ts' : 'module.js',
@@ -357,8 +372,11 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
       }
     }
 
-    return { symbols, exported };
+    const metadata = { symbols, exported };
+    lastJavaScriptAstMetadata = { content, language, metadata };
+    return metadata;
   } catch {
+    lastJavaScriptAstMetadata = { content, language, metadata: null };
     return null;
   }
 }
