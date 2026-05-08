@@ -1,16 +1,26 @@
-type AssemblePageContextInput = {
-  manifest: any;
-  plan: any;
-  page: { path: string; phase?: string; moduleName?: string | null };
-  budget?: Partial<PageContextBudget>;
-};
+export type PageContextType = 'foundation' | 'module' | 'cross-cutting';
 
-type PageContextBudget = {
+export type PageContextBudget = {
   maxChars: number;
   maxSourceCards: number;
   maxDocumentationCards: number;
   maxExcerptChars: number;
 };
+
+export type PageContextPage = {
+  path: string;
+  phase?: string;
+  moduleName?: string | null;
+};
+
+export type AssemblePageContextInput = {
+  manifest: any;
+  plan: any;
+  page: PageContextPage;
+  budget?: Partial<PageContextBudget>;
+};
+
+export type PageContext = ReturnType<typeof assemblePageContext>;
 
 const DEFAULT_BUDGET: PageContextBudget = {
   maxChars: 12_000,
@@ -70,6 +80,10 @@ export function assemblePageContext({ manifest, plan, page, budget }: AssemblePa
       language: card.language,
       reasons: uniqueSorted(card.reasons || []),
       runtime_hints: uniqueSorted(card.runtime_hints || []),
+      environment_variables: boundedStrings(card.environment_variables, SOURCE_EXCERPT_LIMITS.envVars),
+      routes: summarizeRoutes(card.route_surfaces),
+      migrations: summarizeMigrations(card.migration_surfaces),
+      models: summarizeModels(card.model_surfaces),
       excerpt: truncatedExcerpt.value
     };
     const estimatedChars = estimateInputChars(sourceInput);
@@ -146,7 +160,7 @@ export function assemblePageContext({ manifest, plan, page, budget }: AssemblePa
   };
 }
 
-function pageType(page: { phase?: string }) {
+function pageType(page: { phase?: string }): PageContextType {
   if (page?.phase === 'modules') {
     return 'module';
   }
@@ -287,13 +301,51 @@ function sortByPath(items: any[]) {
   return [...items].sort((left, right) => compareStrings(String(left.path || ''), String(right.path || '')));
 }
 
+function sourceSymbols(card: any) {
+  return nonEmptyArray(card.exported_symbols) ? card.exported_symbols : (card.symbols || []);
+}
+
+function nonEmptyArray(value: unknown): value is any[] {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function boundedStrings(values: unknown, limit: number) {
+  return (Array.isArray(values) ? values : []).slice(0, limit).map((value) => String(value));
+}
+
+function summarizeRoutes(values: unknown) {
+  return (Array.isArray(values) ? values : []).slice(0, 5).map((route: any) => ({
+    kind: route?.kind || null,
+    framework: route?.framework || null,
+    methods: boundedStrings(route?.methods, 4),
+    path: route?.path || null,
+    handler: route?.handler || route?.target || null
+  }));
+}
+
+function summarizeMigrations(values: unknown) {
+  return (Array.isArray(values) ? values : []).slice(0, 5).map((migration: any) => ({
+    kind: migration?.kind || null,
+    id: migration?.id || null,
+    name: migration?.name || null
+  }));
+}
+
+function summarizeModels(values: unknown) {
+  return (Array.isArray(values) ? values : []).slice(0, 5).map((model: any) => ({
+    name: model?.name || null,
+    kind: model?.kind || null,
+    framework: model?.framework || null
+  }));
+}
+
 function buildSourceExcerpt(card: any) {
   const parts = [
     `path=${card.path}`,
     `category=${card.category}`,
     `language=${card.language}`,
     `imports=${(card.imports || []).slice(0, SOURCE_EXCERPT_LIMITS.imports).join(', ') || 'none'}`,
-    `symbols=${(card.exported_symbols || card.symbols || []).slice(0, SOURCE_EXCERPT_LIMITS.symbols).map((symbol: any) => symbol?.name || symbol).join(', ') || 'none'}`,
+    `symbols=${sourceSymbols(card).slice(0, SOURCE_EXCERPT_LIMITS.symbols).map((symbol: any) => symbol?.name || symbol).join(', ') || 'none'}`,
     `env=${(card.environment_variables || []).slice(0, SOURCE_EXCERPT_LIMITS.envVars).join(', ') || 'none'}`,
     `hints=${(card.runtime_hints || []).slice(0, SOURCE_EXCERPT_LIMITS.hints).join(', ') || 'none'}`
   ];
@@ -330,19 +382,30 @@ function estimateInputChars(input: unknown) {
   return JSON.stringify(input).length;
 }
 
-const SECRET_LIKE_PATTERNS = [
+const SECRET_LIKE_PATTERNS: Array<RegExp | { pattern: RegExp; preservePrefix: true }> = [
   /AKIA[0-9A-Z]{16}/g,
   /-----BEGIN (?:RSA|DSA|EC|OPENSSH) PRIVATE KEY-----[\s\S]*?-----END (?:RSA|DSA|EC|OPENSSH) PRIVATE KEY-----/g,
   /ghp_[A-Za-z0-9_]{30,}/g,
+  /github_pat_[A-Za-z0-9_]{22,}/g,
+  /glpat-[A-Za-z0-9_-]{20,}/g,
+  /npm_[A-Za-z0-9]{20,}/g,
   /xox[baprs]-[A-Za-z0-9-]{20,}/g,
   /sk-[A-Za-z0-9]{20,}/g,
-  /([A-Z][A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD)\s*=\s*)([^\s'"`]+)/gi
+  { pattern: /(\bBearer\s+)([A-Za-z0-9._~+/-]{20,}={0,2})/gi, preservePrefix: true },
+  { pattern: /([A-Z][A-Z0-9_]*(?:KEY|TOKEN|SECRET|PASSWORD)\s*=\s*)([^\s'"`]+)/gi, preservePrefix: true },
+  { pattern: /([A-Z][A-Z0-9_]{2,}\s*=\s*)([A-Za-z0-9._~+/-]{32,}={0,2})/g, preservePrefix: true }
 ];
 
-function redactSecretLikeText(value: unknown) {
+export function redactSecretLikeText(value: unknown) {
   let output = String(value || '');
-  for (const pattern of SECRET_LIKE_PATTERNS) {
-    output = output.replace(pattern, (_match, prefix) => typeof prefix === 'string' ? `${prefix}[REDACTED]` : '[REDACTED]');
+  for (const entry of SECRET_LIKE_PATTERNS) {
+    const pattern = entry instanceof RegExp ? entry : entry.pattern;
+    output = output.replace(pattern, (...args: any[]) => {
+      if (!(entry instanceof RegExp) && entry.preservePrefix && typeof args[1] === 'string') {
+        return `${args[1]}[REDACTED]`;
+      }
+      return '[REDACTED]';
+    });
   }
   return output;
 }
