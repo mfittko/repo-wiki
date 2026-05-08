@@ -293,6 +293,7 @@ test('scanRepository honors config source excludes when walking files', async ()
     assert.deepEqual(result.manifest.config.source.exclude, ['tmp/**']);
     assert.ok(result.manifest.config.source.effective_exclude.includes('node_modules'));
     assert.ok(result.manifest.config.source.effective_exclude.includes('tmp/**'));
+    assert.deepEqual(result.manifest.config.source.suppressed_nested_repositories, []);
   } finally {
     await fs.rm(repo, { recursive: true, force: true });
   }
@@ -338,6 +339,7 @@ test('scanRepository suppresses nested repository worktree noise', async () => {
     assert.equal(result.manifest.files.some((file) => file.path.startsWith('tmp/nested/')), false);
     assert.equal((result.manifest.analysis.package_scripts || []).some((entry) => entry.path.startsWith('tmp/nested/')), false);
     assert.equal((result.manifest.analysis.ci_workflow_commands || []).length, 0);
+    assert.deepEqual(result.manifest.config.source.suppressed_nested_repositories, ['tmp/nested']);
 
     const planFile = path.join(repo, '.llmwiki', 'plan.json');
     const wikiDir = path.join(repo, '.llmwiki', 'wiki');
@@ -352,7 +354,7 @@ test('scanRepository suppresses nested repository worktree noise', async () => {
   }
 });
 
-test('walkFiles suppresses nested repositories marked by .git symlinks', async () => {
+test('walkFiles suppresses nested repositories marked by .git symlinks', async (t) => {
   const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-nested-repo-symlink-test-'));
 
   try {
@@ -363,6 +365,7 @@ test('walkFiles suppresses nested repositories marked by .git symlinks', async (
       await fs.symlink('../.git/modules/submodule', path.join(repo, 'vendor', 'submodule', '.git'));
     } catch (error) {
       if (error instanceof Error && 'code' in error && error.code === 'EPERM') {
+        t.skip('symlink creation is not permitted on this platform');
         return;
       }
       throw error;
@@ -398,6 +401,7 @@ test('scanRepository can include nested repository content when configured', asy
 
     assert.ok(result.manifest.files.some((file) => file.path === 'vendor/submodule/package.json'));
     assert.equal(result.manifest.config.source.suppress_nested_repositories, false);
+    assert.deepEqual(result.manifest.config.source.suppressed_nested_repositories, []);
   } finally {
     await fs.rm(repo, { recursive: true, force: true });
   }

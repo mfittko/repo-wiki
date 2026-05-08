@@ -46,9 +46,13 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
   const commit = headRef || await getGitCommit(absoluteRepo);
   const remote = await getGitRemote(absoluteRepo);
   const sourceExclude = Array.isArray(config?.source?.exclude) ? config.source.exclude : [];
+  const suppressedNestedRepositories: string[] = [];
   const files = await walkFiles(absoluteRepo, {
     additionalExclude: sourceExclude,
-    suppressNestedRepositories: config?.source?.suppress_nested_repositories !== false
+    suppressNestedRepositories: config?.source?.suppress_nested_repositories !== false,
+    onSuppressNestedRepository(relativePath) {
+      suppressedNestedRepositories.push(relativePath);
+    }
   });
   const cards: any[] = [];
   const documentationCards: any[] = [];
@@ -137,7 +141,8 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     config: {
       source: {
         ...config.source,
-        effective_exclude: [...new Set([...DEFAULT_WALK_EXCLUDES, ...sourceExclude])]
+        effective_exclude: [...new Set([...DEFAULT_WALK_EXCLUDES, ...sourceExclude])],
+        suppressed_nested_repositories: [...new Set(suppressedNestedRepositories)].sort()
       },
       documentation: config.documentation,
       lint: config.lint,

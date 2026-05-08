@@ -10,6 +10,8 @@ type WalkFilesOptions = {
   additionalExclude?: string[];
   /** Skip nested Git repository/worktree roots discovered below rootDir. */
   suppressNestedRepositories?: boolean;
+  /** Observe nested repository/worktree roots that were suppressed. */
+  onSuppressNestedRepository?: (relativePath: string) => void;
 };
 
 export async function ensureDir(dirPath: string) {
@@ -49,6 +51,7 @@ export async function walkFiles(rootDir: string, options: WalkFilesOptions = {})
     const entries = await fs.readdir(current, { withFileTypes: true });
 
     if (options.suppressNestedRepositories && path.resolve(current) !== absoluteRoot && hasGitMarker(entries)) {
+      options.onSuppressNestedRepository?.(path.relative(rootDir, current).replaceAll(path.sep, '/'));
       return;
     }
 
