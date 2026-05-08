@@ -17,7 +17,7 @@ import {
 } from './extractors.js';
 import { buildRepositoryAnalysis, extractPackageMetadata } from './repository-analysis.js';
 import { loadConfig } from './config.js';
-import { isDocumentationFile, createDocumentationCard } from './docs-ingestor.js';
+import { isDocumentationFile, createDocumentationCard, extractCiCommands } from './docs-ingestor.js';
 
 const MAX_TEXT_BYTES = 512_000;
 
@@ -64,6 +64,7 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
       content = isTextCandidate ? buffer.toString('utf8') : '';
     }
     const packageMetadata = content ? extractPackageMetadata(file.relative, content) : null;
+    const ciWorkflowCommands = content && kind === 'ci' ? extractCiCommands(content) : [];
     const goPackage = (language === 'Go' && content) ? extractGoPackage(content, language) : null;
     const imports = content ? extractImports(content, language) : [];
     const symbols = content ? extractSymbols(content, language) : [];
@@ -102,6 +103,7 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
       model_surfaces: modelSurfaces,
       runtime_hints: runtimeHints,
       ...(packageMetadata || {}),
+      ...(ciWorkflowCommands.length ? { ci_workflow_commands: ciWorkflowCommands } : {}),
       ...(goPackage !== null ? { go_package: goPackage } : {}),
       skipped_content: !content,
       reasons: inferReasons(file.relative, kind, content, { environmentVariables, routeSurfaces, migrationSurfaces, modelSurfaces })

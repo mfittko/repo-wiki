@@ -3,6 +3,118 @@ import path from 'node:path';
 
 const DOC_EXTENSIONS = ['.md', '.mdx', '.markdown'];
 
+// Npm lifecycle commands that map directly to package.json scripts
+const NPM_LIFECYCLE_SCRIPTS = new Set(['test', 'start', 'stop', 'restart']);
+const SHELL_RESERVED_WORDS = new Set(['if', 'then', 'else', 'elif', 'fi', 'for', 'select', 'while', 'until', 'do', 'done', 'case', 'esac', '{', '}']);
+
+export type CommandStatus = 'validated' | 'missing' | 'unvalidated';
+export type CommandSource = 'package_scripts' | 'ci_workflow' | 'unknown';
+
+export type CommandClassification = {
+  command: string;
+  status: CommandStatus;
+  source: CommandSource;
+  script_name?: string;
+};
+
+/**
+ * Extract npm/shell commands from CI workflow YAML content.
+ * Parses `run:` lines and `command:` matrix fields.
+ */
+export function extractCiCommands(content: string): string[] {
+  const commands: string[] = [];
+  const lines = content.split('\n');
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    // Match both `- run: <cmd>` (list item) and `  run: <cmd>` (property)
+    const runMatch = /^(\s+)(?:-\s+)?run:\s+(.+)$/.exec(line);
+    if (runMatch) {
+      const { parts, lastLineIndex } = extractWorkflowCommandValue(runMatch[2], lines, index, runMatch[1].length);
+      commands.push(...parts);
+      index = lastLineIndex;
+      continue;
+    }
+    // Match `command: <cmd>` matrix fields
+    const cmdMatch = /^(\s+)command:\s+(.+)$/.exec(line);
+    if (cmdMatch) {
+      const { parts, lastLineIndex } = extractWorkflowCommandValue(cmdMatch[2], lines, index, cmdMatch[1].length);
+      commands.push(...parts);
+      index = lastLineIndex;
+    }
+  }
+  return [...new Set(commands)];
+}
+
+/**
+ * Merge package scripts from all package.json entries in a manifest's analysis.
+ * Later entries overwrite earlier ones on key collision, following the manifest's
+ * sorted package_scripts array order.
+ */
+export function mergePackageScripts(manifest: { analysis?: { package_scripts?: Array<{ scripts?: Record<string, string> }> } }): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const pkg of manifest.analysis?.package_scripts || []) {
+    Object.assign(result, pkg.scripts || {});
+  }
+  return result;
+}
+
+/**
+ * Classify documented commands against known package scripts and CI commands.
+ * Returns each command with a validation status: validated, missing, or unvalidated.
+ */
+export function classifyDocumentedCommands(
+  commands: string[],
+  packageScripts: Record<string, string>,
+  ciCommands: string[]
+): CommandClassification[] {
+  return commands.flatMap((command) => splitShellCommand(command).map((part) => classifyCommand(part, packageScripts, ciCommands)));
+}
+
+function classifyCommand(
+  command: string,
+  packageScripts: Record<string, string>,
+  ciCommands: string[]
+): CommandClassification {
+  // A verbatim CI workflow match is authoritative for any supported command form,
+  // including npm workspace invocations this best-effort parser cannot map safely.
+  const normalized = command.trim();
+  if (ciCommands.some((ci) => ci.trim() === normalized)) {
+    return { command, status: 'validated', source: 'ci_workflow' };
+  }
+
+  // npm workspace selectors require package-to-workspace resolution. Keep those
+  // conservative unless CI validated the exact documented command above.
+  if (hasNpmWorkspaceSelector(command)) {
+    return { command, status: 'unvalidated', source: 'unknown' };
+  }
+
+  // npm run <scriptName>
+  const npmRunScript = parseNpmRunScript(command);
+  if (npmRunScript) {
+    const scriptName = npmRunScript;
+    return {
+      command,
+      status: scriptName in packageScripts ? 'validated' : 'missing',
+      source: 'package_scripts',
+      script_name: scriptName
+    };
+  }
+
+  // npm test / npm start / npm stop / npm restart (lifecycle commands)
+  const lifecycleScript = parseNpmLifecycleScript(command);
+  if (lifecycleScript) {
+    const scriptName = lifecycleScript;
+    return {
+      command,
+      status: scriptName in packageScripts ? 'validated' : 'unvalidated',
+      source: 'package_scripts',
+      script_name: scriptName
+    };
+  }
+
+  return { command, status: 'unvalidated', source: 'unknown' };
+}
+
 export function isDocumentationFile(filePath, config) {
   const lower = filePath.toLowerCase();
   if (!DOC_EXTENSIONS.some((ext) => lower.endsWith(ext))) return false;
@@ -64,7 +176,7 @@ export function validateDocClaims({ claims, content, filePath }) {
       for (const line of block.content.split('\n')) {
         const trimmed = line.trim().replace(/^[$>]\s*/, '');
         if (/^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(trimmed)) {
-          commands.push(trimmed);
+          commands.push(...splitShellCommand(trimmed));
         }
       }
     }
@@ -96,6 +208,97 @@ export function validateDocClaims({ claims, content, filePath }) {
       file: filePath
     }
   };
+}
+
+function extractWorkflowCommandValue(value: string, lines: string[], lineIndex: number, baseIndent: number): { parts: string[]; lastLineIndex: number } {
+  if (/^[|>](?:[+-]?\d*|\d*[+-]?)$/.test(value.trim())) {
+    const blockLines: string[] = [];
+    let lastLineIndex = lineIndex;
+    for (let index = lineIndex + 1; index < lines.length; index += 1) {
+      const line = lines[index];
+      if (line.trim() && leadingSpaces(line) <= baseIndent) break;
+      lastLineIndex = index;
+      if (line.trim()) blockLines.push(line.trim());
+    }
+    return { parts: blockLines.flatMap((line) => extractWorkflowCommandParts(line)), lastLineIndex };
+  }
+
+  return { parts: extractWorkflowCommandParts(value), lastLineIndex: lineIndex };
+}
+
+function extractWorkflowCommandParts(command: string): string[] {
+  const unquoted = command.trim().replace(/^["']|["']$/g, '');
+  if (!unquoted || unquoted.includes('${{')) return [];
+  return splitShellCommand(unquoted, false).filter((part) => !isShellReservedCommand(part));
+}
+
+function isShellReservedCommand(command: string): boolean {
+  const firstToken = tokenizeShellWords(command)[0];
+  return Boolean(firstToken && SHELL_RESERVED_WORDS.has(firstToken));
+}
+
+function leadingSpaces(line: string): number {
+  return /^ */.exec(line)?.[0].length || 0;
+}
+
+function parseNpmRunScript(command: string): string | undefined {
+  const tokens = tokenizeShellWords(command);
+  if (tokens[0] !== 'npm') return undefined;
+  const runIndex = tokens.findIndex((token, index) => index > 0 && token === 'run');
+  if (runIndex === -1) return undefined;
+  return tokens.slice(runIndex + 1).find((token) => token && !token.startsWith('-'));
+}
+
+function parseNpmLifecycleScript(command: string): string | undefined {
+  const tokens = tokenizeShellWords(command);
+  if (tokens[0] !== 'npm') return undefined;
+  return NPM_LIFECYCLE_SCRIPTS.has(tokens[1]) ? tokens[1] : undefined;
+}
+
+function hasNpmWorkspaceSelector(command: string): boolean {
+  const tokens = tokenizeShellWords(command);
+  if (tokens[0] !== 'npm') return false;
+  return tokens.some((token) => token === '-w' || token === '--workspace' || token === '--workspaces' || token.startsWith('--workspace='));
+}
+
+function tokenizeShellWords(command: string): string[] {
+  return (command.match(/"[^"]*"|'[^']*'|\S+/g) || []).map((token) => token.replace(/^["']|["']$/g, ''));
+}
+
+function splitShellCommand(command: string, recognizedOnly = true): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let quote: '"' | "'" | '' = '';
+
+  for (let index = 0; index < command.length; index += 1) {
+    const char = command[index];
+    const next = command[index + 1];
+    if ((char === '"' || char === "'") && !quote) {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === quote) {
+      quote = '';
+      current += char;
+      continue;
+    }
+    if (!quote && ((char === '&' && next === '&') || (char === '|' && next === '|'))) {
+      parts.push(current.trim());
+      current = '';
+      index += 1;
+      continue;
+    }
+    if (!quote && char === ';') {
+      parts.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  parts.push(current.trim());
+
+  return parts.filter((part) => part && (!recognizedOnly || /^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(part)));
 }
 
 function extractHeadings(content) {

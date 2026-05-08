@@ -2,6 +2,7 @@ import path from 'node:path';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { assembleAllPageContexts } from './context-assembler.js';
 import { ensureDir, readJson, writeText } from './utils/fs.js';
+import { classifyDocumentedCommands, mergePackageScripts } from './docs-ingestor.js';
 
 export async function compileWiki({ scanDir, planFile, wikiDir }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
@@ -133,6 +134,25 @@ function renderDocumentationDebtReport(manifest) {
   const staleDocs = docs.filter((doc) => doc.stale).map((doc) => `- \`${doc.path}\` - age ${doc.age_days} days, status ${doc.status}`);
   const contradicted = docs.filter((doc) => doc.validation?.contradictions?.length).map((doc) => `- \`${doc.path}\` - ${doc.validation.contradictions.length} contradiction-review signals`);
 
+  // Build merged package scripts from manifest analysis for command validation
+  const allPackageScripts = mergePackageScripts(manifest);
+
+  // Classify all documented commands against known package scripts and CI
+  // workflow commands extracted into the scan manifest.
+  const allDocCommands: string[] = docs.flatMap((doc) => doc.validation?.commands || []);
+  const uniqueDocCommands = [...new Set(allDocCommands)];
+  const ciCommands: string[] = manifest.analysis?.ci_workflow_commands || [];
+  const classified = classifyDocumentedCommands(uniqueDocCommands, allPackageScripts, ciCommands);
+  const validatedCmds = classified.filter((c) => c.status === 'validated');
+  const missingCmds = classified.filter((c) => c.status === 'missing');
+  const unvalidatedCmds = classified.filter((c) => c.status === 'unvalidated');
+
+  const commandRows = classified.map((c) => {
+    const badge = c.status === 'validated' ? '✅ validated' : c.status === 'missing' ? '❌ missing' : '❓ unvalidated';
+    const source = c.source === 'package_scripts' ? 'package.json' : c.source === 'ci_workflow' ? 'CI workflow' : 'unknown';
+    return `| \`${c.command}\` | ${badge} | ${source} |`;
+  });
+
   return `${frontmatter(manifest, { kind: 'documentation_debt_report', documentation_authority: manifest.documentation?.authority || 'secondary' })}# Documentation Debt Report
 
 Markdown documentation is ingested as secondary evidence. It is useful for intent, terminology, onboarding, and architectural rationale, but material claims should be validated against code, tests, configuration, generated schemas, or CI before the wiki presents them as current behavior.
@@ -157,6 +177,16 @@ ${JSON.stringify(manifest.config?.documentation || {}, null, 2)}
 | File | Status | Authority | Age days | Claims | Commands | Env vars |
 |---|---|---:|---:|---:|---:|---:|
 ${rows.join('\n') || '| No documentation files scanned | | | | | | |'}
+
+## Command validation
+
+Commands extracted from documentation code blocks, validated against \`package.json\` scripts and CI workflow commands captured in the scan manifest.
+
+- Validated: ${validatedCmds.length}
+- Missing (script not in package.json): ${missingCmds.length}
+- Unvalidated (source unknown): ${unvalidatedCmds.length}
+
+${commandRows.length > 0 ? `| Command | Status | Source |\n|---|---|---|\n${commandRows.join('\n')}` : '- No commands extracted from documentation.'}
 
 ## Stale documentation candidates
 
