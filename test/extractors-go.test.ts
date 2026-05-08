@@ -157,7 +157,7 @@ test('extractImports returns empty for Go file with no imports', () => {
 
 test('extractImports returns empty for non-Go language', () => {
   assert.deepEqual(extractImports('import "fmt"', 'Python'), []);
-  assert.deepEqual(extractImports('import "fmt"', 'Rust'), []);
+  assert.deepEqual(extractImports('import "fmt"', 'Ruby'), []);
 });
 
 // ---------------------------------------------------------------------------
@@ -188,7 +188,7 @@ test('extractSymbols returns symbols in sorted order', () => {
 
 test('extractSymbols returns empty for non-Go language', () => {
   assert.deepEqual(extractSymbols('func Foo() {}', 'Python'), []);
-  assert.deepEqual(extractSymbols('func Foo() {}', 'Rust'), []);
+  assert.deepEqual(extractSymbols('func Foo() {}', 'Ruby'), []);
 });
 
 test('extractSymbols returns empty for empty Go file', () => {
