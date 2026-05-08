@@ -33,10 +33,12 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
     pages.set('Data-Model-and-Migrations.md', renderDataModel(manifest));
   }
 
+  const sourceToTestsIndex = buildSourceToTestsIndex(manifest);
+
   for (const module of plan.modules || []) {
     const modulePage = `${module.slug}.md`;
     if (!pages.has(modulePage)) {
-      pages.set(modulePage, renderModulePage(manifest, module));
+      pages.set(modulePage, renderModulePage(manifest, module, sourceToTestsIndex));
     }
   }
 
@@ -234,21 +236,36 @@ function renderDataModel(manifest) {
   return `${frontmatter(manifest, { kind: 'data_model' })}# Data Model and Migrations\n\n## Detected data-related files\n\n${dataFiles.map((file) => `- \`${file.path}\``).join('\n') || '- No data files detected.'}\n`;
 }
 
-function renderModulePage(manifest, module) {
+function renderModulePage(manifest, module, sourceToTestsIndex: Map<string, Set<string>>) {
   const sampleFiles = module.files.slice(0, 80).map((file) => `- \`${file}\``).join('\n');
-  const relatedTests = findRelatedTests(manifest, module.files);
+  const relatedTests = lookupRelatedTests(module.files, sourceToTestsIndex);
   const relatedTestsSection = relatedTests.length
     ? `## Related tests\n\n${relatedTests.map((t) => `- \`${t}\``).join('\n')}\n\n`
     : '';
   return `${frontmatter(manifest, { kind: 'module', module: module.name, source_paths: module.files.slice(0, 20) })}# ${module.name}\n\n## Purpose\n\nGenerated first-pass page for files grouped under ${module.name}. This should be refined by the LLM compiler using source cards and targeted source excerpts.\n\n## Signals\n\n- Files: ${module.files.length}\n- Categories: ${Object.keys(module.categories).join(', ') || 'unknown'}\n- Languages: ${Object.keys(module.languages).join(', ') || 'unknown'}\n- Runtime hints: ${Object.keys(module.runtime_hints).join(', ') || 'none'}\n- Reasons: ${module.important_reasons.join(', ') || 'none'}\n\n## Source files\n\n${sampleFiles || '- None'}\n\n${relatedTestsSection}## Related pages\n\n- ${wikiLink('Dependency-Map.md')}\n- ${wikiLink('Testing-Strategy.md')}\n- ${wikiLink('Open-Questions.md')}\n\n<!-- HUMAN_NOTES_START -->\n<!-- HUMAN_NOTES_END -->\n`;
 }
 
-function findRelatedTests(manifest: any, sourceFiles: string[]) {
-  const sourceSet = new Set(sourceFiles);
-  const tests = new Set<string>();
+function buildSourceToTestsIndex(manifest: any): Map<string, Set<string>> {
+  const index = new Map<string, Set<string>>();
   for (const mapping of manifest.analysis?.test_to_source?.mappings || []) {
-    if (mapping.sources.some((source) => sourceSet.has(source))) {
-      tests.add(mapping.test);
+    for (const source of mapping.sources) {
+      if (!index.has(source)) {
+        index.set(source, new Set());
+      }
+      index.get(source)!.add(mapping.test);
+    }
+  }
+  return index;
+}
+
+function lookupRelatedTests(sourceFiles: string[], index: Map<string, Set<string>>): string[] {
+  const tests = new Set<string>();
+  for (const source of sourceFiles) {
+    const related = index.get(source);
+    if (related) {
+      for (const test of related) {
+        tests.add(test);
+      }
     }
   }
   return [...tests].sort();
