@@ -60,8 +60,23 @@ test('extractImports returns deterministic Rust use metadata', () => {
   ]);
 });
 
+test('extractImports handles Rust `as _` aliases without corrupting import paths', () => {
+  const source = `
+use foo::Bar as _;
+use foo::{Baz as _, Qux as LocalQux};
+`;
+
+  assert.deepEqual(extractImports(source, 'Rust'), [
+    'foo::Bar',
+    'foo::Baz',
+    'foo::Qux'
+  ]);
+});
+
 test('extractSymbols and extractExportedSymbols extract Rust items and impl blocks', () => {
   const symbols = extractSymbols(rustSource, 'Rust');
+  assert.ok(symbols.includes('Deserialize'));
+  assert.ok(symbols.includes('Serialize'));
   assert.ok(symbols.includes('Service'));
   assert.ok(symbols.includes('Status'));
   assert.ok(symbols.includes('Handler'));
@@ -79,9 +94,11 @@ test('extractSymbols and extractExportedSymbols extract Rust items and impl bloc
   assert.deepEqual(exported, [
     { name: 'api', kind: 'mod' },
     { name: 'APP_NAME', kind: 'static' },
+    { name: 'Deserialize', kind: 're-export' },
     { name: 'Handler', kind: 'trait' },
     { name: 'MAX_RETRIES', kind: 'const' },
     { name: 'run', kind: 'fn' },
+    { name: 'Serialize', kind: 're-export' },
     { name: 'Service', kind: 'struct' },
     { name: 'Status', kind: 'enum' }
   ]);
@@ -99,8 +116,25 @@ use crate::broken::{self, Item;
   assert.doesNotThrow(() => extractSymbols(malformed, 'Rust'));
   assert.doesNotThrow(() => extractExportedSymbols(malformed, 'Rust'));
 
+  assert.ok(extractImports(malformed, 'Rust').includes('crate::broken'));
   assert.ok(extractSymbols(malformed, 'Rust').includes('still_works'));
   assert.ok(extractSymbols(malformed, 'Rust').includes('Recovered'));
+});
+
+test('Rust extractor is top-level-only for inline module item declarations', () => {
+  const source = `
+pub mod api { pub struct Request; pub enum Response { Ok } }
+`;
+
+  const symbols = extractSymbols(source, 'Rust');
+  const exported = extractExportedSymbols(source, 'Rust');
+
+  assert.ok(symbols.includes('api'));
+  assert.ok(!symbols.includes('Request'));
+  assert.ok(!symbols.includes('Response'));
+  assert.ok(exported.some((entry) => entry.name === 'api' && entry.kind === 'mod'));
+  assert.ok(!exported.some((entry) => entry.name === 'Request'));
+  assert.ok(!exported.some((entry) => entry.name === 'Response'));
 });
 
 test('scanRepository produces Rust source cards with import and item metadata', async () => {
@@ -125,9 +159,11 @@ test('scanRepository produces Rust source cards with import and item metadata', 
       'std::collections::HashSet',
       'super::helpers::*'
     ]);
+    assert.ok(card.symbols.includes('Deserialize'));
     assert.ok(card.symbols.includes('Service'));
     assert.ok(card.symbols.includes('impl Service'));
     assert.ok(card.symbols.includes('impl Handler for Service'));
+    assert.ok(card.exported_symbols.some((entry) => entry.name === 'Deserialize' && entry.kind === 're-export'));
     assert.ok(card.exported_symbols.some((entry) => entry.name === 'Service' && entry.kind === 'struct'));
     assert.ok(card.exported_symbols.some((entry) => entry.name === 'run' && entry.kind === 'fn'));
   } finally {

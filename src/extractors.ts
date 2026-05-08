@@ -1931,6 +1931,12 @@ function computeRustDeclarations(content: string): RustDeclarations {
     }
   }
 
+  for (const match of code.matchAll(/^pub(?:\([^)]*\))?\s+use\s+([\s\S]*?);/mg)) {
+    for (const name of extractRustPublicUseNames(match[1])) {
+      addSymbol(name, 're-export', true);
+    }
+  }
+
   for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:unsafe\s+)?(?:const\s+)?fn\s+([A-Za-z_]\w*)\b/mg)) {
     addSymbol(match[2], 'fn', Boolean(match[1]));
   }
@@ -2112,7 +2118,7 @@ function expandRustUseSpec(spec: string): string[] {
       return;
     }
 
-    const withoutAlias = trimmed.replace(/\s+as\s+[A-Za-z_]\w*\s*$/, '').trim();
+    const withoutAlias = trimmed.replace(/\s+as\s+(?:[A-Za-z_]\w*|_)\s*$/, '').trim();
     const value = withoutAlias === 'self'
       ? prefix
       : joinRustPath(prefix, withoutAlias);
@@ -2244,4 +2250,75 @@ function normalizeRustImplName(raw: string) {
   }
 
   return `impl ${withoutWhere}`;
+}
+
+function extractRustPublicUseNames(spec: string): string[] {
+  const names = new Set<string>();
+
+  const collect = (segment: string, prefix = '') => {
+    const trimmed = segment.trim();
+    if (!trimmed) {
+      return;
+    }
+
+    const groups = splitTopLevel(trimmed, ',');
+    if (groups.length > 1) {
+      for (const group of groups) {
+        collect(group, prefix);
+      }
+      return;
+    }
+
+    const braceIndex = findTopLevelBrace(trimmed);
+    if (braceIndex >= 0) {
+      const beforeBrace = trimmed.slice(0, braceIndex).replace(/::\s*$/, '').trim();
+      const inner = trimmed.slice(braceIndex + 1, findMatchingBrace(trimmed, braceIndex));
+      const nextPrefix = beforeBrace ? joinRustPath(prefix, beforeBrace) : prefix;
+      for (const child of splitTopLevel(inner, ',')) {
+        collect(child, nextPrefix);
+      }
+      return;
+    }
+
+    const aliasMatch = trimmed.match(/\s+as\s+([A-Za-z_]\w*|_)\s*$/);
+    if (aliasMatch) {
+      if (aliasMatch[1] !== '_') {
+        names.add(aliasMatch[1]);
+      }
+      return;
+    }
+
+    if (trimmed === '*') {
+      return;
+    }
+
+    if (trimmed === 'self') {
+      const selfName = rustPathTerminal(prefix);
+      if (selfName) {
+        names.add(selfName);
+      }
+      return;
+    }
+
+    const full = joinRustPath(prefix, trimmed);
+    const terminal = rustPathTerminal(full);
+    if (terminal) {
+      names.add(terminal);
+    }
+  };
+
+  collect(spec);
+  return [...names].sort();
+}
+
+function rustPathTerminal(pathValue: string) {
+  const normalized = normalizeRustPath(pathValue).replace(/^::/, '');
+  if (!normalized || normalized.endsWith('::')) {
+    return null;
+  }
+  const terminal = normalized.split('::').pop() || '';
+  if (!terminal || terminal === '*' || terminal === 'self') {
+    return null;
+  }
+  return terminal;
 }
