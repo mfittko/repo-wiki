@@ -21,9 +21,9 @@ You are a focused pull request review agent. You review an implementation for co
 - If the PR description contains verdict status, evidence tables, or changelog content, report that as a review finding because those belong in the review verdict, not the PR description.
 
 ## Follow-up Review Scope
-- When this is a follow-up review on a PR that already has at least one review verdict comment, default to a **delta review**: scope the code analysis to commits pushed since the most recent review comment, and scope findings to only those issues that are new, changed, or resolved relative to that prior review.
-- Only perform a full re-review when the caller explicitly requests one (e.g., "full review", "review from scratch", "re-review everything").
-- At the start of a delta review, identify the timestamp or commit SHA of the most recent review verdict comment and use that as the lower bound for the diff.
+- When this is a follow-up review on a PR that already has at least one formal GitHub review verdict submitted by the active reviewer (`mfittko`), default to a **delta review**: scope the code analysis to commits pushed since that prior review, and scope findings to only those issues that are new, changed, or resolved relative to it.
+- To determine the delta lower bound: use `gh api repos/{owner}/{repo}/pulls/{number}/reviews` to list reviews, find the most recent one where `user.login == "mfittko"` and `state` is `APPROVED` or `CHANGES_REQUESTED`, then use `gh api repos/{owner}/{repo}/pulls/{number}/commits` to find the commit SHA at the time of that review's `submitted_at` timestamp. Use that SHA as the lower bound for `git diff` or `git log`.
+- Only perform a full re-review when the caller explicitly requests one (e.g., "full review", "review from scratch", "re-review everything"), or when no prior review by the active reviewer exists.
 - Explicitly state the delta scope at the top of the output (e.g., "Delta review covering commits since `abc1234` on 2026-05-07").
 
 ## Review Focus
