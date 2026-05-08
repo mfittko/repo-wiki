@@ -6,6 +6,7 @@ export async function createBootstrapPlan({ scanDir, outFile }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
   const modules = groupIntoModules(manifest.files);
   const pages = createPagePlan(manifest, modules);
+  const affectedPageGraph = buildAffectedPageGraph(manifest, modules, pages);
 
   const plan = {
     schema_version: 1,
@@ -37,7 +38,8 @@ export async function createBootstrapPlan({ scanDir, outFile }) {
       }
     ],
     modules,
-    pages
+    pages,
+    affected_page_graph: affectedPageGraph
   };
 
   await writeJson(outFile, plan);
@@ -156,4 +158,140 @@ function slugify(value: string): string {
   return value
     .replace(/[^A-Za-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'Page';
+}
+
+function buildAffectedPageGraph(manifest: any, modules: any[], pages: any[]) {
+  // Index: source file path → module wiki page filename
+  const fileToModuleSlug = new Map<string, string>();
+  for (const module of modules) {
+    const slugPage = `${module.slug}.md`;
+    for (const file of module.files) {
+      fileToModuleSlug.set(file, slugPage);
+    }
+  }
+
+  // Reverse import graph: imported file → Set of importer file paths
+  const reverseImports = new Map<string, Set<string>>();
+  for (const edge of manifest.analysis?.dependency_graph?.edges || []) {
+    if (typeof edge.to === 'string' && !edge.to.startsWith('package:')) {
+      if (!reverseImports.has(edge.to)) {
+        reverseImports.set(edge.to, new Set());
+      }
+      reverseImports.get(edge.to)!.add(edge.from);
+    }
+  }
+
+  // Index: test file path → Set of covered source file paths
+  const testToCoveredSources = new Map<string, Set<string>>();
+  for (const mapping of manifest.analysis?.test_to_source?.mappings || []) {
+    if (mapping.test && Array.isArray(mapping.sources)) {
+      testToCoveredSources.set(mapping.test, new Set(mapping.sources));
+    }
+  }
+
+  // Set of wiki pages that are actually planned
+  const plannedPages = new Set(pages.map((p) => p.path));
+
+  // Internal structure: source → page → Set<reason>
+  const entries = new Map<string, Map<string, Set<string>>>();
+
+  function addPage(source: string, wikiPage: string, reason: string) {
+    if (!plannedPages.has(wikiPage)) {
+      return;
+    }
+    let pageMap = entries.get(source);
+    if (!pageMap) {
+      pageMap = new Map();
+      entries.set(source, pageMap);
+    }
+    let reasons = pageMap.get(wikiPage);
+    if (!reasons) {
+      reasons = new Set();
+      pageMap.set(wikiPage, reasons);
+    }
+    reasons.add(reason);
+  }
+
+  for (const card of manifest.files || []) {
+    const source: string = card.path;
+
+    // Direct module page
+    const directSlug = fileToModuleSlug.get(source);
+    if (directSlug) {
+      addPage(source, directSlug, 'direct_module');
+    }
+
+    // Transitive module pages: pages of modules that import this file
+    for (const importer of reverseImports.get(source) || []) {
+      const importerSlug = fileToModuleSlug.get(importer);
+      if (importerSlug && importerSlug !== directSlug) {
+        addPage(source, importerSlug, 'import_transitive');
+      }
+    }
+
+    // Test files → Testing-Strategy.md and covered source module pages
+    if (card.category === 'test') {
+      addPage(source, 'Testing-Strategy.md', 'test_coverage');
+
+      for (const coveredSource of testToCoveredSources.get(source) ?? new Set<string>()) {
+        const coveredSlug = fileToModuleSlug.get(coveredSource);
+        if (coveredSlug) {
+          addPage(source, coveredSlug, 'test_covered_module');
+        }
+      }
+    }
+
+    // Files participating in the dependency graph → Dependency-Map.md
+    if ((card.imports?.length ?? 0) > 0 || reverseImports.has(source)) {
+      addPage(source, 'Dependency-Map.md', 'dependency_change');
+    }
+
+    // Route surfaces → API-HTTP-Routes.md
+    if ((card.route_surfaces?.length ?? 0) > 0) {
+      addPage(source, 'API-HTTP-Routes.md', 'cross_cutting_routes');
+    }
+
+    // Migration or ORM model surfaces → Data-Model-and-Migrations.md
+    if ((card.migration_surfaces?.length ?? 0) > 0 || (card.model_surfaces?.length ?? 0) > 0) {
+      addPage(source, 'Data-Model-and-Migrations.md', 'cross_cutting_data_model');
+    }
+
+    // Environment variables → Configuration-and-Environment.md
+    if ((card.environment_variables?.length ?? 0) > 0) {
+      addPage(source, 'Configuration-and-Environment.md', 'cross_cutting_config');
+    }
+
+    // Auth or billing signals → Security-and-Secrets.md
+    if (card.reasons?.some((r: string) => ['auth', 'billing-or-payment'].includes(r))) {
+      addPage(source, 'Security-and-Secrets.md', 'cross_cutting_security');
+    }
+  }
+
+  // Documentation cards → Documentation-Debt-Report.md (plus their direct module page if any)
+  for (const docCard of manifest.documentation?.files || []) {
+    const source: string = docCard.path;
+    addPage(source, 'Documentation-Debt-Report.md', 'docs_debt');
+    const directSlug = fileToModuleSlug.get(source);
+    if (directSlug) {
+      addPage(source, directSlug, 'direct_module');
+    }
+  }
+
+  const sourceToPagesArray = [...entries.entries()]
+    .filter(([, pageMap]) => pageMap.size > 0)
+    .map(([source, pageMap]) => ({
+      source,
+      pages: [...pageMap.entries()]
+        .map(([page, reasons]) => ({ page, reasons: [...reasons].sort() }))
+        .sort((a, b) => a.page.localeCompare(b.page))
+    }))
+    .sort((a, b) => a.source.localeCompare(b.source));
+
+  return {
+    source_to_pages: sourceToPagesArray,
+    summary: {
+      mapped_sources: sourceToPagesArray.length,
+      total_page_references: sourceToPagesArray.reduce((sum, entry) => sum + entry.pages.length, 0)
+    }
+  };
 }
