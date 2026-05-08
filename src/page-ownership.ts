@@ -51,13 +51,17 @@ export function detectPageState(content: string): PageState {
  */
 export function extractHumanNotes(content: string): string {
   const start = content.indexOf(HUMAN_NOTES_START);
-  const end = content.indexOf(HUMAN_NOTES_END);
-
-  if (start === -1 || end === -1 || end <= start) {
+  if (start === -1) {
     return '';
   }
 
-  return content.slice(start + HUMAN_NOTES_START.length, end);
+  const notesStart = start + HUMAN_NOTES_START.length;
+  const end = content.indexOf(HUMAN_NOTES_END, notesStart);
+  if (end === -1) {
+    return '';
+  }
+
+  return content.slice(notesStart, end);
 }
 
 /**
@@ -67,14 +71,18 @@ export function extractHumanNotes(content: string): string {
  */
 export function injectHumanNotes(content: string, notes: string): string {
   const start = content.indexOf(HUMAN_NOTES_START);
-  const end = content.indexOf(HUMAN_NOTES_END);
+  if (start === -1) {
+    return content;
+  }
 
-  if (start === -1 || end === -1 || end <= start) {
+  const notesStart = start + HUMAN_NOTES_START.length;
+  const end = content.indexOf(HUMAN_NOTES_END, notesStart);
+  if (end === -1) {
     return content;
   }
 
   return (
-    content.slice(0, start + HUMAN_NOTES_START.length) +
+    content.slice(0, notesStart) +
     notes +
     content.slice(end)
   );

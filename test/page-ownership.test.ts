@@ -42,7 +42,7 @@ test('detectPageState returns "mixed" when HUMAN_NOTES has non-empty content', (
   assert.equal(detectPageState(content), 'mixed');
 });
 
-test('detectPageState returns "mixed" when notes are only whitespace-free text', () => {
+test('detectPageState returns "mixed" when notes contain non-whitespace content', () => {
   const content = generatedPage('\n## Extra section\n\nDetails.\n');
   assert.equal(detectPageState(content), 'mixed');
 });
@@ -157,6 +157,18 @@ test('extractHumanNotes returns empty string when END marker comes before START'
   assert.equal(extractHumanNotes(content), '');
 });
 
+test('extractHumanNotes ignores END markers before the START marker', () => {
+  const notes = '\nPreserve these notes.\n';
+  const content = [
+    '<!-- HUMAN_NOTES_END --> appears in earlier documentation.',
+    '<!-- HUMAN_NOTES_START -->',
+    notes,
+    '<!-- HUMAN_NOTES_END -->'
+  ].join('\n');
+
+  assert.equal(extractHumanNotes(content), `\n${notes}\n`);
+});
+
 test('extractHumanNotes returns empty string when only START marker is present', () => {
   assert.equal(extractHumanNotes('<!-- HUMAN_NOTES_START -->some text'), '');
 });
@@ -196,6 +208,22 @@ test('injectHumanNotes returns content unchanged when END marker is absent', () 
 test('injectHumanNotes returns content unchanged when END comes before START', () => {
   const content = '<!-- HUMAN_NOTES_END --><!-- HUMAN_NOTES_START -->';
   assert.equal(injectHumanNotes(content, '\nnotes\n'), content);
+});
+
+test('injectHumanNotes ignores END markers before the START marker', () => {
+  const content = [
+    '<!-- HUMAN_NOTES_END --> appears in earlier documentation.',
+    '<!-- HUMAN_NOTES_START -->',
+    'old notes',
+    '<!-- HUMAN_NOTES_END -->',
+    'footer'
+  ].join('\n');
+  const notes = '\nnew notes\n';
+  const result = injectHumanNotes(content, notes);
+
+  assert.equal(extractHumanNotes(result), notes);
+  assert.match(result, /^<!-- HUMAN_NOTES_END --> appears in earlier documentation\./);
+  assert.match(result, /footer$/);
 });
 
 test('injectHumanNotes preserves content outside the markers', () => {

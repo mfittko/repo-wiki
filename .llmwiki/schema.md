@@ -43,11 +43,14 @@ Open-Questions.md
 source_repo: "owner/repo"
 source_commit: "abc123"
 compiled_at: "2026-05-06T00:00:00.000Z"
+page_state: "generated"
 kind: "module"
 source_paths:
   - "src/example.ts"
 ---
 ```
+
+`page_state` is emitted for generated pages and may be `generated`, `mixed`, or `human-owned`. Pages marked `human-owned` are skipped by the compiler; generated pages with non-empty preserved HUMAN_NOTES are rewritten as `mixed`.
 
 ## Lint gates
 
