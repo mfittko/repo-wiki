@@ -232,6 +232,11 @@ test('language detection and classification cover the major path cases', () => {
   assert.equal(detectLanguage('Dockerfile'), 'Dockerfile');
   assert.equal(detectLanguage('src/component.tsx'), 'TypeScript React');
   assert.equal(detectLanguage('src/module.py'), 'Python');
+  assert.equal(detectLanguage('src/module.rb'), 'Ruby');
+  assert.equal(detectLanguage('Gemfile'), 'Ruby');
+  assert.equal(detectLanguage('Rakefile'), 'Ruby');
+  assert.equal(detectLanguage('app/config.ru'), 'Ruby');
+  assert.equal(detectLanguage('repo-wiki.gemspec'), 'Ruby');
   assert.equal(detectLanguage('README'), 'Text');
 
   assert.equal(classifyPath('tests/foo.spec.ts'), 'test');
@@ -242,6 +247,80 @@ test('language detection and classification cover the major path cases', () => {
   assert.equal(classifyPath('ops/infra/main.tf'), 'infra');
   assert.equal(classifyPath('package-lock.json'), 'package');
   assert.equal(classifyPath('src/index.ts'), 'source');
+});
+
+test('ruby extraction captures requires, modules, classes, methods, singleton methods, constants, and malformed fallback', () => {
+  const rubySource = `
+# require 'ignored'
+require "json"
+require_relative 'lib/service'
+require_relative("./support/helpers")
+
+module RepoWiki
+  VERSION = "1.0.0"
+
+  class Scanner
+    DEFAULT_LIMIT ||= 50
+
+    def run
+      true
+    end
+
+    def self.build
+      new
+    end
+
+    class << self
+      def from_config
+        build
+      end
+    end
+  end
+end
+
+class Worker
+  def perform!
+    true
+  end
+end
+
+def top_level_method?
+  true
+end
+`;
+
+  assert.deepEqual(extractImports(rubySource, 'Ruby'), ['./lib/service', './support/helpers', 'json']);
+  assert.deepEqual(extractSymbols(rubySource, 'Ruby'), [
+    'RepoWiki',
+    'RepoWiki::Scanner',
+    'RepoWiki::Scanner#run',
+    'RepoWiki::Scanner.build',
+    'RepoWiki::Scanner.from_config',
+    'RepoWiki::Scanner::DEFAULT_LIMIT',
+    'RepoWiki::VERSION',
+    'Worker',
+    'Worker#perform!',
+    'top_level_method?'
+  ]);
+
+  const malformedRuby = `
+module Broken
+  class Worker
+    def perform
+      true
+def self.recover
+  true
+BROKEN_CONST = 1
+`;
+
+  assert.doesNotThrow(() => extractSymbols(malformedRuby, 'Ruby'));
+  assert.deepEqual(extractSymbols(malformedRuby, 'Ruby'), [
+    'Broken',
+    'Broken::Worker',
+    'Broken::Worker#perform',
+    'Broken::Worker.recover',
+    'Broken::Worker::BROKEN_CONST'
+  ]);
 });
 
 test('python extraction captures imports, classes, functions, async functions, constants, and malformed input fallback', () => {

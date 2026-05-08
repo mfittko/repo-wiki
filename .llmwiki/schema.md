@@ -6,6 +6,11 @@ This file defines how repository source code is compiled into wiki pages.
 
 The source repository at the pinned commit is authoritative. Generated wiki pages are derived artifacts.
 
+## Source card extraction baseline
+
+- Language detection includes Ruby source and common project files (`.rb`, `.rake`, `.ru`, `.gemspec`, `Gemfile`, `Rakefile`).
+- Ruby source cards extract deterministic metadata from static text only: `require`/`require_relative` imports plus module, class, method, singleton-method, and constant symbols.
+
 ## Required pages
 
 ```text

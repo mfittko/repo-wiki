@@ -214,3 +214,49 @@ async def run_job():
     await fs.rm(repo, { recursive: true, force: true });
   }
 });
+
+test('scanRepository extracts deterministic Ruby imports and symbols', async () => {
+  const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-ruby-test-'));
+
+  try {
+    await fs.mkdir(path.join(repo, 'lib'), { recursive: true });
+    await fs.writeFile(path.join(repo, 'lib', 'scanner.rb'), `require 'json'
+require_relative './support/helpers'
+
+module RepoWiki
+  VERSION = "1.0.0"
+
+  class Scanner
+    def run
+      true
+    end
+
+    def self.build
+      new
+    end
+  end
+end
+`, 'utf8');
+
+    const out = path.join(repo, '.llmwiki', 'run');
+    const result = await scanRepository({
+      mode: 'bootstrap',
+      repoPath: repo,
+      outDir: out
+    });
+
+    assert.equal(result.manifest.totals.languages.Ruby, 1);
+    const rubyCard = result.manifest.files.find((file) => file.path === 'lib/scanner.rb');
+    assert.ok(rubyCard);
+    assert.deepEqual(rubyCard.imports, ['./support/helpers', 'json']);
+    assert.deepEqual(rubyCard.symbols, [
+      'RepoWiki',
+      'RepoWiki::Scanner',
+      'RepoWiki::Scanner#run',
+      'RepoWiki::Scanner.build',
+      'RepoWiki::VERSION'
+    ]);
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
+});

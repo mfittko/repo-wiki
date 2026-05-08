@@ -15,6 +15,9 @@ const extensionMap = new Map([
   ['.java', 'Java'],
   ['.kt', 'Kotlin'],
   ['.rb', 'Ruby'],
+  ['.rake', 'Ruby'],
+  ['.ru', 'Ruby'],
+  ['.gemspec', 'Ruby'],
   ['.php', 'PHP'],
   ['.cs', 'C#'],
   ['.sql', 'SQL'],
@@ -24,9 +27,14 @@ const extensionMap = new Map([
 
 export function detectLanguage(filePath) {
   const lower = filePath.toLowerCase();
+  const base = lower.includes('/') ? lower.slice(lower.lastIndexOf('/') + 1) : lower;
 
   if (lower.endsWith('dockerfile') || lower.includes('/dockerfile')) {
     return 'Dockerfile';
+  }
+
+  if (base === 'gemfile' || base === 'rakefile') {
+    return 'Ruby';
   }
 
   const ext = lower.includes('.') ? lower.slice(lower.lastIndexOf('.')) : '';
