@@ -2240,7 +2240,7 @@ function normalizeRustImplName(raw: string) {
     if (!traitName || !typeName) {
       return null;
     }
-    return `impl ${typeName} for ${traitName}`;
+    return `impl ${traitName} for ${typeName}`;
   }
 
   return `impl ${withoutWhere}`;

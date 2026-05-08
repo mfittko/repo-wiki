@@ -72,8 +72,8 @@ test('extractSymbols and extractExportedSymbols extract Rust items and impl bloc
   assert.ok(symbols.includes('run'));
   assert.ok(symbols.includes('helper'));
   assert.ok(symbols.includes('impl Service'));
-  assert.ok(symbols.includes('impl Service for Handler'));
-  assert.ok(symbols.includes('impl Service for From<T>'));
+  assert.ok(symbols.includes('impl Handler for Service'));
+  assert.ok(symbols.includes('impl From<T> for Service'));
 
   const exported = extractExportedSymbols(rustSource, 'Rust');
   assert.deepEqual(exported, [
@@ -127,7 +127,7 @@ test('scanRepository produces Rust source cards with import and item metadata', 
     ]);
     assert.ok(card.symbols.includes('Service'));
     assert.ok(card.symbols.includes('impl Service'));
-    assert.ok(card.symbols.includes('impl Service for Handler'));
+    assert.ok(card.symbols.includes('impl Handler for Service'));
     assert.ok(card.exported_symbols.some((entry) => entry.name === 'Service' && entry.kind === 'struct'));
     assert.ok(card.exported_symbols.some((entry) => entry.name === 'run' && entry.kind === 'fn'));
   } finally {
