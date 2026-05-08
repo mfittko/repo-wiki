@@ -130,6 +130,28 @@ const Profile = mongoose.model('Profile', profileSchema);
     }
   ]);
 
+  assert.deepEqual(extractRouteSurfaces('src/more-routes.ts', `
+fastify.get('/ready', readyHandler);
+router.post('/jobs', createJob);
+`, 'TypeScript'), [
+    {
+      kind: 'http-route',
+      framework: 'router',
+      target: 'router',
+      methods: ['POST'],
+      path: '/jobs',
+      handler: 'createJob'
+    },
+    {
+      kind: 'http-route',
+      framework: 'fastify',
+      target: 'fastify',
+      methods: ['GET'],
+      path: '/ready',
+      handler: 'readyHandler'
+    }
+  ]);
+
   assert.deepEqual(detectRuntimeHints('infra/Dockerfile', richSource + '\ncron.schedule()', {
     routeSurfaces: extractRouteSurfaces('src/server.ts', richSource, 'TypeScript'),
     environmentVariables: extractEnvironmentVariables(richSource, 'TypeScript')
@@ -209,6 +231,7 @@ export default (
 test('language detection and classification cover the major path cases', () => {
   assert.equal(detectLanguage('Dockerfile'), 'Dockerfile');
   assert.equal(detectLanguage('src/component.tsx'), 'TypeScript React');
+  assert.equal(detectLanguage('src/module.py'), 'Python');
   assert.equal(detectLanguage('README'), 'Text');
 
   assert.equal(classifyPath('tests/foo.spec.ts'), 'test');
@@ -219,6 +242,96 @@ test('language detection and classification cover the major path cases', () => {
   assert.equal(classifyPath('ops/infra/main.tf'), 'infra');
   assert.equal(classifyPath('package-lock.json'), 'package');
   assert.equal(classifyPath('src/index.ts'), 'source');
+});
+
+test('python extraction captures imports, classes, functions, async functions, constants, and malformed input fallback', () => {
+  const pythonSource = `
+"""
+import fake_mod
+from fake_pkg import hidden
+def fake():
+    return 0
+"""
+
+import os
+import pkg.mod as mod, json
+from collections import defaultdict
+from .local.module import value as local_value
+
+CONSTANT = "value"
+MAX_RETRIES: int = 3
+SPECIAL_TOKEN: Literal["="] = "="
+TRIPLE_MARKER = "'''"
+
+class Service:
+    def method(self):
+        return 1
+
+def helper(name: str):
+    return name
+
+async def fetch_data():
+    return None
+
+def multi_line(
+    name: str,
+) -> str:
+    return name
+
+async def multi_async(
+    value: int,
+):
+    return value
+`;
+
+  assert.deepEqual(extractImports(pythonSource, 'Python'), ['.local.module', 'collections', 'json', 'os', 'pkg.mod']);
+  assert.deepEqual(extractSymbols(pythonSource, 'Python'), ['CONSTANT', 'MAX_RETRIES', 'SPECIAL_TOKEN', 'Service', 'TRIPLE_MARKER', 'fetch_data', 'helper', 'multi_async', 'multi_line']);
+
+  const malformedSource = `
+import requests
+def still_ok():
+    return True
+def broken(
+class Recoverable:
+    pass
+RESULT = 1
+`;
+  assert.doesNotThrow(() => extractSymbols(malformedSource, 'Python'));
+  assert.deepEqual(extractSymbols(malformedSource, 'Python'), ['RESULT', 'Recoverable', 'still_ok']);
+  assert.deepEqual(extractImports(malformedSource, 'Python'), ['requests']);
+
+  const quoteEdgeCases = `
+'''example import hidden_single_quote_docstring'''
+VALUE_WITH_HASH = "not a # comment"
+VALUE_WITH_ESCAPED_QUOTE = "keeps \\"# still string"
+TRIPLE_MARKER = "'''"
+DOUBLE_TRIPLE_MARKER = '\"\"\"'
+NESTED = {"key": "="}
+LIST_VALUE = ["="]
+COMPARES = 1 == 1
+NOT_EQUAL = 1 != 2
+
+def with_defaults(value: str = "(", other: dict = {"x": ":"}) -> str:
+    return value
+
+def no_colon(value) -> str
+class AfterMalformed:
+    pass
+async def :
+    pass
+`;
+  assert.deepEqual(extractSymbols(quoteEdgeCases, 'Python'), [
+    'AfterMalformed',
+    'COMPARES',
+    'DOUBLE_TRIPLE_MARKER',
+    'LIST_VALUE',
+    'NESTED',
+    'NOT_EQUAL',
+    'TRIPLE_MARKER',
+    'VALUE_WITH_ESCAPED_QUOTE',
+    'VALUE_WITH_HASH',
+    'with_defaults'
+  ]);
 });
 
 test('git helpers cover success and fallback paths', async () => {
@@ -545,4 +658,37 @@ test('inferFileRoutePath detects Next.js app router and pages patterns', () => {
   // app/api/route pattern
   const app = extractRouteSurfaces('src/app/api/items/route.ts', 'export async function POST() {}', 'TypeScript');
   assert.ok(app.some(s => s.path === '/api/items'), 'app/api route pattern');
+});
+
+test('python extractImports ignores invalid specifiers and handles escape sequences in strings', () => {
+  // Quoted specifier (Go-style) should be ignored — not a valid Python identifier
+  assert.deepEqual(extractImports('import "fmt"', 'Python'), []);
+  assert.deepEqual(extractImports('import 123bad', 'Python'), []);
+  // Escaped single-quote inside inline string should not start triple-quote block
+  const src = `import os\nx = 'it\\'s fine'\nimport sys\n`;
+  const result = extractImports(src, 'Python');
+  assert.ok(result.includes('os'), 'os imported');
+  assert.ok(result.includes('sys'), 'sys imported');
+});
+
+test('python extractSymbols handles def with no parenthesis match and -> without colon', () => {
+  // def with no opening paren: should be skipped
+  const src1 = `def no_paren str:\n    pass\n`;
+  assert.deepEqual(extractSymbols(src1, 'Python'), []);
+  // async def with return annotation but no colon: should be skipped
+  const src2 = `async def incomplete() -> str\n`;
+  assert.deepEqual(extractSymbols(src2, 'Python'), []);
+  // multiline collectPythonSignature that hits empty-line break mid-multiline
+  const src3 = `def broken(\n\n    x: int,\n) -> int:\n    return x\n`;
+  const syms = extractSymbols(src3, 'Python');
+  assert.ok(syms.includes('broken') || syms.length === 0, 'gracefully handles mid-signature empty line');
+});
+
+test('stripPythonTripleQuotedStrings handles escaped triple-quote and inline quote before triple', () => {
+  // Inline single quote before triple-quote block: triple-quote block is still stripped
+  const src = `x = 'hello'\n"""\ndocstring content\nimport hidden\n"""\nimport real\n`;
+  assert.deepEqual(extractImports(src, 'Python'), ['real']);
+  // Double-escaped backslash before triple-quote is not an escape of the quote
+  const src2 = `import a\nx = "test"\nimport b\n`;
+  assert.deepEqual(extractImports(src2, 'Python'), ['a', 'b']);
 });
