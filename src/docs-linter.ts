@@ -15,7 +15,7 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
   const allPackageScripts = mergePackageScripts(manifest);
 
   // Collect CI commands from scan analysis and refresh workflow YAML files when available.
-  const ciCommands: string[] = [...(manifest.analysis?.ci_workflow_commands || [])];
+  const ciCommands = new Set<string>(manifest.analysis?.ci_workflow_commands || []);
   const workflowsDir = path.join(repoRoot, '.github', 'workflows');
   let workflowFiles: string[] = [];
   try {
@@ -27,7 +27,7 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
     if (wf.endsWith('.yml') || wf.endsWith('.yaml')) {
       try {
         const content = await fs.readFile(path.join(workflowsDir, wf), 'utf8');
-        ciCommands.push(...extractCiCommands(content));
+        for (const command of extractCiCommands(content)) ciCommands.add(command);
       } catch {
         // Skip only the unreadable workflow; other workflows can still validate commands.
       }
@@ -48,7 +48,7 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
     // Validate documented commands against package scripts and CI workflows
     const docCommands: string[] = doc.validation?.commands || [];
     if (docCommands.length > 0) {
-      const classified = classifyDocumentedCommands(docCommands, allPackageScripts, ciCommands);
+      const classified = classifyDocumentedCommands(docCommands, allPackageScripts, [...ciCommands]);
       for (const cls of classified) {
         if (cls.status === 'missing' && cls.source === 'package_scripts') {
           issues.push(issue(

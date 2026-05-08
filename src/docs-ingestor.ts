@@ -5,6 +5,7 @@ const DOC_EXTENSIONS = ['.md', '.mdx', '.markdown'];
 
 // Npm lifecycle commands that map directly to package.json scripts
 const NPM_LIFECYCLE_SCRIPTS = new Set(['test', 'start', 'stop', 'restart']);
+const SHELL_RESERVED_WORDS = new Set(['if', 'then', 'else', 'elif', 'fi', 'for', 'select', 'while', 'until', 'do', 'done', 'case', 'esac', '{', '}']);
 
 export type CommandStatus = 'validated' | 'missing' | 'unvalidated';
 export type CommandSource = 'package_scripts' | 'ci_workflow' | 'unknown';
@@ -228,7 +229,12 @@ function extractWorkflowCommandValue(value: string, lines: string[], lineIndex: 
 function extractWorkflowCommandParts(command: string): string[] {
   const unquoted = command.trim().replace(/^["']|["']$/g, '');
   if (!unquoted || unquoted.includes('${{')) return [];
-  return splitShellCommand(unquoted, false);
+  return splitShellCommand(unquoted, false).filter((part) => !isShellReservedCommand(part));
+}
+
+function isShellReservedCommand(command: string): boolean {
+  const firstToken = tokenizeShellWords(command)[0];
+  return Boolean(firstToken && SHELL_RESERVED_WORDS.has(firstToken));
 }
 
 function leadingSpaces(line: string): number {

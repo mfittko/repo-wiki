@@ -123,8 +123,11 @@ jobs:
         run: \${{ matrix.task.command }}
       - name: Block script
         run: |-
-          npm run block
-          bash scripts/block.sh && python tools/block.py
+          if [ -f package.json ]; then
+            npm run block
+          else
+            bash scripts/block.sh && python tools/block.py
+          fi
           echo \${{ matrix.skip }}
       - name: Folded script
         run: >
@@ -147,6 +150,7 @@ jobs:
   assert.ok(cmds.includes('bash scripts/block.sh'));
   assert.ok(cmds.includes('python tools/block.py'));
   assert.ok(cmds.includes('./folded-check'));
+  assert.ok(!cmds.some((c) => ['if [ -f package.json ]', 'then', 'else', 'fi'].includes(c)));
   assert.ok(cmds.includes('npm run check'));
   assert.ok(cmds.includes('npm run pack:check'));
   // Template expressions anywhere in the command should be excluded
