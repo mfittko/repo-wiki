@@ -259,7 +259,7 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
     const symbols = new Set<string>();
     const exported: Array<{ name: string; kind: string }> = [];
     const seenExported = new Set<string>();
-    const declarationKinds = new Map<string, string>();
+    const declarationKinds = collectTopLevelDeclarationKinds(sourceFile);
 
     for (const statement of sourceFile.statements) {
       const modifierFlags = getModifierFlags(statement);
@@ -268,7 +268,6 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
         if (statement.name) {
           const name = statement.name.text;
           symbols.add(name);
-          declarationKinds.set(name, 'function');
           if (modifierFlags.exported) {
             pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'function' });
           }
@@ -283,7 +282,6 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
         if (statement.name) {
           const name = statement.name.text;
           symbols.add(name);
-          declarationKinds.set(name, 'class');
           if (modifierFlags.exported) {
             pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'class' });
           }
@@ -297,7 +295,6 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
       if (ts.isInterfaceDeclaration(statement)) {
         const name = statement.name.text;
         symbols.add(name);
-        declarationKinds.set(name, 'interface');
         if (modifierFlags.exported) {
           pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'interface' });
         }
@@ -307,7 +304,6 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
       if (ts.isTypeAliasDeclaration(statement)) {
         const name = statement.name.text;
         symbols.add(name);
-        declarationKinds.set(name, 'type');
         if (modifierFlags.exported) {
           pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'type' });
         }
@@ -317,7 +313,6 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
       if (ts.isEnumDeclaration(statement)) {
         const name = statement.name.text;
         symbols.add(name);
-        declarationKinds.set(name, 'enum');
         if (modifierFlags.exported) {
           pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'enum' });
         }
@@ -334,7 +329,6 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
           if (ts.isIdentifier(declaration.name)) {
             const name = declaration.name.text;
             symbols.add(name);
-            declarationKinds.set(name, kind);
             if (modifierFlags.exported) {
               pushExportedSymbol(exported, seenExported, { name, kind });
             }
@@ -363,6 +357,52 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
   } catch {
     return null;
   }
+}
+
+function collectTopLevelDeclarationKinds(sourceFile: ts.SourceFile): Map<string, string> {
+  const declarationKinds = new Map<string, string>();
+
+  for (const statement of sourceFile.statements) {
+    if (ts.isFunctionDeclaration(statement) && statement.name) {
+      declarationKinds.set(statement.name.text, 'function');
+      continue;
+    }
+
+    if (ts.isClassDeclaration(statement) && statement.name) {
+      declarationKinds.set(statement.name.text, 'class');
+      continue;
+    }
+
+    if (ts.isInterfaceDeclaration(statement)) {
+      declarationKinds.set(statement.name.text, 'interface');
+      continue;
+    }
+
+    if (ts.isTypeAliasDeclaration(statement)) {
+      declarationKinds.set(statement.name.text, 'type');
+      continue;
+    }
+
+    if (ts.isEnumDeclaration(statement)) {
+      declarationKinds.set(statement.name.text, 'enum');
+      continue;
+    }
+
+    if (ts.isVariableStatement(statement)) {
+      const kind = statement.declarationList.flags & ts.NodeFlags.Const
+        ? 'const'
+        : statement.declarationList.flags & ts.NodeFlags.Let
+          ? 'let'
+          : 'var';
+      for (const declaration of statement.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name)) {
+          declarationKinds.set(declaration.name.text, kind);
+        }
+      }
+    }
+  }
+
+  return declarationKinds;
 }
 
 function inferDefaultExportKind(expression: ts.Expression, declarationKinds: Map<string, string>): string {

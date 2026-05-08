@@ -119,6 +119,14 @@ export const answer = 42;
     { name: 'default', kind: 'function' }
   ]);
 
+  const forwardDefaultSource = `
+export default helper;
+function helper() { return 1; }
+`;
+  assert.deepEqual(extractExportedSymbols(forwardDefaultSource, 'JavaScript'), [
+    { name: 'default', kind: 'function' }
+  ]);
+
   const tsSource = `
 type InternalType = { id: string };
 interface InternalShape { value: number }
