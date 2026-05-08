@@ -101,7 +101,7 @@ jobs:
   assert.ok(cmds.includes('npm run check'));
   assert.ok(cmds.includes('npm run pack:check'));
   // Template expression should be excluded
-  assert.ok(!cmds.some((c) => c.startsWith('${{') ));
+  assert.ok(!cmds.some((c) => c.startsWith('${{')));
 });
 
 test('lintDocs reports missing-package-script for commands not in package.json', async () => {

@@ -49,6 +49,19 @@ export function extractCiCommands(content: string): string[] {
 }
 
 /**
+ * Merge package scripts from all package.json entries in a manifest's analysis.
+ * Later entries overwrite earlier ones on key collision (monorepo root-last order
+ * is determined by the manifest's sorted package_scripts array).
+ */
+export function mergePackageScripts(manifest: { analysis?: { package_scripts?: Array<{ scripts?: Record<string, string> }> } }): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const pkg of manifest.analysis?.package_scripts || []) {
+    Object.assign(result, pkg.scripts || {});
+  }
+  return result;
+}
+
+/**
  * Classify documented commands against known package scripts and CI commands.
  * Returns each command with a validation status: validated, missing, or unvalidated.
  */

@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { ensureDir, readJson, writeText } from './utils/fs.js';
-import { classifyDocumentedCommands } from './docs-ingestor.js';
+import { classifyDocumentedCommands, mergePackageScripts } from './docs-ingestor.js';
 
 export async function compileWiki({ scanDir, planFile, wikiDir }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
@@ -131,10 +131,7 @@ function renderDocumentationDebtReport(manifest) {
   const contradicted = docs.filter((doc) => doc.validation?.contradictions?.length).map((doc) => `- \`${doc.path}\` - ${doc.validation.contradictions.length} contradiction-review signals`);
 
   // Build merged package scripts from manifest analysis for command validation
-  const allPackageScripts: Record<string, string> = {};
-  for (const pkg of manifest.analysis?.package_scripts || []) {
-    Object.assign(allPackageScripts, pkg.scripts || {});
-  }
+  const allPackageScripts = mergePackageScripts(manifest);
 
   // Classify all documented commands against known package scripts
   // CI command validation requires running lint-docs with repo access

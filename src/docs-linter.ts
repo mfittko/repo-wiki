@@ -2,7 +2,7 @@ import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { readJson } from './utils/fs.js';
 import { loadConfig } from './config.js';
-import { classifyDocumentedCommands, extractCiCommands } from './docs-ingestor.js';
+import { classifyDocumentedCommands, extractCiCommands, mergePackageScripts } from './docs-ingestor.js';
 
 export async function lintDocs({ scanDir, repoPath = '.' }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
@@ -12,10 +12,7 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
   const repoRoot = path.resolve(repoPath);
 
   // Collect merged package scripts from manifest analysis
-  const allPackageScripts: Record<string, string> = {};
-  for (const pkg of manifest.analysis?.package_scripts || []) {
-    Object.assign(allPackageScripts, pkg.scripts || {});
-  }
+  const allPackageScripts = mergePackageScripts(manifest);
 
   // Collect CI commands from workflow YAML files
   const ciCommands: string[] = [];
