@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build scanner analysis foundation, TypeScript migration, and CI enforcement.
 - Add repo guidance and simplify agent names.
 - add issue task template and backlog note.
+- Add AST-backed TypeScript/JavaScript symbol extraction in scanner.
 
 ### Changed
 - Node.js engine requirement raised to `>=24`; removed unsafe incremental cache from scanner
