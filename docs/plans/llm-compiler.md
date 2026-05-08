@@ -79,6 +79,58 @@ sequenceDiagram
 - Merge strategy for back-fill and reconcile mode, not just fresh bootstrap generation
 - Prompt templates for each page archetype
 
+## Provider configuration contract
+
+The first production LLM boundary should be provider-agnostic and compatible with OpenAI-style chat completions so GitHub Actions and local runs can use OpenAI, compatible hosted providers, or local gateways without changing compiler code.
+
+Minimum `.llmwiki/config.json` shape:
+
+```jsonc
+{
+  "compiler": {
+    "mode": "deterministic", // deterministic | llm
+    "llm": {
+      "provider": "openai-compatible",
+      "base_url": "https://api.openai.com/v1",
+      "model": "gpt-4.1-mini",
+      "api_key_env": "LLMWIKI_LLM_API_KEY",
+      "system_prompt": "You compile source-grounded GitHub Wiki pages.",
+      "temperature": 0.1,
+      "max_output_tokens": 4000,
+      "timeout_ms": 60000,
+      "retries": 2
+    }
+  }
+}
+```
+
+Environment variables override config values for CI and secrets:
+
+| Environment variable | Purpose |
+|---|---|
+| `LLMWIKI_COMPILER_MODE` | Select `deterministic` or `llm` mode. |
+| `LLMWIKI_LLM_BASE_URL` | Override provider API base URL. |
+| `LLMWIKI_LLM_MODEL` | Override model name. |
+| `LLMWIKI_LLM_API_KEY` | Provider API key; never written to artifacts or logs. |
+| `LLMWIKI_LLM_SYSTEM_PROMPT` | Inline system prompt override. |
+| `LLMWIKI_LLM_SYSTEM_PROMPT_FILE` | Path to a system prompt file; useful for repo-maintained prompts. |
+| `LLMWIKI_LLM_TEMPERATURE` | Sampling temperature override. |
+| `LLMWIKI_LLM_MAX_OUTPUT_TOKENS` | Output token budget override. |
+
+Configuration precedence should be explicit and deterministic: CLI flags, when added, override environment variables; environment variables override `.llmwiki/config.json`; config overrides safe defaults. The API key must be read only from the configured environment variable and must never be persisted in scan artifacts, generated wiki pages, prompt-debug artifacts, or normal logs.
+
+GitHub Actions can enable LLM compilation by setting repository variables for non-secret values and a secret for the API key:
+
+```yaml
+env:
+  LLMWIKI_COMPILER_MODE: llm
+  LLMWIKI_LLM_BASE_URL: ${{ vars.LLMWIKI_LLM_BASE_URL }}
+  LLMWIKI_LLM_MODEL: ${{ vars.LLMWIKI_LLM_MODEL }}
+  LLMWIKI_LLM_API_KEY: ${{ secrets.LLMWIKI_LLM_API_KEY }}
+```
+
+Tests must use a deterministic mock provider and must not require network access or API keys.
+
 ## Success Criteria
 
 - Generated wiki pages are useful without manual editing
