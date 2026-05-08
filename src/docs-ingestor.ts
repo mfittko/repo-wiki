@@ -7,6 +7,7 @@ const DOC_EXTENSIONS = ['.md', '.mdx', '.markdown'];
 // Npm lifecycle commands that map directly to package.json scripts
 const NPM_LIFECYCLE_SCRIPTS = new Set(['test', 'start', 'stop', 'restart']);
 const SHELL_RESERVED_WORDS = new Set(['if', 'then', 'else', 'elif', 'fi', 'for', 'select', 'while', 'until', 'do', 'done', 'case', 'esac', '{', '}']);
+const COMMON_ENV_VAR_NAMES = new Set(['CI', 'HOME', 'PATH', 'PORT', 'SHELL', 'TERM', 'USER']);
 
 export type CommandStatus = 'validated' | 'missing' | 'unvalidated';
 export type CommandSource = 'package_scripts' | 'ci_workflow' | 'unknown';
@@ -220,9 +221,11 @@ export function validateDocClaims({ claims, content, filePath }) {
 }
 
 function isEnvironmentVariableMention(value: string) {
+  if (!/^[A-Z][A-Z0-9_]{1,}$/.test(value)) return false;
+  if (COMMON_ENV_VAR_NAMES.has(value)) return true;
   if (!value.includes('_')) return false;
   if (/^(README|TODO|HTTP|HTTPS|JSON|YAML|CLI|API)$/.test(value)) return false;
-  return /^[A-Z][A-Z0-9_]{2,}$/.test(value);
+  return true;
 }
 
 function extractWorkflowCommandValue(value: string, lines: string[], lineIndex: number, baseIndent: number): { parts: string[]; lastLineIndex: number } {
@@ -331,8 +334,8 @@ export function extractDocumentedFilePaths(content: string): DocumentedFilePath[
     }
     if (fenceMarker) continue;
 
-    for (const match of line.matchAll(/!?\[[^\]]*\]\(([^)]+)\)/g)) {
-      const target = cleanDocumentedPathTarget(match[1]);
+    for (const linkTarget of extractMarkdownLinkTargets(line)) {
+      const target = cleanDocumentedPathTarget(linkTarget);
       if (isDocumentedPathCandidate(target, true)) {
         pushDocumentedPath(results, seen, { path: target, line: index + 1, source: 'link' });
       }
@@ -347,6 +350,65 @@ export function extractDocumentedFilePaths(content: string): DocumentedFilePath[
   }
 
   return results.slice(0, 200);
+}
+
+function extractMarkdownLinkTargets(line: string) {
+  const targets: string[] = [];
+  for (let index = 0; index < line.length; index += 1) {
+    const openBracket = line.indexOf('[', index);
+    if (openBracket === -1) break;
+    const closeBracket = line.indexOf(']', openBracket + 1);
+    if (closeBracket === -1 || line[closeBracket + 1] !== '(') {
+      index = openBracket;
+      continue;
+    }
+
+    let cursor = closeBracket + 2;
+    let target = '';
+    if (line[cursor] === '<') {
+      cursor += 1;
+      const closeAngle = line.indexOf('>', cursor);
+      if (closeAngle === -1) {
+        index = cursor;
+        continue;
+      }
+      target = line.slice(cursor, closeAngle);
+      cursor = closeAngle + 1;
+      while (line[cursor] && /\s/.test(line[cursor])) cursor += 1;
+      if (line[cursor] !== ')') {
+        index = cursor;
+        continue;
+      }
+      targets.push(target);
+      index = cursor;
+      continue;
+    }
+
+    let depth = 0;
+    let quote: '"' | "'" | '' = '';
+    for (; cursor < line.length; cursor += 1) {
+      const char = line[cursor];
+      if ((char === '"' || char === "'") && !quote) {
+        quote = char;
+      } else if (char === quote) {
+        quote = '';
+      } else if (!quote && char === '(') {
+        depth += 1;
+      } else if (!quote && char === ')') {
+        if (depth === 0) break;
+        depth -= 1;
+      }
+      target += char;
+    }
+
+    if (cursor < line.length && line[cursor] === ')') {
+      targets.push(target);
+      index = cursor;
+    } else {
+      index = closeBracket;
+    }
+  }
+  return targets;
 }
 
 function pushDocumentedPath(results: DocumentedFilePath[], seen: Set<string>, value: DocumentedFilePath) {

@@ -13,7 +13,8 @@ async function makeTempRepo() {
   await fs.mkdir(path.join(dir, 'tests'), { recursive: true });
   await fs.writeFile(path.join(dir, 'package.json'), JSON.stringify({ name: 'fixture-repo', scripts: { build: 'node build.js', test: 'node --test' } }, null, 2));
   await fs.writeFile(path.join(dir, '.env.example'), 'EXAMPLE_MODE=on\n');
-  await fs.writeFile(path.join(dir, 'Dockerfile'), 'ARG DOCKER_MODE\nENV DOCKER_HOST=localhost\n');
+  await fs.writeFile(path.join(dir, 'Dockerfile'), 'ARG DOCKER_MODE\nENV DOCKER_HOST=localhost DOCKER_PORT=8080 DOCKER_PATH=/app\n');
+  await fs.writeFile(path.join(dir, 'config.yml'), 'env_var: CONFIG_MODE\nHTTP_PORT: 3000\n');
   await fs.writeFile(path.join(dir, 'src', 'utils.js'), 'export function value() { return 42; }\n');
   await fs.writeFile(path.join(dir, 'src', 'index.js'), "import express from 'express';\nimport fs from 'node:fs';\nimport { value } from './utils.js';\n\nconst app = express();\nexport const router = express.Router();\n\napp.get('/health', healthCheck);\nrouter.post('/users', createUser);\n\nexport function hello() {\n  return fs.existsSync('.') && value() === 42 && Boolean(process.env.PORT) && process.env['APP_MODE'] !== 'off';\n}\n\nfunction healthCheck(_req, res) {\n  return res.json({ ok: true, mode: process.env.APP_MODE });\n}\n\nconst createUser = (_req, res) => {\n  return res.json({ created: true });\n};\n");
   await fs.writeFile(path.join(dir, 'src', 'math.js'), 'export function add(left, right) { return left + right; }\n');
@@ -36,7 +37,7 @@ test('scanRepository creates a manifest and source cards', async () => {
       outDir: out
     });
 
-    assert.equal(result.summary.files, 10);
+    assert.equal(result.summary.files, 11);
     assert.equal(result.manifest.totals.languages.JavaScript, 7);
     assert.equal(result.manifest.totals.languages.JSON, 1);
     assert.ok(result.manifest.files.some((file) => file.path === 'src/index.js'));
@@ -99,7 +100,10 @@ test('scanRepository creates a manifest and source cards', async () => {
     assert.deepEqual(envExampleCard.environment_variables, ['EXAMPLE_MODE']);
     const dockerfileCard = result.manifest.files.find((file) => file.path === 'Dockerfile');
     assert.ok(dockerfileCard);
-    assert.deepEqual(dockerfileCard.environment_variables, ['DOCKER_HOST', 'DOCKER_MODE']);
+    assert.deepEqual(dockerfileCard.environment_variables, ['DOCKER_HOST', 'DOCKER_MODE', 'DOCKER_PATH', 'DOCKER_PORT']);
+    const configCard = result.manifest.files.find((file) => file.path === 'config.yml');
+    assert.ok(configCard);
+    assert.deepEqual(configCard.environment_variables, ['CONFIG_MODE']);
     assert.deepEqual(indexCard.route_surfaces, [
       {
         kind: 'http-route',

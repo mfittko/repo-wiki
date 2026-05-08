@@ -42,10 +42,12 @@ test('documentation ingestion produces documentation cards and lint issues', asy
 });
 
 test('extractDocumentedFilePaths extracts deterministic markdown link and inline code path references', () => {
-  const refs = extractDocumentedFilePaths('# Paths\n\nSee [plan](docs/PLAN.md), [titled](docs/TITLE.md "Title"), `src/cli.ts`, `../README.md`, `dist/`, `1..2`, and `npm run build`.\n\n```bash\ncat missing.md\n```\n\n~~~bash\ncat also-missing.md\n~~~\n');
+  const refs = extractDocumentedFilePaths('# Paths\n\nSee [plan](docs/PLAN.md), [titled](docs/TITLE.md "Title"), [paren](docs/guide(arch).md), [angle](<docs/another(arch).md>), `src/cli.ts`, `../README.md`, `dist/`, `1..2`, and `npm run build`.\n\n```bash\ncat missing.md\n```\n\n~~~bash\ncat also-missing.md\n~~~\n');
   assert.deepEqual(refs, [
     { path: 'docs/PLAN.md', line: 3, source: 'link' },
     { path: 'docs/TITLE.md', line: 3, source: 'link' },
+    { path: 'docs/guide(arch).md', line: 3, source: 'link' },
+    { path: 'docs/another(arch).md', line: 3, source: 'link' },
     { path: 'src/cli.ts', line: 3, source: 'inline_code' },
     { path: '../README.md', line: 3, source: 'inline_code' }
   ]);
@@ -253,11 +255,11 @@ test('lintDocs reports broken documented file paths, broken image links, and unv
         stale_after_days: 9999
       }
     }), 'utf8');
-    await writeFile(path.join(dir, 'src', 'app.js'), "export const mode = process.env.APP_MODE;\nconst baseUrl = optionalEnv(env, 'LLMWIKI_LLM_BASE_URL');\n", 'utf8');
+    await writeFile(path.join(dir, 'src', 'app.js'), "export const mode = process.env.APP_MODE;\nconst port = process.env.PORT;\nconst baseUrl = optionalEnv(env, 'LLMWIKI_LLM_BASE_URL');\n", 'utf8');
     await writeFile(path.join(dir, '.env.example'), 'EXAMPLE_MODE=on\n', 'utf8');
     await writeFile(path.join(dir, 'docs', 'plans', 'README.md'), '# Plans\n', 'utf8');
     await writeFile(path.join(dir, 'docs', 'guide.md'), '# Guide\n\n[local readme](README.md)\n', 'utf8');
-    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee `src/app.js`, `docs/plans/`, `docs/missing.md`, ![missing](assets/missing.png), and configure APP_MODE, EXAMPLE_MODE, MISSING_TOKEN, or LLMWIKI_LLM_BASE_URL.\n', 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee `src/app.js`, `docs/plans/`, `docs/missing.md`, ![missing](assets/missing.png), and configure APP_MODE, PORT, EXAMPLE_MODE, MISSING_TOKEN, or LLMWIKI_LLM_BASE_URL.\n', 'utf8');
 
     const scanDir = path.join(dir, '.llmwiki', 'run');
     await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });

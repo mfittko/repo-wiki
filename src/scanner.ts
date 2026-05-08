@@ -178,7 +178,7 @@ function redactSecretConfig(value: any): any {
 }
 
 function isSecretConfigKey(key: string) {
-  if (/(?:^|[_-])env$/i.test(key) || /env$/i.test(key)) {
+  if (/env$/i.test(key)) {
     return false;
   }
   if (/api[_-]?key/i.test(key)) {
@@ -221,18 +221,26 @@ function extractConfiguredEnvironmentVariables(filePath: string, content: string
 
   if (lower.endsWith('dockerfile') || lower.includes('/dockerfile')) {
     for (const line of content.split('\n')) {
-      const match = /^\s*(?:ENV|ARG)\s+([A-Z][A-Z0-9_]{2,})(?:\s|=|$)/i.exec(line);
-      if (match) names.add(match[1]);
+      const instruction = /^\s*(ENV|ARG)\s+(.+)$/i.exec(line);
+      if (!instruction) continue;
+      for (const token of tokenizeDockerEnvInstruction(instruction[2])) {
+        const match = /^([A-Z][A-Z0-9_]{2,})(?:=.*)?$/.exec(token);
+        if (match) names.add(match[1]);
+      }
     }
   }
 
   if (/\.(ya?ml|json|toml)$/.test(lower) || lower.includes('schema') || lower.includes('config')) {
-    for (const match of content.matchAll(/\b([A-Z][A-Z0-9_]{2,})\b\s*[:=]/g)) {
+    for (const match of content.matchAll(/\b(?:env|env_var|env_vars|environment_variable|environment_variables)\b\s*[:=]\s*['"]?([A-Z][A-Z0-9_]{2,})['"]?/gi)) {
       names.add(match[1]);
     }
   }
 
   return [...names].sort();
+}
+
+function tokenizeDockerEnvInstruction(value: string) {
+  return value.match(/"[^"]*"|'[^']*'|\S+/g)?.map((token) => token.replace(/^['"]|['"]$/g, '')) || [];
 }
 
 function safeFileName(filePath: string) {
