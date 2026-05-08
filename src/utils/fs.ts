@@ -33,8 +33,9 @@ export async function fileExists(filePath: string) {
 }
 
 export async function walkFiles(rootDir: string, options: WalkFilesOptions = {}): Promise<WalkFile[]> {
-  const exclude = options.exclude || defaultExcludes;
+  const exclude = [...new Set([...defaultExcludes, ...(options.exclude || [])])];
   const files: WalkFile[] = [];
+  const absoluteRoot = path.resolve(rootDir);
 
   async function walk(current: string) {
     const entries = await fs.readdir(current, { withFileTypes: true });
@@ -48,6 +49,9 @@ export async function walkFiles(rootDir: string, options: WalkFilesOptions = {})
       }
 
       if (entry.isDirectory()) {
+        if (await isNestedRepositoryRoot(absolute, absoluteRoot)) {
+          continue;
+        }
         await walk(absolute);
       } else if (entry.isFile()) {
         files.push({ absolute, relative });
@@ -58,6 +62,20 @@ export async function walkFiles(rootDir: string, options: WalkFilesOptions = {})
   await walk(rootDir);
   files.sort((a, b) => a.relative.localeCompare(b.relative));
   return files;
+}
+
+async function isNestedRepositoryRoot(dirPath: string, absoluteRoot: string) {
+  if (path.resolve(dirPath) === absoluteRoot) {
+    return false;
+  }
+
+  const gitMarker = path.join(dirPath, '.git');
+  try {
+    const stat = await fs.stat(gitMarker);
+    return stat.isDirectory() || stat.isFile();
+  } catch {
+    return false;
+  }
 }
 
 const defaultExcludes = [

@@ -45,7 +45,9 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
   const config = await loadConfig(absoluteRepo);
   const commit = headRef || await getGitCommit(absoluteRepo);
   const remote = await getGitRemote(absoluteRepo);
-  const files = await walkFiles(absoluteRepo);
+  const files = await walkFiles(absoluteRepo, {
+    exclude: Array.isArray(config?.source?.exclude) ? config.source.exclude : undefined
+  });
   const cards: any[] = [];
   const documentationCards: any[] = [];
 
