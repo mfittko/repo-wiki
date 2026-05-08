@@ -187,7 +187,7 @@ test('createProvider with unknown provider and apiKey throws UNKNOWN_PROVIDER', 
   );
 });
 
-test('resolveProviderConfig applies CI environment overrides without exposing api key', () => {
+test('resolveProviderConfig applies env overrides and resolves api key', () => {
   const resolved = resolveProviderConfig(
     {
       provider: 'mock',
@@ -288,6 +288,24 @@ test('resolveProviderConfig rejects invalid numeric JSON config', () => {
       return true;
     },
   );
+});
+
+test('resolveProviderConfig rejects negative integer config', () => {
+  for (const config of [
+    { maxOutputTokens: -1 },
+    { timeoutMs: -1 },
+    { retries: -1 },
+  ]) {
+    assert.throws(
+      () => resolveProviderConfig(config, {}),
+      (err: unknown) => {
+        assert.ok(err instanceof LLMProviderError);
+        assert.equal(err.code, 'INVALID_CONFIG');
+        assert.equal(err.provider, 'config');
+        return true;
+      },
+    );
+  }
 });
 
 test('OpenAICompatibleProvider posts chat-completions request', async (t) => {

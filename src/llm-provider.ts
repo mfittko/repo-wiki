@@ -397,9 +397,9 @@ export function resolveProviderConfig(
     systemPrompt,
     systemPromptFile,
     temperature: parseNumber(optionalEnv(env, 'LLMWIKI_LLM_TEMPERATURE'), llmConfig.temperature ?? LLM_DEFAULTS.temperature, 'temperature'),
-    maxOutputTokens: parseInteger(optionalEnv(env, 'LLMWIKI_LLM_MAX_OUTPUT_TOKENS'), llmConfig.maxOutputTokens ?? llmConfig.max_output_tokens ?? LLM_DEFAULTS.maxOutputTokens, 'maxOutputTokens'),
-    timeoutMs: parseInteger(optionalEnv(env, 'LLMWIKI_LLM_TIMEOUT_MS'), llmConfig.timeoutMs ?? llmConfig.timeout_ms ?? LLM_DEFAULTS.timeoutMs, 'timeoutMs'),
-    retries: parseInteger(optionalEnv(env, 'LLMWIKI_LLM_RETRIES'), llmConfig.retries ?? LLM_DEFAULTS.retries, 'retries')
+    maxOutputTokens: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_MAX_OUTPUT_TOKENS'), llmConfig.maxOutputTokens ?? llmConfig.max_output_tokens ?? LLM_DEFAULTS.maxOutputTokens, 'maxOutputTokens'),
+    timeoutMs: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_TIMEOUT_MS'), llmConfig.timeoutMs ?? llmConfig.timeout_ms ?? LLM_DEFAULTS.timeoutMs, 'timeoutMs'),
+    retries: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_RETRIES'), llmConfig.retries ?? LLM_DEFAULTS.retries, 'retries')
   };
 }
 
@@ -465,10 +465,10 @@ function parseNumber(value: string | undefined, fallback: number, field: string)
   return candidate;
 }
 
-function parseInteger(value: string | undefined, fallback: number, field: string): number {
+function parseNonNegativeInteger(value: string | undefined, fallback: number, field: string): number {
   const candidate = value === undefined ? fallback : Number(value);
-  if (!Number.isInteger(candidate)) {
-    throw new LLMProviderError(`Invalid integer LLM config for ${field}.`, 'config', 'INVALID_CONFIG');
+  if (!Number.isInteger(candidate) || candidate < 0) {
+    throw new LLMProviderError(`Invalid non-negative integer LLM config for ${field}.`, 'config', 'INVALID_CONFIG');
   }
   return candidate;
 }
