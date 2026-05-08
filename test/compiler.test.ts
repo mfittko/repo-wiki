@@ -204,10 +204,126 @@ test('compileWiki falls back cleanly when richer analysis is absent', async () =
   }
 });
 
-test('compileWiki renders data-model page for ORM-only manifests', async () => {
+test('compileWiki renders related tests in module pages', async () => {
   const manifest = {
     remote: 'origin',
-    commit: 'orm123456789',
+    commit: 'abc123456789',
+    mode: 'bootstrap',
+    totals: {
+      languages: { JavaScript: 2 },
+      categories: { source: 1, test: 1 },
+      runtime_hints: {}
+    },
+    files: [
+      {
+        path: 'src/utils.js',
+        category: 'source',
+        language: 'JavaScript',
+        imports: [],
+        runtime_hints: [],
+        reasons: ['source']
+      },
+      {
+        path: 'test/utils.test.js',
+        category: 'test',
+        language: 'JavaScript',
+        imports: ['../src/utils.js'],
+        runtime_hints: [],
+        reasons: ['test']
+      }
+    ],
+    analysis: {
+      package_scripts: [],
+      dependency_graph: {
+        edges: [{ from: 'test/utils.test.js', to: 'src/utils.js', specifier: '../src/utils.js' }],
+        summary: { edges: 1, importers: 1, imported_files: 1, imported_packages: 0 }
+      },
+      test_to_source: {
+        mappings: [
+          { test: 'test/utils.test.js', sources: ['src/utils.js'], heuristics: ['imports'] }
+        ],
+        summary: { mapped_tests: 1, source_files: 1 }
+      }
+    }
+  };
+
+  const plan = {
+    pages: createPlan().pages,
+    modules: [
+      {
+        slug: 'Module-Utils',
+        name: 'Utils',
+        files: ['src/utils.js'],
+        categories: { source: 1 },
+        languages: { JavaScript: 1 },
+        runtime_hints: {},
+        important_reasons: ['source']
+      }
+    ]
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+    const modulePage = await fs.readFile(path.join(wikiDir, 'Module-Utils.md'), 'utf8');
+    assert.match(modulePage, /Related tests/);
+    assert.match(modulePage, /test\/utils\.test\.js/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki omits Related tests section when no test mappings exist for the module', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'abc123456789',
+    mode: 'bootstrap',
+    totals: {
+      languages: { JavaScript: 1 },
+      categories: { source: 1 },
+      runtime_hints: {}
+    },
+    files: [
+      {
+        path: 'src/utils.js',
+        category: 'source',
+        language: 'JavaScript',
+        imports: [],
+        runtime_hints: [],
+        reasons: ['source']
+      }
+    ]
+  };
+
+  const plan = {
+    pages: createPlan().pages,
+    modules: [
+      {
+        slug: 'Module-Utils',
+        name: 'Utils',
+        files: ['src/utils.js'],
+        categories: { source: 1 },
+        languages: { JavaScript: 1 },
+        runtime_hints: {},
+        important_reasons: ['source']
+      }
+    ]
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+    const modulePage = await fs.readFile(path.join(wikiDir, 'Module-Utils.md'), 'utf8');
+    assert.doesNotMatch(modulePage, /Related tests/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki renders data-model page for ORM-only manifests', async () => {
+  const manifest = {
     mode: 'bootstrap',
     totals: {
       languages: { TypeScript: 1 },
