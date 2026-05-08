@@ -151,7 +151,7 @@ function page(path, phase, purpose, moduleName = null) {
   return { path, phase, purpose, moduleName };
 }
 
-function hasDataModelSignals(manifest: any) {
+function hasDataModelSignals(manifest: any): boolean {
   if (manifest.totals.categories?.data) {
     return true;
   }
@@ -167,7 +167,7 @@ function hasDataModelSignals(manifest: any) {
   );
 }
 
-function slugify(value) {
+function slugify(value: string): string {
   return value
     .replace(/[^A-Za-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'Page';

@@ -313,7 +313,7 @@ function escapeMermaid(value: string) {
   return String(value).replace(/[\[\]{}]/g, '').replace(/"/g, "'");
 }
 
-function shouldRenderDataModelPage(manifest: any, plan: any) {
+function shouldRenderDataModelPage(manifest: any, plan: any): boolean {
   if (manifest.totals.categories?.data || manifest.totals.runtime_hints?.['data-model'] || manifest.totals.runtime_hints?.['orm-model'] || manifest.totals.runtime_hints?.['database-migration']) {
     return true;
   }
