@@ -233,7 +233,7 @@ function buildAffectedPageGraph(manifest: any, modules: any[], pages: any[]) {
     if (card.category === 'test') {
       addPage(source, 'Testing-Strategy.md', 'test_coverage');
 
-      for (const coveredSource of testToCoveredSources.get(source) || []) {
+      for (const coveredSource of testToCoveredSources.get(source) ?? new Set<string>()) {
         const coveredSlug = fileToModuleSlug.get(coveredSource);
         if (coveredSlug) {
           addPage(source, coveredSlug, 'test_covered_module');
