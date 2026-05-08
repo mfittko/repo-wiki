@@ -178,7 +178,10 @@ function isSecretConfigKey(key: string) {
   if (/(?:^|[_-])env$/i.test(key)) {
     return false;
   }
-  return /(?:api[_-]?key|token|secret|password|credential)/i.test(key);
+  if (/api[_-]?key/i.test(key)) {
+    return true;
+  }
+  return /(?:^|[_-])(?:access[_-]?token|auth[_-]?token|refresh[_-]?token|id[_-]?token|client[_-]?secret|secret[_-]?key|private[_-]?key|password|credentials?|token|secret)(?:$|[_-](?:value|file|path))$/i.test(key);
 }
 
 function summarize(cards: Array<{ language: string; category: string; runtime_hints: string[] }>, documentationCards: any[] = []) {

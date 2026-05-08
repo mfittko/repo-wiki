@@ -86,12 +86,10 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
 
     for (const link of doc.links || []) {
       if (link.startsWith('http') || link.startsWith('#') || link.startsWith('mailto:')) continue;
-      const target = link.split('#')[0];
+      const target = cleanDocumentLinkTarget(link);
       if (!target) continue;
-      const absolute = path.resolve(path.dirname(path.join(repoRoot, doc.path)), target);
-      try {
-        await fs.access(absolute);
-      } catch {
+      const resolved = await resolveDocumentedPathOnDisk(target, doc.path, repoRoot);
+      if (!resolved.valid) {
         issues.push(issue('warning', 'broken-documentation-link', `${doc.path} links to missing relative target ${link}.`));
       }
     }
@@ -115,4 +113,9 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
 function issue(level, code, message) {
   const normalized = level === 'error' ? 'error' : 'warning';
   return { level: normalized, code, message };
+}
+
+function cleanDocumentLinkTarget(value: string) {
+  const withoutTitle = value.trim().replace(/\s+(?:"[^"]*"|'[^']*'|\([^)]*\))$/, '');
+  return withoutTitle.split('#')[0].split('?')[0].trim();
 }

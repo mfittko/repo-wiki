@@ -272,6 +272,10 @@ test('scanRepository redacts secret-bearing compiler config fields from manifest
           apiKey: 'plain-secret-key',
           api_key: 'snake-secret-key',
           provider_token: 'provider-secret-token',
+          secret_key: 'provider-secret-key',
+          tokenizer: 'safe-tokenizer-name',
+          credential_type: 'bearer',
+          secret_sauce: 'documentation-only-label',
           api_key_env: 'SAFE_ENV_NAME',
           model: 'safe-model-name'
         }
@@ -288,6 +292,10 @@ test('scanRepository redacts secret-bearing compiler config fields from manifest
     assert.equal(result.manifest.config.compiler.llm.apiKey, '[REDACTED]');
     assert.equal(result.manifest.config.compiler.llm.api_key, '[REDACTED]');
     assert.equal(result.manifest.config.compiler.llm.provider_token, '[REDACTED]');
+    assert.equal(result.manifest.config.compiler.llm.secret_key, '[REDACTED]');
+    assert.equal(result.manifest.config.compiler.llm.tokenizer, 'safe-tokenizer-name');
+    assert.equal(result.manifest.config.compiler.llm.credential_type, 'bearer');
+    assert.equal(result.manifest.config.compiler.llm.secret_sauce, 'documentation-only-label');
     assert.equal(result.manifest.config.compiler.llm.api_key_env, 'SAFE_ENV_NAME');
     assert.equal(result.manifest.config.compiler.llm.model, 'safe-model-name');
   } finally {

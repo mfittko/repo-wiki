@@ -357,9 +357,9 @@ function pushDocumentedPath(results: DocumentedFilePath[], seen: Set<string>, va
 }
 
 function cleanPathCandidate(value: string) {
-  return value
-    .trim()
-    .replace(/^<|>$/g, '')
+  const withoutAngleBrackets = value.trim().replace(/^<|>$/g, '');
+  const withoutTitle = withoutAngleBrackets.replace(/\s+(?:"[^"]*"|'[^']*'|\([^)]*\))$/, '');
+  return withoutTitle
     .split('#')[0]
     .split('?')[0]
     .replace(/^['"]|['"]$/g, '')

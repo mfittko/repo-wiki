@@ -197,11 +197,17 @@ function renderDocumentationDebtReport(manifest) {
   const unvalidatedCmds = classified.filter((c) => c.status === 'unvalidated');
   const manifestFiles = new Set<string>((manifest.files || []).map((file) => normalizeRepoPath(file.path)));
   const manifestDirectories = collectManifestDirectories(manifestFiles);
-  const filePathFindings = docs.flatMap((doc) => (doc.file_paths || []).map((reference) => ({
-    doc: doc.path,
-    ...reference,
-    ...resolveDocumentedPathFromManifest(reference.path, doc.path, manifestFiles, manifestDirectories)
-  })));
+  const filePathFindings = docs.flatMap((doc) => (doc.file_paths || []).map((reference) => {
+    const resolved = resolveDocumentedPathFromManifest(reference.path, doc.path, manifestFiles, manifestDirectories);
+    return {
+      doc: doc.path,
+      line: reference.line,
+      source: reference.source,
+      reference_path: reference.path,
+      resolved_path: resolved.path,
+      valid: resolved.valid
+    };
+  }));
   const validFilePaths = filePathFindings.filter((finding) => finding.valid);
   const brokenFilePaths = filePathFindings.filter((finding) => !finding.valid);
   const knownEnvVars = collectKnownEnvironmentVariables(manifest);
@@ -216,7 +222,7 @@ function renderDocumentationDebtReport(manifest) {
   });
   const filePathRows = filePathFindings.slice(0, 200).map((finding) => {
     const badge = finding.valid ? '✅ valid' : '❌ missing';
-    return `| \`${finding.doc}:${finding.line}\` | \`${finding.path}\` | ${badge} | ${finding.valid ? `\`${finding.path}\`` : 'not found'} |`;
+    return `| \`${finding.doc}:${finding.line}\` | \`${finding.reference_path}\` | ${badge} | ${finding.valid ? `\`${finding.resolved_path}\`` : 'not found'} |`;
   });
   const envRows = envFindings.slice(0, 200).map((finding) => {
     const badge = finding.valid ? '✅ validated' : '❓ unvalidated';

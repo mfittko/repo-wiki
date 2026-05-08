@@ -19,8 +19,9 @@ export function isGeneratedOutputReference(filePath: string) {
 }
 
 export function candidateRepoPaths(referencePath: string, docPath: string) {
-  const cleaned = normalizeRepoPath(referencePath.replace(/^\.\//, ''));
-  const docRelative = normalizeRepoPath(path.posix.normalize(path.posix.join(path.posix.dirname(normalizeRepoPath(docPath)), referencePath)));
+  const normalizedReference = normalizeRepoPath(referencePath);
+  const cleaned = normalizeRepoPath(normalizedReference.replace(/^\.\//, ''));
+  const docRelative = normalizeRepoPath(path.posix.normalize(path.posix.join(path.posix.dirname(normalizeRepoPath(docPath)), normalizedReference)));
   return [...new Set([cleaned, docRelative].filter((candidate) => candidate && candidate !== '.'))];
 }
 

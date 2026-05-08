@@ -7,6 +7,7 @@ import { scanRepository } from '../src/scanner.js';
 import { lintDocs } from '../src/docs-linter.js';
 import { classifyDocumentedCommands, extractCiCommands, extractDocumentedFilePaths } from '../src/docs-ingestor.js';
 import { compileWiki } from '../src/compiler.js';
+import { candidateRepoPaths } from '../src/docs-validation.js';
 
 test('documentation ingestion produces documentation cards and lint issues', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-docs-'));
@@ -41,11 +42,16 @@ test('documentation ingestion produces documentation cards and lint issues', asy
 });
 
 test('extractDocumentedFilePaths extracts deterministic markdown link and inline code path references', () => {
-  const refs = extractDocumentedFilePaths('# Paths\n\nSee [plan](docs/PLAN.md), `src/cli.ts`, `dist/`, and `npm run build`.\n\n```bash\ncat missing.md\n```\n');
+  const refs = extractDocumentedFilePaths('# Paths\n\nSee [plan](docs/PLAN.md), [titled](docs/TITLE.md "Title"), `src/cli.ts`, `dist/`, and `npm run build`.\n\n```bash\ncat missing.md\n```\n');
   assert.deepEqual(refs, [
     { path: 'docs/PLAN.md', line: 3, source: 'link' },
+    { path: 'docs/TITLE.md', line: 3, source: 'link' },
     { path: 'src/cli.ts', line: 3, source: 'inline_code' }
   ]);
+});
+
+test('candidateRepoPaths normalizes Windows separators before resolving relative paths', () => {
+  assert.deepEqual(candidateRepoPaths('..\\README.md', 'docs/guides/intro.md'), ['../README.md', 'docs/README.md']);
 });
 
 test('classifyDocumentedCommands validates known package scripts, flags missing scripts, and marks unknowns', () => {
@@ -259,6 +265,37 @@ test('lintDocs reports broken documented file paths and unvalidated environment 
     const envIssues = lint.issues.filter((i) => i.code === 'unvalidated-env-var');
     assert.equal(envIssues.length, 1);
     assert.match(envIssues[0].message, /MISSING_TOKEN/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintDocs keeps link validation inside repo and exempts generated-output roots', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-link-safety-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await mkdir(path.join(dir, 'docs'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: {
+        ingest: true,
+        include: ['README.md'],
+        exclude: [],
+        stale_after_days: 9999
+      }
+    }), 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee [outside](../outside.txt), [dist](dist/), [missing](docs/missing.md), and [titled](docs/guide.md "Guide").\n', 'utf8');
+    await writeFile(path.join(dir, 'docs', 'guide.md'), '# Guide\n', 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    const brokenLinks = lint.issues.filter((i) => i.code === 'broken-documentation-link');
+    assert.equal(brokenLinks.length, 2);
+    assert.ok(brokenLinks.some((i) => i.message.includes('../outside.txt')));
+    assert.ok(brokenLinks.some((i) => i.message.includes('docs/missing.md')));
+    assert.ok(!brokenLinks.some((i) => i.message.includes('dist/')));
+    assert.ok(!brokenLinks.some((i) => i.message.includes('docs/guide.md')));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
