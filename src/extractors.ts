@@ -7,6 +7,8 @@ const JAVASCRIPT_LANGUAGES = new Set([
   'TypeScript React'
 ]);
 
+const GO_LANGUAGE = 'Go';
+
 const ROUTE_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'all', 'use'];
 
 type RuntimeHintMetadata = {
@@ -19,13 +21,27 @@ type JavaScriptAstMetadata = {
   exported: Array<{ name: string; kind: string }>;
 };
 
+type GoDeclarations = {
+  allSymbols: string[];
+  exported: Array<{ name: string; kind: string }>;
+};
+
 let lastJavaScriptAstMetadata: {
   content: string;
   language: string;
   metadata: JavaScriptAstMetadata | null;
 } | null = null;
 
+let lastGoDeclarations: {
+  content: string;
+  declarations: GoDeclarations;
+} | null = null;
+
 export function extractImports(content: string, language: string): string[] {
+  if (language === GO_LANGUAGE) {
+    return extractGoImports(content);
+  }
+
   if (!isJavaScriptLike(language)) {
     return [];
   }
@@ -47,6 +63,10 @@ export function extractImports(content: string, language: string): string[] {
 }
 
 export function extractSymbols(content: string, language: string): string[] {
+  if (language === GO_LANGUAGE) {
+    return getGoDeclarations(content).allSymbols;
+  }
+
   if (!isJavaScriptLike(language)) {
     return [];
   }
@@ -80,6 +100,10 @@ export function extractSymbols(content: string, language: string): string[] {
 }
 
 export function extractExportedSymbols(content: string, language: string): Array<{ name: string; kind: string }> {
+  if (language === GO_LANGUAGE) {
+    return getGoDeclarations(content).exported;
+  }
+
   if (!isJavaScriptLike(language)) {
     return [];
   }
@@ -249,6 +273,15 @@ export function detectRuntimeHints(filePath: string, content: string, metadata: 
   }
 
   return [...new Set(hints)].sort();
+}
+
+export function extractGoPackage(content: string, language: string): string | null {
+  if (language !== GO_LANGUAGE) {
+    return null;
+  }
+
+  const match = content.match(/^\s*package\s+([A-Za-z_]\w*)\b/m);
+  return match ? match[1] : null;
 }
 
 function isJavaScriptLike(language) {
@@ -619,4 +652,91 @@ function compareRouteSurfaces(left, right) {
   }
 
   return (left.handler || '').localeCompare(right.handler || '');
+}
+
+function extractGoImports(content: string): string[] {
+  const imports = new Set<string>();
+
+  // Single import: import "path"
+  for (const match of content.matchAll(/^import\s+"([^"]+)"/mg)) {
+    imports.add(match[1]);
+  }
+
+  // Block import: import (\n  "path1"\n  alias "path2"\n)
+  for (const match of content.matchAll(/^import\s*\(([\s\S]*?)\)/mg)) {
+    for (const pathMatch of match[1].matchAll(/"([^"]+)"/g)) {
+      imports.add(pathMatch[1]);
+    }
+  }
+
+  return [...imports].sort();
+}
+
+function getGoDeclarations(content: string): GoDeclarations {
+  if (lastGoDeclarations?.content === content) {
+    return lastGoDeclarations.declarations;
+  }
+
+  const declarations = computeGoDeclarations(content);
+  lastGoDeclarations = { content, declarations };
+  return declarations;
+}
+
+function computeGoDeclarations(content: string): GoDeclarations {
+  const symbols = new Set<string>();
+  const exported: Array<{ name: string; kind: string }> = [];
+  const seenExported = new Set<string>();
+
+  const addSymbol = (name: string, kind: string) => {
+    symbols.add(name);
+    if (/^[A-Z]/.test(name)) {
+      pushExportedSymbol(exported, seenExported, { name, kind });
+    }
+  };
+
+  // Functions and methods: func [(receiver)] Name( or Name[ or Name{
+  for (const match of content.matchAll(/^func\s+(?:\([^)]*\)\s+)?([A-Za-z_]\w*)\s*[([{]/mg)) {
+    addSymbol(match[1], 'func');
+  }
+
+  // Type declarations: type Name [TypeParams] struct / interface / other
+  for (const match of content.matchAll(/^type\s+([A-Za-z_]\w*)(?:\[[^\]]*\])?\s+(struct|interface|[^\s{])/mg)) {
+    const name = match[1];
+    const typeWord = match[2];
+    const kind = typeWord === 'struct' ? 'struct'
+      : typeWord === 'interface' ? 'interface'
+      : 'type';
+    addSymbol(name, kind);
+  }
+
+  // Single const declaration: const Name ...
+  for (const match of content.matchAll(/^const\s+([A-Za-z_]\w*)\b/mg)) {
+    addSymbol(match[1], 'const');
+  }
+
+  // Single var declaration: var Name ...
+  for (const match of content.matchAll(/^var\s+([A-Za-z_]\w*)\b/mg)) {
+    addSymbol(match[1], 'var');
+  }
+
+  // Const block: const (\n  Name ...\n)  — closing ) must be on its own line (gofmt)
+  for (const match of content.matchAll(/^const\s*\(([\s\S]*?)^\)/mg)) {
+    for (const nameMatch of match[1].matchAll(/^[ \t]+([A-Za-z_]\w*)\b/mg)) {
+      addSymbol(nameMatch[1], 'const');
+    }
+  }
+
+  // Var block: var (\n  Name ...\n)  — closing ) must be on its own line (gofmt)
+  for (const match of content.matchAll(/^var\s*\(([\s\S]*?)^\)/mg)) {
+    for (const nameMatch of match[1].matchAll(/^[ \t]+([A-Za-z_]\w*)\b/mg)) {
+      addSymbol(nameMatch[1], 'var');
+    }
+  }
+
+  return {
+    allSymbols: [...symbols].sort().slice(0, 50),
+    exported: exported
+      .sort((a, b) => a.name.localeCompare(b.name) || a.kind.localeCompare(b.kind))
+      .slice(0, 50)
+  };
 }
