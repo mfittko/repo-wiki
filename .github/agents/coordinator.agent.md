@@ -59,6 +59,7 @@ Default operating mode:
 - Use pull requests as the default delivery mechanism for completed work, with reviewable commits and a clear description of code and documentation changes.
 - Default to draft pull requests first, then mark ready for review only after verification passes and the milestone is genuinely reviewable.
 - If work started on `main` and has become non-trivial, move to a task branch before declaring the milestone complete unless the user explicitly requests a direct-to-`main` workflow.
+- When creating or editing issue/PR descriptions or comments, prefer `--body-file` / `-F` or stdin over inline shell strings; use heredocs or temp files for multi-line content and do not interpolate untrusted text directly into shell commands.
 
 ## Documentation Policy
 - Treat documentation as part of the deliverable, not a follow-up task.
