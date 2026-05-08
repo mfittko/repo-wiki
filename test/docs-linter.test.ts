@@ -5,8 +5,9 @@ import path from 'node:path';
 import os from 'node:os';
 import { scanRepository } from '../src/scanner.js';
 import { lintDocs } from '../src/docs-linter.js';
-import { classifyDocumentedCommands, extractCiCommands } from '../src/docs-ingestor.js';
+import { classifyDocumentedCommands, extractCiCommands, extractDocumentedFilePaths } from '../src/docs-ingestor.js';
 import { compileWiki } from '../src/compiler.js';
+import { candidateRepoPaths } from '../src/docs-validation.js';
 
 test('documentation ingestion produces documentation cards and lint issues', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-docs-'));
@@ -31,12 +32,59 @@ test('documentation ingestion produces documentation cards and lint issues', asy
     const readmeCard = scan.manifest.documentation.files.find((doc) => doc.path === 'README.md');
     assert.ok(readmeCard.validation.env_vars.includes('MY_API_TOKEN'));
     assert.ok(readmeCard.links.includes('docs/old.md'));
+    assert.ok(readmeCard.file_paths.some((reference) => reference.path === 'docs/old.md'));
 
     const lint = await lintDocs({ scanDir, repoPath: dir });
     assert.ok(lint.summary.warnings + lint.summary.errors >= 1);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test('extractDocumentedFilePaths extracts deterministic markdown link and inline code path references', () => {
+  const refs = extractDocumentedFilePaths('# Paths\n\nSee [plan](docs/PLAN.md), [titled](docs/TITLE.md "Title"), [paren](docs/guide(arch).md), [angle](<docs/another(arch).md>), `src/cli.ts`, `../README.md`, `dist/`, `1..2`, and `npm run build`.\n\n```bash\ncat missing.md\n```\n\n~~~bash\ncat also-missing.md\n~~~\n');
+  assert.deepEqual(refs, [
+    { path: 'docs/PLAN.md', line: 3, source: 'link' },
+    { path: 'docs/TITLE.md', line: 3, source: 'link' },
+    { path: 'docs/guide(arch).md', line: 3, source: 'link' },
+    { path: 'docs/another(arch).md', line: 3, source: 'link' },
+    { path: 'src/cli.ts', line: 3, source: 'inline_code' },
+    { path: '../README.md', line: 3, source: 'inline_code' }
+  ]);
+});
+
+test('markdown links with parentheses are ingested without truncated fallback links', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-link-parens-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await mkdir(path.join(dir, 'docs'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: {
+        ingest: true,
+        include: ['README.md', 'docs/**/*.md'],
+        exclude: [],
+        stale_after_days: 9999
+      }
+    }), 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee [guide](docs/guide(arch).md).\n', 'utf8');
+    await writeFile(path.join(dir, 'docs', 'guide(arch).md'), '# Guide\n', 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    const scan = await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+    const readmeCard = scan.manifest.documentation.files.find((doc) => doc.path === 'README.md');
+    assert.ok(readmeCard.links.includes('docs/guide(arch).md'));
+    assert.ok(!readmeCard.links.includes('docs/guide(arch'));
+
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    assert.equal(lint.issues.filter((i) => i.code === 'broken-documentation-link').length, 0);
+    assert.equal(lint.issues.filter((i) => i.code === 'broken-documented-file-path').length, 0);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('candidateRepoPaths normalizes Windows separators before resolving relative paths', () => {
+  assert.deepEqual(candidateRepoPaths('..\\README.md', 'docs/guides/intro.md'), ['../README.md', 'docs/README.md']);
 });
 
 test('classifyDocumentedCommands validates known package scripts, flags missing scripts, and marks unknowns', () => {
@@ -200,7 +248,7 @@ test('lintDocs and Documentation Debt Report validate exact commands from CI wor
         stale_after_days: 9999
       }
     }), 'utf8');
-    await writeFile(path.join(dir, 'README.md'), '# Demo\n\n```bash\nnpm run ci-only\ndocker build .\n```\n', 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\n```bash\nnpm run ci-only\ndocker login --password supersecretvalue\ndocker build .\n```\n', 'utf8');
     await writeFile(path.join(dir, 'package.json'), JSON.stringify({ scripts: {} }), 'utf8');
 
     const scanDir = path.join(dir, '.llmwiki', 'run');
@@ -216,6 +264,143 @@ test('lintDocs and Documentation Debt Report validate exact commands from CI wor
     await compileWiki({ scanDir, planFile, wikiDir });
     const report = await readFile(path.join(wikiDir, 'Documentation-Debt-Report.md'), 'utf8');
     assert.match(report, /\| `npm run ci-only` \| ✅ validated \| CI workflow \|/);
+    assert.match(report, /`docker login --password \[REDACTED\]`/);
+    assert.doesNotMatch(report, /supersecretvalue/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintDocs reports broken documented file paths, broken image links, and unvalidated environment variables', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-path-env-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await mkdir(path.join(dir, 'src'), { recursive: true });
+    await mkdir(path.join(dir, 'docs', 'plans'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: {
+        ingest: true,
+        include: ['README.md', 'docs/**/*.md'],
+        exclude: [],
+        stale_after_days: 9999
+      }
+    }), 'utf8');
+    await writeFile(path.join(dir, 'src', 'app.js'), "export const mode = process.env.APP_MODE;\nconst port = process.env.PORT;\nconst baseUrl = optionalEnv(env, 'LLMWIKI_LLM_BASE_URL');\n", 'utf8');
+    await writeFile(path.join(dir, '.env.example'), 'EXAMPLE_MODE=on\n', 'utf8');
+    await writeFile(path.join(dir, 'docs', 'plans', 'README.md'), '# Plans\n', 'utf8');
+    await writeFile(path.join(dir, 'docs', 'guide.md'), '# Guide\n\n[local readme](README.md)\n', 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee `src/app.js`, `docs/plans/`, `docs/missing.md`, ![missing](assets/missing.png), and configure APP_MODE, PORT, EXAMPLE_MODE, MISSING_TOKEN, or LLMWIKI_LLM_BASE_URL.\n', 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    const brokenPathIssues = lint.issues.filter((i) => i.code === 'broken-documented-file-path');
+    assert.equal(brokenPathIssues.length, 3);
+    assert.ok(brokenPathIssues.some((item) => /README\.md:3 references missing repository path docs\/missing\.md/.test(item.message)));
+    assert.ok(brokenPathIssues.some((item) => /README\.md:3 references missing repository path assets\/missing\.png/.test(item.message)));
+    assert.ok(brokenPathIssues.some((item) => /docs\/guide\.md:3 references missing repository path README\.md/.test(item.message)));
+
+    const envIssues = lint.issues.filter((i) => i.code === 'unvalidated-env-var');
+    assert.equal(envIssues.length, 1);
+    assert.match(envIssues[0].message, /MISSING_TOKEN/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintDocs keeps link validation inside repo and exempts generated-output roots', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-link-safety-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await mkdir(path.join(dir, 'docs'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: {
+        ingest: true,
+        include: ['README.md'],
+        exclude: [],
+        stale_after_days: 9999
+      }
+    }), 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee [outside](../outside.txt), [dist](dist/), [escaped](dist/../../outside.txt), [missing](docs/missing.md), [angle](<docs/guide.md>), and [titled](docs/guide.md "Guide").\n', 'utf8');
+    await writeFile(path.join(dir, 'docs', 'guide.md'), '# Guide\n', 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    const brokenPaths = lint.issues.filter((i) => i.code === 'broken-documented-file-path');
+    assert.equal(brokenPaths.length, 3);
+    assert.ok(brokenPaths.some((i) => i.message.includes('../outside.txt')));
+    assert.ok(brokenPaths.some((i) => i.message.includes('dist/../../outside.txt')));
+    assert.ok(brokenPaths.some((i) => i.message.includes('docs/missing.md')));
+    assert.ok(!brokenPaths.some((i) => i.message.endsWith('repository path dist/.')));
+    assert.ok(!brokenPaths.some((i) => i.message.includes('docs/guide.md')));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintDocs only treats config strings as env vars under env-specific keys', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-config-env-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: {
+        ingest: true,
+        include: ['README.md'],
+        exclude: [],
+        stale_after_days: 9999
+      },
+      compiler: {
+        profile: 'FEATURE_FLAG',
+        api_key_env: 'REAL_API_KEY'
+      }
+    }), 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nConfigure FEATURE_FLAG and REAL_API_KEY.\n', 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    const envIssues = lint.issues.filter((i) => i.code === 'unvalidated-env-var');
+    assert.equal(envIssues.length, 1);
+    assert.match(envIssues[0].message, /FEATURE_FLAG/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('Documentation Debt Report includes file path and environment variable validation', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-debt-path-env-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await mkdir(path.join(dir, 'src'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: {
+        ingest: true,
+        include: ['README.md'],
+        exclude: [],
+        stale_after_days: 9999
+      }
+    }), 'utf8');
+    await writeFile(path.join(dir, 'src', 'app.js'), 'export const mode = process.env.APP_MODE;\n', 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee `src/app.js` and `docs/missing.md`. Configure APP_MODE and MISSING_TOKEN.\n', 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+    const wikiDir = path.join(dir, '.llmwiki', 'wiki');
+    const planFile = path.join(dir, '.llmwiki', 'plan.json');
+    await writeFile(planFile, JSON.stringify({ pages: [], modules: [] }), 'utf8');
+    await compileWiki({ scanDir, planFile, wikiDir });
+
+    const report = await readFile(path.join(wikiDir, 'Documentation-Debt-Report.md'), 'utf8');
+    assert.match(report, /## File path validation/);
+    assert.match(report, /\| `README\.md:3` \| `src\/app\.js` \| ✅ valid \| `src\/app\.js` \|/);
+    assert.match(report, /\| `README\.md:3` \| `docs\/missing\.md` \| ❌ missing \| not found \|/);
+    assert.match(report, /## Environment variable validation/);
+    assert.match(report, /\| `README\.md` \| `APP_MODE` \| ✅ validated \|/);
+    assert.match(report, /\| `README\.md` \| `MISSING_TOKEN` \| ❓ unvalidated \|/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

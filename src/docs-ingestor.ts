@@ -1,11 +1,13 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { cleanDocumentedPathTarget, hasParentDirectorySegment, isGeneratedOutputReference } from './docs-validation.js';
 
 const DOC_EXTENSIONS = ['.md', '.mdx', '.markdown'];
 
 // Npm lifecycle commands that map directly to package.json scripts
 const NPM_LIFECYCLE_SCRIPTS = new Set(['test', 'start', 'stop', 'restart']);
 const SHELL_RESERVED_WORDS = new Set(['if', 'then', 'else', 'elif', 'fi', 'for', 'select', 'while', 'until', 'do', 'done', 'case', 'esac', '{', '}']);
+const COMMON_ENV_VAR_NAMES = new Set(['CI', 'HOME', 'PATH', 'PORT', 'SHELL', 'TERM', 'USER']);
 
 export type CommandStatus = 'validated' | 'missing' | 'unvalidated';
 export type CommandSource = 'package_scripts' | 'ci_workflow' | 'unknown';
@@ -15,6 +17,12 @@ export type CommandClassification = {
   status: CommandStatus;
   source: CommandSource;
   script_name?: string;
+};
+
+export type DocumentedFilePath = {
+  path: string;
+  line: number;
+  source: 'link' | 'inline_code';
 };
 
 /**
@@ -129,6 +137,7 @@ export async function createDocumentationCard({ file, content, config, repoPath 
   const headings = extractHeadings(content);
   const links = extractMarkdownLinks(content);
   const codeBlocks = extractCodeBlocks(content);
+  const filePaths = extractDocumentedFilePaths(content);
   const claims = extractDocumentationClaims(content);
   const validation = validateDocClaims({ claims, content, filePath: file.relative });
   const ageDays = Math.floor((Date.now() - stats.mtimeMs) / 86_400_000);
@@ -146,6 +155,7 @@ export async function createDocumentationCard({ file, content, config, repoPath 
     headings,
     links,
     code_blocks: codeBlocks,
+    file_paths: filePaths,
     claims,
     validation,
     status: stale ? 'stale' : validation.contradictions.length ? 'contradicted' : validation.validated.length ? 'partially_validated' : 'unvalidated'
@@ -183,7 +193,7 @@ export function validateDocClaims({ claims, content, filePath }) {
   }
 
   for (const match of content.matchAll(/\b[A-Z][A-Z0-9_]{2,}\b/g)) {
-    if (/(_KEY|_TOKEN|_SECRET|_URL|_HOST|_PORT|_ID)$/i.test(match[0])) envVars.push(match[0]);
+    if (isEnvironmentVariableMention(match[0])) envVars.push(match[0]);
   }
 
   for (const claim of claims) {
@@ -208,6 +218,14 @@ export function validateDocClaims({ claims, content, filePath }) {
       file: filePath
     }
   };
+}
+
+function isEnvironmentVariableMention(value: string) {
+  if (!/^[A-Z][A-Z0-9_]{1,}$/.test(value)) return false;
+  if (COMMON_ENV_VAR_NAMES.has(value)) return true;
+  if (!value.includes('_')) return false;
+  if (/^(README|TODO|HTTP|HTTPS|JSON|YAML|CLI|API)$/.test(value)) return false;
+  return true;
 }
 
 function extractWorkflowCommandValue(value: string, lines: string[], lineIndex: number, baseIndent: number): { parts: string[]; lastLineIndex: number } {
@@ -301,6 +319,120 @@ function splitShellCommand(command: string, recognizedOnly = true): string[] {
   return parts.filter((part) => part && (!recognizedOnly || /^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(part)));
 }
 
+export function extractDocumentedFilePaths(content: string): DocumentedFilePath[] {
+  const results: DocumentedFilePath[] = [];
+  const seen = new Set<string>();
+  const lines = content.split('\n');
+  let fenceMarker: '`' | '~' | '' = '';
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const fenceMatch = /^\s*(```+|~~~+)/.exec(line);
+    if (fenceMatch && (!fenceMarker || fenceMatch[1][0] === fenceMarker)) {
+      fenceMarker = fenceMarker ? '' : fenceMatch[1][0] as '`' | '~';
+      continue;
+    }
+    if (fenceMarker) continue;
+
+    for (const linkTarget of extractMarkdownLinkTargets(line)) {
+      const target = cleanDocumentedPathTarget(linkTarget);
+      if (isDocumentedPathCandidate(target, true)) {
+        pushDocumentedPath(results, seen, { path: target, line: index + 1, source: 'link' });
+      }
+    }
+
+    for (const match of line.matchAll(/`([^`]+)`/g)) {
+      const target = cleanDocumentedPathTarget(match[1]);
+      if (isDocumentedPathCandidate(target, false)) {
+        pushDocumentedPath(results, seen, { path: target, line: index + 1, source: 'inline_code' });
+      }
+    }
+  }
+
+  return results.slice(0, 200);
+}
+
+function extractMarkdownLinkTargets(line: string) {
+  const targets: string[] = [];
+  for (let index = 0; index < line.length; index += 1) {
+    const openBracket = line.indexOf('[', index);
+    if (openBracket === -1) break;
+    const closeBracket = line.indexOf(']', openBracket + 1);
+    if (closeBracket === -1 || line[closeBracket + 1] !== '(') {
+      index = openBracket;
+      continue;
+    }
+
+    let cursor = closeBracket + 2;
+    let target = '';
+    if (line[cursor] === '<') {
+      cursor += 1;
+      const closeAngle = line.indexOf('>', cursor);
+      if (closeAngle === -1) {
+        index = cursor;
+        continue;
+      }
+      target = line.slice(cursor, closeAngle);
+      cursor = closeAngle + 1;
+      while (line[cursor] && /\s/.test(line[cursor])) cursor += 1;
+      if (line[cursor] !== ')') {
+        index = cursor;
+        continue;
+      }
+      targets.push(target);
+      index = cursor;
+      continue;
+    }
+
+    let depth = 0;
+    let quote: '"' | "'" | '' = '';
+    for (; cursor < line.length; cursor += 1) {
+      const char = line[cursor];
+      if ((char === '"' || char === "'") && !quote) {
+        quote = char;
+      } else if (char === quote) {
+        quote = '';
+      } else if (!quote && char === '(') {
+        depth += 1;
+      } else if (!quote && char === ')') {
+        if (depth === 0) break;
+        depth -= 1;
+      }
+      target += char;
+    }
+
+    if (cursor < line.length && line[cursor] === ')') {
+      targets.push(target);
+      index = cursor;
+    } else {
+      index = closeBracket;
+    }
+  }
+  return targets;
+}
+
+function pushDocumentedPath(results: DocumentedFilePath[], seen: Set<string>, value: DocumentedFilePath) {
+  const key = `${value.path}\0${value.line}\0${value.source}`;
+  if (!seen.has(key)) {
+    seen.add(key);
+    results.push(value);
+  }
+}
+
+function isDocumentedPathCandidate(value: string, fromLink: boolean) {
+  if (!value || value.startsWith('#') || /^(https?:|mailto:|tel:)/i.test(value)) return false;
+  if (/[{}*]/.test(value)) return false;
+  if (/\s/.test(value)) return false;
+  if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(value)) return false;
+  if (value.startsWith('/')) return false;
+  if (isGeneratedOutputReference(value)) return false;
+  if (hasParentDirectorySegment(value)) return true;
+  if (value.startsWith('./') || value.startsWith('../')) return true;
+  if (value.includes('/')) return true;
+  if (fromLink) return true;
+  return /^(?:[A-Z]+\.)?[^/]+\.(?:md|mdx|markdown|ts|tsx|js|jsx|mjs|cjs|json|ya?ml|toml|rs|go|py|rb|java|kt|cs|php|prisma|sql|sh|bash|env|txt)$/i.test(value);
+}
+
 function extractHeadings(content) {
   return content.split('\n')
     .map((line, index) => ({ line: index + 1, match: /^(#{1,6})\s+(.+)$/.exec(line) }))
@@ -311,8 +443,10 @@ function extractHeadings(content) {
 
 function extractMarkdownLinks(content) {
   const links = [];
-  for (const match of content.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {
-    links.push(match[1]);
+  for (const line of content.split('\n')) {
+    for (const target of extractMarkdownLinkTargets(line)) {
+      links.push(cleanDocumentedPathTarget(target));
+    }
   }
   return [...new Set(links)].slice(0, 200);
 }

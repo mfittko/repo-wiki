@@ -77,7 +77,10 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     const imports = content ? extractImports(content, language) : [];
     const symbols = content ? extractSymbols(content, language) : [];
     const exportedSymbols = content ? extractExportedSymbols(content, language) : [];
-    const environmentVariables = content ? extractEnvironmentVariables(content, language) : [];
+    const environmentVariables = content ? mergeEnvironmentVariables(
+      extractEnvironmentVariables(content, language),
+      extractConfiguredEnvironmentVariables(file.relative, content)
+    ) : [];
     const routeSurfaces = content ? extractRouteSurfaces(file.relative, content, language) : [];
     const migrationSurfaces = extractMigrationSurfaces(file.relative, language);
     const modelSurfaces = content ? extractModelSurfaces(file.relative, content, language) : [];
@@ -145,6 +148,7 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
         suppressed_nested_repositories: [...new Set(suppressedNestedRepositories)].sort()
       },
       documentation: config.documentation,
+      compiler: redactSecretConfig(config.compiler),
       lint: config.lint,
       wiki: config.wiki
     },
@@ -175,6 +179,32 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
   };
 }
 
+function redactSecretConfig(value: any): any {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactSecretConfig(entry));
+  }
+
+  if (value && typeof value === 'object') {
+    const redacted: Record<string, any> = {};
+    for (const [key, entry] of Object.entries(value)) {
+      redacted[key] = isSecretConfigKey(key) ? '[REDACTED]' : redactSecretConfig(entry);
+    }
+    return redacted;
+  }
+
+  return value;
+}
+
+function isSecretConfigKey(key: string) {
+  if (/env$/i.test(key)) {
+    return false;
+  }
+  if (/api[_-]?key/i.test(key)) {
+    return true;
+  }
+  return /(?:^|[_-])(?:access[_-]?token|auth[_-]?token|refresh[_-]?token|id[_-]?token|client[_-]?secret|secret[_-]?key|private[_-]?key|password|credentials?|token|secret)(?:$|[_-](?:value|file|path))$/i.test(key);
+}
+
 function summarize(cards: Array<{ language: string; category: string; runtime_hints: string[] }>, documentationCards: any[] = []) {
   const languages: Record<string, number> = {};
   const categories: Record<string, number> = {};
@@ -190,6 +220,45 @@ function summarize(cards: Array<{ language: string; category: string; runtime_hi
   }
 
   return { languages, categories, runtime_hints: runtimeHints, documentation: summarizeDocumentation(documentationCards) };
+}
+
+function mergeEnvironmentVariables(...groups: string[][]) {
+  return [...new Set(groups.flat())].sort();
+}
+
+function extractConfiguredEnvironmentVariables(filePath: string, content: string) {
+  const lower = filePath.toLowerCase();
+  const names = new Set<string>();
+
+  if (/(^|\/)\.env(?:\.|$)/.test(lower) || lower.endsWith('/.env') || lower === '.env') {
+    for (const line of content.split('\n')) {
+      const match = /^\s*(?:export\s+)?([A-Z][A-Z0-9_]{2,})\s*=/.exec(line);
+      if (match) names.add(match[1]);
+    }
+  }
+
+  if (lower.endsWith('dockerfile') || lower.includes('/dockerfile')) {
+    for (const line of content.split('\n')) {
+      const instruction = /^\s*(ENV|ARG)\s+(.+)$/i.exec(line);
+      if (!instruction) continue;
+      for (const token of tokenizeDockerEnvInstruction(instruction[2])) {
+        const match = /^([A-Z][A-Z0-9_]{2,})(?:=.*)?$/.exec(token);
+        if (match) names.add(match[1]);
+      }
+    }
+  }
+
+  if (/\.(ya?ml|json|toml)$/.test(lower) || lower.includes('schema') || lower.includes('config')) {
+    for (const match of content.matchAll(/\b(?:env|env_var|env_vars|environment_variable|environment_variables)\b\s*[:=]\s*['"]?([A-Z][A-Z0-9_]{2,})['"]?/gi)) {
+      names.add(match[1]);
+    }
+  }
+
+  return [...names].sort();
+}
+
+function tokenizeDockerEnvInstruction(value: string) {
+  return value.match(/"[^"]*"|'[^']*'|\S+/g)?.map((token) => token.replace(/^['"]|['"]$/g, '')) || [];
 }
 
 function safeFileName(filePath: string) {
@@ -238,6 +307,7 @@ function summarizeDocumentation(cards: any[]) {
   let claims = 0;
   let commands = 0;
   let envVars = 0;
+  let filePaths = 0;
 
   for (const card of cards || []) {
     statuses[card.status] = (statuses[card.status] || 0) + 1;
@@ -245,7 +315,8 @@ function summarizeDocumentation(cards: any[]) {
     claims += card.claims?.length || 0;
     commands += card.validation?.commands?.length || 0;
     envVars += card.validation?.env_vars?.length || 0;
+    filePaths += card.file_paths?.length || 0;
   }
 
-  return { files: cards.length, statuses, stale, claims, commands, env_vars: envVars };
+  return { files: cards.length, statuses, stale, claims, commands, env_vars: envVars, file_paths: filePaths };
 }

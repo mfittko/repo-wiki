@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { assembleAllPageContexts } from './context-assembler.js';
 import { ensureDir, readJson, writeText } from './utils/fs.js';
+import { collectKnownEnvironmentVariables, collectManifestDirectories, normalizeRepoPath, resolveDocumentedPathFromManifest } from './docs-validation.js';
 import { classifyDocumentedCommands, mergePackageScripts } from './docs-ingestor.js';
 import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-ownership.js';
 
@@ -194,11 +195,43 @@ function renderDocumentationDebtReport(manifest) {
   const validatedCmds = classified.filter((c) => c.status === 'validated');
   const missingCmds = classified.filter((c) => c.status === 'missing');
   const unvalidatedCmds = classified.filter((c) => c.status === 'unvalidated');
+  const manifestFiles = new Set<string>((manifest.files || []).map((file) => normalizeRepoPath(file.path)));
+  const manifestDirectories = collectManifestDirectories(manifestFiles);
+  const filePathFindings = docs.flatMap((doc) => (doc.file_paths || []).map((reference) => {
+    const resolved = resolveDocumentedPathFromManifest(reference.path, doc.path, manifestFiles, manifestDirectories, reference.source);
+    return {
+      doc: doc.path,
+      line: reference.line,
+      source: reference.source,
+      reference_path: reference.path,
+      resolved_path: resolved.path,
+      valid: resolved.valid
+    };
+  }));
+  const validFilePaths = filePathFindings.filter((finding) => finding.valid);
+  const brokenFilePaths = filePathFindings.filter((finding) => !finding.valid);
+  const knownEnvVars = collectKnownEnvironmentVariables(manifest);
+  const envFindings = docs.flatMap((doc) => (doc.validation?.env_vars || []).map((name) => ({ doc: doc.path, name, valid: knownEnvVars.has(name) })));
+  const validatedEnvVars = envFindings.filter((finding) => finding.valid);
+  const unvalidatedEnvVars = envFindings.filter((finding) => !finding.valid);
 
   const commandRows = classified.map((c) => {
     const badge = c.status === 'validated' ? '✅ validated' : c.status === 'missing' ? '❌ missing' : '❓ unvalidated';
     const source = c.source === 'package_scripts' ? 'package.json' : c.source === 'ci_workflow' ? 'CI workflow' : 'unknown';
-    return `| \`${c.command}\` | ${badge} | ${source} |`;
+    return tableRow([code(redactSensitiveText(c.command)), badge, source]);
+  });
+  const filePathRows = filePathFindings.slice(0, 200).map((finding) => {
+    const badge = finding.valid ? '✅ valid' : '❌ missing';
+    return tableRow([
+      code(`${finding.doc}:${finding.line}`),
+      code(finding.reference_path),
+      badge,
+      finding.valid ? code(finding.resolved_path) : 'not found'
+    ]);
+  });
+  const envRows = envFindings.slice(0, 200).map((finding) => {
+    const badge = finding.valid ? '✅ validated' : '❓ unvalidated';
+    return tableRow([code(finding.doc), code(finding.name), badge]);
   });
 
   return `${frontmatter(manifest, { kind: 'documentation_debt_report', documentation_authority: manifest.documentation?.authority || 'secondary' })}# Documentation Debt Report
@@ -219,6 +252,7 @@ ${JSON.stringify(manifest.config?.documentation || {}, null, 2)}
 - Stale documents: ${summary.stale || 0}
 - Commands found in docs: ${summary.commands || 0}
 - Environment variable mentions: ${summary.env_vars || 0}
+- File path references: ${summary.file_paths || 0}
 
 ## Documentation status table
 
@@ -235,6 +269,24 @@ Commands extracted from documentation code blocks, validated against \`package.j
 - Unvalidated (source unknown): ${unvalidatedCmds.length}
 
 ${commandRows.length > 0 ? `| Command | Status | Source |\n|---|---|---|\n${commandRows.join('\n')}` : '- No commands extracted from documentation.'}
+
+## File path validation
+
+Repository file and directory references extracted from markdown links and inline code spans. Generated-output roots such as \`dist/\`, \`coverage/\`, and \`.llmwiki/\` are excluded from extraction.
+
+- Valid: ${validFilePaths.length}
+- Missing: ${brokenFilePaths.length}
+
+${filePathRows.length > 0 ? `| Documentation location | Reference | Status | Resolved path |\n|---|---|---|---|\n${filePathRows.join('\n')}${filePathFindings.length > filePathRows.length ? `\n\n_Showing first ${filePathRows.length} of ${filePathFindings.length} file path findings._` : ''}` : '- No file path references extracted from documentation.'}
+
+## Environment variable validation
+
+Environment variable names extracted from documentation are validated against scanner-detected source usage and configured environment-variable names. Values are never copied into generated markdown.
+
+- Validated: ${validatedEnvVars.length}
+- Unvalidated: ${unvalidatedEnvVars.length}
+
+${envRows.length > 0 ? `| Documentation file | Variable | Status |\n|---|---|---|\n${envRows.join('\n')}${envFindings.length > envRows.length ? `\n\n_Showing first ${envRows.length} of ${envFindings.length} environment variable findings._` : ''}` : '- No environment variable mentions extracted from documentation.'}
 
 ## Stale documentation candidates
 
@@ -364,10 +416,14 @@ function tableFromObject(object: Record<string, number> | undefined, headers: st
 
 function markdownTable(headers: string[], rows: Array<Array<string | number>>) {
   return [
-    `| ${headers.map((header) => sanitizeTableCell(header)).join(' | ')} |`,
+    tableRow(headers),
     `| ${headers.map(() => '---').join(' | ')} |`,
-    ...rows.map((row) => `| ${row.map((value) => sanitizeTableCell(value)).join(' | ')} |`)
+    ...rows.map((row) => tableRow(row))
   ].join('\n');
+}
+
+function tableRow(cells: Array<string | number>) {
+  return `| ${cells.map((cell) => sanitizeTableCell(cell)).join(' | ')} |`;
 }
 
 function collectEnvironmentRows(files: any[]) {
@@ -417,7 +473,14 @@ function code(value: string | number) {
 }
 
 function sanitizeTableCell(value: string | number) {
-  return String(value ?? '').replace(/\n/g, ' ').replace(/\|/g, '\\|');
+  return String(value ?? '').replace(/[\r\n]+/g, ' ').replace(/\|/g, '\\|').trim();
+}
+
+function redactSensitiveText(value: string | number) {
+  return String(value ?? '')
+    .replace(/(authorization:\s*bearer\s+)[^\s"']+/ig, '$1[REDACTED]')
+    .replace(/((?:--?token|--?password|--?api[-_]?key|--?secret)(?:=|\s+))[^\s"']+/ig, '$1[REDACTED]')
+    .replace(/((?:token|password|api[_-]?key|secret)=)[^\s&]+/ig, '$1[REDACTED]');
 }
 
 function shortCommit(commit: string) {

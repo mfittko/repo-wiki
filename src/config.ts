@@ -41,7 +41,9 @@ export const DEFAULT_CONFIG = {
     secret_like_content: 'error',
     stale_docs: 'warning',
     contradicted_docs: 'error',
-    unvalidated_doc_claims: 'warning'
+    unvalidated_doc_claims: 'warning',
+    broken_file_references: 'warning',
+    unvalidated_env_vars: 'warning'
   }
 };
 

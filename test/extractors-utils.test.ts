@@ -34,6 +34,7 @@ export enum State { Ready }
 export { value as renamed, type Name as Alias };
 const { API_KEY, PORT: localPort = '3000', ...rest } = process.env;
 const { VITE_HOST } = import.meta.env;
+const baseUrl = optionalEnv(env, 'LLMWIKI_LLM_BASE_URL');
 const router = Router();
 router.get('/health', healthCheck);
 const api = fastify();
@@ -49,7 +50,7 @@ test('extractors cover imports, exports, env vars, routes, and runtime hints', (
   assert.deepEqual(extractRouteSurfaces('routes.py', 'print(1)', 'Python'), []);
 
   assert.deepEqual(extractImports(richSource, 'TypeScript'), ['../legacy.cjs', './helper.js', 'lib']);
-  assert.deepEqual(extractSymbols(richSource, 'TypeScript'), ['GET', 'Name', 'Service', 'Shape', 'State', 'api', 'count', 'default', 'dep', 'flag', 'router', 'runTask', 'value']);
+  assert.deepEqual(extractSymbols(richSource, 'TypeScript'), ['GET', 'Name', 'Service', 'Shape', 'State', 'api', 'baseUrl', 'count', 'default', 'dep', 'flag', 'router', 'runTask', 'value']);
   const exported = extractExportedSymbols(richSource, 'TypeScript');
   assert.ok(exported.some((entry) => entry.name === 'default' && entry.kind === 'function'));
   assert.ok(exported.some((entry) => entry.name === 'default' && entry.kind === 'class'));
@@ -60,7 +61,7 @@ test('extractors cover imports, exports, env vars, routes, and runtime hints', (
   assert.ok(exported.some((entry) => entry.name === 'Name' && entry.kind === 'type'));
   assert.ok(exported.some((entry) => entry.name === 'Shape' && entry.kind === 'interface'));
   assert.ok(exported.some((entry) => entry.name === 'State' && entry.kind === 'enum'));
-  assert.deepEqual(extractEnvironmentVariables(richSource, 'TypeScript'), ['API_KEY', 'PORT', 'VITE_HOST']);
+  assert.deepEqual(extractEnvironmentVariables(richSource, 'TypeScript'), ['API_KEY', 'LLMWIKI_LLM_BASE_URL', 'PORT', 'VITE_HOST']);
   assert.deepEqual(extractMigrationSurfaces('src/query.sql', 'SQL'), []);
   assert.deepEqual(extractMigrationSurfaces('db/migrations/V2__add_orders_table.sql', 'SQL'), [
     { kind: 'sql-migration', id: '2', name: 'add orders table' }
