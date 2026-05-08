@@ -158,5 +158,5 @@ test('assemblePageContext uses page-type selection for module and cross-cutting 
     plan,
     page: { path: 'Open-Questions.md', phase: 'foundation' }
   });
-  assert.deepEqual(foundationContext.documentation_inputs.map((entry: any) => entry.path), ['docs/guide.md', 'README.md']);
+  assert.deepEqual(foundationContext.documentation_inputs.map((doc: any) => doc.path), ['docs/guide.md', 'README.md']);
 });

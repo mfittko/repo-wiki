@@ -18,6 +18,19 @@ const DEFAULT_BUDGET: PageContextBudget = {
   maxDocumentationCards: 12,
   maxExcerptChars: 320
 };
+const EXTERNAL_PACKAGE_PREFIX = 'package:';
+const SOURCE_EXCERPT_LIMITS = {
+  imports: 8,
+  symbols: 10,
+  envVars: 8,
+  hints: 8
+};
+const DOC_EXCERPT_LIMITS = {
+  headings: 3,
+  claims: 2,
+  commands: 3
+};
+const CARD_OVERHEAD_CHARS = 48;
 
 export function assembleAllPageContexts({ manifest, plan, budget }: { manifest: any; plan: any; budget?: Partial<PageContextBudget> }) {
   return (plan?.pages || []).map((page: any) => assemblePageContext({ manifest, plan, page, budget }));
@@ -52,7 +65,7 @@ export function assemblePageContext({ manifest, plan, page, budget }: AssemblePa
       omitted.excerpts.push(`source:${card.path}`);
     }
 
-    const estimatedChars = card.path.length + truncatedExcerpt.value.length + 48;
+    const estimatedChars = estimateCardChars(card.path, truncatedExcerpt.value);
     if (usedChars + estimatedChars > limits.maxChars) {
       omitted.source_cards.push(card.path);
       omitted.reasons.push('max_chars_exceeded');
@@ -82,7 +95,7 @@ export function assemblePageContext({ manifest, plan, page, budget }: AssemblePa
       omitted.excerpts.push(`docs:${card.path}`);
     }
 
-    const estimatedChars = card.path.length + truncatedExcerpt.value.length + 48;
+    const estimatedChars = estimateCardChars(card.path, truncatedExcerpt.value);
     if (usedChars + estimatedChars > limits.maxChars) {
       omitted.documentation_cards.push(card.path);
       omitted.reasons.push('max_chars_exceeded');
@@ -144,14 +157,14 @@ function pageType(page: { phase?: string }) {
 
 function normalizeBudget(budget?: Partial<PageContextBudget>): PageContextBudget {
   return {
-    maxChars: positiveInt(budget?.maxChars, DEFAULT_BUDGET.maxChars),
-    maxSourceCards: positiveInt(budget?.maxSourceCards, DEFAULT_BUDGET.maxSourceCards),
-    maxDocumentationCards: positiveInt(budget?.maxDocumentationCards, DEFAULT_BUDGET.maxDocumentationCards),
-    maxExcerptChars: positiveInt(budget?.maxExcerptChars, DEFAULT_BUDGET.maxExcerptChars)
+    maxChars: normalizePositiveInt(budget?.maxChars, DEFAULT_BUDGET.maxChars),
+    maxSourceCards: normalizePositiveInt(budget?.maxSourceCards, DEFAULT_BUDGET.maxSourceCards),
+    maxDocumentationCards: normalizePositiveInt(budget?.maxDocumentationCards, DEFAULT_BUDGET.maxDocumentationCards),
+    maxExcerptChars: normalizePositiveInt(budget?.maxExcerptChars, DEFAULT_BUDGET.maxExcerptChars)
   };
 }
 
-function positiveInt(value: unknown, fallback: number) {
+function normalizePositiveInt(value: unknown, fallback: number) {
   const number = typeof value === 'number' ? Math.floor(value) : Number.NaN;
   return Number.isFinite(number) && number > 0 ? number : fallback;
 }
@@ -208,8 +221,8 @@ function selectDocumentationCards({ documentationCards, page, selectedSources, p
   const type = pageType(page);
   if (type === 'module') {
     const module = findModuleForPage(plan, page);
-    const prefixes = new Set((module?.files || []).map((file: string) => file.split('/')[0]).filter(Boolean));
-    return documentationCards.filter((card) => prefixes.has(String(card.path || '').split('/')[0]));
+    const moduleDirectories = new Set((module?.files || []).map((file: string) => file.split('/')[0]).filter(Boolean));
+    return documentationCards.filter((card) => moduleDirectories.has(String(card.path || '').split('/')[0]));
   }
 
   if (page?.path === 'Documentation-Debt-Report.md' || page?.path === 'Open-Questions.md') {
@@ -217,8 +230,8 @@ function selectDocumentationCards({ documentationCards, page, selectedSources, p
   }
 
   if (type === 'cross-cutting') {
-    const selectedPaths = new Set(selectedSources.map((card) => String(card.path).split('/')[0]));
-    return documentationCards.filter((card) => selectedPaths.has(String(card.path || '').split('/')[0]) || card.status === 'stale' || card.status === 'contradicted');
+    const selectedDirectories = new Set(selectedSources.map((card) => String(card.path).split('/')[0]));
+    return documentationCards.filter((card) => selectedDirectories.has(String(card.path || '').split('/')[0]) || card.status === 'stale' || card.status === 'contradicted');
   }
 
   return documentationCards.filter((card) => card.status === 'stale' || card.status === 'contradicted' || card.status === 'partially_validated');
@@ -261,7 +274,8 @@ function dependencyGraphParticipants(manifest: any) {
     if (typeof edge.from === 'string') {
       participants.add(edge.from);
     }
-    if (typeof edge.to === 'string' && !edge.to.startsWith('package:')) {
+    // Exclude external package pseudo-paths so dependency participants stay repository-local.
+    if (typeof edge.to === 'string' && !edge.to.startsWith(EXTERNAL_PACKAGE_PREFIX)) {
       participants.add(edge.to);
     }
   }
@@ -277,18 +291,18 @@ function buildSourceExcerpt(card: any) {
     `path=${card.path}`,
     `category=${card.category}`,
     `language=${card.language}`,
-    `imports=${(card.imports || []).slice(0, 8).join(', ') || 'none'}`,
-    `symbols=${(card.exported_symbols || card.symbols || []).slice(0, 10).map((symbol: any) => symbol?.name || symbol).join(', ') || 'none'}`,
-    `env=${(card.environment_variables || []).slice(0, 8).join(', ') || 'none'}`,
-    `hints=${(card.runtime_hints || []).slice(0, 8).join(', ') || 'none'}`
+    `imports=${(card.imports || []).slice(0, SOURCE_EXCERPT_LIMITS.imports).join(', ') || 'none'}`,
+    `symbols=${(card.exported_symbols || card.symbols || []).slice(0, SOURCE_EXCERPT_LIMITS.symbols).map((symbol: any) => symbol?.name || symbol).join(', ') || 'none'}`,
+    `env=${(card.environment_variables || []).slice(0, SOURCE_EXCERPT_LIMITS.envVars).join(', ') || 'none'}`,
+    `hints=${(card.runtime_hints || []).slice(0, SOURCE_EXCERPT_LIMITS.hints).join(', ') || 'none'}`
   ];
   return parts.join(' | ');
 }
 
 function buildDocumentationExcerpt(card: any) {
-  const headingPreview = (card.headings || []).slice(0, 3).map((heading: any) => heading.text).join(' > ');
-  const claimPreview = (card.claims || []).slice(0, 2).map((claim: any) => claim.text).join(' || ');
-  const commandPreview = (card.validation?.commands || []).slice(0, 3).join(', ');
+  const headingPreview = (card.headings || []).slice(0, DOC_EXCERPT_LIMITS.headings).map((heading: any) => heading.text).join(' > ');
+  const claimPreview = (card.claims || []).slice(0, DOC_EXCERPT_LIMITS.claims).map((claim: any) => claim.text).join(' || ');
+  const commandPreview = (card.validation?.commands || []).slice(0, DOC_EXCERPT_LIMITS.commands).join(', ');
   return [
     `path=${card.path}`,
     `status=${card.status || 'unknown'}`,
@@ -306,6 +320,10 @@ function truncateText(value: string, maxChars: number) {
     return { value: '…', truncated: true };
   }
   return { value: `${value.slice(0, maxChars - 1)}…`, truncated: true };
+}
+
+function estimateCardChars(pathValue: string, excerpt: string) {
+  return String(pathValue).length + excerpt.length + CARD_OVERHEAD_CHARS;
 }
 
 function uniqueSorted(values: string[]) {
