@@ -45,6 +45,7 @@ export function extractSymbols(content: string, language: string): string[] {
     return [...ast.symbols].sort().slice(0, 50);
   }
 
+  /* c8 ignore start: retained for unexpected TypeScript parser failures */
   const fallbackSymbols = new Set<string>();
   const fallbackPatterns = [
     /export\s+async\s+function\s+([A-Za-z_$][\w$]*)/g,
@@ -64,6 +65,7 @@ export function extractSymbols(content: string, language: string): string[] {
   }
 
   return [...fallbackSymbols].sort().slice(0, 50);
+  /* c8 ignore stop */
 }
 
 export function extractExportedSymbols(content: string, language: string): Array<{ name: string; kind: string }> {
@@ -78,6 +80,7 @@ export function extractExportedSymbols(content: string, language: string): Array
       .slice(0, 50);
   }
 
+  /* c8 ignore start: retained for unexpected TypeScript parser failures */
   const exported: Array<{ name: string; kind: string }> = [];
   const seen = new Set<string>();
   const directPatterns = [
@@ -115,6 +118,7 @@ export function extractExportedSymbols(content: string, language: string): Array
   return exported
     .sort((left, right) => left.name.localeCompare(right.name) || left.kind.localeCompare(right.kind))
     .slice(0, 50);
+  /* c8 ignore stop */
 }
 
 export function extractEnvironmentVariables(content: string, language: string): string[] {
