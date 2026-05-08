@@ -573,17 +573,59 @@ function qualifyRubyConstant(name: string, scopeStack: Array<{ kind: 'module' | 
 }
 
 function stripRubyComments(content: string) {
+  const lines = content.split(/\r?\n/);
+  const strippedLines: string[] = [];
+  let inBlockComment = false;
+  let heredocDelimiter: string | null = null;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    if (heredocDelimiter) {
+      if (trimmed === heredocDelimiter) {
+        heredocDelimiter = null;
+      }
+      strippedLines.push('');
+      continue;
+    }
+
+    if (inBlockComment) {
+      if (/^\s*=end\b/.test(line)) {
+        inBlockComment = false;
+      }
+      strippedLines.push('');
+      continue;
+    }
+
+    if (/^\s*=begin\b/.test(line)) {
+      inBlockComment = true;
+      strippedLines.push('');
+      continue;
+    }
+
+    const heredocMatch = /^\s*(?:\w[\w.:@]*\s*=\s*)?<<[-~]?\s*['"]?([A-Za-z_][A-Za-z0-9_]*)['"]?/.exec(line);
+    if (heredocMatch && !/^\s*class\s+<</.test(line)) {
+      heredocDelimiter = heredocMatch[1];
+    }
+
+    strippedLines.push(stripRubyInlineComment(line));
+  }
+
+  return strippedLines.join('\n');
+}
+
+function stripRubyInlineComment(line: string) {
   let result = '';
   let quote: '"' | "'" | '`' | null = null;
 
-  for (let charIndex = 0; charIndex < content.length; charIndex += 1) {
-    const current = content[charIndex];
+  for (let charIndex = 0; charIndex < line.length; charIndex += 1) {
+    const current = line[charIndex];
 
     if (quote) {
       result += current;
       if (current === '\\') {
         charIndex += 1;
-        result += content[charIndex] || '';
+        result += line[charIndex] || '';
         continue;
       }
       if (current === quote) {
@@ -599,13 +641,7 @@ function stripRubyComments(content: string) {
     }
 
     if (current === '#') {
-      while (charIndex < content.length && content[charIndex] !== '\n') {
-        charIndex += 1;
-      }
-      if (charIndex < content.length && content[charIndex] === '\n') {
-        result += '\n';
-      }
-      continue;
+      break;
     }
 
     result += current;

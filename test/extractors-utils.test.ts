@@ -258,6 +258,11 @@ require_relative("./support/helpers")
 
 module RepoWiki
   VERSION = "1.0.0"
+  BANNER = <<~TEXT
+    require "hidden"
+    module Hidden
+    end
+  TEXT
 
   class Scanner
     DEFAULT_LIMIT ||= 50
@@ -278,6 +283,12 @@ module RepoWiki
   end
 end
 
+=begin
+require "ignored_block"
+class IgnoredBlock
+end
+=end
+
 class Worker
   def perform!
     true
@@ -292,6 +303,7 @@ end
   assert.deepEqual(extractImports(rubySource, 'Ruby'), ['./lib/service', './support/helpers', 'json']);
   assert.deepEqual(extractSymbols(rubySource, 'Ruby'), [
     'RepoWiki',
+    'RepoWiki::BANNER',
     'RepoWiki::Scanner',
     'RepoWiki::Scanner#run',
     'RepoWiki::Scanner.build',
