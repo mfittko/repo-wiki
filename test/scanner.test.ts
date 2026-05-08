@@ -8,13 +8,17 @@ import { scanRepository } from '../src/scanner.js';
 async function makeTempRepo() {
   const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-test-'));
   await fs.mkdir(path.join(dir, 'src'), { recursive: true });
+  await fs.mkdir(path.join(dir, 'src', '__tests__'), { recursive: true });
   await fs.mkdir(path.join(dir, 'test'), { recursive: true });
+  await fs.mkdir(path.join(dir, 'tests'), { recursive: true });
   await fs.writeFile(path.join(dir, 'package.json'), JSON.stringify({ name: 'fixture-repo', scripts: { build: 'node build.js', test: 'node --test' } }, null, 2));
   await fs.writeFile(path.join(dir, 'src', 'utils.js'), 'export function value() { return 42; }\n');
   await fs.writeFile(path.join(dir, 'src', 'index.js'), "import express from 'express';\nimport fs from 'node:fs';\nimport { value } from './utils.js';\n\nconst app = express();\nexport const router = express.Router();\n\napp.get('/health', healthCheck);\nrouter.post('/users', createUser);\n\nexport function hello() {\n  return fs.existsSync('.') && value() === 42 && Boolean(process.env.PORT) && process.env['APP_MODE'] !== 'off';\n}\n\nfunction healthCheck(_req, res) {\n  return res.json({ ok: true, mode: process.env.APP_MODE });\n}\n\nconst createUser = (_req, res) => {\n  return res.json({ created: true });\n};\n");
   await fs.writeFile(path.join(dir, 'src', 'math.js'), 'export function add(left, right) { return left + right; }\n');
   await fs.writeFile(path.join(dir, 'src', 'math.test.js'), "import test from 'node:test';\nimport assert from 'node:assert/strict';\n\ntest('add', () => {\n  assert.equal(1 + 1, 2);\n});\n");
+  await fs.writeFile(path.join(dir, 'src', '__tests__', 'utils.test.js'), "import test from 'node:test';\nimport assert from 'node:assert/strict';\n\ntest('value', () => {\n  assert.ok(true);\n});\n");
   await fs.writeFile(path.join(dir, 'test', 'index.test.js'), "import test from 'node:test';\nimport { hello } from '../src/index.js';\n\ntest('ok', () => {\n  hello();\n});\n");
+  await fs.writeFile(path.join(dir, 'tests', 'math.spec.js'), "import test from 'node:test';\nimport assert from 'node:assert/strict';\n\ntest('spec', () => {\n  assert.ok(true);\n});\n");
   return dir;
 }
 
@@ -30,8 +34,8 @@ test('scanRepository creates a manifest and source cards', async () => {
       outDir: out
     });
 
-    assert.equal(result.summary.files, 6);
-    assert.equal(result.manifest.totals.languages.JavaScript, 5);
+    assert.equal(result.summary.files, 8);
+    assert.equal(result.manifest.totals.languages.JavaScript, 7);
     assert.equal(result.manifest.totals.languages.JSON, 1);
     assert.ok(result.manifest.files.some((file) => file.path === 'src/index.js'));
 
@@ -60,6 +64,11 @@ test('scanRepository creates a manifest and source cards', async () => {
 
     assert.deepEqual(result.manifest.analysis.test_to_source.mappings, [
       {
+        test: 'src/__tests__/utils.test.js',
+        sources: ['src/utils.js'],
+        heuristics: ['filename_affinity']
+      },
+      {
         test: 'src/math.test.js',
         sources: ['src/math.js'],
         heuristics: ['filename_affinity']
@@ -68,6 +77,11 @@ test('scanRepository creates a manifest and source cards', async () => {
         test: 'test/index.test.js',
         sources: ['src/index.js'],
         heuristics: ['filename_affinity', 'imports']
+      },
+      {
+        test: 'tests/math.spec.js',
+        sources: ['src/math.js'],
+        heuristics: ['filename_affinity']
       }
     ]);
 
