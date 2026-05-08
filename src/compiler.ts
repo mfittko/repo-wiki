@@ -267,7 +267,7 @@ ${commandRows.length > 0 ? `| Command | Status | Source |\n|---|---|---|\n${comm
 
 ## File path validation
 
-Repository file and directory references extracted from markdown links and inline code spans.
+Repository file and directory references extracted from markdown links and inline code spans. Generated-output roots such as \`dist/\`, \`coverage/\`, and \`.llmwiki/\` are excluded from extraction.
 
 - Valid: ${validFilePaths.length}
 - Missing: ${brokenFilePaths.length}

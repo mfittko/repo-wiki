@@ -25,7 +25,7 @@ export function candidateRepoPaths(referencePath: string, docPath: string) {
   return [...new Set([cleaned, docRelative].filter((candidate) => candidate && candidate !== '.'))];
 }
 
-export async function resolveDocumentedPathOnDisk(referencePath: string, docPath: string, repoRoot: string): Promise<PathResolution> {
+export async function resolveDocumentedPathOnDisk(referencePath: string, docPath: string, repoRoot: string, accessCache: Map<string, boolean> = new Map()): Promise<PathResolution> {
   const candidates = candidateRepoPaths(referencePath, docPath);
   const absoluteRoot = path.resolve(repoRoot);
 
@@ -39,11 +39,19 @@ export async function resolveDocumentedPathOnDisk(referencePath: string, docPath
       continue;
     }
 
-    try {
-      await fs.access(absolute);
+    let exists = accessCache.get(absolute);
+    if (exists === undefined) {
+      try {
+        await fs.access(absolute);
+        exists = true;
+      } catch {
+        exists = false;
+      }
+      accessCache.set(absolute, exists);
+    }
+
+    if (exists) {
       return { valid: true, path: candidate };
-    } catch {
-      // Try the next normalized candidate.
     }
   }
 

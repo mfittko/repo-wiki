@@ -42,11 +42,12 @@ test('documentation ingestion produces documentation cards and lint issues', asy
 });
 
 test('extractDocumentedFilePaths extracts deterministic markdown link and inline code path references', () => {
-  const refs = extractDocumentedFilePaths('# Paths\n\nSee [plan](docs/PLAN.md), [titled](docs/TITLE.md "Title"), `src/cli.ts`, `dist/`, and `npm run build`.\n\n```bash\ncat missing.md\n```\n');
+  const refs = extractDocumentedFilePaths('# Paths\n\nSee [plan](docs/PLAN.md), [titled](docs/TITLE.md "Title"), `src/cli.ts`, `../README.md`, `dist/`, `1..2`, and `npm run build`.\n\n```bash\ncat missing.md\n```\n');
   assert.deepEqual(refs, [
     { path: 'docs/PLAN.md', line: 3, source: 'link' },
     { path: 'docs/TITLE.md', line: 3, source: 'link' },
-    { path: 'src/cli.ts', line: 3, source: 'inline_code' }
+    { path: 'src/cli.ts', line: 3, source: 'inline_code' },
+    { path: '../README.md', line: 3, source: 'inline_code' }
   ]);
 });
 
@@ -236,7 +237,7 @@ test('lintDocs and Documentation Debt Report validate exact commands from CI wor
   }
 });
 
-test('lintDocs reports broken documented file paths and unvalidated environment variables', async () => {
+test('lintDocs reports broken documented file paths, broken image links, and unvalidated environment variables', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-path-env-'));
   try {
     await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
@@ -252,15 +253,16 @@ test('lintDocs reports broken documented file paths and unvalidated environment 
     }), 'utf8');
     await writeFile(path.join(dir, 'src', 'app.js'), "export const mode = process.env.APP_MODE;\nconst baseUrl = optionalEnv(env, 'LLMWIKI_LLM_BASE_URL');\n", 'utf8');
     await writeFile(path.join(dir, 'docs', 'plans', 'README.md'), '# Plans\n', 'utf8');
-    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee `src/app.js`, `docs/plans/`, `docs/missing.md`, and configure APP_MODE, MISSING_TOKEN, or LLMWIKI_LLM_BASE_URL.\n', 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee `src/app.js`, `docs/plans/`, `docs/missing.md`, ![missing](assets/missing.png), and configure APP_MODE, MISSING_TOKEN, or LLMWIKI_LLM_BASE_URL.\n', 'utf8');
 
     const scanDir = path.join(dir, '.llmwiki', 'run');
     await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
 
     const lint = await lintDocs({ scanDir, repoPath: dir });
     const brokenPathIssues = lint.issues.filter((i) => i.code === 'broken-documented-file-path');
-    assert.equal(brokenPathIssues.length, 1);
-    assert.match(brokenPathIssues[0].message, /README\.md:3 references missing repository path docs\/missing\.md/);
+    assert.equal(brokenPathIssues.length, 2);
+    assert.ok(brokenPathIssues.some((item) => /README\.md:3 references missing repository path docs\/missing\.md/.test(item.message)));
+    assert.ok(brokenPathIssues.some((item) => /README\.md:3 references missing repository path assets\/missing\.png/.test(item.message)));
 
     const envIssues = lint.issues.filter((i) => i.code === 'unvalidated-env-var');
     assert.equal(envIssues.length, 1);
@@ -290,12 +292,12 @@ test('lintDocs keeps link validation inside repo and exempts generated-output ro
     await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
 
     const lint = await lintDocs({ scanDir, repoPath: dir });
-    const brokenLinks = lint.issues.filter((i) => i.code === 'broken-documentation-link');
-    assert.equal(brokenLinks.length, 2);
-    assert.ok(brokenLinks.some((i) => i.message.includes('../outside.txt')));
-    assert.ok(brokenLinks.some((i) => i.message.includes('docs/missing.md')));
-    assert.ok(!brokenLinks.some((i) => i.message.includes('dist/')));
-    assert.ok(!brokenLinks.some((i) => i.message.includes('docs/guide.md')));
+    const brokenPaths = lint.issues.filter((i) => i.code === 'broken-documented-file-path');
+    assert.equal(brokenPaths.length, 2);
+    assert.ok(brokenPaths.some((i) => i.message.includes('../outside.txt')));
+    assert.ok(brokenPaths.some((i) => i.message.includes('docs/missing.md')));
+    assert.ok(!brokenPaths.some((i) => i.message.includes('dist/')));
+    assert.ok(!brokenPaths.some((i) => i.message.includes('docs/guide.md')));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

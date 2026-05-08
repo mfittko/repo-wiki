@@ -12,6 +12,7 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
   const docs = manifest.documentation?.files || [];
   const repoRoot = path.resolve(repoPath);
   const knownEnvVars = collectKnownEnvironmentVariables(manifest);
+  const pathAccessCache = new Map<string, boolean>();
 
   // Collect merged package scripts from manifest analysis
   const allPackageScripts = mergePackageScripts(manifest);
@@ -62,9 +63,12 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
       }
     }
 
+    const validatedLinkTargets = new Set<string>();
     for (const reference of doc.file_paths || []) {
-      if (reference.source === 'link') continue;
-      const resolved = await resolveDocumentedPathOnDisk(reference.path, doc.path, repoRoot);
+      const resolved = await resolveDocumentedPathOnDisk(reference.path, doc.path, repoRoot, pathAccessCache);
+      if (reference.source === 'link') {
+        validatedLinkTargets.add(cleanDocumentLinkTarget(reference.path));
+      }
       if (!resolved.valid) {
         issues.push(issue(
           config.lint?.broken_file_references || 'warning',
@@ -87,8 +91,8 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
     for (const link of doc.links || []) {
       if (link.startsWith('http') || link.startsWith('#') || link.startsWith('mailto:')) continue;
       const target = cleanDocumentLinkTarget(link);
-      if (!target) continue;
-      const resolved = await resolveDocumentedPathOnDisk(target, doc.path, repoRoot);
+      if (!target || validatedLinkTargets.has(target)) continue;
+      const resolved = await resolveDocumentedPathOnDisk(target, doc.path, repoRoot, pathAccessCache);
       if (!resolved.valid) {
         issues.push(issue('warning', 'broken-documentation-link', `${doc.path} links to missing relative target ${link}.`));
       }

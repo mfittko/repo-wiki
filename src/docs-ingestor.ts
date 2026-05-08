@@ -373,11 +373,15 @@ function isDocumentedPathCandidate(value: string, fromLink: boolean) {
   if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(value)) return false;
   if (value.startsWith('/')) return false;
   if (isGeneratedOutputReference(value)) return false;
-  if (value.includes('..')) return true;
+  if (hasParentDirectorySegment(value)) return true;
   if (value.startsWith('./') || value.startsWith('../')) return true;
   if (value.includes('/')) return true;
   if (fromLink) return true;
   return /^(?:[A-Z]+\.)?[^/]+\.(?:md|mdx|markdown|ts|tsx|js|jsx|mjs|cjs|json|ya?ml|toml|rs|go|py|rb|java|kt|cs|php|prisma|sql|sh|bash|env|txt)$/i.test(value);
+}
+
+function hasParentDirectorySegment(value: string) {
+  return /(^|\/)\.\.(\/|$)/.test(value.replaceAll('\\', '/'));
 }
 
 function extractHeadings(content) {
