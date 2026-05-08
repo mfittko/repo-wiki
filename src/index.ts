@@ -9,3 +9,7 @@ export { lintWiki } from './linter.js';
 export { lintDocs } from './docs-linter.js';
 export { publishWiki } from './publisher.js';
 export { loadConfig, DEFAULT_CONFIG } from './config.js';
+export { buildPrompt, buildFoundationPrompt, buildModulePrompt, buildCrossCuttingPrompt } from './prompts.js';
+export type { PageArchetype, PromptContext, BuiltPrompt, SourceCardContext, DocCardContext, ModuleInfo } from './prompts.js';
+export { MockLLMProvider, OpenAICompatibleProvider, LLMProviderError, LLM_DEFAULTS, createProvider, resolveProviderConfig, buildRequest } from './llm-provider.js';
+export type { LLMProvider, LLMRequest, LLMResponse, LLMProviderConfig, ResolvedLLMProviderConfig, BuildRequestOptions } from './llm-provider.js';

@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileExists, readJson } from './utils/fs.js';
+import { LLM_DEFAULTS } from './llm-provider.js';
 
 export const DEFAULT_CONFIG = {
   documentation: {
@@ -13,6 +14,20 @@ export const DEFAULT_CONFIG = {
     preserve_original_claims: false,
     fail_on_stale_docs: false,
     fail_on_conflicting_docs: true
+  },
+  compiler: {
+    mode: 'deterministic',
+    llm: {
+      provider: LLM_DEFAULTS.hostedProvider,
+      base_url: LLM_DEFAULTS.baseUrl,
+      model: LLM_DEFAULTS.model,
+      api_key_env: LLM_DEFAULTS.apiKeyEnv,
+      system_prompt: LLM_DEFAULTS.systemPrompt,
+      temperature: LLM_DEFAULTS.temperature,
+      max_output_tokens: LLM_DEFAULTS.maxOutputTokens,
+      timeout_ms: LLM_DEFAULTS.timeoutMs,
+      retries: LLM_DEFAULTS.retries
+    }
   },
   wiki: {
     max_pages: 500,

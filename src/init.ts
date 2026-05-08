@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { LLM_DEFAULTS } from './llm-provider.js';
 import { ensureDir, fileExists, writeJson, writeText } from './utils/fs.js';
 
 const DEFAULT_CONFIG = {
@@ -28,6 +29,20 @@ const DEFAULT_CONFIG = {
     preserve_original_claims: false,
     fail_on_stale_docs: false,
     fail_on_conflicting_docs: true
+  },
+  compiler: {
+    mode: 'deterministic',
+    llm: {
+      provider: LLM_DEFAULTS.hostedProvider,
+      base_url: LLM_DEFAULTS.baseUrl,
+      model: LLM_DEFAULTS.model,
+      api_key_env: LLM_DEFAULTS.apiKeyEnv,
+      system_prompt: LLM_DEFAULTS.systemPrompt,
+      temperature: LLM_DEFAULTS.temperature,
+      max_output_tokens: LLM_DEFAULTS.maxOutputTokens,
+      timeout_ms: LLM_DEFAULTS.timeoutMs,
+      retries: LLM_DEFAULTS.retries
+    }
   },
   wiki: {
     local_dir: '.llmwiki/wiki',
