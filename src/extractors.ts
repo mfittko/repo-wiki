@@ -682,7 +682,7 @@ function extractRubyHeredocDelimiters(line: string) {
       cursor += 1;
     }
 
-    const delimiterQuote = code[cursor] === '"' || code[cursor] === "'" ? code[cursor] : null;
+    const delimiterQuote = code[cursor] === '"' || code[cursor] === "'" || code[cursor] === '`' ? code[cursor] : null;
     if (hasWhitespace && !delimiterQuote) {
       continue;
     }
@@ -792,9 +792,10 @@ function countRubyBlockOpeners(line: string) {
 
 function countRubyEndKeywords(line: string) {
   let count = 0;
+  const sanitized = stripRubyQuotedStrings(stripRubyInlineComment(line));
 
-  for (const match of line.matchAll(/\bend\b/g)) {
-    const prefix = line.slice(0, match.index).trimEnd();
+  for (const match of sanitized.matchAll(/\bend\b/g)) {
+    const prefix = sanitized.slice(0, match.index).trimEnd();
     const previous = prefix[prefix.length - 1];
     if (previous === ':' || previous === '.') {
       continue;

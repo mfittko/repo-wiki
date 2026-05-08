@@ -282,7 +282,10 @@ module RepoWiki
 
     def run
       status = :end
-      items << value
+      quoted_status = :"end"
+      message = "end"
+      literal = 'end'
+      items << value # end
       if ready then :ok end
       if true
         [1].each do |value|
@@ -322,6 +325,11 @@ query = <<~ 'RUBYSQL'
   class IgnoredQuotedHeredoc
   end
 RUBYSQL
+
+command = <<~ \`RUBYCMD\`
+  class IgnoredBacktickHeredoc
+  end
+RUBYCMD
 
 =begin
 require "ignored_block"
