@@ -172,6 +172,43 @@ test('assemblePageContext honors explicit zero budget caps', () => {
   assert.deepEqual(context.omitted.source_cards, ['src/a.ts', 'src/b.ts']);
 });
 
+test('assemblePageContext tracks documentation omissions from character budget and one-character excerpts', () => {
+  const { manifest, plan } = createFixture();
+  const context = assemblePageContext({
+    manifest: {
+      ...manifest,
+      files: [],
+    },
+    plan,
+    page: { path: 'Open-Questions.md', phase: 'foundation' },
+    budget: {
+      maxChars: 80,
+      maxDocumentationCards: 10,
+      maxExcerptChars: 1
+    }
+  });
+
+  assert.equal(context.documentation_inputs.length, 1);
+  assert.equal(context.documentation_inputs[0].excerpt, '…');
+  assert.deepEqual(context.omitted.documentation_cards, ['docs/guide.md']);
+  assert.ok(context.omitted.excerpts.includes('docs:README.md'));
+  assert.ok(context.omitted.reasons.includes('max_chars_exceeded'));
+});
+
+test('assemblePageContext deduplicates duplicate source paths deterministically', () => {
+  const { manifest, plan } = createFixture();
+  const context = assemblePageContext({
+    manifest: {
+      ...manifest,
+      files: [...manifest.files, { ...manifest.files[0] }]
+    },
+    plan,
+    page: { path: 'Module-Core.md', phase: 'modules', moduleName: 'Core' }
+  });
+
+  assert.deepEqual(context.source_paths, ['src/a.ts', 'src/b.ts']);
+});
+
 test('assemblePageContext uses page-type selection for module and cross-cutting pages', () => {
   const { manifest, plan } = createFixture();
 
