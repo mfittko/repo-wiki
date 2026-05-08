@@ -315,3 +315,196 @@ custom.route({ method: 'patch', path: '/patch' });
   assert.deepEqual(detectRuntimeHints('src/jobs/worker.ts', 'process.env.API_TOKEN\nqueue.add()', {}), ['background-work', 'environment-variable']);
   assert.deepEqual(detectRuntimeHints('src/plain.ts', 'const value = 1;', {}), []);
 });
+
+test('extractRouteSurfaces detects NestJS, Koa, tRPC, GraphQL, and OpenAPI patterns', () => {
+  const frameworkContent = `
+import Router from '@koa/router';
+import Koa from 'koa';
+import { initTRPC } from '@trpc/server';
+import { graphql } from 'graphql';
+const koaApp = new Koa();
+koaApp.use('/koa-middleware', koaMiddleware);
+const koaRouter = new Router();
+koaRouter.get('/koa-health', koaHealth);
+
+@Controller('/users')
+export class UsersController {
+  @Get('/profile')
+  getProfile() { return true; }
+
+  @Post()
+  createUser() { return true; }
+}
+
+const t = initTRPC.create();
+const appRouter = t.router({
+  hello: t.procedure.query(() => 'ok'),
+  createUser: t.procedure.mutation(() => ({ id: 1 })),
+  procedureWithoutQueryOrMutation: t.procedure
+});
+
+const resolvers = {
+  Query: {
+    health: () => 'ok',
+    user: {
+      type: UserType,
+      resolve: () => ({ id: '1' })
+    }
+  },
+  Mutation: {
+    createPost: () => ({})
+  }
+};
+
+registry.registerPath({
+  method: 'get',
+  path: '/openapi/pets',
+  operationId: 'listPets'
+});
+registry.registerPath({ path: '/openapi/missing-method' });
+`;
+
+  assert.deepEqual(extractRouteSurfaces('src/server.ts', frameworkContent, 'TypeScript'), [
+    { kind: 'rpc-route', framework: 'trpc', target: 'router', methods: ['MUTATION'], path: '/createUser', handler: 'createUser' },
+    { kind: 'graphql-operation', framework: 'graphql', target: 'Mutation', methods: ['MUTATION'], path: '/graphql', handler: 'createPost' },
+    { kind: 'graphql-operation', framework: 'graphql', target: 'Query', methods: ['QUERY'], path: '/graphql', handler: 'health' },
+    { kind: 'graphql-operation', framework: 'graphql', target: 'Query', methods: ['QUERY'], path: '/graphql', handler: 'user' },
+    { kind: 'rpc-route', framework: 'trpc', target: 'router', methods: ['QUERY'], path: '/hello', handler: 'hello' },
+    { kind: 'http-route', framework: 'koa', target: 'koaRouter', methods: ['GET'], path: '/koa-health', handler: 'koaHealth' },
+    { kind: 'http-route', framework: 'koa', target: 'koaApp', methods: ['USE'], path: '/koa-middleware', handler: 'koaMiddleware' },
+    { kind: 'openapi-operation', framework: 'openapi', target: 'registry', methods: ['GET'], path: '/openapi/pets', handler: 'listPets' },
+    { kind: 'http-route', framework: 'nestjs', target: 'UsersController', methods: ['POST'], path: '/users', handler: 'createUser' },
+    { kind: 'http-route', framework: 'nestjs', target: 'UsersController', methods: ['GET'], path: '/users/profile', handler: 'getProfile' }
+  ]);
+
+  assert.deepEqual(extractRouteSurfaces('src/plain.ts', `
+import { graphql } from 'graphql';
+const resolvers = {
+  Query: {
+    nonFunctionResolver: true
+  }
+};
+const router = t.router({
+  invalidOnly: t.procedure
+});
+registry.registerPath({ path: '/missing', operationId: 'missingMethod' });
+`, 'TypeScript'), []);
+});
+
+test('extractRouteSurfaces handles strings, comments, and template literals inside resolver maps', () => {
+  // Exercise readBalancedObjectBody and isTopLevelObjectKey branches for
+  // single-quoted strings, double-quoted strings, template literals,
+  // line comments, and block comments with embedded braces.
+  const content = `
+import { graphql } from 'graphql';
+const resolvers = {
+  Query: {
+    withStrings: () => {
+      const a = "hello { world }";
+      const b = 'curly { brace }';
+      const c = \`template \${ '{' } literal\`;
+      // line comment with { brace
+      /* block comment with { brace } */
+      return { ok: true };
+    },
+    simple: () => 'ok'
+  },
+  Mutation: {
+    escaped: () => {
+      const s = 'it\\'s a \\"test\\"';
+      return {};
+    }
+  }
+};
+`;
+
+  const surfaces = extractRouteSurfaces('src/resolvers.ts', content, 'TypeScript');
+  const names = surfaces.map(s => s.handler).sort();
+  assert.ok(names.includes('withStrings'), 'withStrings should be detected');
+  assert.ok(names.includes('simple'), 'simple should be detected');
+  assert.ok(names.includes('escaped'), 'escaped should be detected');
+});
+
+test('extractRouteSurfaces handles Koa middleware with inline comments', () => {
+  const content = `
+import Router from '@koa/router';
+const r = new Router();
+r.post('/items', /* auth middleware */ handleItems);
+r.get('/health', healthCheck); // health route
+`;
+  const surfaces = extractRouteSurfaces('src/app.ts', content, 'TypeScript');
+  assert.equal(surfaces.length, 2);
+  assert.equal(surfaces[0].path, '/health');
+  assert.equal(surfaces[1].path, '/items');
+});
+
+test('extractRouteSurfaces handles tRPC with nested router', () => {
+  const content = `
+import { initTRPC } from '@trpc/server';
+const t = initTRPC.create();
+const router = t.router({
+  getItems: t.procedure.query(() => []),
+  addItem: t.procedure.mutation(() => ({ id: 1 }))
+});
+`;
+  const surfaces = extractRouteSurfaces('src/trpc.ts', content, 'TypeScript');
+  assert.equal(surfaces.length, 2);
+  assert.deepEqual(surfaces.map(s => s.handler).sort(), ['addItem', 'getItems']);
+});
+
+test('extractRouteSurfaces does not infer tRPC from generic router objects', () => {
+  const content = `
+const router = ({
+  lookup: db.query('select 1'),
+  save: db.mutation('insert')
+});
+`;
+  assert.deepEqual(extractRouteSurfaces('src/plain.ts', content, 'TypeScript'), []);
+});
+
+test('extractRouteSurfaces handles OpenAPI with array method', () => {
+  const content = `
+import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
+const reg = new OpenAPIRegistry();
+reg.registerPath({
+  method: 'post',
+  path: '/api/upload',
+  operationId: 'uploadFile'
+});
+`;
+  const surfaces = extractRouteSurfaces('src/openapi.ts', content, 'TypeScript');
+  assert.equal(surfaces.length, 1);
+  assert.equal(surfaces[0].path, '/api/upload');
+  assert.equal(surfaces[0].handler, 'uploadFile');
+});
+
+test('extractRouteSurfaces handles NestJS with multiple decorators', () => {
+  const content = `
+@Controller('/api')
+export class ApiController {
+  @Get('/list')
+  list() { return []; }
+
+  @Delete('/item')
+  remove() { return null; }
+
+  @Put('/item')
+  update() { return {}; }
+
+  @Patch('/item')
+  patch() { return {}; }
+}
+`;
+  const surfaces = extractRouteSurfaces('src/api.controller.ts', content, 'TypeScript');
+  assert.ok(surfaces.length >= 4, `Expected at least 4 surfaces, got ${surfaces.length}`);
+});
+
+test('inferFileRoutePath detects Next.js app router and pages patterns', () => {
+  // pages/api pattern
+  const pages = extractRouteSurfaces('src/pages/api/users.ts', 'export async function GET() {}', 'TypeScript');
+  assert.ok(pages.some(s => s.path === '/api/users'), 'pages/api pattern');
+
+  // app/api/route pattern
+  const app = extractRouteSurfaces('src/app/api/items/route.ts', 'export async function POST() {}', 'TypeScript');
+  assert.ok(app.some(s => s.path === '/api/items'), 'app/api route pattern');
+});

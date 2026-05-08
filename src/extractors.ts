@@ -10,6 +10,9 @@ const JAVASCRIPT_LANGUAGES = new Set([
 const GO_LANGUAGE = 'Go';
 
 const ROUTE_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'all', 'use'];
+const NEST_ROUTE_DECORATORS = ['Get', 'Post', 'Put', 'Patch', 'Delete', 'Options', 'Head', 'All'];
+const MAX_GRAPHQL_RESOLVER_BODY_LENGTH = 2000;
+const MAX_OPENAPI_REGISTER_BODY_LENGTH = 1000;
 
 type RuntimeHintMetadata = {
   routeSurfaces?: Array<{ kind?: string; framework?: string; target?: string; methods?: string[]; path?: string; handler?: string | null }>;
@@ -225,6 +228,11 @@ export function extractRouteSurfaces(filePath: string, content: string, language
       handler
     });
   }
+
+  extractNestRouteSurfaces(content, surfaces, seen);
+  extractTrpcRouteSurfaces(content, surfaces, seen);
+  extractGraphqlRouteSurfaces(content, surfaces, seen);
+  extractOpenApiRouteSurfaces(content, surfaces, seen);
 
   const routeHandlerPath = inferFileRoutePath(filePath);
   if (routeHandlerPath) {
@@ -536,12 +544,14 @@ function collectDestructuredEnvNames(content, pattern, names) {
 
 function inferRouteTargets(content) {
   const targets = new Map();
+  const routerFactoryFramework = inferRouterFactoryFramework(content);
   const patterns = [
     { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*express\s*\(/g, framework: 'express' },
     { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*express\s*\.\s*Router\s*\(/g, framework: 'express' },
-    { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*Router\s*\(/g, framework: 'express' },
+    { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:new\s+)?Router\s*\(/g, framework: routerFactoryFramework },
     { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:fastify|Fastify)\s*\(/g, framework: 'fastify' },
-    { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*new\s+Hono\s*\(/g, framework: 'hono' }
+    { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*new\s+Hono\s*\(/g, framework: 'hono' },
+    { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*new\s+Koa\s*\(/g, framework: 'koa' }
   ];
 
   for (const { pattern, framework } of patterns) {
@@ -556,6 +566,10 @@ function inferRouteTargets(content) {
 function inferRouteFramework(target, targets) {
   if (targets.has(target)) {
     return targets.get(target);
+  }
+
+  if (/koa/i.test(target)) {
+    return 'koa';
   }
 
   if (/fastify/i.test(target)) {
@@ -576,6 +590,381 @@ function inferRouteFramework(target, targets) {
 function inferHandlerName(content, offset) {
   const tail = content.slice(offset, offset + 160);
   return tail.match(/^\s*,\s*([A-Za-z_$][\w$]*)\b/)?.[1] || null;
+}
+
+function extractNestRouteSurfaces(content, surfaces, seen) {
+  const controllers = [...content.matchAll(/@Controller\s*\(\s*(?:['"`]([^'"`]*)['"`])?\s*\)\s*(?:export\s+)?class\s+([A-Za-z_$][\w$]*)/g)];
+  if (!controllers.length) {
+    return;
+  }
+
+  for (let index = 0; index < controllers.length; index += 1) {
+    const controller = controllers[index];
+    const basePath = controller[1] || '';
+    const className = controller[2];
+    const segmentStart = (controller.index || 0) + controller[0].length;
+    const segmentEnd = index + 1 < controllers.length ? (controllers[index + 1].index || content.length) : content.length;
+    const segment = content.slice(segmentStart, segmentEnd);
+    const methodPattern = new RegExp(
+      `@(${NEST_ROUTE_DECORATORS.join('|')})\\s*\\(\\s*(?:['"\`]([^'"\`]*)['"\`])?\\s*\\)\\s*(?:public|private|protected)?\\s*(?:static\\s+)?(?:async\\s+)?([A-Za-z_$][\\w$]*)\\s*\\(`,
+      'g'
+    );
+
+    for (const match of segment.matchAll(methodPattern)) {
+      const routePath = combineRoutePath(basePath, match[2] || '');
+      pushRouteSurface(surfaces, seen, {
+        kind: 'http-route',
+        framework: 'nestjs',
+        target: className,
+        methods: [match[1].toUpperCase()],
+        path: routePath,
+        handler: match[3]
+      });
+    }
+  }
+}
+
+function extractTrpcRouteSurfaces(content, surfaces, seen) {
+  if (!/\b(?:@trpc\/server|initTRPC|createTRPCRouter|t\s*\.\s*router)\b/.test(content)) {
+    return;
+  }
+
+  const procedurePattern = /\b([A-Za-z_$][\w$]*)\s*:\s*(?:[A-Za-z_$][\w$]*Procedure|[A-Za-z_$][\w$]*\s*\.\s*procedure|procedure)\s*\.\s*(query|mutation|subscription)\s*\(/g;
+  for (const match of content.matchAll(procedurePattern)) {
+    pushRouteSurface(surfaces, seen, {
+      kind: 'rpc-route',
+      framework: 'trpc',
+      target: 'router',
+      methods: [match[2].toUpperCase()],
+      path: `/${match[1]}`,
+      handler: match[1]
+    });
+  }
+}
+
+function extractGraphqlRouteSurfaces(content, surfaces, seen) {
+  if (!/\b(?:graphql|gql|apollo)\b/i.test(content)) {
+    return;
+  }
+
+  for (const block of content.matchAll(/\b(Query|Mutation|Subscription)\s*:\s*\{/g)) {
+    const openBraceIndex = (block.index || 0) + block[0].length - 1;
+    const body = readBalancedObjectBody(content, openBraceIndex, MAX_GRAPHQL_RESOLVER_BODY_LENGTH);
+    if (!body) {
+      continue;
+    }
+
+    for (const field of body.matchAll(/\b([A-Za-z_$][\w$]*)\s*:/g)) {
+      if (!isTopLevelObjectKey(body, field.index || 0)) {
+        continue;
+      }
+
+      const valueStart = (field.index || 0) + field[0].length;
+      const tail = body.slice(valueStart, valueStart + 220);
+      if (!isLikelyGraphqlOperationValue(body, valueStart, tail)) {
+        continue;
+      }
+
+      pushRouteSurface(surfaces, seen, {
+        kind: 'graphql-operation',
+        framework: 'graphql',
+        target: block[1],
+        methods: [block[1].toUpperCase()],
+        path: '/graphql',
+        handler: field[1]
+      });
+    }
+  }
+}
+
+function extractOpenApiRouteSurfaces(content, surfaces, seen) {
+  if (!/\b(?:openapi|swagger|registerPath)\b/i.test(content)) {
+    return;
+  }
+
+  for (const match of content.matchAll(/([A-Za-z_$][\w$]*)\s*\.\s*registerPath\s*\(\s*\{/g)) {
+    const openBraceIndex = (match.index || 0) + match[0].length - 1;
+    const body = readBalancedObjectBody(content, openBraceIndex, MAX_OPENAPI_REGISTER_BODY_LENGTH);
+    if (!body) {
+      continue;
+    }
+
+    const method = body.match(/\bmethod\s*:\s*['"`]([A-Za-z]+)['"`]/)?.[1];
+    const routePath = body.match(/\bpath\s*:\s*['"`]([^'"`]+)['"`]/)?.[1];
+    if (!method || !routePath) {
+      continue;
+    }
+
+    pushRouteSurface(surfaces, seen, {
+      kind: 'openapi-operation',
+      framework: 'openapi',
+      target: match[1],
+      methods: [method.toUpperCase()],
+      path: routePath,
+      handler: body.match(/\boperationId\s*:\s*['"`]([^'"`]+)['"`]/)?.[1] || null
+    });
+  }
+}
+
+/**
+ * Normalize and merge controller-level and method-level route segments.
+ */
+function combineRoutePath(basePath, routePath) {
+  const parts = [basePath, routePath]
+    .map((value) => (value || '').trim())
+    .filter((value) => value.length > 0)
+    .map((value) => value.replace(/^\/+|\/+$/g, ''));
+  return `/${parts.join('/')}`.replace(/\/+/g, '/');
+}
+
+function inferRouterFactoryFramework(content) {
+  return /['"](?:@koa\/router|koa-router)['"]/.test(content) ? 'koa' : 'express';
+}
+
+/**
+ * Read the body of a `{ ... }` object literal from source text with bounded scanning.
+ */
+function readBalancedObjectBody(content, openBraceIndex, maxBodyLength) {
+  if (content[openBraceIndex] !== '{') {
+    return null;
+  }
+
+  let depth = 0;
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let inTemplate = false;
+  let inLineComment = false;
+  let inBlockComment = false;
+  let escaped = false;
+
+  const scanLimit = Math.min(content.length, openBraceIndex + maxBodyLength + 500);
+  for (let index = openBraceIndex; index < scanLimit; index += 1) {
+    const token = content[index];
+
+    if (inLineComment) {
+      if (token === '\n') {
+        inLineComment = false;
+      }
+      continue;
+    }
+
+    if (inBlockComment) {
+      if (token === '*' && content[index + 1] === '/') {
+        inBlockComment = false;
+        index += 1;
+      }
+      continue;
+    }
+
+    if (inSingleQuote) {
+      if (!escaped && token === '\'') {
+        inSingleQuote = false;
+      }
+      escaped = !escaped && token === '\\';
+      continue;
+    }
+
+    if (inDoubleQuote) {
+      if (!escaped && token === '"') {
+        inDoubleQuote = false;
+      }
+      escaped = !escaped && token === '\\';
+      continue;
+    }
+
+    if (inTemplate) {
+      if (!escaped && token === '`') {
+        inTemplate = false;
+      }
+      escaped = !escaped && token === '\\';
+      continue;
+    }
+
+    escaped = false;
+    if (token === '/' && content[index + 1] === '/') {
+      inLineComment = true;
+      index += 1;
+      continue;
+    }
+    if (token === '/' && content[index + 1] === '*') {
+      inBlockComment = true;
+      index += 1;
+      continue;
+    }
+    if (token === '\'') {
+      inSingleQuote = true;
+      continue;
+    }
+    if (token === '"') {
+      inDoubleQuote = true;
+      continue;
+    }
+    if (token === '`') {
+      inTemplate = true;
+      continue;
+    }
+
+    if (token === '{') {
+      depth += 1;
+      continue;
+    }
+    if (token !== '}') {
+      continue;
+    }
+
+    depth -= 1;
+    if (depth !== 0) {
+      continue;
+    }
+
+    const body = content.slice(openBraceIndex + 1, index);
+    if (body.length > maxBodyLength) {
+      return null;
+    }
+
+    return body;
+  }
+
+  return null;
+}
+
+/**
+ * Heuristic: GraphQL resolver map entries should map field names to callable values.
+ */
+function isLikelyGraphqlResolverValue(value) {
+  // Only treat resolver entries as API surfaces when the mapped value looks callable.
+  return /^\s*(?:async\s*)?(?:function\b|\(|[A-Za-z_$][\w$]*\s*\()/m.test(value);
+}
+
+function isLikelyGraphqlOperationValue(body, valueStart, valueTail) {
+  if (isLikelyGraphqlResolverValue(valueTail)) {
+    return true;
+  }
+
+  const leadingOffset = valueTail.match(/^\s*/)?.[0]?.length || 0;
+  const objectStart = valueStart + leadingOffset;
+  if (body[objectStart] !== '{') {
+    return false;
+  }
+
+  const configBody = readBalancedObjectBody(body, objectStart, 500);
+  if (!configBody) {
+    return false;
+  }
+
+  for (const field of configBody.matchAll(/\bresolve\s*:/g)) {
+    if (!isTopLevelObjectKey(configBody, field.index || 0)) {
+      continue;
+    }
+
+    const resolveTail = configBody.slice((field.index || 0) + field[0].length, (field.index || 0) + field[0].length + 220);
+    if (isLikelyGraphqlResolverValue(resolveTail)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function isTopLevelObjectKey(content, index) {
+  let braceDepth = 0;
+  let bracketDepth = 0;
+  let parenDepth = 0;
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let inTemplate = false;
+  let inLineComment = false;
+  let inBlockComment = false;
+  let escaped = false;
+
+  for (let cursor = 0; cursor < index; cursor += 1) {
+    const token = content[cursor];
+
+    if (inLineComment) {
+      if (token === '\n') {
+        inLineComment = false;
+      }
+      continue;
+    }
+    if (inBlockComment) {
+      if (token === '*' && content[cursor + 1] === '/') {
+        inBlockComment = false;
+        cursor += 1;
+      }
+      continue;
+    }
+    if (inSingleQuote) {
+      if (!escaped && token === '\'') {
+        inSingleQuote = false;
+      }
+      escaped = !escaped && token === '\\';
+      continue;
+    }
+    if (inDoubleQuote) {
+      if (!escaped && token === '"') {
+        inDoubleQuote = false;
+      }
+      escaped = !escaped && token === '\\';
+      continue;
+    }
+    if (inTemplate) {
+      if (!escaped && token === '`') {
+        inTemplate = false;
+      }
+      escaped = !escaped && token === '\\';
+      continue;
+    }
+
+    escaped = false;
+    if (token === '/' && content[cursor + 1] === '/') {
+      inLineComment = true;
+      cursor += 1;
+      continue;
+    }
+    if (token === '/' && content[cursor + 1] === '*') {
+      inBlockComment = true;
+      cursor += 1;
+      continue;
+    }
+    if (token === '\'') {
+      inSingleQuote = true;
+      continue;
+    }
+    if (token === '"') {
+      inDoubleQuote = true;
+      continue;
+    }
+    if (token === '`') {
+      inTemplate = true;
+      continue;
+    }
+
+    if (token === '{') {
+      braceDepth += 1;
+      continue;
+    }
+    if (token === '}') {
+      braceDepth = Math.max(0, braceDepth - 1);
+      continue;
+    }
+    if (token === '[') {
+      bracketDepth += 1;
+      continue;
+    }
+    if (token === ']') {
+      bracketDepth = Math.max(0, bracketDepth - 1);
+      continue;
+    }
+    if (token === '(') {
+      parenDepth += 1;
+      continue;
+    }
+    if (token === ')') {
+      parenDepth = Math.max(0, parenDepth - 1);
+    }
+  }
+
+  return braceDepth === 0 && bracketDepth === 0 && parenDepth === 0;
 }
 
 function parseRouteMethods(body) {
