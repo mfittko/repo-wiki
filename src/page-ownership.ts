@@ -102,12 +102,13 @@ export function preserveHumanNotes(content: string, notes: string): string {
 }
 
 function extractFrontmatter(content: string): string {
-  if (!content.startsWith('---\n')) {
+  const normalized = content.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+  if (!normalized.startsWith('---\n')) {
     return '';
   }
-  const end = content.indexOf('\n---', 4);
+  const end = normalized.indexOf('\n---', 4);
   if (end === -1) {
     return '';
   }
-  return content.slice(4, end);
+  return normalized.slice(4, end);
 }

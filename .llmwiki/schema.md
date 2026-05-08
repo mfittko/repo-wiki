@@ -50,7 +50,7 @@ source_paths:
 ---
 ```
 
-`page_state` is emitted for generated pages and may be `generated`, `mixed`, or `human-owned`. Pages marked `human-owned` are skipped by the compiler; generated pages with non-empty preserved HUMAN_NOTES are rewritten as `mixed`.
+`page_state` is emitted for generated pages, including `_Sidebar.md`, and may be `generated`, `mixed`, or `human-owned`. Pages marked `human-owned` or `owned_by: "human"` are skipped by the compiler; generated pages with non-empty preserved HUMAN_NOTES are rewritten as `mixed`. Existing pages without repo-wiki ownership metadata are treated as unmanaged and are not overwritten or adopted by default; adoption must be explicit by adding generated frontmatter/ownership metadata.
 
 ## Lint gates
 

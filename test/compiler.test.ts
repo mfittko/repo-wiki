@@ -376,7 +376,10 @@ test('compileWiki adds page_state: "generated" frontmatter to new pages', async 
   try {
     await compileWiki({ scanDir, planFile, wikiDir });
     const homePage = await fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8');
+    const sidebarPage = await fs.readFile(path.join(wikiDir, '_Sidebar.md'), 'utf8');
     assert.match(homePage, /page_state: "generated"/);
+    assert.match(sidebarPage, /source_commit: "abc123"/);
+    assert.match(sidebarPage, /page_state: "generated"/);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
@@ -487,7 +490,7 @@ test('compileWiki preserves whitespace-only HUMAN_NOTES without marking the page
   }
 });
 
-test('compileWiki does not overwrite a human-owned page', async () => {
+test('compileWiki does not overwrite a human-owned page and summarizes owned_by skips', async () => {
   const manifest = {
     remote: 'origin',
     commit: 'abc123',
@@ -502,22 +505,24 @@ test('compileWiki does not overwrite a human-owned page', async () => {
     // First compilation.
     await compileWiki({ scanDir, planFile, wikiDir });
 
-    // A human claims ownership of the Home page.
+    // A human claims ownership of the Home page using owned_by.
     const originalHome = await fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8');
-    const ownedHome = originalHome.replace('page_state: "generated"', 'page_state: "human-owned"');
+    const ownedHome = originalHome.replace('page_state: "generated"', 'page_state: "generated"\nowned_by: "human"');
     await fs.writeFile(path.join(wikiDir, 'Home.md'), ownedHome, 'utf8');
 
     // Second compilation – must not touch the human-owned page.
-    await compileWiki({ scanDir, planFile, wikiDir });
+    const result = await compileWiki({ scanDir, planFile, wikiDir });
 
     const afterRecompile = await fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8');
     assert.equal(afterRecompile, ownedHome);
+    assert.equal(result.summary.skipped, 1);
+    assert.equal(result.summary.skipped_by_state['human-owned'], 1);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
 
-test('compileWiki preserves human notes in unmanaged page (no source_commit)', async () => {
+test('compileWiki does not overwrite unmanaged pages by default', async () => {
   const manifest = {
     remote: 'origin',
     commit: 'abc123',
@@ -560,14 +565,13 @@ test('compileWiki preserves human notes in unmanaged page (no source_commit)', a
     ].join('\n');
     await fs.writeFile(path.join(wikiDir, 'Module-Index.md'), unmanagedContent, 'utf8');
 
-    // Compilation should adopt the notes from the unmanaged page.
-    await compileWiki({ scanDir, planFile, wikiDir });
+    // Compilation must not implicitly adopt or overwrite the unmanaged page.
+    const compileResult = await compileWiki({ scanDir, planFile, wikiDir });
 
     const result = await fs.readFile(path.join(wikiDir, 'Module-Index.md'), 'utf8');
-    assert.match(result, /Notes left by a human\./);
-    assert.match(result, /page_state: "mixed"/);
-    // The page should now have proper generated frontmatter.
-    assert.match(result, /source_commit:/);
+    assert.equal(result, unmanagedContent);
+    assert.equal(compileResult.summary.skipped, 1);
+    assert.equal(compileResult.summary.skipped_by_state.unmanaged, 1);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

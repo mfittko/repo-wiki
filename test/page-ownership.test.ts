@@ -37,6 +37,16 @@ test('detectPageState returns "generated" for a clean generated page', () => {
   assert.equal(detectPageState(content), 'generated');
 });
 
+test('detectPageState tolerates UTF-8 BOM and CRLF frontmatter', () => {
+  const content = '\uFEFF---\r\nsource_repo: "owner/repo"\r\nsource_commit: "abc123"\r\npage_state: "generated"\r\n---\r\n\r\n# Test Page\r\n';
+  assert.equal(detectPageState(content), 'generated');
+});
+
+test('detectPageState detects CRLF human-owned frontmatter', () => {
+  const content = '---\r\nsource_commit: "abc123"\r\nowned_by: "human"\r\n---\r\n\r\n# Human-owned\r\n';
+  assert.equal(detectPageState(content), 'human-owned');
+});
+
 test('detectPageState returns "mixed" when HUMAN_NOTES has non-empty content', () => {
   const content = generatedPage('\nSome human notes here.\n');
   assert.equal(detectPageState(content), 'mixed');
