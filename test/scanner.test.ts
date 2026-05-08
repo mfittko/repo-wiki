@@ -163,3 +163,36 @@ export class Session extends Model {}
     await fs.rm(repo, { recursive: true, force: true });
   }
 });
+
+test('scanRepository extracts deterministic Python imports and symbols', async () => {
+  const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-python-test-'));
+
+  try {
+    await fs.mkdir(path.join(repo, 'src'), { recursive: true });
+    await fs.writeFile(path.join(repo, 'src', 'app.py'), `import os
+from collections import defaultdict
+
+SETTING = "prod"
+
+class Service:
+    pass
+
+def helper():
+    return True
+
+async def run_job():
+    return None
+`, 'utf8');
+
+    const out = path.join(repo, '.llmwiki', 'run');
+    const result = await scanRepository({
+      mode: 'bootstrap',
+      repoPath: repo,
+      outDir: out
+    });
+
+    assert.equal(result.manifest.totals.languages.Python, 1);
+    const pythonCard = result.manifest.files.find((file) => file.path === 'src/app.py');
+    assert.ok(pythonCard);
+    assert.deepEqual(pythonCard.imports, ['collections', 'os']);
+    assert.deepEqual(pythonCard.symbols, ['SETTING', 'Service', 'helper', 'run_job']);

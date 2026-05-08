@@ -6,6 +6,7 @@ const JAVASCRIPT_LANGUAGES = new Set([
   'TypeScript',
   'TypeScript React'
 ]);
+const PYTHON_LANGUAGE = 'Python';
 
 const GO_LANGUAGE = 'Go';
 
@@ -48,6 +49,10 @@ export function extractImports(content: string, language: string): string[] {
     return extractGoImports(content);
   }
 
+  if (isPython(language)) {
+    return extractPythonImports(content);
+  }
+
   if (!isJavaScriptLike(language)) {
     return [];
   }
@@ -71,6 +76,10 @@ export function extractImports(content: string, language: string): string[] {
 export function extractSymbols(content: string, language: string): string[] {
   if (language === GO_LANGUAGE) {
     return getGoDeclarations(content).allSymbols;
+  }
+
+  if (isPython(language)) {
+    return extractPythonSymbols(content);
   }
 
   if (!isJavaScriptLike(language)) {
@@ -403,6 +412,112 @@ function inferRuntimeHintLanguage(filePath: string) {
 
 function isJavaScriptLike(language) {
   return JAVASCRIPT_LANGUAGES.has(language);
+}
+
+function isPython(language: string) {
+  return language === PYTHON_LANGUAGE;
+}
+
+function extractPythonImports(content: string): string[] {
+  const imports = new Set<string>();
+
+  for (const rawLine of content.split(/\r?\n/)) {
+    if (!/^\S/.test(rawLine)) {
+      continue;
+    }
+
+    const line = stripInlineComment(rawLine).trim();
+    if (!line) {
+      continue;
+    }
+
+    const importMatch = line.match(/^import\s+(.+)$/);
+    if (importMatch) {
+      for (const entry of importMatch[1].split(',')) {
+        const specifier = entry.trim().split(/\s+as\s+/i)[0]?.trim();
+        if (specifier) {
+          imports.add(specifier);
+        }
+      }
+      continue;
+    }
+
+    const fromMatch = line.match(/^from\s+([.\w]+)\s+import\s+/);
+    if (fromMatch) {
+      imports.add(fromMatch[1]);
+    }
+  }
+
+  return [...imports].sort();
+}
+
+function extractPythonSymbols(content: string): string[] {
+  const symbols = new Set<string>();
+
+  for (const rawLine of content.split(/\r?\n/)) {
+    if (!/^\S/.test(rawLine)) {
+      continue;
+    }
+
+    const line = stripInlineComment(rawLine).trim();
+    if (!line) {
+      continue;
+    }
+
+    const asyncFunction = line.match(/^async\s+def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\([^)]*\)\s*(?:->\s*[^:]+)?\s*:/);
+    if (asyncFunction) {
+      symbols.add(asyncFunction[1]);
+      continue;
+    }
+
+    const functionMatch = line.match(/^def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\([^)]*\)\s*(?:->\s*[^:]+)?\s*:/);
+    if (functionMatch) {
+      symbols.add(functionMatch[1]);
+      continue;
+    }
+
+    const classMatch = line.match(/^class\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:\([^)]*\))?\s*:/);
+    if (classMatch) {
+      symbols.add(classMatch[1]);
+      continue;
+    }
+
+    const constantMatch = line.match(/^([A-Z][A-Z0-9_]*)\s*(?::[^=]+)?=\s*/);
+    if (constantMatch) {
+      symbols.add(constantMatch[1]);
+    }
+  }
+
+  return [...symbols].sort().slice(0, 50);
+}
+
+function stripInlineComment(line: string) {
+  let quote: '"' | "'" | null = null;
+  for (let index = 0; index < line.length; index += 1) {
+    const current = line[index];
+
+    if (quote) {
+      if (current === '\\') {
+        index += 1;
+        continue;
+      }
+      if (current === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (current === '"' || current === "'") {
+      quote = current;
+      continue;
+    }
+
+    if (current === '#') {
+      return line.slice(0, index);
+    }
+  }
+
+  return line;
 }
 
 function extractJavaScriptAstMetadata(content: string, language: string): JavaScriptAstMetadata | null {

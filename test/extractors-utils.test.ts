@@ -209,6 +209,7 @@ export default (
 test('language detection and classification cover the major path cases', () => {
   assert.equal(detectLanguage('Dockerfile'), 'Dockerfile');
   assert.equal(detectLanguage('src/component.tsx'), 'TypeScript React');
+  assert.equal(detectLanguage('src/module.py'), 'Python');
   assert.equal(detectLanguage('README'), 'Text');
 
   assert.equal(classifyPath('tests/foo.spec.ts'), 'test');
@@ -219,6 +220,44 @@ test('language detection and classification cover the major path cases', () => {
   assert.equal(classifyPath('ops/infra/main.tf'), 'infra');
   assert.equal(classifyPath('package-lock.json'), 'package');
   assert.equal(classifyPath('src/index.ts'), 'source');
+});
+
+test('python extraction captures imports, classes, functions, async functions, constants, and malformed input fallback', () => {
+  const pythonSource = `
+import os
+import pkg.mod as mod, json
+from collections import defaultdict
+from .local.module import value as local_value
+
+CONSTANT = "value"
+MAX_RETRIES: int = 3
+
+class Service:
+    def method(self):
+        return 1
+
+def helper(name: str):
+    return name
+
+async def fetch_data():
+    return None
+`;
+
+  assert.deepEqual(extractImports(pythonSource, 'Python'), ['.local.module', 'collections', 'json', 'os', 'pkg.mod']);
+  assert.deepEqual(extractSymbols(pythonSource, 'Python'), ['CONSTANT', 'MAX_RETRIES', 'Service', 'fetch_data', 'helper']);
+
+  const malformedSource = `
+import requests
+def still_ok():
+    return True
+def broken(
+class Recoverable:
+    pass
+RESULT = 1
+`;
+  assert.doesNotThrow(() => extractSymbols(malformedSource, 'Python'));
+  assert.deepEqual(extractSymbols(malformedSource, 'Python'), ['RESULT', 'Recoverable', 'still_ok']);
+  assert.deepEqual(extractImports(malformedSource, 'Python'), ['requests']);
 });
 
 test('git helpers cover success and fallback paths', async () => {
