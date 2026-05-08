@@ -4,7 +4,7 @@ import { hasDataModelSignals } from './data-model-signals.js';
 import { assembleAllPageContexts } from './context-assembler.js';
 import { ensureDir, readJson, writeText } from './utils/fs.js';
 import { classifyDocumentedCommands, mergePackageScripts } from './docs-ingestor.js';
-import { detectPageState, extractHumanNotes, injectHumanNotes } from './page-ownership.js';
+import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-ownership.js';
 
 export async function compileWiki({ scanDir, planFile, wikiDir }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
@@ -71,7 +71,7 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
       // Preserve any human notes that exist in the current page.
       const notes = extractHumanNotes(existingContent);
       if (notes.trim().length > 0) {
-        const withNotes = injectHumanNotes(newContent, notes);
+        const withNotes = preserveHumanNotes(newContent, notes);
         // Update page_state to "mixed" since human notes are present.
         await writeText(filePath, withNotes.replace(/^page_state: "generated"/m, 'page_state: "mixed"'));
         continue;

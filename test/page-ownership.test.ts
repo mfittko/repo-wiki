@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectPageState, extractHumanNotes, injectHumanNotes } from '../src/page-ownership.js';
+import { detectPageState, extractHumanNotes, injectHumanNotes, preserveHumanNotes } from '../src/page-ownership.js';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -81,6 +81,21 @@ test('detectPageState returns "unmanaged" when source_commit is absent', () => {
 
 test('detectPageState returns "unmanaged" for an empty page', () => {
   assert.equal(detectPageState(''), 'unmanaged');
+});
+
+test('detectPageState ignores ownership-like text outside frontmatter', () => {
+  const content = [
+    '---',
+    'source_commit: "abc123"',
+    'page_state: "generated"',
+    '---',
+    '',
+    '# Page',
+    '',
+    'Body mentions page_state: "human-owned" for documentation purposes.',
+    ''
+  ].join('\n');
+  assert.equal(detectPageState(content), 'generated');
 });
 
 test('detectPageState treats human-owned declaration as higher priority than non-empty notes', () => {
@@ -182,6 +197,16 @@ test('injectHumanNotes preserves content outside the markers', () => {
   assert.match(result, /# Title/);
   assert.match(result, /## Footer/);
   assert.match(result, /Human content\./);
+});
+
+test('preserveHumanNotes appends markers when generated content has no human notes block', () => {
+  const content = '---\nsource_commit: "abc"\npage_state: "generated"\n---\n\n# Home\n';
+  const notes = '\nKeep this home-page note.\n';
+  const preserved = preserveHumanNotes(content, notes);
+
+  assert.match(preserved, /# Home/);
+  assert.match(preserved, /HUMAN_NOTES_START/);
+  assert.equal(extractHumanNotes(preserved), notes);
 });
 
 test('extractHumanNotes round-trips through injectHumanNotes', () => {

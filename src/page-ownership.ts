@@ -19,19 +19,21 @@ const HUMAN_NOTES_END = '<!-- HUMAN_NOTES_END -->';
  * Inspect a wiki page's content and return its ownership state.
  *
  * Decision order:
- * 1. Explicit `page_state: "human-owned"` or `owned_by: "human"` → human-owned.
- * 2. No `source_commit:` field in content → unmanaged.
+ * 1. Explicit `page_state: "human-owned"` or `owned_by: "human"` in frontmatter → human-owned.
+ * 2. No `source_commit:` field in frontmatter → unmanaged.
  * 3. Non-empty content between HUMAN_NOTES markers → mixed.
  * 4. Otherwise → generated.
  */
 export function detectPageState(content: string): PageState {
+  const frontmatter = extractFrontmatter(content);
+
   // Explicit human-ownership declarations take the highest priority.
-  if (/^page_state:\s*"human-owned"/m.test(content) || /^owned_by:\s*"human"/m.test(content)) {
+  if (/^page_state:\s*"human-owned"/m.test(frontmatter) || /^owned_by:\s*"human"/m.test(frontmatter)) {
     return 'human-owned';
   }
 
-  // Must have a source_commit field to be considered a repo-wiki page.
-  if (!/^source_commit:/m.test(content)) {
+  // Must have a source_commit field in frontmatter to be considered a repo-wiki page.
+  if (!/^source_commit:/m.test(frontmatter)) {
     return 'unmanaged';
   }
 
@@ -76,4 +78,28 @@ export function injectHumanNotes(content: string, notes: string): string {
     notes +
     content.slice(end)
   );
+}
+
+/**
+ * Preserve notes in generated content. If the renderer did not include a human
+ * notes block, append one so non-module pages can still retain human content.
+ */
+export function preserveHumanNotes(content: string, notes: string): string {
+  if (content.includes(HUMAN_NOTES_START) && content.includes(HUMAN_NOTES_END)) {
+    return injectHumanNotes(content, notes);
+  }
+
+  const suffix = content.endsWith('\n') ? '' : '\n';
+  return `${content}${suffix}\n${HUMAN_NOTES_START}${notes}${HUMAN_NOTES_END}\n`;
+}
+
+function extractFrontmatter(content: string): string {
+  if (!content.startsWith('---\n')) {
+    return '';
+  }
+  const end = content.indexOf('\n---', 4);
+  if (end === -1) {
+    return '';
+  }
+  return content.slice(4, end);
 }
