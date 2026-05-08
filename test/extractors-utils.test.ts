@@ -342,7 +342,11 @@ const appRouter = t.router({
 
 const resolvers = {
   Query: {
-    health: () => 'ok'
+    health: () => 'ok',
+    user: {
+      type: UserType,
+      resolve: () => ({ id: '1' })
+    }
   },
   Mutation: {
     createPost: () => ({})
@@ -361,6 +365,7 @@ registry.registerPath({ path: '/openapi/missing-method' });
     { kind: 'rpc-route', framework: 'trpc', target: 'router', methods: ['MUTATION'], path: '/createUser', handler: 'createUser' },
     { kind: 'graphql-operation', framework: 'graphql', target: 'Mutation', methods: ['MUTATION'], path: '/graphql', handler: 'createPost' },
     { kind: 'graphql-operation', framework: 'graphql', target: 'Query', methods: ['QUERY'], path: '/graphql', handler: 'health' },
+    { kind: 'graphql-operation', framework: 'graphql', target: 'Query', methods: ['QUERY'], path: '/graphql', handler: 'user' },
     { kind: 'rpc-route', framework: 'trpc', target: 'router', methods: ['QUERY'], path: '/hello', handler: 'hello' },
     { kind: 'http-route', framework: 'koa', target: 'koaRouter', methods: ['GET'], path: '/koa-health', handler: 'koaHealth' },
     { kind: 'openapi-operation', framework: 'openapi', target: 'registry', methods: ['GET'], path: '/openapi/pets', handler: 'listPets' },
@@ -369,6 +374,7 @@ registry.registerPath({ path: '/openapi/missing-method' });
   ]);
 
   assert.deepEqual(extractRouteSurfaces('src/plain.ts', `
+import { graphql } from 'graphql';
 const resolvers = {
   Query: {
     nonFunctionResolver: true

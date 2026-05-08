@@ -620,8 +620,13 @@ function extractGraphqlRouteSurfaces(content, surfaces, seen) {
     }
 
     for (const field of body.matchAll(/\b([A-Za-z_$][\w$]*)\s*:/g)) {
-      const tail = body.slice((field.index || 0) + field[0].length, (field.index || 0) + field[0].length + 220);
-      if (!isLikelyGraphqlResolverValue(tail)) {
+      if (!isTopLevelObjectKey(body, field.index || 0)) {
+        continue;
+      }
+
+      const valueStart = (field.index || 0) + field[0].length;
+      const tail = body.slice(valueStart, valueStart + 220);
+      if (!isLikelyGraphqlOperationValue(body, valueStart, tail)) {
         continue;
       }
 
@@ -794,6 +799,137 @@ function readBalancedObjectBody(content, openBraceIndex, maxBodyLength) {
 function isLikelyGraphqlResolverValue(value) {
   // Only treat resolver entries as API surfaces when the mapped value looks callable.
   return /^\s*(?:async\s*)?(?:function\b|\(|[A-Za-z_$][\w$]*\s*\()/m.test(value);
+}
+
+function isLikelyGraphqlOperationValue(body, valueStart, valueTail) {
+  if (isLikelyGraphqlResolverValue(valueTail)) {
+    return true;
+  }
+
+  const leadingOffset = valueTail.match(/^\s*/)?.[0]?.length || 0;
+  const objectStart = valueStart + leadingOffset;
+  if (body[objectStart] !== '{') {
+    return false;
+  }
+
+  const configBody = readBalancedObjectBody(body, objectStart, 500);
+  if (!configBody) {
+    return false;
+  }
+
+  for (const field of configBody.matchAll(/\bresolve\s*:/g)) {
+    if (!isTopLevelObjectKey(configBody, field.index || 0)) {
+      continue;
+    }
+
+    const resolveTail = configBody.slice((field.index || 0) + field[0].length, (field.index || 0) + field[0].length + 220);
+    if (isLikelyGraphqlResolverValue(resolveTail)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function isTopLevelObjectKey(content, index) {
+  let braceDepth = 0;
+  let bracketDepth = 0;
+  let parenDepth = 0;
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let inTemplate = false;
+  let inLineComment = false;
+  let inBlockComment = false;
+  let escaped = false;
+
+  for (let cursor = 0; cursor < index; cursor += 1) {
+    const token = content[cursor];
+
+    if (inLineComment) {
+      if (token === '\n') {
+        inLineComment = false;
+      }
+      continue;
+    }
+    if (inBlockComment) {
+      if (token === '*' && content[cursor + 1] === '/') {
+        inBlockComment = false;
+        cursor += 1;
+      }
+      continue;
+    }
+    if (inSingleQuote) {
+      if (!escaped && token === '\'') {
+        inSingleQuote = false;
+      }
+      escaped = !escaped && token === '\\';
+      continue;
+    }
+    if (inDoubleQuote) {
+      if (!escaped && token === '"') {
+        inDoubleQuote = false;
+      }
+      escaped = !escaped && token === '\\';
+      continue;
+    }
+    if (inTemplate) {
+      if (!escaped && token === '`') {
+        inTemplate = false;
+      }
+      escaped = !escaped && token === '\\';
+      continue;
+    }
+
+    escaped = false;
+    if (token === '/' && content[cursor + 1] === '/') {
+      inLineComment = true;
+      cursor += 1;
+      continue;
+    }
+    if (token === '/' && content[cursor + 1] === '*') {
+      inBlockComment = true;
+      cursor += 1;
+      continue;
+    }
+    if (token === '\'') {
+      inSingleQuote = true;
+      continue;
+    }
+    if (token === '"') {
+      inDoubleQuote = true;
+      continue;
+    }
+    if (token === '`') {
+      inTemplate = true;
+      continue;
+    }
+
+    if (token === '{') {
+      braceDepth += 1;
+      continue;
+    }
+    if (token === '}') {
+      braceDepth = Math.max(0, braceDepth - 1);
+      continue;
+    }
+    if (token === '[') {
+      bracketDepth += 1;
+      continue;
+    }
+    if (token === ']') {
+      bracketDepth = Math.max(0, bracketDepth - 1);
+      continue;
+    }
+    if (token === '(') {
+      parenDepth += 1;
+      continue;
+    }
+    if (token === ')') {
+      parenDepth = Math.max(0, parenDepth - 1);
+    }
+  }
+
+  return braceDepth === 0 && bracketDepth === 0 && parenDepth === 0;
 }
 
 function parseRouteMethods(body) {
