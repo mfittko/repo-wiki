@@ -116,7 +116,7 @@ export const answer = 42;
   assert.deepEqual(extractSymbols(jsSource, 'JavaScript'), ['Service', 'answer', 'default', 'helper', 'localValue']);
   assert.deepEqual(extractExportedSymbols(jsSource, 'JavaScript'), [
     { name: 'answer', kind: 'const' },
-    { name: 'default', kind: 'default' }
+    { name: 'default', kind: 'function' }
   ]);
 
   const tsSource = `

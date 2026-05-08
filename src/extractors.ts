@@ -78,8 +78,8 @@ export function extractExportedSymbols(content: string, language: string): Array
       .slice(0, 50);
   }
 
-  const exported = [];
-  const seen = new Set();
+  const exported: Array<{ name: string; kind: string }> = [];
+  const seen = new Set<string>();
   const directPatterns = [
     { pattern: /export\s+default\s+async\s+function\s+([A-Za-z_$][\w$]*)/g, kind: 'function' },
     { pattern: /export\s+default\s+function(?:\s+([A-Za-z_$][\w$]*))?\s*\(/g, kind: 'function', allowDefaultName: true },
@@ -259,15 +259,20 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
     const symbols = new Set<string>();
     const exported: Array<{ name: string; kind: string }> = [];
     const seenExported = new Set<string>();
+    const declarationKinds = new Map<string, string>();
 
     for (const statement of sourceFile.statements) {
+      const modifierFlags = getModifierFlags(statement);
+
       if (ts.isFunctionDeclaration(statement)) {
         if (statement.name) {
-          symbols.add(statement.name.text);
-          if (hasExportModifier(statement)) {
+          const name = statement.name.text;
+          symbols.add(name);
+          declarationKinds.set(name, 'function');
+          if (modifierFlags.exported) {
             pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'function' });
           }
-        } else if (hasDefaultModifier(statement)) {
+        } else if (modifierFlags.defaultExport) {
           symbols.add('default');
           pushExportedSymbol(exported, seenExported, { name: 'default', kind: 'function' });
         }
@@ -276,11 +281,13 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
 
       if (ts.isClassDeclaration(statement)) {
         if (statement.name) {
-          symbols.add(statement.name.text);
-          if (hasExportModifier(statement)) {
+          const name = statement.name.text;
+          symbols.add(name);
+          declarationKinds.set(name, 'class');
+          if (modifierFlags.exported) {
             pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'class' });
           }
-        } else if (hasDefaultModifier(statement)) {
+        } else if (modifierFlags.defaultExport) {
           symbols.add('default');
           pushExportedSymbol(exported, seenExported, { name: 'default', kind: 'class' });
         }
@@ -288,24 +295,30 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
       }
 
       if (ts.isInterfaceDeclaration(statement)) {
-        symbols.add(statement.name.text);
-        if (hasExportModifier(statement)) {
+        const name = statement.name.text;
+        symbols.add(name);
+        declarationKinds.set(name, 'interface');
+        if (modifierFlags.exported) {
           pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'interface' });
         }
         continue;
       }
 
       if (ts.isTypeAliasDeclaration(statement)) {
-        symbols.add(statement.name.text);
-        if (hasExportModifier(statement)) {
+        const name = statement.name.text;
+        symbols.add(name);
+        declarationKinds.set(name, 'type');
+        if (modifierFlags.exported) {
           pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'type' });
         }
         continue;
       }
 
       if (ts.isEnumDeclaration(statement)) {
-        symbols.add(statement.name.text);
-        if (hasExportModifier(statement)) {
+        const name = statement.name.text;
+        symbols.add(name);
+        declarationKinds.set(name, 'enum');
+        if (modifierFlags.exported) {
           pushExportedSymbol(exported, seenExported, { name: statement.name.text, kind: 'enum' });
         }
         continue;
@@ -319,9 +332,11 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
             : 'var';
         for (const declaration of statement.declarationList.declarations) {
           if (ts.isIdentifier(declaration.name)) {
-            symbols.add(declaration.name.text);
-            if (hasExportModifier(statement)) {
-              pushExportedSymbol(exported, seenExported, { name: declaration.name.text, kind });
+            const name = declaration.name.text;
+            symbols.add(name);
+            declarationKinds.set(name, kind);
+            if (modifierFlags.exported) {
+              pushExportedSymbol(exported, seenExported, { name, kind });
             }
           }
         }
@@ -332,7 +347,7 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
         symbols.add('default');
         pushExportedSymbol(exported, seenExported, {
           name: 'default',
-          kind: inferDefaultExportKind(statement.expression)
+          kind: inferDefaultExportKind(statement.expression, declarationKinds)
         });
         continue;
       }
@@ -350,15 +365,11 @@ function extractJavaScriptAstMetadata(content: string, language: string) {
   }
 }
 
-function hasExportModifier(node) {
-  return ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword);
-}
+function inferDefaultExportKind(expression: ts.Expression, declarationKinds: Map<string, string>): string {
+  if (ts.isIdentifier(expression)) {
+    return declarationKinds.get(expression.text) || 'default';
+  }
 
-function hasDefaultModifier(node) {
-  return ts.canHaveModifiers(node) && ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword);
-}
-
-function inferDefaultExportKind(expression) {
   if (ts.isFunctionExpression(expression) || ts.isArrowFunction(expression)) {
     return 'function';
   }
@@ -370,7 +381,23 @@ function inferDefaultExportKind(expression) {
   return 'default';
 }
 
-function pushExportedSymbol(exported, seen, symbol) {
+function getModifierFlags(node: ts.Node): { exported: boolean; defaultExport: boolean } {
+  if (!ts.canHaveModifiers(node)) {
+    return { exported: false, defaultExport: false };
+  }
+
+  const modifiers = ts.getModifiers(node) || [];
+  return {
+    exported: modifiers.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword),
+    defaultExport: modifiers.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)
+  };
+}
+
+function pushExportedSymbol(
+  exported: Array<{ name: string; kind: string }>,
+  seen: Set<string>,
+  symbol: { name: string; kind: string }
+) {
   const key = `${symbol.name}\u0000${symbol.kind}`;
   if (seen.has(key)) {
     return;
