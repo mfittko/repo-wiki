@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add deterministic migration and ORM/model detection with data-model wiki routing.
 - Add deterministic Python source extraction support with docstring-safe parsing.
 - Add affected-page graph inputs for incremental mode.
+- Add deterministic Rust scanner extraction for imports, re-exports, and top-level items.
 
 ### Changed
 - Node.js engine requirement raised to `>=24`; removed unsafe incremental cache from scanner
