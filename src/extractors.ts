@@ -202,6 +202,11 @@ export function extractRouteSurfaces(filePath: string, content: string, language
     });
   }
 
+  extractNestRouteSurfaces(content, surfaces, seen);
+  extractTrpcRouteSurfaces(content, surfaces, seen);
+  extractGraphqlRouteSurfaces(content, surfaces, seen);
+  extractOpenApiRouteSurfaces(content, surfaces, seen);
+
   const routeHandlerPath = inferFileRoutePath(filePath);
   if (routeHandlerPath) {
     const routeHandlerPatterns = [
@@ -502,12 +507,14 @@ function collectDestructuredEnvNames(content, pattern, names) {
 
 function inferRouteTargets(content) {
   const targets = new Map();
+  const routerFactoryFramework = inferRouterFactoryFramework(content);
   const patterns = [
     { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*express\s*\(/g, framework: 'express' },
     { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*express\s*\.\s*Router\s*\(/g, framework: 'express' },
-    { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*Router\s*\(/g, framework: 'express' },
+    { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:new\s+)?Router\s*\(/g, framework: routerFactoryFramework },
     { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:fastify|Fastify)\s*\(/g, framework: 'fastify' },
-    { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*new\s+Hono\s*\(/g, framework: 'hono' }
+    { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*new\s+Hono\s*\(/g, framework: 'hono' },
+    { pattern: /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*new\s+Koa\s*\(/g, framework: 'koa' }
   ];
 
   for (const { pattern, framework } of patterns) {
@@ -522,6 +529,10 @@ function inferRouteTargets(content) {
 function inferRouteFramework(target, targets) {
   if (targets.has(target)) {
     return targets.get(target);
+  }
+
+  if (/koa/i.test(target)) {
+    return 'koa';
   }
 
   if (/fastify/i.test(target)) {
@@ -542,6 +553,106 @@ function inferRouteFramework(target, targets) {
 function inferHandlerName(content, offset) {
   const tail = content.slice(offset, offset + 160);
   return tail.match(/^\s*,\s*([A-Za-z_$][\w$]*)\b/)?.[1] || null;
+}
+
+function extractNestRouteSurfaces(content, surfaces, seen) {
+  const controllers = [...content.matchAll(/@Controller\s*\(\s*(?:['"`]([^'"`]*)['"`])?\s*\)\s*(?:export\s+)?class\s+([A-Za-z_$][\w$]*)/g)];
+  if (!controllers.length) {
+    return;
+  }
+
+  for (let index = 0; index < controllers.length; index += 1) {
+    const controller = controllers[index];
+    const basePath = controller[1] || '';
+    const className = controller[2];
+    const segmentStart = (controller.index || 0) + controller[0].length;
+    const segmentEnd = index + 1 < controllers.length ? (controllers[index + 1].index || content.length) : content.length;
+    const segment = content.slice(segmentStart, segmentEnd);
+    const methodPattern = /@(Get|Post|Put|Patch|Delete|Options|Head|All)\s*\(\s*(?:['"`]([^'"`]*)['"`])?\s*\)\s*(?:public|private|protected|async|static|\s)*([A-Za-z_$][\w$]*)\s*\(/g;
+
+    for (const match of segment.matchAll(methodPattern)) {
+      const routePath = combineRoutePath(basePath, match[2] || '');
+      pushRouteSurface(surfaces, seen, {
+        kind: 'http-route',
+        framework: 'nestjs',
+        target: className,
+        methods: [match[1].toUpperCase()],
+        path: routePath,
+        handler: match[3]
+      });
+    }
+  }
+}
+
+function extractTrpcRouteSurfaces(content, surfaces, seen) {
+  if (!/\b(?:@trpc\/server|initTRPC|createTRPCRouter|t\s*\.\s*router|router\s*\(\s*\{)/.test(content)) {
+    return;
+  }
+
+  for (const match of content.matchAll(/\b([A-Za-z_$][\w$]*)\s*:\s*[A-Za-z_$][\w$.]*\s*\.\s*(query|mutation|subscription)\s*\(/g)) {
+    pushRouteSurface(surfaces, seen, {
+      kind: 'rpc-route',
+      framework: 'trpc',
+      target: 'router',
+      methods: [match[2].toUpperCase()],
+      path: `/${match[1]}`,
+      handler: match[1]
+    });
+  }
+}
+
+function extractGraphqlRouteSurfaces(content, surfaces, seen) {
+  if (!/\b(?:graphql|gql|apollo)\b/i.test(content)) {
+    return;
+  }
+
+  for (const block of content.matchAll(/\b(Query|Mutation|Subscription)\s*:\s*\{([\s\S]{0,2000}?)\}/g)) {
+    for (const field of block[2].matchAll(/\b([A-Za-z_$][\w$]*)\s*:/g)) {
+      pushRouteSurface(surfaces, seen, {
+        kind: 'graphql-operation',
+        framework: 'graphql',
+        target: block[1],
+        methods: [block[1].toUpperCase()],
+        path: '/graphql',
+        handler: field[1]
+      });
+    }
+  }
+}
+
+function extractOpenApiRouteSurfaces(content, surfaces, seen) {
+  if (!/\b(?:openapi|swagger|registerPath)\b/i.test(content)) {
+    return;
+  }
+
+  for (const match of content.matchAll(/([A-Za-z_$][\w$]*)\s*\.\s*registerPath\s*\(\s*\{([\s\S]{0,1000}?)\}\s*\)/g)) {
+    const method = match[2].match(/\bmethod\s*:\s*['"`]([A-Za-z]+)['"`]/)?.[1];
+    const routePath = match[2].match(/\bpath\s*:\s*['"`]([^'"`]+)['"`]/)?.[1];
+    if (!method || !routePath) {
+      continue;
+    }
+
+    pushRouteSurface(surfaces, seen, {
+      kind: 'openapi-operation',
+      framework: 'openapi',
+      target: match[1],
+      methods: [method.toUpperCase()],
+      path: routePath,
+      handler: match[2].match(/\boperationId\s*:\s*['"`]([^'"`]+)['"`]/)?.[1] || null
+    });
+  }
+}
+
+function combineRoutePath(basePath, routePath) {
+  const parts = [basePath, routePath]
+    .map((value) => (value || '').trim())
+    .filter((value) => value.length > 0)
+    .map((value) => value.replace(/^\/+|\/+$/g, ''));
+  return `/${parts.join('/')}`.replace(/\/+/g, '/');
+}
+
+function inferRouterFactoryFramework(content) {
+  return /['"](?:@koa\/router|koa-router)['"]/.test(content) ? 'koa' : 'express';
 }
 
 function parseRouteMethods(body) {

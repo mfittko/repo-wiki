@@ -315,3 +315,68 @@ custom.route({ method: 'patch', path: '/patch' });
   assert.deepEqual(detectRuntimeHints('src/jobs/worker.ts', 'process.env.API_TOKEN\nqueue.add()', {}), ['background-work', 'environment-variable']);
   assert.deepEqual(detectRuntimeHints('src/plain.ts', 'const value = 1;', {}), []);
 });
+
+test('extractRouteSurfaces detects NestJS, Koa, tRPC, GraphQL, and OpenAPI patterns', () => {
+  const frameworkContent = `
+import Router from '@koa/router';
+import { initTRPC } from '@trpc/server';
+import { graphql } from 'graphql';
+const koaRouter = new Router();
+koaRouter.get('/koa-health', koaHealth);
+
+@Controller('/users')
+export class UsersController {
+  @Get('/profile')
+  getProfile() { return true; }
+
+  @Post()
+  createUser() { return true; }
+}
+
+const t = initTRPC.create();
+const appRouter = t.router({
+  hello: t.procedure.query(() => 'ok'),
+  createUser: t.procedure.mutation(() => ({ id: 1 })),
+  invalidShape: t.procedure
+});
+
+const resolvers = {
+  Query: {
+    health: () => 'ok'
+  },
+  Mutation: {
+    createPost: () => ({})
+  }
+};
+
+registry.registerPath({
+  method: 'get',
+  path: '/openapi/pets',
+  operationId: 'listPets'
+});
+registry.registerPath({ path: '/openapi/missing-method' });
+`;
+
+  assert.deepEqual(extractRouteSurfaces('src/server.ts', frameworkContent, 'TypeScript'), [
+    { kind: 'rpc-route', framework: 'trpc', target: 'router', methods: ['MUTATION'], path: '/createUser', handler: 'createUser' },
+    { kind: 'graphql-operation', framework: 'graphql', target: 'Mutation', methods: ['MUTATION'], path: '/graphql', handler: 'createPost' },
+    { kind: 'graphql-operation', framework: 'graphql', target: 'Query', methods: ['QUERY'], path: '/graphql', handler: 'health' },
+    { kind: 'rpc-route', framework: 'trpc', target: 'router', methods: ['QUERY'], path: '/hello', handler: 'hello' },
+    { kind: 'http-route', framework: 'koa', target: 'koaRouter', methods: ['GET'], path: '/koa-health', handler: 'koaHealth' },
+    { kind: 'openapi-operation', framework: 'openapi', target: 'registry', methods: ['GET'], path: '/openapi/pets', handler: 'listPets' },
+    { kind: 'http-route', framework: 'nestjs', target: 'UsersController', methods: ['POST'], path: '/users', handler: 'createUser' },
+    { kind: 'http-route', framework: 'nestjs', target: 'UsersController', methods: ['GET'], path: '/users/profile', handler: 'getProfile' }
+  ]);
+
+  assert.deepEqual(extractRouteSurfaces('src/plain.ts', `
+const resolvers = {
+  Query: {
+    notGraphql: true
+  }
+};
+const router = t.router({
+  invalidOnly: t.procedure
+});
+registry.registerPath({ path: '/missing', operationId: 'missingMethod' });
+`, 'TypeScript'), []);
+});
