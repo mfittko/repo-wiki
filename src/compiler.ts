@@ -1,8 +1,10 @@
 import path from 'node:path';
+import { promises as fs } from 'node:fs';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { assembleAllPageContexts } from './context-assembler.js';
 import { ensureDir, readJson, writeText } from './utils/fs.js';
 import { classifyDocumentedCommands, mergePackageScripts } from './docs-ingestor.js';
+import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-ownership.js';
 
 export async function compileWiki({ scanDir, planFile, wikiDir }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
@@ -13,7 +15,7 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
   const pages = new Map();
 
   pages.set('Home.md', renderHome(manifest, plan));
-  pages.set('_Sidebar.md', renderSidebar(plan));
+  pages.set('_Sidebar.md', renderSidebar(manifest, plan));
   pages.set('Index.md', renderIndex(manifest, plan));
   pages.set('Log.md', renderLog(manifest, plan));
   pages.set('Agent-Context-Pack.md', renderAgentContextPack(manifest, plan));
@@ -45,8 +47,47 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
     }
   }
 
-  for (const [file, content] of pages) {
-    await writeText(path.join(wikiDir, file), content);
+  let skipped = 0;
+  const skippedByState: Record<string, number> = {};
+
+  for (const [file, newContent] of pages) {
+    const filePath = path.join(wikiDir, file);
+    let existingContent: string | null = null;
+
+    try {
+      existingContent = await fs.readFile(filePath, 'utf8');
+    } catch (error) {
+      if (!isNodeError(error) || error.code !== 'ENOENT') {
+        throw error;
+      }
+      // File does not exist yet – this is a fresh page.
+    }
+
+    if (existingContent !== null) {
+      const state = detectPageState(existingContent);
+
+      // Human-owned and unmanaged pages are never overwritten implicitly.
+      // Adoption of pre-existing hand-written pages must be explicit.
+      if (state === 'human-owned' || state === 'unmanaged') {
+        skipped++;
+        skippedByState[state] = (skippedByState[state] || 0) + 1;
+        continue;
+      }
+
+      // Preserve any human notes that exist in the current page.
+      const notes = extractHumanNotes(existingContent);
+      if (notes.length > 0) {
+        let withNotes = preserveHumanNotes(newContent, notes);
+        if (notes.trim().length > 0) {
+          // Update page_state to "mixed" since human notes are present.
+          withNotes = withNotes.replace(/^page_state: "generated"/m, 'page_state: "mixed"');
+        }
+        await writeText(filePath, withNotes);
+        continue;
+      }
+    }
+
+    await writeText(filePath, newContent);
   }
 
   return {
@@ -54,10 +95,16 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
     summary: {
       wikiDir,
       pages: pages.size,
+      skipped,
+      skipped_by_state: skippedByState,
       commit: manifest.commit,
       contexts: pageContexts.length
     }
   };
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error;
 }
 
 function frontmatter(manifest, extra = {}) {
@@ -65,7 +112,8 @@ function frontmatter(manifest, extra = {}) {
     source_repo: manifest.remote,
     source_commit: manifest.commit,
     compiled_at: new Date().toISOString(),
-    ...extra
+    ...extra,
+    page_state: 'generated'
   };
 
   const lines = ['---'];
@@ -84,9 +132,9 @@ function renderHome(manifest, plan) {
   return `${frontmatter(manifest, { kind: 'home' })}# Repository Knowledge Base\n\nGenerated from \`${manifest.remote}\` at commit \`${manifest.commit}\`.\n\n## Start here\n\n- ${wikiLink('Agent-Context-Pack.md')}\n- ${wikiLink('Repository-Overview.md')}\n- ${wikiLink('Architecture.md')}\n- ${wikiLink('Build-Test-and-Run.md')}\n- ${wikiLink('Index.md')}\n\n## Important rule\n\nSource code at the pinned commit is authoritative. Tests, CI, and generated schemas are high-authority evidence. Markdown documentation is ingested as configurable secondary evidence and must be validated before it changes generated claims.\n\n## Generated module pages\n\n${(plan.modules || []).slice(0, 20).map((module) => `- [${module.name}](${module.slug})`).join('\n') || '- No module pages generated.'}\n`;
 }
 
-function renderSidebar(plan) {
+function renderSidebar(manifest, plan) {
   const moduleLinks = (plan.modules || []).slice(0, 25).map((module) => `  - [${module.name}](${module.slug})`).join('\n');
-  return `# Navigation\n\n- [Home](Home)\n- [Agent Context Pack](Agent-Context-Pack)\n- [Repository Overview](Repository-Overview)\n- [Architecture](Architecture)\n- [Build, Test, and Run](Build-Test-and-Run)\n- [Index](Index)\n- [Log](Log)\n\n## Modules\n\n${moduleLinks || '- No module pages generated.'}\n\n## Cross-cutting\n\n- [Dependency Map](Dependency-Map)\n- [Testing Strategy](Testing-Strategy)\n- [Configuration and Environment](Configuration-and-Environment)\n- [Security and Secrets](Security-and-Secrets)\n- [Operational Runbook](Operational-Runbook)\n- [Documentation Debt Report](Documentation-Debt-Report)
+  return `${frontmatter(manifest, { kind: 'sidebar' })}# Navigation\n\n- [Home](Home)\n- [Agent Context Pack](Agent-Context-Pack)\n- [Repository Overview](Repository-Overview)\n- [Architecture](Architecture)\n- [Build, Test, and Run](Build-Test-and-Run)\n- [Index](Index)\n- [Log](Log)\n\n## Modules\n\n${moduleLinks || '- No module pages generated.'}\n\n## Cross-cutting\n\n- [Dependency Map](Dependency-Map)\n- [Testing Strategy](Testing-Strategy)\n- [Configuration and Environment](Configuration-and-Environment)\n- [Security and Secrets](Security-and-Secrets)\n- [Operational Runbook](Operational-Runbook)\n- [Documentation Debt Report](Documentation-Debt-Report)
 - [Open Questions](Open-Questions)\n`;
 }
 

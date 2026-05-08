@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { compileWiki } from '../src/compiler.js';
+import { extractHumanNotes } from '../src/page-ownership.js';
 
 function createPlan() {
   return {
@@ -356,3 +357,223 @@ test('compileWiki renders data-model page for ORM-only manifests', async () => {
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Frontmatter: page_state metadata
+// ---------------------------------------------------------------------------
+
+test('compileWiki adds page_state: "generated" frontmatter to new pages', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'abc123',
+    mode: 'bootstrap',
+    totals: { languages: {}, categories: {}, runtime_hints: {} },
+    files: []
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan: createPlan() });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+    const homePage = await fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8');
+    const sidebarPage = await fs.readFile(path.join(wikiDir, '_Sidebar.md'), 'utf8');
+    assert.match(homePage, /page_state: "generated"/);
+    assert.match(sidebarPage, /source_commit: "abc123"/);
+    assert.match(sidebarPage, /page_state: "generated"/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Human-notes preservation
+// ---------------------------------------------------------------------------
+
+test('compileWiki preserves HUMAN_NOTES content byte-for-byte on recompilation', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'abc123',
+    mode: 'bootstrap',
+    totals: { languages: { JavaScript: 1 }, categories: { source: 1 }, runtime_hints: {} },
+    files: [{ path: 'src/utils.js', category: 'source', language: 'JavaScript', imports: [], runtime_hints: [], reasons: ['source'] }],
+    analysis: { package_scripts: [], dependency_graph: { edges: [], summary: {} }, test_to_source: { mappings: [], summary: {} } }
+  };
+
+  const plan = {
+    pages: createPlan().pages,
+    modules: [
+      {
+        slug: 'Module-Utils',
+        name: 'Utils',
+        files: ['src/utils.js'],
+        categories: { source: 1 },
+        languages: { JavaScript: 1 },
+        runtime_hints: {},
+        important_reasons: ['source']
+      }
+    ]
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    // First compilation – produces a clean generated page.
+    await compileWiki({ scanDir, planFile, wikiDir });
+
+    const firstPage = await fs.readFile(path.join(wikiDir, 'Module-Utils.md'), 'utf8');
+    assert.match(firstPage, /page_state: "generated"/);
+
+    // Simulate a human adding notes between the markers.
+    const humanNotes = '\n## My custom section\n\nThis was written by a human.\n';
+    const pageWithNotes = firstPage.replace(
+      '<!-- HUMAN_NOTES_START -->\n<!-- HUMAN_NOTES_END -->',
+      `<!-- HUMAN_NOTES_START -->${humanNotes}<!-- HUMAN_NOTES_END -->`
+    );
+    await fs.writeFile(path.join(wikiDir, 'Module-Utils.md'), pageWithNotes, 'utf8');
+
+    // Second compilation – must preserve the human notes.
+    await compileWiki({ scanDir, planFile, wikiDir });
+
+    const secondPage = await fs.readFile(path.join(wikiDir, 'Module-Utils.md'), 'utf8');
+    assert.equal(extractHumanNotes(secondPage), humanNotes);
+    assert.match(secondPage, /page_state: "mixed"/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki preserves whitespace-only HUMAN_NOTES without marking the page mixed', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'abc123',
+    mode: 'bootstrap',
+    totals: { languages: { JavaScript: 1 }, categories: { source: 1 }, runtime_hints: {} },
+    files: [{ path: 'src/utils.js', category: 'source', language: 'JavaScript', imports: [], runtime_hints: [], reasons: ['source'] }],
+    analysis: { package_scripts: [], dependency_graph: { edges: [], summary: {} }, test_to_source: { mappings: [], summary: {} } }
+  };
+
+  const plan = {
+    pages: createPlan().pages,
+    modules: [
+      {
+        slug: 'Module-Utils',
+        name: 'Utils',
+        files: ['src/utils.js'],
+        categories: { source: 1 },
+        languages: { JavaScript: 1 },
+        runtime_hints: {},
+        important_reasons: ['source']
+      }
+    ]
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+
+    const firstPage = await fs.readFile(path.join(wikiDir, 'Module-Utils.md'), 'utf8');
+    const whitespaceNotes = '\n  \t  \n';
+    const pageWithWhitespaceNotes = firstPage.replace(
+      '<!-- HUMAN_NOTES_START -->\n<!-- HUMAN_NOTES_END -->',
+      `<!-- HUMAN_NOTES_START -->${whitespaceNotes}<!-- HUMAN_NOTES_END -->`
+    );
+    await fs.writeFile(path.join(wikiDir, 'Module-Utils.md'), pageWithWhitespaceNotes, 'utf8');
+
+    await compileWiki({ scanDir, planFile, wikiDir });
+
+    const secondPage = await fs.readFile(path.join(wikiDir, 'Module-Utils.md'), 'utf8');
+    assert.equal(extractHumanNotes(secondPage), whitespaceNotes);
+    assert.match(secondPage, /page_state: "generated"/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki does not overwrite a human-owned page and summarizes owned_by skips', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'abc123',
+    mode: 'bootstrap',
+    totals: { languages: {}, categories: {}, runtime_hints: {} },
+    files: []
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan: createPlan() });
+
+  try {
+    // First compilation.
+    await compileWiki({ scanDir, planFile, wikiDir });
+
+    // A human claims ownership of the Home page using owned_by.
+    const originalHome = await fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8');
+    const ownedHome = originalHome.replace('page_state: "generated"', 'page_state: "generated"\nowned_by: "human"');
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), ownedHome, 'utf8');
+
+    // Second compilation – must not touch the human-owned page.
+    const result = await compileWiki({ scanDir, planFile, wikiDir });
+
+    const afterRecompile = await fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8');
+    assert.equal(afterRecompile, ownedHome);
+    assert.equal(result.summary.skipped, 1);
+    assert.equal(result.summary.skipped_by_state['human-owned'], 1);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki does not overwrite unmanaged pages by default', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'abc123',
+    mode: 'bootstrap',
+    totals: { languages: { JavaScript: 1 }, categories: { source: 1 }, runtime_hints: {} },
+    files: [{ path: 'src/index.js', category: 'source', language: 'JavaScript', imports: [], runtime_hints: [], reasons: ['source'] }],
+    analysis: { package_scripts: [], dependency_graph: { edges: [], summary: {} }, test_to_source: { mappings: [], summary: {} } }
+  };
+
+  const plan = {
+    pages: createPlan().pages,
+    modules: [
+      {
+        slug: 'Module-Index',
+        name: 'Index',
+        files: ['src/index.js'],
+        categories: { source: 1 },
+        languages: { JavaScript: 1 },
+        runtime_hints: {},
+        important_reasons: ['source']
+      }
+    ]
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+
+    // Pre-existing unmanaged page with HUMAN_NOTES markers but no source_commit.
+    const unmanagedContent = [
+      '# Module Index',
+      '',
+      'Some description.',
+      '',
+      '<!-- HUMAN_NOTES_START -->',
+      'Notes left by a human.',
+      '<!-- HUMAN_NOTES_END -->',
+      ''
+    ].join('\n');
+    await fs.writeFile(path.join(wikiDir, 'Module-Index.md'), unmanagedContent, 'utf8');
+
+    // Compilation must not implicitly adopt or overwrite the unmanaged page.
+    const compileResult = await compileWiki({ scanDir, planFile, wikiDir });
+
+    const result = await fs.readFile(path.join(wikiDir, 'Module-Index.md'), 'utf8');
+    assert.equal(result, unmanagedContent);
+    assert.equal(compileResult.summary.skipped, 1);
+    assert.equal(compileResult.summary.skipped_by_state.unmanaged, 1);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+

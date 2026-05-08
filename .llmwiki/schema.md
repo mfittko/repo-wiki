@@ -43,11 +43,14 @@ Open-Questions.md
 source_repo: "owner/repo"
 source_commit: "abc123"
 compiled_at: "2026-05-06T00:00:00.000Z"
+page_state: "generated"
 kind: "module"
 source_paths:
   - "src/example.ts"
 ---
 ```
+
+`page_state` is emitted for generated pages, including `_Sidebar.md`, and may be `generated`, `mixed`, or `human-owned`. Pages marked `human-owned` or `owned_by: "human"` are skipped by the compiler; generated pages with non-empty preserved HUMAN_NOTES are rewritten as `mixed`. Existing pages without repo-wiki ownership metadata are treated as unmanaged and are not overwritten or adopted by default; adoption must be explicit by adding generated frontmatter/ownership metadata.
 
 ## Lint gates
 
