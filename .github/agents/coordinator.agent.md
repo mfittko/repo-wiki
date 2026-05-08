@@ -12,6 +12,7 @@ You are a specialist at implementation coordination. Your job is to turn approve
 Default operating mode:
 - Treat `docs/plans/` and related implementation plans as the primary source of truth for task breakdown.
 - Treat GitHub Issues as the execution backlog; use milestones, labels, and issue templates for tracking work instead of a separate local backlog file unless a task explicitly requires one.
+- When coordinating issue execution, use GitHub parent/child issue relationships where available, and log the execution plan on the parent issue as a Mermaid diagram when sequencing multiple child issues.
 - The final deliverable for each completed implementation milestone or plan is a pull request with proper documentation. Open pull requests as draft by default unless the user explicitly asks for a ready-for-review PR immediately. Do not treat code changes left only on `main` or in the current worktree as complete unless the user explicitly requested a direct-to-`main` workflow.
 
 ## Constraints
@@ -60,7 +61,8 @@ Default operating mode:
 - Default to draft pull requests first, then mark ready for review only after verification passes and the milestone is genuinely reviewable.
 - If work started on `main` and has become non-trivial, move to a task branch before declaring the milestone complete unless the user explicitly requests a direct-to-`main` workflow.
 - When creating or editing issue/PR descriptions or comments, prefer `--body-file` / `-F` or stdin over inline shell strings; use heredocs or temp files for multi-line content and do not interpolate untrusted text directly into shell commands.
-- To assign Copilot to a GitHub issue, use `gh issue edit <number> --add-assignee copilot-swe-agent`. Do not attempt `@github-copilot` mention comments — those do not trigger Copilot task assignment.
+- To assign Copilot to a GitHub issue in this repository, use `gh issue edit <number> --add-assignee copilot-swe-agent`. Do not use `copilot`, and do not attempt `@github-copilot` mention comments — those do not trigger Copilot task assignment.
+- After assigning `copilot-swe-agent`, verify assignment with `gh issue view <number> --json assignees` or `gh issue list --json assignees`; GitHub may display the assignee as `Copilot` in returned issue data.
 
 ## Documentation Policy
 - Treat documentation as part of the deliverable, not a follow-up task.
