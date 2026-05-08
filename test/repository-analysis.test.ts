@@ -36,7 +36,7 @@ test('buildRepositoryAnalysis resolves imports, deduplicates edges, and maps fil
     {
       path: 'src/index.ts',
       category: 'source',
-      imports: ['./utils', './utils', '../lib/feature', 'express', 'node:fs']
+      imports: ['./utils', './utils', '../lib/feature', 'express', 'node:fs', 'fs', 'fs/promises', 'path', 'path/posix']
     },
     {
       path: 'src/utils.ts',

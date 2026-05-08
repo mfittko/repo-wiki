@@ -1,3 +1,4 @@
+import { builtinModules } from 'node:module';
 import path from 'node:path';
 
 const RESOLVABLE_EXTENSIONS = ['.js', '.mjs', '.cjs', '.jsx', '.ts', '.tsx', '.json'];
@@ -13,6 +14,7 @@ type SourceCard = {
 const FILE_NODE_PREFIX = 'file:';
 const PACKAGE_NODE_PREFIX = 'package:';
 const SCHEME_SPECIFIER_PATTERN = /^[A-Za-z][A-Za-z+.-]*:/;
+const NODE_BUILTIN_MODULES = new Set(builtinModules.map((moduleName) => moduleName.replace(/^node:/, '')));
 
 export function extractPackageMetadata(filePath: string, content: string): { package_name: string | null; package_scripts: Record<string, string> } | null {
   if (!filePath.toLowerCase().endsWith('package.json')) {
@@ -304,6 +306,10 @@ function resolvePackageSpecifier(specifier) {
     return null;
   }
 
+  if (isNodeBuiltinSpecifier(specifier)) {
+    return null;
+  }
+
   if (specifier.startsWith('@')) {
     const parts = specifier.split('/');
     const packageSegment = parts[1];
@@ -313,4 +319,8 @@ function resolvePackageSpecifier(specifier) {
 
   const [name] = specifier.split('/');
   return name && name.length > 0 ? name : null;
+}
+
+function isNodeBuiltinSpecifier(specifier) {
+  return NODE_BUILTIN_MODULES.has(specifier);
 }
