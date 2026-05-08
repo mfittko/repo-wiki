@@ -16,6 +16,19 @@
 import { readFileSync } from 'node:fs';
 import { type PageArchetype, type PromptContext, buildPrompt } from './prompts.js';
 
+export const LLM_DEFAULTS = {
+  provider: 'mock',
+  hostedProvider: 'openai-compatible',
+  model: 'gpt-4.1-mini',
+  baseUrl: 'https://api.openai.com/v1',
+  apiKeyEnv: 'LLMWIKI_LLM_API_KEY',
+  systemPrompt: 'You compile source-grounded GitHub Wiki pages.',
+  temperature: 0.1,
+  maxOutputTokens: 4000,
+  timeoutMs: 60000,
+  retries: 2
+} as const;
+
 export type { PageArchetype };
 export type { PromptContext };
 
@@ -106,6 +119,20 @@ export class MockLLMProvider implements LLMProvider {
 }
 
 /** OpenAI-compatible chat-completions provider. */
+type OpenAIChatMessage = { role: 'system' | 'user'; content: string };
+
+type OpenAIChatRequest = {
+  model: string;
+  messages: OpenAIChatMessage[];
+  max_tokens?: number;
+  temperature?: number;
+};
+
+type OpenAIChatResponse = {
+  choices: Array<{ message?: { content?: unknown } }>;
+  usage?: { prompt_tokens?: unknown; completion_tokens?: unknown };
+};
+
 export class OpenAICompatibleProvider implements LLMProvider {
   readonly name = 'openai-compatible';
   readonly baseUrl: string;
@@ -123,7 +150,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
   }
 
   async complete(request: LLMRequest): Promise<LLMResponse> {
-    const body = {
+    const body: OpenAIChatRequest = {
       model: this.model,
       messages: [
         { role: 'system', content: request.systemPrompt },
@@ -133,8 +160,8 @@ export class OpenAICompatibleProvider implements LLMProvider {
       ...(request.temperature !== undefined ? { temperature: request.temperature } : {})
     };
 
-    const payload = await this.postWithRetries(body);
-    const content = payload?.choices?.[0]?.message?.content;
+    const payload = assertOpenAIChatResponse(await this.postWithRetries(body), this.name);
+    const content = payload.choices[0]?.message?.content;
     if (typeof content !== 'string' || !content.trim()) {
       throw new LLMProviderError('OpenAI-compatible provider returned an empty completion.', this.name, 'EMPTY_RESPONSE');
     }
@@ -147,7 +174,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
     };
   }
 
-  private async postWithRetries(body: unknown): Promise<any> {
+  private async postWithRetries(body: OpenAIChatRequest): Promise<unknown> {
     let lastError: unknown;
     for (let attempt = 0; attempt <= this.retries; attempt += 1) {
       try {
@@ -163,7 +190,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
     throw lastError;
   }
 
-  private async post(body: unknown): Promise<any> {
+  private async post(body: OpenAIChatRequest): Promise<unknown> {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
@@ -216,7 +243,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
 function buildMockContent(request: LLMRequest): string {
   const lines: string[] = [
     '---',
-    `page_type: ${JSON.stringify(request.archetype)}`,
+    `kind: ${JSON.stringify(request.archetype)}`,
     `page_name: ${JSON.stringify(request.pageName)}`,
     `compiled_at: "mock"`,
     `source_commit: "mock"`,
@@ -282,6 +309,10 @@ export interface LLMProviderConfig {
   timeout_ms?: number;
   /** Number of retries for retryable hosted provider failures. */
   retries?: number;
+  /** Compiler mode alias used when callers pass the whole compiler config. */
+  mode?: string;
+  /** Nested LLM settings used when callers pass the whole compiler config. */
+  llm?: LLMProviderConfig;
 }
 
 export interface ResolvedLLMProviderConfig extends LLMProviderConfig {
@@ -349,23 +380,26 @@ export function resolveProviderConfig(
   config: LLMProviderConfig = {},
   env: NodeJS.ProcessEnv = process.env,
 ): ResolvedLLMProviderConfig {
-  const apiKeyEnv = env.LLMWIKI_LLM_API_KEY ? 'LLMWIKI_LLM_API_KEY' : (config.apiKeyEnv ?? config.api_key_env ?? 'LLMWIKI_LLM_API_KEY');
-  const systemPromptFile = env.LLMWIKI_LLM_SYSTEM_PROMPT_FILE ?? config.systemPromptFile ?? config.system_prompt_file;
-  const systemPrompt = env.LLMWIKI_LLM_SYSTEM_PROMPT ?? readPromptFileIfSet(systemPromptFile) ?? config.systemPrompt ?? config.system_prompt ?? 'You compile source-grounded GitHub Wiki pages.';
+  const llmConfig = config.llm ? { ...config.llm, mode: config.mode } : config;
+  const envApiKey = optionalEnv(env, 'LLMWIKI_LLM_API_KEY');
+  const apiKeyEnv = envApiKey !== undefined ? 'LLMWIKI_LLM_API_KEY' : (nonBlank(llmConfig.apiKeyEnv) ?? nonBlank(llmConfig.api_key_env) ?? LLM_DEFAULTS.apiKeyEnv);
+  const systemPromptFile = optionalEnv(env, 'LLMWIKI_LLM_SYSTEM_PROMPT_FILE') ?? nonBlank(llmConfig.systemPromptFile) ?? nonBlank(llmConfig.system_prompt_file);
+  const systemPrompt = optionalEnv(env, 'LLMWIKI_LLM_SYSTEM_PROMPT') ?? readPromptFileIfSet(systemPromptFile) ?? nonBlank(llmConfig.systemPrompt) ?? nonBlank(llmConfig.system_prompt) ?? LLM_DEFAULTS.systemPrompt;
+  const mode = optionalEnv(env, 'LLMWIKI_COMPILER_MODE') ?? nonBlank(llmConfig.mode);
 
   return {
-    ...config,
-    provider: env.LLMWIKI_LLM_PROVIDER ?? providerForMode(env.LLMWIKI_COMPILER_MODE) ?? config.provider ?? 'mock',
-    apiKey: env[apiKeyEnv] ?? config.apiKey,
+    ...llmConfig,
+    provider: optionalEnv(env, 'LLMWIKI_LLM_PROVIDER') ?? providerForMode(mode) ?? nonBlank(llmConfig.provider) ?? LLM_DEFAULTS.provider,
+    apiKey: optionalEnv(env, apiKeyEnv) ?? nonBlank(llmConfig.apiKey),
     apiKeyEnv,
-    model: env.LLMWIKI_LLM_MODEL ?? config.model ?? 'gpt-4.1-mini',
-    baseUrl: env.LLMWIKI_LLM_BASE_URL ?? config.baseUrl ?? config.base_url ?? 'https://api.openai.com/v1',
+    model: optionalEnv(env, 'LLMWIKI_LLM_MODEL') ?? nonBlank(llmConfig.model) ?? LLM_DEFAULTS.model,
+    baseUrl: optionalEnv(env, 'LLMWIKI_LLM_BASE_URL') ?? nonBlank(llmConfig.baseUrl) ?? nonBlank(llmConfig.base_url) ?? LLM_DEFAULTS.baseUrl,
     systemPrompt,
     systemPromptFile,
-    temperature: parseNumber(env.LLMWIKI_LLM_TEMPERATURE, config.temperature ?? 0.1),
-    maxOutputTokens: parseInteger(env.LLMWIKI_LLM_MAX_OUTPUT_TOKENS, config.maxOutputTokens ?? config.max_output_tokens ?? 4000),
-    timeoutMs: parseInteger(env.LLMWIKI_LLM_TIMEOUT_MS, config.timeoutMs ?? config.timeout_ms ?? 60000),
-    retries: parseInteger(env.LLMWIKI_LLM_RETRIES, config.retries ?? 2)
+    temperature: parseNumber(optionalEnv(env, 'LLMWIKI_LLM_TEMPERATURE'), llmConfig.temperature ?? LLM_DEFAULTS.temperature, 'temperature'),
+    maxOutputTokens: parseInteger(optionalEnv(env, 'LLMWIKI_LLM_MAX_OUTPUT_TOKENS'), llmConfig.maxOutputTokens ?? llmConfig.max_output_tokens ?? LLM_DEFAULTS.maxOutputTokens, 'maxOutputTokens'),
+    timeoutMs: parseInteger(optionalEnv(env, 'LLMWIKI_LLM_TIMEOUT_MS'), llmConfig.timeoutMs ?? llmConfig.timeout_ms ?? LLM_DEFAULTS.timeoutMs, 'timeoutMs'),
+    retries: parseInteger(optionalEnv(env, 'LLMWIKI_LLM_RETRIES'), llmConfig.retries ?? LLM_DEFAULTS.retries, 'retries')
   };
 }
 
@@ -418,21 +452,33 @@ export function buildRequest(
 }
 
 function providerForMode(mode?: string): string | undefined {
-  if (mode === 'llm') return 'openai-compatible';
-  if (mode === 'deterministic') return 'mock';
+  if (mode === 'llm') return LLM_DEFAULTS.hostedProvider;
+  if (mode === 'deterministic') return LLM_DEFAULTS.provider;
   return undefined;
 }
 
-function parseNumber(value: string | undefined, fallback: number): number {
-  if (value === undefined || value === '') return fallback;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : fallback;
+function parseNumber(value: string | undefined, fallback: number, field: string): number {
+  const candidate = value === undefined ? fallback : Number(value);
+  if (!Number.isFinite(candidate)) {
+    throw new LLMProviderError(`Invalid numeric LLM config for ${field}.`, 'config', 'INVALID_CONFIG');
+  }
+  return candidate;
 }
 
-function parseInteger(value: string | undefined, fallback: number): number {
-  if (value === undefined || value === '') return fallback;
-  const parsed = Number.parseInt(value, 10);
-  return Number.isFinite(parsed) ? parsed : fallback;
+function parseInteger(value: string | undefined, fallback: number, field: string): number {
+  const candidate = value === undefined ? fallback : Number(value);
+  if (!Number.isInteger(candidate)) {
+    throw new LLMProviderError(`Invalid integer LLM config for ${field}.`, 'config', 'INVALID_CONFIG');
+  }
+  return candidate;
+}
+
+function optionalEnv(env: NodeJS.ProcessEnv, key: string): string | undefined {
+  return nonBlank(env[key]);
+}
+
+function nonBlank(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value : undefined;
 }
 
 function readPromptFileIfSet(filePath?: string): string | undefined {
@@ -442,6 +488,17 @@ function readPromptFileIfSet(filePath?: string): string | undefined {
   } catch {
     return undefined;
   }
+}
+
+function assertOpenAIChatResponse(value: unknown, provider: string): OpenAIChatResponse {
+  if (!value || typeof value !== 'object') {
+    throw new LLMProviderError('OpenAI-compatible provider returned an invalid response object.', provider, 'INVALID_RESPONSE');
+  }
+  const response = value as { choices?: unknown };
+  if (!Array.isArray(response.choices) || response.choices.length === 0) {
+    throw new LLMProviderError('OpenAI-compatible provider returned no choices.', provider, 'MISSING_CHOICES');
+  }
+  return value as OpenAIChatResponse;
 }
 
 function numberOrUndefined(value: unknown): number | undefined {

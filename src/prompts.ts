@@ -70,7 +70,7 @@ Authority rules:
 
 Output contract:
 - Produce valid GitHub-flavored Markdown.
-- Include a YAML frontmatter block with at minimum: source_commit, compiled_at, page_type, source_paths.
+- Include a YAML frontmatter block with at minimum: source_commit, compiled_at, kind, source_paths.
 - Use headings, tables, and code blocks where appropriate.
 - End module pages with a human notes block:
   <!-- HUMAN_NOTES_START -->

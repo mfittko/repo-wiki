@@ -74,7 +74,8 @@ test('MockLLMProvider response includes frontmatter', async () => {
   const provider = new MockLLMProvider();
   const response = await provider.complete(makeRequest({ pageName: 'Module-Auth', pageTitle: 'Auth' }));
   assert.match(response.content, /^---/);
-  assert.match(response.content, /page_type:/);
+  assert.match(response.content, /kind:/);
+  assert.doesNotMatch(response.content, /page_type:/);
   assert.match(response.content, /page_name:/);
   assert.match(response.content, /compiled_at:/);
   assert.match(response.content, /source_commit:/);
@@ -240,6 +241,55 @@ test('resolveProviderConfig uses OpenAI-compatible provider for llm mode', () =>
   assert.equal(resolved.provider, 'openai-compatible');
 });
 
+test('resolveProviderConfig honors compiler config mode before nested llm provider default', () => {
+  const resolved = resolveProviderConfig({
+    mode: 'deterministic',
+    llm: { provider: 'openai-compatible', apiKey: 'secret-key' },
+  });
+
+  assert.equal(resolved.provider, 'mock');
+});
+
+test('resolveProviderConfig treats blank environment variables as unset', () => {
+  const resolved = resolveProviderConfig(
+    { provider: 'mock', model: 'config-model', apiKey: 'config-key' },
+    {
+      LLMWIKI_COMPILER_MODE: '   ',
+      LLMWIKI_LLM_PROVIDER: '',
+      LLMWIKI_LLM_MODEL: ' ',
+      LLMWIKI_LLM_API_KEY: '',
+      LLMWIKI_LLM_TEMPERATURE: '',
+    },
+  );
+
+  assert.equal(resolved.provider, 'mock');
+  assert.equal(resolved.model, 'config-model');
+  assert.equal(resolved.apiKey, 'config-key');
+  assert.equal(resolved.temperature, 0.1);
+});
+
+test('resolveProviderConfig rejects invalid numeric environment config', () => {
+  assert.throws(
+    () => resolveProviderConfig({}, { LLMWIKI_LLM_TIMEOUT_MS: 'not-a-number' }),
+    (err: unknown) => {
+      assert.ok(err instanceof LLMProviderError);
+      assert.equal(err.code, 'INVALID_CONFIG');
+      return true;
+    },
+  );
+});
+
+test('resolveProviderConfig rejects invalid numeric JSON config', () => {
+  assert.throws(
+    () => resolveProviderConfig({ timeoutMs: 'soon' } as any, {}),
+    (err: unknown) => {
+      assert.ok(err instanceof LLMProviderError);
+      assert.equal(err.code, 'INVALID_CONFIG');
+      return true;
+    },
+  );
+});
+
 test('OpenAICompatibleProvider posts chat-completions request', async (t) => {
   let captured: { url?: string; body?: any; authorization?: string } = {};
   t.mock.method(globalThis, 'fetch', (async (url: string, init: any) => {
@@ -264,6 +314,75 @@ test('OpenAICompatibleProvider posts chat-completions request', async (t) => {
   assert.equal(response.content, '# Generated');
   assert.equal(response.promptTokens, 10);
   assert.equal(response.completionTokens, 2);
+});
+
+async function assertProviderRejectsCode(promise: Promise<unknown>, code: string, retryable?: boolean) {
+  await assert.rejects(
+    promise,
+    (err: unknown) => {
+      assert.ok(err instanceof LLMProviderError);
+      assert.equal(err.code, code);
+      if (retryable !== undefined) assert.equal(err.retryable, retryable);
+      return true;
+    },
+  );
+}
+
+test('OpenAICompatibleProvider rejects missing choices', async (t) => {
+  t.mock.method(globalThis, 'fetch', (async () => new Response(JSON.stringify({}), { status: 200 })) as typeof fetch);
+
+  const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123' });
+  await assertProviderRejectsCode(provider.complete(makeRequest()), 'MISSING_CHOICES');
+});
+
+test('OpenAICompatibleProvider rejects empty choices', async (t) => {
+  t.mock.method(globalThis, 'fetch', (async () => new Response(JSON.stringify({ choices: [] }), { status: 200 })) as typeof fetch);
+
+  const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123' });
+  await assertProviderRejectsCode(provider.complete(makeRequest()), 'MISSING_CHOICES');
+});
+
+test('OpenAICompatibleProvider rejects empty message content', async (t) => {
+  t.mock.method(globalThis, 'fetch', (async () => new Response(JSON.stringify({ choices: [{ message: { content: '   ' } }] }), { status: 200 })) as typeof fetch);
+
+  const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123' });
+  await assertProviderRejectsCode(provider.complete(makeRequest()), 'EMPTY_RESPONSE');
+});
+
+test('OpenAICompatibleProvider rejects invalid JSON response', async (t) => {
+  t.mock.method(globalThis, 'fetch', (async () => new Response('not-json', { status: 200 })) as typeof fetch);
+
+  const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123' });
+  await assertProviderRejectsCode(provider.complete(makeRequest()), 'INVALID_JSON', false);
+});
+
+test('OpenAICompatibleProvider retries retryable HTTP failures', async (t) => {
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', (async () => {
+    calls += 1;
+    if (calls === 1) {
+      return new Response(JSON.stringify({ error: 'rate limit' }), { status: 429 });
+    }
+    return new Response(JSON.stringify({ choices: [{ message: { content: '# After retry' } }] }), { status: 200 });
+  }) as typeof fetch);
+
+  const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123', retries: 1 });
+  const response = await provider.complete(makeRequest());
+  assert.equal(calls, 2);
+  assert.equal(response.content, '# After retry');
+});
+
+test('OpenAICompatibleProvider surfaces timeout as retryable', async (t) => {
+  t.mock.method(globalThis, 'fetch', ((_: string, init: any) => new Promise((_resolve, reject) => {
+    init.signal.addEventListener('abort', () => {
+      const error = new Error('aborted');
+      error.name = 'AbortError';
+      reject(error);
+    });
+  })) as typeof fetch);
+
+  const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123', timeoutMs: 1, retries: 0 });
+  await assertProviderRejectsCode(provider.complete(makeRequest()), 'TIMEOUT', true);
 });
 
 // ── buildRequest ───────────────────────────────────────────────────────────

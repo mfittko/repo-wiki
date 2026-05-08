@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { fileExists, readJson } from './utils/fs.js';
+import { LLM_DEFAULTS } from './llm-provider.js';
 
 export const DEFAULT_CONFIG = {
   documentation: {
@@ -17,15 +18,15 @@ export const DEFAULT_CONFIG = {
   compiler: {
     mode: 'deterministic',
     llm: {
-      provider: 'openai-compatible',
-      base_url: 'https://api.openai.com/v1',
-      model: 'gpt-4.1-mini',
-      api_key_env: 'LLMWIKI_LLM_API_KEY',
-      system_prompt: 'You compile source-grounded GitHub Wiki pages.',
-      temperature: 0.1,
-      max_output_tokens: 4000,
-      timeout_ms: 60000,
-      retries: 2
+      provider: LLM_DEFAULTS.hostedProvider,
+      base_url: LLM_DEFAULTS.baseUrl,
+      model: LLM_DEFAULTS.model,
+      api_key_env: LLM_DEFAULTS.apiKeyEnv,
+      system_prompt: LLM_DEFAULTS.systemPrompt,
+      temperature: LLM_DEFAULTS.temperature,
+      max_output_tokens: LLM_DEFAULTS.maxOutputTokens,
+      timeout_ms: LLM_DEFAULTS.timeoutMs,
+      retries: LLM_DEFAULTS.retries
     }
   },
   wiki: {
