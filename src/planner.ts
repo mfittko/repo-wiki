@@ -151,7 +151,7 @@ function page(path, phase, purpose, moduleName = null) {
   return { path, phase, purpose, moduleName };
 }
 
-function hasDataModelSignals(manifest) {
+function hasDataModelSignals(manifest: any) {
   if (manifest.totals.categories?.data) {
     return true;
   }
