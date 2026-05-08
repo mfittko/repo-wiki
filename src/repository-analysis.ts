@@ -306,9 +306,9 @@ function resolvePackageSpecifier(specifier) {
 
   if (specifier.startsWith('@')) {
     const parts = specifier.split('/');
-    const packageSegment = parts[1]?.trim();
+    const packageSegment = parts[1];
     // Scoped package names require both scope and package segments (e.g. @scope/pkg).
-    return parts.length >= 2 && packageSegment ? `${parts[0]}/${packageSegment}` : null;
+    return parts.length >= 2 && packageSegment && packageSegment.length > 0 ? `${parts[0]}/${packageSegment}` : null;
   }
 
   const [name] = specifier.split('/');
