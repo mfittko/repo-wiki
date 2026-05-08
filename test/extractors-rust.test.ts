@@ -142,6 +142,52 @@ use crate::broken::{self, Item;
   assert.ok(extractSymbols(malformed, 'Rust').includes('Recovered'));
 });
 
+test('Rust extractor accepts indented top-level declarations but ignores nested module bodies', () => {
+  const source = `
+    use crate::prelude::{Context, Result};
+    pub use crate::api::Handler as ApiHandler;
+
+    pub struct Service;
+      pub enum Status { Ready }
+    pub const MAX_RETRIES: usize = 3;
+    pub static APP_NAME: &str = "repo-wiki";
+    pub async fn run() {}
+    impl Service {}
+
+    pub mod api {
+      pub struct Request;
+      pub fn nested() {}
+    }
+`;
+
+  assert.deepEqual(extractImports(source, 'Rust'), [
+    'crate::api::Handler',
+    'crate::prelude::Context',
+    'crate::prelude::Result'
+  ]);
+
+  const symbols = extractSymbols(source, 'Rust');
+  assert.ok(symbols.includes('Service'));
+  assert.ok(symbols.includes('Status'));
+  assert.ok(symbols.includes('MAX_RETRIES'));
+  assert.ok(symbols.includes('APP_NAME'));
+  assert.ok(symbols.includes('run'));
+  assert.ok(symbols.includes('impl Service'));
+  assert.ok(symbols.includes('api'));
+  assert.ok(!symbols.includes('Request'));
+  assert.ok(!symbols.includes('nested'));
+
+  assert.deepEqual(extractExportedSymbols(source, 'Rust'), [
+    { name: 'api', kind: 'mod' },
+    { name: 'ApiHandler', kind: 're-export' },
+    { name: 'APP_NAME', kind: 'static' },
+    { name: 'MAX_RETRIES', kind: 'const' },
+    { name: 'run', kind: 'fn' },
+    { name: 'Service', kind: 'struct' },
+    { name: 'Status', kind: 'enum' }
+  ]);
+});
+
 test('Rust extractor is top-level-only for inline module item declarations', () => {
   const source = `
 pub mod api { pub struct Request; pub enum Response { Ok } }

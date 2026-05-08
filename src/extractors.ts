@@ -1925,47 +1925,47 @@ function computeRustDeclarations(content: string): RustDeclarations {
     }
   };
 
-  for (const match of code.matchAll(/^(?:pub(?:\([^)]*\))?\s+)?use\s+([\s\S]*?);/mg)) {
+  for (const match of topLevelRustMatches(code, /^\s*(?:pub(?:\([^)]*\))?\s+)?use\s+([\s\S]*?);/mg)) {
     for (const specifier of expandRustUseSpec(match[1])) {
       imports.add(specifier);
     }
   }
 
-  for (const match of code.matchAll(/^pub(?:\([^)]*\))?\s+use\s+([\s\S]*?);/mg)) {
+  for (const match of topLevelRustMatches(code, /^\s*pub(?:\([^)]*\))?\s+use\s+([\s\S]*?);/mg)) {
     for (const name of extractRustPublicUseNames(match[1])) {
       addSymbol(name, 're-export', true);
     }
   }
 
-  for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:unsafe\s+)?(?:const\s+)?fn\s+([A-Za-z_]\w*)\b/mg)) {
+  for (const match of topLevelRustMatches(code, /^\s*(pub(?:\([^)]*\))?\s+)?(?:async\s+)?(?:unsafe\s+)?(?:const\s+)?fn\s+([A-Za-z_]\w*)\b/mg)) {
     addSymbol(match[2], 'fn', Boolean(match[1]));
   }
 
-  for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?struct\s+([A-Za-z_]\w*)\b/mg)) {
+  for (const match of topLevelRustMatches(code, /^\s*(pub(?:\([^)]*\))?\s+)?struct\s+([A-Za-z_]\w*)\b/mg)) {
     addSymbol(match[2], 'struct', Boolean(match[1]));
   }
 
-  for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?enum\s+([A-Za-z_]\w*)\b/mg)) {
+  for (const match of topLevelRustMatches(code, /^\s*(pub(?:\([^)]*\))?\s+)?enum\s+([A-Za-z_]\w*)\b/mg)) {
     addSymbol(match[2], 'enum', Boolean(match[1]));
   }
 
-  for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?(?:unsafe\s+)?trait\s+([A-Za-z_]\w*)\b/mg)) {
+  for (const match of topLevelRustMatches(code, /^\s*(pub(?:\([^)]*\))?\s+)?(?:unsafe\s+)?trait\s+([A-Za-z_]\w*)\b/mg)) {
     addSymbol(match[2], 'trait', Boolean(match[1]));
   }
 
-  for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?mod\s+([A-Za-z_]\w*)\b/mg)) {
+  for (const match of topLevelRustMatches(code, /^\s*(pub(?:\([^)]*\))?\s+)?mod\s+([A-Za-z_]\w*)\b/mg)) {
     addSymbol(match[2], 'mod', Boolean(match[1]));
   }
 
-  for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?const\s+([A-Za-z_]\w*)\b/mg)) {
+  for (const match of topLevelRustMatches(code, /^\s*(pub(?:\([^)]*\))?\s+)?const\s+([A-Za-z_]\w*)\b/mg)) {
     addSymbol(match[2], 'const', Boolean(match[1]));
   }
 
-  for (const match of code.matchAll(/^(pub(?:\([^)]*\))?\s+)?static(?:\s+mut)?\s+([A-Za-z_]\w*)\b/mg)) {
+  for (const match of topLevelRustMatches(code, /^\s*(pub(?:\([^)]*\))?\s+)?static(?:\s+mut)?\s+([A-Za-z_]\w*)\b/mg)) {
     addSymbol(match[2], 'static', Boolean(match[1]));
   }
 
-  for (const match of code.matchAll(/^impl(?:\s*<[^>{;]*>)?\s+([\s\S]*?)\{/mg)) {
+  for (const match of topLevelRustMatches(code, /^\s*impl(?:\s*<[^>{;]*>)?\s+([\s\S]*?)\{/mg)) {
     const implName = normalizeRustImplName(match[1]);
     if (implName) {
       addSymbol(implName, 'impl');
@@ -1976,9 +1976,37 @@ function computeRustDeclarations(content: string): RustDeclarations {
     imports: [...imports].sort(),
     allSymbols: [...symbols].sort().slice(0, SYMBOL_LIMIT),
     exported: exported
-      .sort((left, right) => left.name.localeCompare(right.name) || left.kind.localeCompare(right.kind))
+      .sort((left, right) => compareStrings(left.name, right.name) || compareStrings(left.kind, right.kind))
       .slice(0, SYMBOL_LIMIT)
   };
+}
+
+function* topLevelRustMatches(code: string, pattern: RegExp): IterableIterator<RegExpExecArray> {
+  for (const match of code.matchAll(pattern)) {
+    if (rustBraceDepthAt(code, match.index) === 0 || rustMatchHasNoLeadingWhitespace(code, match.index)) {
+      yield match;
+    }
+  }
+}
+
+function rustMatchHasNoLeadingWhitespace(code: string, index: number) {
+  return code[index] !== ' ' && code[index] !== '\t';
+}
+
+function rustBraceDepthAt(code: string, index: number) {
+  let depth = 0;
+  for (let cursor = 0; cursor < index; cursor += 1) {
+    if (code[cursor] === '{') {
+      depth += 1;
+    } else if (code[cursor] === '}') {
+      depth = Math.max(0, depth - 1);
+    }
+  }
+  return depth;
+}
+
+function compareStrings(left: string, right: string) {
+  return left.localeCompare(right, 'en-US');
 }
 
 function stripRustCommentsAndLiterals(content: string): string {
