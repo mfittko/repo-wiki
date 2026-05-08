@@ -231,6 +231,7 @@ from .local.module import value as local_value
 
 CONSTANT = "value"
 MAX_RETRIES: int = 3
+SPECIAL_TOKEN: Literal["="] = "="
 
 class Service:
     def method(self):
@@ -244,7 +245,7 @@ async def fetch_data():
 `;
 
   assert.deepEqual(extractImports(pythonSource, 'Python'), ['.local.module', 'collections', 'json', 'os', 'pkg.mod']);
-  assert.deepEqual(extractSymbols(pythonSource, 'Python'), ['CONSTANT', 'MAX_RETRIES', 'Service', 'fetch_data', 'helper']);
+  assert.deepEqual(extractSymbols(pythonSource, 'Python'), ['CONSTANT', 'MAX_RETRIES', 'SPECIAL_TOKEN', 'Service', 'fetch_data', 'helper']);
 
   const malformedSource = `
 import requests

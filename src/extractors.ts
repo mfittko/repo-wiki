@@ -7,6 +7,7 @@ const JAVASCRIPT_LANGUAGES = new Set([
   'TypeScript React'
 ]);
 const PYTHON_LANGUAGE = 'Python';
+const SYMBOL_LIMIT = 50;
 
 const GO_LANGUAGE = 'Go';
 
@@ -88,7 +89,7 @@ export function extractSymbols(content: string, language: string): string[] {
 
   const ast = extractJavaScriptAstMetadata(content, language);
   if (ast) {
-    return [...ast.symbols].sort().slice(0, 50);
+    return [...ast.symbols].sort().slice(0, SYMBOL_LIMIT);
   }
 
   /* c8 ignore start: retained for unexpected TypeScript parser failures */
@@ -110,7 +111,7 @@ export function extractSymbols(content: string, language: string): string[] {
     }
   }
 
-  return [...fallbackSymbols].sort().slice(0, 50);
+  return [...fallbackSymbols].sort().slice(0, SYMBOL_LIMIT);
   /* c8 ignore stop */
 }
 
@@ -127,7 +128,7 @@ export function extractExportedSymbols(content: string, language: string): Array
   if (ast) {
     return [...ast.exported]
       .sort((left, right) => left.name.localeCompare(right.name) || left.kind.localeCompare(right.kind))
-      .slice(0, 50);
+      .slice(0, SYMBOL_LIMIT);
   }
 
   /* c8 ignore start: retained for unexpected TypeScript parser failures */
@@ -167,7 +168,7 @@ export function extractExportedSymbols(content: string, language: string): Array
 
   return exported
     .sort((left, right) => left.name.localeCompare(right.name) || left.kind.localeCompare(right.kind))
-    .slice(0, 50);
+    .slice(0, SYMBOL_LIMIT);
   /* c8 ignore stop */
 }
 
@@ -422,7 +423,7 @@ function extractPythonImports(content: string): string[] {
   const imports = new Set<string>();
 
   for (const rawLine of content.split(/\r?\n/)) {
-    if (!/^\S/.test(rawLine)) {
+    if (!isTopLevelLine(rawLine)) {
       continue;
     }
 
@@ -455,7 +456,7 @@ function extractPythonSymbols(content: string): string[] {
   const symbols = new Set<string>();
 
   for (const rawLine of content.split(/\r?\n/)) {
-    if (!/^\S/.test(rawLine)) {
+    if (!isTopLevelLine(rawLine)) {
       continue;
     }
 
@@ -464,15 +465,15 @@ function extractPythonSymbols(content: string): string[] {
       continue;
     }
 
-    const asyncFunction = line.match(/^async\s+def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\([^)]*\)\s*(?:->\s*[^:]+)?\s*:/);
+    const asyncFunction = findPythonFunctionName(line, true);
     if (asyncFunction) {
-      symbols.add(asyncFunction[1]);
+      symbols.add(asyncFunction);
       continue;
     }
 
-    const functionMatch = line.match(/^def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\([^)]*\)\s*(?:->\s*[^:]+)?\s*:/);
-    if (functionMatch) {
-      symbols.add(functionMatch[1]);
+    const functionName = findPythonFunctionName(line, false);
+    if (functionName) {
+      symbols.add(functionName);
       continue;
     }
 
@@ -482,23 +483,23 @@ function extractPythonSymbols(content: string): string[] {
       continue;
     }
 
-    const constantMatch = line.match(/^([A-Z][A-Z0-9_]*)\s*(?::[^=]+)?=\s*/);
-    if (constantMatch) {
-      symbols.add(constantMatch[1]);
+    const constantName = findPythonModuleConstant(line);
+    if (constantName) {
+      symbols.add(constantName);
     }
   }
 
-  return [...symbols].sort().slice(0, 50);
+  return [...symbols].sort().slice(0, SYMBOL_LIMIT);
 }
 
 function stripInlineComment(line: string) {
   let quote: '"' | "'" | null = null;
-  for (let index = 0; index < line.length; index += 1) {
-    const current = line[index];
+  for (let charIndex = 0; charIndex < line.length; charIndex += 1) {
+    const current = line[charIndex];
 
     if (quote) {
       if (current === '\\') {
-        index += 1;
+        charIndex += 1;
         continue;
       }
       if (current === quote) {
@@ -513,11 +514,167 @@ function stripInlineComment(line: string) {
     }
 
     if (current === '#') {
-      return line.slice(0, index);
+      return line.slice(0, charIndex);
     }
   }
 
   return line;
+}
+
+function isTopLevelLine(line: string) {
+  return /^\S/.test(line);
+}
+
+function findPythonFunctionName(line: string, isAsyncFunction: boolean) {
+  const prefix = isAsyncFunction ? 'async def ' : 'def ';
+  if (!line.startsWith(prefix)) {
+    return null;
+  }
+
+  const rest = line.slice(prefix.length);
+  const nameMatch = rest.match(/^([A-Za-z_][A-Za-z0-9_]*)\s*/);
+  if (!nameMatch) {
+    return null;
+  }
+
+  const name = nameMatch[1];
+  const signatureStart = prefix.length + nameMatch[0].length;
+  if (line[signatureStart] !== '(') {
+    return null;
+  }
+
+  const signatureEnd = findMatchingParenthesis(line, signatureStart);
+  if (signatureEnd < 0) {
+    return null;
+  }
+
+  const suffix = line.slice(signatureEnd + 1).trim();
+  if (suffix.startsWith(':')) {
+    return name;
+  }
+  if (suffix.startsWith('->')) {
+    return suffix.includes(':') ? name : null;
+  }
+
+  return null;
+}
+
+function findPythonModuleConstant(line: string): string | null {
+  const assignmentOffset = findTopLevelAssignmentOffset(line);
+  if (assignmentOffset < 0) {
+    return null;
+  }
+
+  const lhs = line.slice(0, assignmentOffset).trim();
+  const match = lhs.match(/^([A-Z][A-Z0-9_]*)(?:\s*:.+?)?$/);
+  return match ? match[1] : null;
+}
+
+function findTopLevelAssignmentOffset(line: string) {
+  let quote: '"' | "'" | null = null;
+  let parenthesesDepth = 0;
+  let bracketDepth = 0;
+  let braceDepth = 0;
+
+  for (let charIndex = 0; charIndex < line.length; charIndex += 1) {
+    const current = line[charIndex];
+
+    if (quote) {
+      if (current === '\\') {
+        charIndex += 1;
+        continue;
+      }
+      if (current === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (current === '"' || current === "'") {
+      quote = current;
+      continue;
+    }
+
+    if (current === '(') {
+      parenthesesDepth += 1;
+      continue;
+    }
+    if (current === ')' && parenthesesDepth > 0) {
+      parenthesesDepth -= 1;
+      continue;
+    }
+    if (current === '[') {
+      bracketDepth += 1;
+      continue;
+    }
+    if (current === ']' && bracketDepth > 0) {
+      bracketDepth -= 1;
+      continue;
+    }
+    if (current === '{') {
+      braceDepth += 1;
+      continue;
+    }
+    if (current === '}' && braceDepth > 0) {
+      braceDepth -= 1;
+      continue;
+    }
+
+    if (current !== '=' || parenthesesDepth > 0 || bracketDepth > 0 || braceDepth > 0) {
+      continue;
+    }
+
+    const previous = line[charIndex - 1];
+    const next = line[charIndex + 1];
+    if (previous === '=' || previous === '!' || previous === '<' || previous === '>') {
+      continue;
+    }
+    if (next === '=') {
+      continue;
+    }
+    return charIndex;
+  }
+
+  return -1;
+}
+
+function findMatchingParenthesis(line: string, startOffset: number) {
+  let quote: '"' | "'" | null = null;
+  let depth = 0;
+
+  for (let charIndex = startOffset; charIndex < line.length; charIndex += 1) {
+    const current = line[charIndex];
+
+    if (quote) {
+      if (current === '\\') {
+        charIndex += 1;
+        continue;
+      }
+      if (current === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (current === '"' || current === "'") {
+      quote = current;
+      continue;
+    }
+
+    if (current === '(') {
+      depth += 1;
+      continue;
+    }
+
+    if (current === ')') {
+      depth -= 1;
+      if (depth === 0) {
+        return charIndex;
+      }
+    }
+  }
+
+  return -1;
 }
 
 function extractJavaScriptAstMetadata(content: string, language: string): JavaScriptAstMetadata | null {
