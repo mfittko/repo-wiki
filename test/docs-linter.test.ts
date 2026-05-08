@@ -20,13 +20,16 @@ test('documentation ingestion produces documentation cards and lint issues', asy
         stale_after_days: 9999
       }
     }), 'utf8');
-    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nRun npm test.\n\n```bash\nnpm test\n```\n', 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nRun npm test with MY_API_TOKEN. See [old docs](docs/old.md).\n\n```bash\nnpm test\n```\n', 'utf8');
     await writeFile(path.join(dir, 'docs', 'old.md'), '# Old\n\nThis is deprecated and should be reviewed.\n', 'utf8');
     await writeFile(path.join(dir, 'package.json'), JSON.stringify({ scripts: { test: 'node --test' } }), 'utf8');
 
     const scanDir = path.join(dir, '.llmwiki', 'run');
     const scan = await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
     assert.equal(scan.manifest.documentation.files.length, 2);
+    const readmeCard = scan.manifest.documentation.files.find((doc) => doc.path === 'README.md');
+    assert.ok(readmeCard.validation.env_vars.includes('MY_API_TOKEN'));
+    assert.ok(readmeCard.links.includes('docs/old.md'));
 
     const lint = await lintDocs({ scanDir, repoPath: dir });
     assert.ok(lint.summary.warnings + lint.summary.errors >= 1);
@@ -147,6 +150,34 @@ test('lintDocs reports missing-package-script for commands not in package.json',
     const missingIssues = lint.issues.filter((i) => i.code === 'missing-package-script');
     assert.ok(missingIssues.length >= 1, 'expected at least one missing-package-script issue');
     assert.ok(missingIssues[0].message.includes('deploy'), 'issue message should name the missing script');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintDocs continues reading workflows after an unreadable workflow entry', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-ci-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await mkdir(path.join(dir, '.github', 'workflows', 'bad.yaml'), { recursive: true });
+    await writeFile(path.join(dir, '.github', 'workflows', 'notes.txt'), 'ignored', 'utf8');
+    await writeFile(path.join(dir, '.github', 'workflows', 'good.yml'), 'jobs:\n  test:\n    steps:\n      - run: docker build .\n', 'utf8');
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: {
+        ingest: true,
+        include: ['README.md'],
+        exclude: [],
+        stale_after_days: 9999
+      }
+    }), 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\n```bash\ndocker build .\n```\n', 'utf8');
+    await writeFile(path.join(dir, 'package.json'), JSON.stringify({ scripts: {} }), 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    assert.equal(lint.issues.filter((i) => i.code === 'missing-package-script').length, 0);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
