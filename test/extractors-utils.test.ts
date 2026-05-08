@@ -337,7 +337,7 @@ const t = initTRPC.create();
 const appRouter = t.router({
   hello: t.procedure.query(() => 'ok'),
   createUser: t.procedure.mutation(() => ({ id: 1 })),
-  invalidShape: t.procedure
+  procedureWithoutQueryOrMutation: t.procedure
 });
 
 const resolvers = {
@@ -371,7 +371,7 @@ registry.registerPath({ path: '/openapi/missing-method' });
   assert.deepEqual(extractRouteSurfaces('src/plain.ts', `
 const resolvers = {
   Query: {
-    notGraphql: true
+    nonFunctionResolver: true
   }
 };
 const router = t.router({

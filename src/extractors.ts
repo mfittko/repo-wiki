@@ -8,6 +8,9 @@ const JAVASCRIPT_LANGUAGES = new Set([
 ]);
 
 const ROUTE_METHODS = ['get', 'post', 'put', 'patch', 'delete', 'options', 'head', 'all', 'use'];
+const NEST_ROUTE_DECORATORS = ['Get', 'Post', 'Put', 'Patch', 'Delete', 'Options', 'Head', 'All'];
+const MAX_GRAPHQL_RESOLVER_BODY_LENGTH = 2000;
+const MAX_OPENAPI_REGISTER_BODY_LENGTH = 1000;
 
 type RuntimeHintMetadata = {
   routeSurfaces?: Array<{ kind?: string; framework?: string; target?: string; methods?: string[]; path?: string; handler?: string | null }>;
@@ -568,7 +571,10 @@ function extractNestRouteSurfaces(content, surfaces, seen) {
     const segmentStart = (controller.index || 0) + controller[0].length;
     const segmentEnd = index + 1 < controllers.length ? (controllers[index + 1].index || content.length) : content.length;
     const segment = content.slice(segmentStart, segmentEnd);
-    const methodPattern = /@(Get|Post|Put|Patch|Delete|Options|Head|All)\s*\(\s*(?:['"`]([^'"`]*)['"`])?\s*\)\s*(?:public|private|protected|async|static|\s)*([A-Za-z_$][\w$]*)\s*\(/g;
+    const methodPattern = new RegExp(
+      `@(${NEST_ROUTE_DECORATORS.join('|')})\\s*\\(\\s*(?:['"\`]([^'"\`]*)['"\`])?\\s*\\)\\s*(?:public|private|protected)?\\s*(?:static\\s+)?(?:async\\s+)?([A-Za-z_$][\\w$]*)\\s*\\(`,
+      'g'
+    );
 
     for (const match of segment.matchAll(methodPattern)) {
       const routePath = combineRoutePath(basePath, match[2] || '');
@@ -606,8 +612,19 @@ function extractGraphqlRouteSurfaces(content, surfaces, seen) {
     return;
   }
 
-  for (const block of content.matchAll(/\b(Query|Mutation|Subscription)\s*:\s*\{([\s\S]{0,2000}?)\}/g)) {
-    for (const field of block[2].matchAll(/\b([A-Za-z_$][\w$]*)\s*:/g)) {
+  for (const block of content.matchAll(/\b(Query|Mutation|Subscription)\s*:\s*\{/g)) {
+    const openBraceIndex = (block.index || 0) + block[0].length - 1;
+    const body = readBalancedObjectBody(content, openBraceIndex, MAX_GRAPHQL_RESOLVER_BODY_LENGTH);
+    if (!body) {
+      continue;
+    }
+
+    for (const field of body.matchAll(/\b([A-Za-z_$][\w$]*)\s*:/g)) {
+      const tail = body.slice((field.index || 0) + field[0].length, (field.index || 0) + field[0].length + 220);
+      if (!isLikelyGraphqlResolverValue(tail)) {
+        continue;
+      }
+
       pushRouteSurface(surfaces, seen, {
         kind: 'graphql-operation',
         framework: 'graphql',
@@ -625,9 +642,15 @@ function extractOpenApiRouteSurfaces(content, surfaces, seen) {
     return;
   }
 
-  for (const match of content.matchAll(/([A-Za-z_$][\w$]*)\s*\.\s*registerPath\s*\(\s*\{([\s\S]{0,1000}?)\}\s*\)/g)) {
-    const method = match[2].match(/\bmethod\s*:\s*['"`]([A-Za-z]+)['"`]/)?.[1];
-    const routePath = match[2].match(/\bpath\s*:\s*['"`]([^'"`]+)['"`]/)?.[1];
+  for (const match of content.matchAll(/([A-Za-z_$][\w$]*)\s*\.\s*registerPath\s*\(\s*\{/g)) {
+    const openBraceIndex = (match.index || 0) + match[0].length - 1;
+    const body = readBalancedObjectBody(content, openBraceIndex, MAX_OPENAPI_REGISTER_BODY_LENGTH);
+    if (!body) {
+      continue;
+    }
+
+    const method = body.match(/\bmethod\s*:\s*['"`]([A-Za-z]+)['"`]/)?.[1];
+    const routePath = body.match(/\bpath\s*:\s*['"`]([^'"`]+)['"`]/)?.[1];
     if (!method || !routePath) {
       continue;
     }
@@ -638,11 +661,14 @@ function extractOpenApiRouteSurfaces(content, surfaces, seen) {
       target: match[1],
       methods: [method.toUpperCase()],
       path: routePath,
-      handler: match[2].match(/\boperationId\s*:\s*['"`]([^'"`]+)['"`]/)?.[1] || null
+      handler: body.match(/\boperationId\s*:\s*['"`]([^'"`]+)['"`]/)?.[1] || null
     });
   }
 }
 
+/**
+ * Normalize and merge controller-level and method-level route segments.
+ */
 function combineRoutePath(basePath, routePath) {
   const parts = [basePath, routePath]
     .map((value) => (value || '').trim())
@@ -653,6 +679,121 @@ function combineRoutePath(basePath, routePath) {
 
 function inferRouterFactoryFramework(content) {
   return /['"](?:@koa\/router|koa-router)['"]/.test(content) ? 'koa' : 'express';
+}
+
+/**
+ * Read the body of a `{ ... }` object literal from source text with bounded scanning.
+ */
+function readBalancedObjectBody(content, openBraceIndex, maxBodyLength) {
+  if (content[openBraceIndex] !== '{') {
+    return null;
+  }
+
+  let depth = 0;
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let inTemplate = false;
+  let inLineComment = false;
+  let inBlockComment = false;
+  let escaped = false;
+
+  const scanLimit = Math.min(content.length, openBraceIndex + maxBodyLength + 500);
+  for (let index = openBraceIndex; index < scanLimit; index += 1) {
+    const token = content[index];
+
+    if (inLineComment) {
+      if (token === '\n') {
+        inLineComment = false;
+      }
+      continue;
+    }
+
+    if (inBlockComment) {
+      if (token === '*' && content[index + 1] === '/') {
+        inBlockComment = false;
+        index += 1;
+      }
+      continue;
+    }
+
+    if (inSingleQuote) {
+      if (!escaped && token === '\'') {
+        inSingleQuote = false;
+      }
+      escaped = !escaped && token === '\\';
+      continue;
+    }
+
+    if (inDoubleQuote) {
+      if (!escaped && token === '"') {
+        inDoubleQuote = false;
+      }
+      escaped = !escaped && token === '\\';
+      continue;
+    }
+
+    if (inTemplate) {
+      if (!escaped && token === '`') {
+        inTemplate = false;
+      }
+      escaped = !escaped && token === '\\';
+      continue;
+    }
+
+    escaped = false;
+    if (token === '/' && content[index + 1] === '/') {
+      inLineComment = true;
+      index += 1;
+      continue;
+    }
+    if (token === '/' && content[index + 1] === '*') {
+      inBlockComment = true;
+      index += 1;
+      continue;
+    }
+    if (token === '\'') {
+      inSingleQuote = true;
+      continue;
+    }
+    if (token === '"') {
+      inDoubleQuote = true;
+      continue;
+    }
+    if (token === '`') {
+      inTemplate = true;
+      continue;
+    }
+
+    if (token === '{') {
+      depth += 1;
+      continue;
+    }
+    if (token !== '}') {
+      continue;
+    }
+
+    depth -= 1;
+    if (depth !== 0) {
+      continue;
+    }
+
+    const body = content.slice(openBraceIndex + 1, index);
+    if (body.length > maxBodyLength) {
+      return null;
+    }
+
+    return body;
+  }
+
+  return null;
+}
+
+/**
+ * Heuristic: GraphQL resolver map entries should map field names to callable values.
+ */
+function isLikelyGraphqlResolverValue(value) {
+  // Only treat resolver entries as API surfaces when the mapped value looks callable.
+  return /^\s*(?:async\s*)?(?:function\b|\(|[A-Za-z_$][\w$]*\s*\()/m.test(value);
 }
 
 function parseRouteMethods(body) {
