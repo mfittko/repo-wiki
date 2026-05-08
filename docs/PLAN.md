@@ -388,7 +388,8 @@ Wiki lint gates:
 
 ## Detailed feature plans
 
-Detailed planned-feature epics live as one markdown file per feature under `docs/plans/`:
+Detailed planned-feature epics live as one markdown file per feature under `docs/plans/`.
+GitHub Issues are the execution backlog; these docs define scope, acceptance criteria, and implementation direction:
 
 - `docs/plans/production-scanner.md`
 - `docs/plans/doc-validation.md`

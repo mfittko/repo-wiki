@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: repo-wiki roadmap and plans
+    url: https://github.com/mfittko/repo-wiki/issues
+    about: Track roadmap epics and implementation tasks in GitHub Issues.
