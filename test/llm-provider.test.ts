@@ -149,7 +149,7 @@ test('createProvider with provider="mock" returns MockLLMProvider', () => {
   assert.ok(provider instanceof MockLLMProvider);
 });
 
-test('createProvider with unknown provider and no apiKey throws MISSING_API_KEY', () => {
+test('createProvider with openai alias and no apiKey throws MISSING_API_KEY', () => {
   const config: LLMProviderConfig = { provider: 'openai' };
   assert.throws(
     () => createProvider(config),
@@ -300,6 +300,14 @@ test('buildRequest accepts request options without positional maxTokens', () => 
   assert.equal(req.systemPrompt, 'Custom system prompt.');
   assert.equal(req.temperature, 0.2);
   assert.equal(req.maxTokens, 2048);
+});
+
+test('buildRequest treats null maxTokens argument as no positional budget', () => {
+  const ctx = makeContext();
+  const req = buildRequest('foundation', ctx, null as unknown as number);
+
+  assert.equal(req.maxTokens, undefined);
+  assert.ok(req.systemPrompt.length > 0);
 });
 
 test('buildRequest user prompt includes source card paths', () => {

@@ -36,7 +36,7 @@ export interface ModuleInfo {
 }
 
 export interface PromptContext {
-  /** Kebab-case page file name without .md extension (e.g. "Module-Auth"). */
+  /** Wiki page slug/filename without .md extension (e.g. "Module-Auth"). */
   pageName: string;
   /** Human-readable page title (e.g. "Auth"). */
   pageTitle: string;

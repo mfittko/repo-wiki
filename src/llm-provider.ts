@@ -25,7 +25,7 @@ export type { PromptContext };
 export interface LLMRequest {
   /** Page archetype that selected the prompt template. */
   archetype: PageArchetype;
-  /** Kebab-case page identifier without .md (e.g. "Module-Auth"). */
+  /** Wiki page slug/filename without .md (e.g. "Module-Auth"). */
   pageName: string;
   /** Human-readable page title (e.g. "Auth"). */
   pageTitle: string;
@@ -299,9 +299,10 @@ export interface ResolvedLLMProviderConfig extends LLMProviderConfig {
 // ── Factory ────────────────────────────────────────────────────────────────
 
 /**
- * Create an `LLMProvider` from explicit configuration.
+ * Create an `LLMProvider` from configuration resolved with environment overrides.
  *
- * - Omitting `config` (or setting `provider: "mock"`) returns the mock provider.
+ * - Omitting `config` (or setting `provider: "mock"`) returns the mock provider unless
+ *   `LLMWIKI_LLM_PROVIDER` or `LLMWIKI_COMPILER_MODE` selects a hosted provider.
  * - Specifying an OpenAI-compatible provider without an API key throws
  *   `LLMProviderError` with `code: "MISSING_API_KEY"`.
  * - Specifying an unknown provider name throws
@@ -398,13 +399,13 @@ export function buildRequest(
 export function buildRequest(
   archetype: PageArchetype,
   context: PromptContext,
-  maxTokensOrOptions?: number | BuildRequestOptions,
+  maxTokensOrOptions?: number | BuildRequestOptions | null,
   config: Pick<LLMProviderConfig, 'systemPrompt' | 'temperature' | 'maxOutputTokens'> = {},
 ): LLMRequest {
   const prompt = buildPrompt(archetype, context);
-  const options = typeof maxTokensOrOptions === 'object'
+  const options: BuildRequestOptions = maxTokensOrOptions !== null && typeof maxTokensOrOptions === 'object'
     ? maxTokensOrOptions
-    : { ...config, maxTokens: maxTokensOrOptions };
+    : { ...config, maxTokens: typeof maxTokensOrOptions === 'number' ? maxTokensOrOptions : undefined };
   return {
     archetype,
     pageName: context.pageName,
