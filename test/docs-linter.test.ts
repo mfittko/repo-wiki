@@ -52,6 +52,11 @@ test('classifyDocumentedCommands validates known package scripts, flags missing 
   assert.equal(missingRun[0].source, 'package_scripts');
   assert.equal(missingRun[0].script_name, 'deploy');
 
+  // npm run options and quoted script names should not be treated as script names
+  const optionRun = classifyDocumentedCommands(['npm run --silent "build"'], packageScripts, []);
+  assert.equal(optionRun[0].status, 'validated');
+  assert.equal(optionRun[0].script_name, 'build');
+
   // npm test lifecycle → validated when test script exists
   const npmTest = classifyDocumentedCommands(['npm test'], packageScripts, []);
   assert.equal(npmTest[0].status, 'validated');
@@ -93,6 +98,10 @@ jobs:
       - run: npm ci
       - name: Lint
         run: npm run lint:code
+      - name: Scripted
+        run: bash scripts/check.sh || python tools/check.py; ./local-check
+      - name: Templated echo
+        run: echo \${{ matrix.foo }}
       - name: Matrix step
         run: \${{ matrix.task.command }}
   matrix:
@@ -106,10 +115,13 @@ jobs:
   const cmds = extractCiCommands(yaml);
   assert.ok(cmds.includes('npm ci'));
   assert.ok(cmds.includes('npm run lint:code'));
+  assert.ok(cmds.includes('bash scripts/check.sh'));
+  assert.ok(cmds.includes('python tools/check.py'));
+  assert.ok(cmds.includes('./local-check'));
   assert.ok(cmds.includes('npm run check'));
   assert.ok(cmds.includes('npm run pack:check'));
-  // Template expression should be excluded
-  assert.ok(!cmds.some((c) => c.startsWith('${{')));
+  // Template expressions anywhere in the command should be excluded
+  assert.ok(!cmds.some((c) => c.includes('${{')));
 });
 
 test('lintDocs reports missing-package-script for commands not in package.json', async () => {

@@ -26,23 +26,12 @@ export function extractCiCommands(content: string): string[] {
     // Match both `- run: <cmd>` (list item) and `  run: <cmd>` (property)
     const runMatch = /^\s+(?:-\s+)?run:\s+(.+)$/.exec(line);
     if (runMatch) {
-      const cmd = runMatch[1].trim().replace(/^["']|["']$/g, '');
-      if (!cmd.startsWith('${{')) {
-        for (const part of cmd.split('&&')) {
-          const trimmed = part.trim();
-          if (/^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(trimmed)) {
-            commands.push(trimmed);
-          }
-        }
-      }
+      commands.push(...extractWorkflowCommandParts(runMatch[1]));
     }
     // Match `command: <cmd>` matrix fields
     const cmdMatch = /^\s+command:\s+(.+)$/.exec(line);
     if (cmdMatch) {
-      const cmd = cmdMatch[1].trim().replace(/^["']|["']$/g, '');
-      if (!cmd.startsWith('${{') && /^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(cmd)) {
-        commands.push(cmd);
-      }
+      commands.push(...extractWorkflowCommandParts(cmdMatch[1]));
     }
   }
   return [...new Set(commands)];
@@ -79,9 +68,9 @@ function classifyCommand(
   ciCommands: string[]
 ): CommandClassification {
   // npm run <scriptName>
-  const npmRunMatch = /^npm\s+run\s+(\S+)/.exec(command);
-  if (npmRunMatch) {
-    const scriptName = npmRunMatch[1];
+  const npmRunScript = parseNpmRunScript(command);
+  if (npmRunScript) {
+    const scriptName = npmRunScript;
     return {
       command,
       status: scriptName in packageScripts ? 'validated' : 'missing',
@@ -91,9 +80,9 @@ function classifyCommand(
   }
 
   // npm test / npm start / npm stop / npm restart (lifecycle commands)
-  const lifecycleMatch = /^npm\s+(test|start|stop|restart)\b/.exec(command);
-  if (lifecycleMatch) {
-    const scriptName = lifecycleMatch[1];
+  const lifecycleScript = parseNpmLifecycleScript(command);
+  if (lifecycleScript) {
+    const scriptName = lifecycleScript;
     return {
       command,
       status: scriptName in packageScripts ? 'validated' : 'unvalidated',
@@ -206,11 +195,33 @@ export function validateDocClaims({ claims, content, filePath }) {
   };
 }
 
-function splitShellCommand(command: string): string[] {
+function extractWorkflowCommandParts(command: string): string[] {
+  const unquoted = command.trim().replace(/^["']|["']$/g, '');
+  if (!unquoted || unquoted.includes('${{')) return [];
+  return splitShellCommand(unquoted, false);
+}
+
+function parseNpmRunScript(command: string): string | undefined {
+  const tokens = tokenizeShellWords(command);
+  if (tokens[0] !== 'npm' || tokens[1] !== 'run') return undefined;
+  return tokens.slice(2).find((token) => token && !token.startsWith('-'));
+}
+
+function parseNpmLifecycleScript(command: string): string | undefined {
+  const tokens = tokenizeShellWords(command);
+  if (tokens[0] !== 'npm') return undefined;
+  return NPM_LIFECYCLE_SCRIPTS.has(tokens[1]) ? tokens[1] : undefined;
+}
+
+function tokenizeShellWords(command: string): string[] {
+  return (command.match(/"[^"]*"|'[^']*'|\S+/g) || []).map((token) => token.replace(/^["']|["']$/g, ''));
+}
+
+function splitShellCommand(command: string, recognizedOnly = true): string[] {
   return command
     .split(/\s*(?:&&|\|\||;)\s*/)
     .map((part) => part.trim())
-    .filter((part) => /^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(part));
+    .filter((part) => part && (!recognizedOnly || /^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(part)));
 }
 
 function extractHeadings(content) {

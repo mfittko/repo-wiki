@@ -17,16 +17,21 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
   // Collect CI commands from workflow YAML files
   const ciCommands: string[] = [];
   const workflowsDir = path.join(repoRoot, '.github', 'workflows');
+  let workflowFiles: string[] = [];
   try {
-    const workflowFiles = await fs.readdir(workflowsDir);
-    for (const wf of workflowFiles) {
-      if (wf.endsWith('.yml') || wf.endsWith('.yaml')) {
-        const content = await fs.readFile(path.join(workflowsDir, wf), 'utf8');
-        ciCommands.push(...extractCiCommands(content));
-      }
-    }
+    workflowFiles = await fs.readdir(workflowsDir);
   } catch {
     // No .github/workflows directory — acceptable
+  }
+  for (const wf of workflowFiles) {
+    if (wf.endsWith('.yml') || wf.endsWith('.yaml')) {
+      try {
+        const content = await fs.readFile(path.join(workflowsDir, wf), 'utf8');
+        ciCommands.push(...extractCiCommands(content));
+      } catch {
+        // Skip only the unreadable workflow; other workflows can still validate commands.
+      }
+    }
   }
 
   for (const doc of docs) {
