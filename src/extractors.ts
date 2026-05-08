@@ -591,11 +591,12 @@ function extractNestRouteSurfaces(content, surfaces, seen) {
 }
 
 function extractTrpcRouteSurfaces(content, surfaces, seen) {
-  if (!/\b(?:@trpc\/server|initTRPC|createTRPCRouter|t\s*\.\s*router|router\s*\(\s*\{)/.test(content)) {
+  if (!/\b(?:@trpc\/server|initTRPC|createTRPCRouter|t\s*\.\s*router)\b/.test(content)) {
     return;
   }
 
-  for (const match of content.matchAll(/\b([A-Za-z_$][\w$]*)\s*:\s*[A-Za-z_$][\w$.]*\s*\.\s*(query|mutation|subscription)\s*\(/g)) {
+  const procedurePattern = /\b([A-Za-z_$][\w$]*)\s*:\s*(?:[A-Za-z_$][\w$]*Procedure|[A-Za-z_$][\w$]*\s*\.\s*procedure|procedure)\s*\.\s*(query|mutation|subscription)\s*\(/g;
+  for (const match of content.matchAll(procedurePattern)) {
     pushRouteSurface(surfaces, seen, {
       kind: 'rpc-route',
       framework: 'trpc',

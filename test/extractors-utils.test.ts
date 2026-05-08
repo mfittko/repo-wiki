@@ -319,8 +319,11 @@ custom.route({ method: 'patch', path: '/patch' });
 test('extractRouteSurfaces detects NestJS, Koa, tRPC, GraphQL, and OpenAPI patterns', () => {
   const frameworkContent = `
 import Router from '@koa/router';
+import Koa from 'koa';
 import { initTRPC } from '@trpc/server';
 import { graphql } from 'graphql';
+const koaApp = new Koa();
+koaApp.use('/koa-middleware', koaMiddleware);
 const koaRouter = new Router();
 koaRouter.get('/koa-health', koaHealth);
 
@@ -368,6 +371,7 @@ registry.registerPath({ path: '/openapi/missing-method' });
     { kind: 'graphql-operation', framework: 'graphql', target: 'Query', methods: ['QUERY'], path: '/graphql', handler: 'user' },
     { kind: 'rpc-route', framework: 'trpc', target: 'router', methods: ['QUERY'], path: '/hello', handler: 'hello' },
     { kind: 'http-route', framework: 'koa', target: 'koaRouter', methods: ['GET'], path: '/koa-health', handler: 'koaHealth' },
+    { kind: 'http-route', framework: 'koa', target: 'koaApp', methods: ['USE'], path: '/koa-middleware', handler: 'koaMiddleware' },
     { kind: 'openapi-operation', framework: 'openapi', target: 'registry', methods: ['GET'], path: '/openapi/pets', handler: 'listPets' },
     { kind: 'http-route', framework: 'nestjs', target: 'UsersController', methods: ['POST'], path: '/users', handler: 'createUser' },
     { kind: 'http-route', framework: 'nestjs', target: 'UsersController', methods: ['GET'], path: '/users/profile', handler: 'getProfile' }
@@ -446,6 +450,16 @@ const router = t.router({
   const surfaces = extractRouteSurfaces('src/trpc.ts', content, 'TypeScript');
   assert.equal(surfaces.length, 2);
   assert.deepEqual(surfaces.map(s => s.handler).sort(), ['addItem', 'getItems']);
+});
+
+test('extractRouteSurfaces does not infer tRPC from generic router objects', () => {
+  const content = `
+const router = ({
+  lookup: db.query('select 1'),
+  save: db.mutation('insert')
+});
+`;
+  assert.deepEqual(extractRouteSurfaces('src/plain.ts', content, 'TypeScript'), []);
 });
 
 test('extractRouteSurfaces handles OpenAPI with array method', () => {
