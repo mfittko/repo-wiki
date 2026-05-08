@@ -29,6 +29,7 @@ When running repository commands or automation:
 
 - Prefer single commands where practical. If the logic is too involved for one command, write a temporary `.mjs` script under `tmp/` instead of building up fragile shell sequences.
 - For GitHub issue/PR descriptions and comments, prefer `--body-file` / `-F` or stdin via `-F -` over inline shell strings. Use heredocs or temp files for multi-line content and avoid interpolating untrusted text directly into shell commands.
+- When a PR verdict is requested for a pull request not opened by the active GitHub user (`<self>`), submit a formal GitHub review: use Approve when the verdict is merge-ready, or Request Changes when the verdict includes must-fix findings. Do not leave only a plain PR comment for these verdicts.
 
 When adding new capabilities:
 
