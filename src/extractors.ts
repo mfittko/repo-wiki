@@ -468,19 +468,23 @@ function extractPythonSymbols(content: string): string[] {
       continue;
     }
 
-    const asyncSignature = collectPythonSignature(lines, lineIndex);
-    const asyncFunction = findPythonFunctionName(asyncSignature.signature, true);
-    if (asyncFunction) {
-      symbols.add(asyncFunction);
-      lineIndex = asyncSignature.endLineIndex;
+    if (line.startsWith('async def ')) {
+      const asyncSignature = collectPythonSignature(lines, lineIndex);
+      const asyncFunction = findPythonFunctionName(asyncSignature.signature, true);
+      if (asyncFunction) {
+        symbols.add(asyncFunction);
+        lineIndex = asyncSignature.endLineIndex;
+      }
       continue;
     }
 
-    const functionSignature = collectPythonSignature(lines, lineIndex);
-    const functionName = findPythonFunctionName(functionSignature.signature, false);
-    if (functionName) {
-      symbols.add(functionName);
-      lineIndex = functionSignature.endLineIndex;
+    if (line.startsWith('def ')) {
+      const functionSignature = collectPythonSignature(lines, lineIndex);
+      const functionName = findPythonFunctionName(functionSignature.signature, false);
+      if (functionName) {
+        symbols.add(functionName);
+        lineIndex = functionSignature.endLineIndex;
+      }
       continue;
     }
 
@@ -535,16 +539,30 @@ function isTopLevelLine(line: string) {
 function stripPythonTripleQuotedStrings(content: string) {
   let result = '';
   let tripleQuote: "'''" | '"""' | null = null;
+  let inlineQuote: '"' | "'" | null = null;
 
   for (let charIndex = 0; charIndex < content.length; charIndex += 1) {
     const current = content[charIndex];
 
     if (tripleQuote) {
-      if (content.startsWith(tripleQuote, charIndex)) {
+      if (content.startsWith(tripleQuote, charIndex) && !isEscaped(content, charIndex)) {
         tripleQuote = null;
         charIndex += 2;
       } else if (current === '\n') {
         result += '\n';
+      }
+      continue;
+    }
+
+    if (inlineQuote) {
+      result += current;
+      if (current === '\\') {
+        charIndex += 1;
+        result += content[charIndex] || '';
+        continue;
+      }
+      if (current === inlineQuote) {
+        inlineQuote = null;
       }
       continue;
     }
@@ -561,10 +579,22 @@ function stripPythonTripleQuotedStrings(content: string) {
       continue;
     }
 
+    if (current === '"' || current === "'") {
+      inlineQuote = current;
+    }
+
     result += current;
   }
 
   return result;
+}
+
+function isEscaped(content: string, charIndex: number) {
+  let slashCount = 0;
+  for (let index = charIndex - 1; index >= 0 && content[index] === '\\'; index -= 1) {
+    slashCount += 1;
+  }
+  return slashCount % 2 === 1;
 }
 
 function collectPythonSignature(lines: string[], startLineIndex: number) {

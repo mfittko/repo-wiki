@@ -130,6 +130,28 @@ const Profile = mongoose.model('Profile', profileSchema);
     }
   ]);
 
+  assert.deepEqual(extractRouteSurfaces('src/more-routes.ts', `
+fastify.get('/ready', readyHandler);
+router.post('/jobs', createJob);
+`, 'TypeScript'), [
+    {
+      kind: 'http-route',
+      framework: 'router',
+      target: 'router',
+      methods: ['POST'],
+      path: '/jobs',
+      handler: 'createJob'
+    },
+    {
+      kind: 'http-route',
+      framework: 'fastify',
+      target: 'fastify',
+      methods: ['GET'],
+      path: '/ready',
+      handler: 'readyHandler'
+    }
+  ]);
+
   assert.deepEqual(detectRuntimeHints('infra/Dockerfile', richSource + '\ncron.schedule()', {
     routeSurfaces: extractRouteSurfaces('src/server.ts', richSource, 'TypeScript'),
     environmentVariables: extractEnvironmentVariables(richSource, 'TypeScript')
@@ -239,6 +261,7 @@ from .local.module import value as local_value
 CONSTANT = "value"
 MAX_RETRIES: int = 3
 SPECIAL_TOKEN: Literal["="] = "="
+TRIPLE_MARKER = "'''"
 
 class Service:
     def method(self):
@@ -262,7 +285,7 @@ async def multi_async(
 `;
 
   assert.deepEqual(extractImports(pythonSource, 'Python'), ['.local.module', 'collections', 'json', 'os', 'pkg.mod']);
-  assert.deepEqual(extractSymbols(pythonSource, 'Python'), ['CONSTANT', 'MAX_RETRIES', 'SPECIAL_TOKEN', 'Service', 'fetch_data', 'helper', 'multi_async', 'multi_line']);
+  assert.deepEqual(extractSymbols(pythonSource, 'Python'), ['CONSTANT', 'MAX_RETRIES', 'SPECIAL_TOKEN', 'Service', 'TRIPLE_MARKER', 'fetch_data', 'helper', 'multi_async', 'multi_line']);
 
   const malformedSource = `
 import requests
@@ -276,6 +299,39 @@ RESULT = 1
   assert.doesNotThrow(() => extractSymbols(malformedSource, 'Python'));
   assert.deepEqual(extractSymbols(malformedSource, 'Python'), ['RESULT', 'Recoverable', 'still_ok']);
   assert.deepEqual(extractImports(malformedSource, 'Python'), ['requests']);
+
+  const quoteEdgeCases = `
+'''example import hidden_single_quote_docstring'''
+VALUE_WITH_HASH = "not a # comment"
+VALUE_WITH_ESCAPED_QUOTE = "keeps \\"# still string"
+TRIPLE_MARKER = "'''"
+DOUBLE_TRIPLE_MARKER = '\"\"\"'
+NESTED = {"key": "="}
+LIST_VALUE = ["="]
+COMPARES = 1 == 1
+NOT_EQUAL = 1 != 2
+
+def with_defaults(value: str = "(", other: dict = {"x": ":"}) -> str:
+    return value
+
+def no_colon(value) -> str
+class AfterMalformed:
+    pass
+async def :
+    pass
+`;
+  assert.deepEqual(extractSymbols(quoteEdgeCases, 'Python'), [
+    'AfterMalformed',
+    'COMPARES',
+    'DOUBLE_TRIPLE_MARKER',
+    'LIST_VALUE',
+    'NESTED',
+    'NOT_EQUAL',
+    'TRIPLE_MARKER',
+    'VALUE_WITH_ESCAPED_QUOTE',
+    'VALUE_WITH_HASH',
+    'with_defaults'
+  ]);
 });
 
 test('git helpers cover success and fallback paths', async () => {
