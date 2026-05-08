@@ -98,7 +98,8 @@ function shouldExclude(relative: string, name: string, exclude: string[]) {
 
   return exclude.some((pattern) => {
     if (pattern.endsWith('/**')) {
-      return relative.startsWith(pattern.slice(0, -3));
+      const base = pattern.slice(0, -3).replace(/\/+$/, '');
+      return relative === base || relative.startsWith(`${base}/`);
     }
     return relative === pattern || relative.startsWith(`${pattern}/`);
   });
