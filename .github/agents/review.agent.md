@@ -5,6 +5,7 @@ tools: [read, search, execute, bash]
 argument-hint: "PR number or branch, relevant plan files, and any specific review focus areas or constraints."
 systemPromptMode: append
 inheritProjectContext: true
+defaultContext: fresh
 user-invocable: false
 ---
 You are a focused pull request review agent. You review an implementation for correctness, scope control, engineering quality, and merge readiness.
