@@ -277,6 +277,7 @@ test('scanRepository redacts secret-bearing compiler config fields from manifest
           credential_type: 'bearer',
           secret_sauce: 'documentation-only-label',
           api_key_env: 'SAFE_ENV_NAME',
+          apiKeyEnv: 'SAFE_CAMEL_ENV_NAME',
           model: 'safe-model-name'
         }
       }
@@ -297,6 +298,7 @@ test('scanRepository redacts secret-bearing compiler config fields from manifest
     assert.equal(result.manifest.config.compiler.llm.credential_type, 'bearer');
     assert.equal(result.manifest.config.compiler.llm.secret_sauce, 'documentation-only-label');
     assert.equal(result.manifest.config.compiler.llm.api_key_env, 'SAFE_ENV_NAME');
+    assert.equal(result.manifest.config.compiler.llm.apiKeyEnv, 'SAFE_CAMEL_ENV_NAME');
     assert.equal(result.manifest.config.compiler.llm.model, 'safe-model-name');
   } finally {
     await fs.rm(repo, { recursive: true, force: true });

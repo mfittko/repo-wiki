@@ -14,6 +14,9 @@ export function normalizeRepoPath(filePath: string) {
 
 export function isGeneratedOutputReference(filePath: string) {
   const normalized = normalizeRepoPath(filePath.replace(/^\.\//, ''));
+  if (hasParentDirectorySegment(normalized)) {
+    return false;
+  }
   const root = normalized.split('/')[0];
   return GENERATED_OUTPUT_ROOTS.has(root);
 }
@@ -30,13 +33,13 @@ export async function resolveDocumentedPathOnDisk(referencePath: string, docPath
   const absoluteRoot = path.resolve(repoRoot);
 
   for (const candidate of candidates) {
-    if (isGeneratedOutputReference(candidate)) {
-      return { valid: true, path: candidate };
-    }
-
     const absolute = path.resolve(absoluteRoot, candidate);
     if (!isPathInside(absoluteRoot, absolute)) {
       continue;
+    }
+
+    if (isGeneratedOutputReference(candidate)) {
+      return { valid: true, path: candidate };
     }
 
     let exists = accessCache.get(absolute);
@@ -112,4 +115,8 @@ function collectConfigEnvironmentVariables(value: any, names: Set<string>) {
 function isPathInside(root: string, target: string) {
   const relative = path.relative(root, target);
   return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+}
+
+function hasParentDirectorySegment(filePath: string) {
+  return /(^|\/)\.\.(\/|$)/.test(filePath.replaceAll('\\', '/'));
 }

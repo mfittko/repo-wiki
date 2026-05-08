@@ -175,7 +175,7 @@ function redactSecretConfig(value: any): any {
 }
 
 function isSecretConfigKey(key: string) {
-  if (/(?:^|[_-])env$/i.test(key)) {
+  if (/(?:^|[_-])env$/i.test(key) || /env$/i.test(key)) {
     return false;
   }
   if (/api[_-]?key/i.test(key)) {

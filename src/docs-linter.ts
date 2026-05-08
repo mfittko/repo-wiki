@@ -120,6 +120,11 @@ function issue(level, code, message) {
 }
 
 function cleanDocumentLinkTarget(value: string) {
-  const withoutTitle = value.trim().replace(/\s+(?:"[^"]*"|'[^']*'|\([^)]*\))$/, '');
-  return withoutTitle.split('#')[0].split('?')[0].trim();
+  const withoutAngleBrackets = value.trim().replace(/^<|>$/g, '');
+  const withoutTitle = withoutAngleBrackets.replace(/\s+(?:"[^"]*"|'[^']*'|\([^)]*\))$/, '');
+  return withoutTitle
+    .split('#')[0]
+    .split('?')[0]
+    .replace(/^['"]|['"]$/g, '')
+    .trim();
 }

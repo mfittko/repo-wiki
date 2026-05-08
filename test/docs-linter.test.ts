@@ -285,7 +285,7 @@ test('lintDocs keeps link validation inside repo and exempts generated-output ro
         stale_after_days: 9999
       }
     }), 'utf8');
-    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee [outside](../outside.txt), [dist](dist/), [missing](docs/missing.md), and [titled](docs/guide.md "Guide").\n', 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee [outside](../outside.txt), [dist](dist/), [escaped](dist/../../outside.txt), [missing](docs/missing.md), [angle](<docs/guide.md>), and [titled](docs/guide.md "Guide").\n', 'utf8');
     await writeFile(path.join(dir, 'docs', 'guide.md'), '# Guide\n', 'utf8');
 
     const scanDir = path.join(dir, '.llmwiki', 'run');
@@ -293,10 +293,11 @@ test('lintDocs keeps link validation inside repo and exempts generated-output ro
 
     const lint = await lintDocs({ scanDir, repoPath: dir });
     const brokenPaths = lint.issues.filter((i) => i.code === 'broken-documented-file-path');
-    assert.equal(brokenPaths.length, 2);
+    assert.equal(brokenPaths.length, 3);
     assert.ok(brokenPaths.some((i) => i.message.includes('../outside.txt')));
+    assert.ok(brokenPaths.some((i) => i.message.includes('dist/../../outside.txt')));
     assert.ok(brokenPaths.some((i) => i.message.includes('docs/missing.md')));
-    assert.ok(!brokenPaths.some((i) => i.message.includes('dist/')));
+    assert.ok(!brokenPaths.some((i) => i.message.endsWith('repository path dist/.')));
     assert.ok(!brokenPaths.some((i) => i.message.includes('docs/guide.md')));
   } finally {
     await rm(dir, { recursive: true, force: true });
