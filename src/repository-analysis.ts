@@ -12,6 +12,7 @@ type SourceCard = {
 
 const FILE_NODE_PREFIX = 'file:';
 const PACKAGE_NODE_PREFIX = 'package:';
+const SCHEME_SPECIFIER_PATTERN = /^[A-Za-z][A-Za-z+.-]*:/;
 
 export function extractPackageMetadata(filePath: string, content: string): { package_name: string | null; package_scripts: Record<string, string> } | null {
   if (!filePath.toLowerCase().endsWith('package.json')) {
@@ -299,14 +300,15 @@ function resolvePackageSpecifier(specifier) {
     return null;
   }
 
-  if (/^[A-Za-z][A-Za-z+.-]*:/.test(specifier)) {
+  if (SCHEME_SPECIFIER_PATTERN.test(specifier)) {
     return null;
   }
 
   if (specifier.startsWith('@')) {
     const parts = specifier.split('/');
+    const packageSegment = parts[1]?.trim();
     // Scoped package names require both scope and package segments (e.g. @scope/pkg).
-    return parts.length >= 2 && parts[1] ? `${parts[0]}/${parts[1]}` : null;
+    return parts.length >= 2 && packageSegment ? `${parts[0]}/${packageSegment}` : null;
   }
 
   const [name] = specifier.split('/');
