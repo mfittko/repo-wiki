@@ -26,14 +26,13 @@ flowchart TD
 
 ```mermaid
 flowchart LR
-   subgraph Extractors
-     TS[TypeScript/JS]
-     Py[Python]
-     Go[Go]
-     Ruby[Ruby]
-     Rust[Rust]
-   end
-   subgraph Frameworks
+  subgraph Extractors
+    TS[TypeScript/JS]
+    Py[Python]
+    Go[Go]
+    Rust[Rust]
+  end
+  subgraph Frameworks
     Express
     Fastify
     NestJS
@@ -43,9 +42,8 @@ flowchart LR
     GraphQL
     OpenAPI
   end
-   TS --> Frameworks
-   Py --> Frameworks
-   Ruby --> Frameworks
+  TS --> Frameworks
+  Py --> Frameworks
 ```
 
 ```mermaid

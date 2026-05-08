@@ -240,6 +240,8 @@ test('language detection and classification cover the major path cases', () => {
   assert.equal(detectLanguage('README'), 'Text');
 
   assert.equal(classifyPath('tests/foo.spec.ts'), 'test');
+  assert.equal(classifyPath('spec/models/user_spec.rb'), 'test');
+  assert.equal(classifyPath('src/models/user_test.rb'), 'test');
   assert.equal(classifyPath('.github/workflows/ci.yml'), 'ci');
   assert.equal(classifyPath('docs/guide.md'), 'docs');
   assert.equal(classifyPath('db/migrations/001.sql'), 'data');
@@ -268,6 +270,14 @@ module RepoWiki
     DEFAULT_LIMIT ||= 50
 
     def run
+      if true
+        [1].each do |value|
+          case value
+          when 1
+            true
+          end
+        end
+      end
       true
     end
 
@@ -282,6 +292,17 @@ module RepoWiki
     end
   end
 end
+
+execute <<~SQL
+  require "ignored_sql"
+  module IgnoredSql
+  end
+SQL
+
+logger.debug(<<~TEXT)
+  def fake_method
+  end
+TEXT
 
 =begin
 require "ignored_block"

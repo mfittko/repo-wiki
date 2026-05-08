@@ -43,8 +43,9 @@ export function detectLanguage(filePath) {
 
 export function classifyPath(filePath) {
   const lower = filePath.toLowerCase();
+  const isRubyTestFile = /(?:^|\/)spec\/.+\.rb$/.test(lower) || /_test\.rb$/.test(lower);
 
-  if (lower.includes('/test/') || lower.includes('/tests/') || /\.(test|spec)\.[mc]?[jt]sx?$/.test(lower)) {
+  if (lower.includes('/test/') || lower.includes('/tests/') || /\.(test|spec)\.[mc]?[jt]sx?$/.test(lower) || isRubyTestFile) {
     return 'test';
   }
 
