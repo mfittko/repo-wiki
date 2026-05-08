@@ -133,11 +133,12 @@ function renderDocumentationDebtReport(manifest) {
   // Build merged package scripts from manifest analysis for command validation
   const allPackageScripts = mergePackageScripts(manifest);
 
-  // Classify all documented commands against known package scripts
-  // CI command validation requires running lint-docs with repo access
+  // Classify all documented commands against known package scripts and CI
+  // workflow commands extracted into the scan manifest.
   const allDocCommands: string[] = docs.flatMap((doc) => doc.validation?.commands || []);
   const uniqueDocCommands = [...new Set(allDocCommands)];
-  const classified = classifyDocumentedCommands(uniqueDocCommands, allPackageScripts, []);
+  const ciCommands: string[] = manifest.analysis?.ci_workflow_commands || [];
+  const classified = classifyDocumentedCommands(uniqueDocCommands, allPackageScripts, ciCommands);
   const validatedCmds = classified.filter((c) => c.status === 'validated');
   const missingCmds = classified.filter((c) => c.status === 'missing');
   const unvalidatedCmds = classified.filter((c) => c.status === 'unvalidated');
@@ -175,7 +176,7 @@ ${rows.join('\n') || '| No documentation files scanned | | | | | | |'}
 
 ## Command validation
 
-Commands extracted from documentation code blocks, validated against \`package.json\` scripts. Run \`repo-wiki lint-docs\` (or \`npm run lint:docs\`) for CI workflow validation.
+Commands extracted from documentation code blocks, validated against \`package.json\` scripts and CI workflow commands captured in the scan manifest.
 
 - Validated: ${validatedCmds.length}
 - Missing (script not in package.json): ${missingCmds.length}

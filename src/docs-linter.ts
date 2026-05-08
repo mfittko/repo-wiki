@@ -14,8 +14,8 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
   // Collect merged package scripts from manifest analysis
   const allPackageScripts = mergePackageScripts(manifest);
 
-  // Collect CI commands from workflow YAML files
-  const ciCommands: string[] = [];
+  // Collect CI commands from scan analysis and refresh workflow YAML files when available.
+  const ciCommands: string[] = [...(manifest.analysis?.ci_workflow_commands || [])];
   const workflowsDir = path.join(repoRoot, '.github', 'workflows');
   let workflowFiles: string[] = [];
   try {
@@ -54,7 +54,7 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
           issues.push(issue(
             config.lint?.missing_package_scripts || 'warning',
             'missing-package-script',
-            `${doc.path} documents 'npm run ${cls.script_name}' but script '${cls.script_name}' is not defined in package.json.`
+            `${doc.path} documents '${cls.command}' but script '${cls.script_name}' is not defined in package.json.`
           ));
         }
       }

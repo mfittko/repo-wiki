@@ -9,6 +9,7 @@ type SourceCard = {
   imports?: string[];
   package_name?: string | null;
   package_scripts?: Record<string, string>;
+  ci_workflow_commands?: string[];
 };
 
 const FILE_NODE_PREFIX = 'file:';
@@ -52,8 +53,11 @@ export function buildRepositoryAnalysis(cards: SourceCard[]) {
   const dependencyEdges = dependencyGraph.edges;
   const testMappings = buildTestMappings(cards, dependencyEdges, fileIndex);
 
+  const ciWorkflowCommands = [...new Set(cards.flatMap((card) => card.ci_workflow_commands || []))].sort();
+
   return {
     package_scripts: packageScripts,
+    ci_workflow_commands: ciWorkflowCommands,
     dependency_graph: {
       nodes: dependencyGraph.nodes,
       edges: dependencyEdges,

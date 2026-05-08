@@ -74,6 +74,19 @@ function classifyCommand(
   packageScripts: Record<string, string>,
   ciCommands: string[]
 ): CommandClassification {
+  // A verbatim CI workflow match is authoritative for any supported command form,
+  // including npm workspace invocations this best-effort parser cannot map safely.
+  const normalized = command.trim();
+  if (ciCommands.some((ci) => ci.trim() === normalized)) {
+    return { command, status: 'validated', source: 'ci_workflow' };
+  }
+
+  // npm workspace selectors require package-to-workspace resolution. Keep those
+  // conservative unless CI validated the exact documented command above.
+  if (hasNpmWorkspaceSelector(command)) {
+    return { command, status: 'unvalidated', source: 'unknown' };
+  }
+
   // npm run <scriptName>
   const npmRunScript = parseNpmRunScript(command);
   if (npmRunScript) {
@@ -96,12 +109,6 @@ function classifyCommand(
       source: 'package_scripts',
       script_name: scriptName
     };
-  }
-
-  // Check if command appears verbatim in CI workflow commands
-  const normalized = command.trim();
-  if (ciCommands.some((ci) => ci.trim() === normalized)) {
-    return { command, status: 'validated', source: 'ci_workflow' };
   }
 
   return { command, status: 'unvalidated', source: 'unknown' };
@@ -230,8 +237,10 @@ function leadingSpaces(line: string): number {
 
 function parseNpmRunScript(command: string): string | undefined {
   const tokens = tokenizeShellWords(command);
-  if (tokens[0] !== 'npm' || tokens[1] !== 'run') return undefined;
-  return tokens.slice(2).find((token) => token && !token.startsWith('-'));
+  if (tokens[0] !== 'npm') return undefined;
+  const runIndex = tokens.findIndex((token, index) => index > 0 && token === 'run');
+  if (runIndex === -1) return undefined;
+  return tokens.slice(runIndex + 1).find((token) => token && !token.startsWith('-'));
 }
 
 function parseNpmLifecycleScript(command: string): string | undefined {
@@ -240,15 +249,50 @@ function parseNpmLifecycleScript(command: string): string | undefined {
   return NPM_LIFECYCLE_SCRIPTS.has(tokens[1]) ? tokens[1] : undefined;
 }
 
+function hasNpmWorkspaceSelector(command: string): boolean {
+  const tokens = tokenizeShellWords(command);
+  if (tokens[0] !== 'npm') return false;
+  return tokens.some((token) => token === '-w' || token === '--workspace' || token === '--workspaces' || token.startsWith('--workspace='));
+}
+
 function tokenizeShellWords(command: string): string[] {
   return (command.match(/"[^"]*"|'[^']*'|\S+/g) || []).map((token) => token.replace(/^["']|["']$/g, ''));
 }
 
 function splitShellCommand(command: string, recognizedOnly = true): string[] {
-  return command
-    .split(/\s*(?:&&|\|\||;)\s*/)
-    .map((part) => part.trim())
-    .filter((part) => part && (!recognizedOnly || /^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(part)));
+  const parts: string[] = [];
+  let current = '';
+  let quote: '"' | "'" | '' = '';
+
+  for (let index = 0; index < command.length; index += 1) {
+    const char = command[index];
+    const next = command[index + 1];
+    if ((char === '"' || char === "'") && !quote) {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === quote) {
+      quote = '';
+      current += char;
+      continue;
+    }
+    if (!quote && ((char === '&' && next === '&') || (char === '|' && next === '|'))) {
+      parts.push(current.trim());
+      current = '';
+      index += 1;
+      continue;
+    }
+    if (!quote && char === ';') {
+      parts.push(current.trim());
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+  parts.push(current.trim());
+
+  return parts.filter((part) => part && (!recognizedOnly || /^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(part)));
 }
 
 function extractHeadings(content) {
