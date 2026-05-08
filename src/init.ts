@@ -16,7 +16,8 @@ const DEFAULT_CONFIG = {
       'coverage/**',
       '.llmwiki/run/**',
       '.llmwiki/wiki/**'
-    ]
+    ],
+    suppress_nested_repositories: true
   },
   documentation: {
     ingest: true,
