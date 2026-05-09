@@ -123,5 +123,5 @@ jobs:
       - name: Publish GitHub Pages
         env:
           LLMWIKI_PUBLISH_REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
-          PAGES_PATH: ${{ github.event.inputs.pages_path || 'docs' }}
+          PAGES_PATH: ${{ github.event.inputs.pages_path || '.' }}
         run: node ./dist/bin/repo-wiki.js publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --pages-path "$PAGES_PATH"
