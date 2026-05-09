@@ -275,6 +275,68 @@ test('compileWiki renders related tests in module pages', async () => {
   }
 });
 
+test('compileWiki renders source file paths as commit-pinned GitHub links when remote is GitHub', async () => {
+  const manifest = {
+    remote: 'git@github.com:owner/example.git',
+    commit: 'abc123456789',
+    mode: 'bootstrap',
+    totals: {
+      languages: { TypeScript: 2, JSON: 1 },
+      categories: { source: 1, test: 1, config: 1 },
+      runtime_hints: {}
+    },
+    files: [
+      { path: 'package.json', category: 'config', language: 'JSON', imports: [], runtime_hints: [], reasons: ['config'] },
+      { path: 'src/file with spaces.ts', category: 'source', language: 'TypeScript', imports: [], runtime_hints: [], reasons: ['source'] },
+      { path: 'test/file with spaces.test.ts', category: 'test', language: 'TypeScript', imports: ['../src/file with spaces.ts'], runtime_hints: [], reasons: ['test'] }
+    ],
+    analysis: {
+      package_scripts: [{ path: 'package.json', name: 'example', scripts: { test: 'node --test' } }],
+      dependency_graph: {
+        edges: [{ from: 'test/file with spaces.test.ts', to: 'src/file with spaces.ts', specifier: '../src/file with spaces.ts' }],
+        summary: { edges: 1, importers: 1, imported_files: 1 }
+      },
+      test_to_source: {
+        mappings: [{ test: 'test/file with spaces.test.ts', sources: ['src/file with spaces.ts'], heuristics: ['imports'] }],
+        summary: { mapped_tests: 1, source_files: 1 }
+      }
+    }
+  };
+
+  const plan = {
+    pages: createPlan().pages,
+    modules: [
+      {
+        slug: 'Module-Source',
+        name: 'Source',
+        files: ['src/file with spaces.ts'],
+        categories: { source: 1 },
+        languages: { TypeScript: 1 },
+        runtime_hints: {},
+        important_reasons: ['source']
+      }
+    ]
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+
+    const modulePage = await fs.readFile(path.join(wikiDir, 'Module-Source.md'), 'utf8');
+    const buildPage = await fs.readFile(path.join(wikiDir, 'Build-Test-and-Run.md'), 'utf8');
+    const testingPage = await fs.readFile(path.join(wikiDir, 'Testing-Strategy.md'), 'utf8');
+    const dependencyPage = await fs.readFile(path.join(wikiDir, 'Dependency-Map.md'), 'utf8');
+
+    assert.match(modulePage, /\[src\/file with spaces\.ts\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/src\/file%20with%20spaces\.ts\)/);
+    assert.match(buildPage, /\[package\.json\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/package\.json\)/);
+    assert.match(testingPage, /\[test\/file with spaces\.test\.ts\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/test\/file%20with%20spaces\.test\.ts\)/);
+    assert.match(dependencyPage, /\[src\/file with spaces\.ts\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/src\/file%20with%20spaces\.ts\)/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('compileWiki omits Related tests section when no test mappings exist for the module', async () => {
   const manifest = {
     remote: 'origin',
