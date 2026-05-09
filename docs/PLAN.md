@@ -131,12 +131,13 @@ External usage should be equivalent:
 ```bash
 npx repo-wiki init --repo . --write-agents
 npx repo-wiki run --mode bootstrap --repo . --wiki .llmwiki/wiki
-npx repo-wiki publish --target github-wiki --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git
+npx repo-wiki publish --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git
 ```
 
-Richer static-site publication should be available through a GitHub Pages target:
+Planned richer publication should make the target explicit, including a GitHub Wiki target and a GitHub Pages target:
 
 ```bash
+npx repo-wiki publish --target github-wiki --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git
 npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --path .
 ```
 
@@ -510,7 +511,7 @@ repo-wiki plan      Produce bootstrap or incremental page plan.
 repo-wiki lint-docs Validate ingested markdown before compilation.
 repo-wiki compile   Generate local wiki markdown.
 repo-wiki lint      Validate generated wiki markdown.
-repo-wiki publish   Publish local wiki markdown to a target such as GitHub Wiki or GitHub Pages.
+repo-wiki publish   Publish local wiki markdown to a configured Git remote, normally a GitHub Wiki repository.
 repo-wiki run       Orchestrate scan -> plan -> lint-docs -> compile -> lint -> optional publish.
 ```
 
@@ -524,6 +525,8 @@ repo-wiki diff      Show wiki pages that would change for a branch or PR.
 repo-wiki query     Ask a source-cited question against the wiki, cards, and source files.
 repo-wiki search    Local search over generated wiki pages, cards, and selected source metadata.
 repo-wiki health    Focused wiki-health diagnostics, using the graph/orphan/stale/contradiction checks also enforced by lint policy.
+repo-wiki publish --target github-wiki|github-pages
+                  Select destination-specific publish behavior and frontmatter policy.
 ```
 
 ## Local dogfooding workflow

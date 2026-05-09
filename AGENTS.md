@@ -21,7 +21,7 @@ For repository orientation, use the generated local wiki as a navigation aid bef
 
 The local wiki is not authoritative; verify material claims against source, tests, configuration, and CI.
 
-Repository-maintained cross-platform skills can live under `skills/` when they are intended to ship with or describe repo-wiki itself. Integration-specific locations such as `.github/skills/` and `.pi/skills/` should be symlinks to the canonical skill directory, not duplicate skill copies.
+Repository-maintained cross-platform skills can live under `skills/` when they are intended to ship with or describe repo-wiki itself. Integration-specific skill roots such as `.github/skills/` and `.pi/skills/` may also contain integration-only skills, but any shared repo-wiki skill there should be a symlink to the canonical `skills/` directory, not a duplicate copy.
 
 GitHub Issues are the execution backlog for this repository. Use milestones, labels, and issue templates for tracking work; do not create or maintain a separate local backlog file unless a task explicitly requires it.
 

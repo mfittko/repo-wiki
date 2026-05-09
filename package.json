@@ -17,6 +17,7 @@
     "dist/",
     "docs/",
     "prompts/",
+    "skills/",
     ".llmwiki/schema.md",
     ".llmwiki/config.json",
     "CHANGELOG.md",
