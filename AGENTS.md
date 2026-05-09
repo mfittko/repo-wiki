@@ -27,6 +27,8 @@ GitHub Issues are the execution backlog for this repository. Use milestones, lab
 
 When running repository commands or automation:
 
+- Treat user wording as authoritative. If the user asks a question about whether an action should be taken (for example, “Would you land this?”, “Can we merge?”, “Should we push?”), answer the question and wait for an explicit imperative confirmation before taking any irreversible or externally visible action.
+- Never merge PRs, push commits, delete branches, publish artifacts, resolve review threads, close issues, or assign work from an ambiguous prompt, question, or implied approval. Require a clear command such as “merge it”, “push this”, “assign it”, or “publish now”.
 - Prefer single commands where practical. If the logic is too involved for one command, write a temporary `.mjs` script under `tmp/` instead of building up fragile shell sequences.
 - For GitHub issue/PR descriptions and comments, prefer `--body-file` / `-F` or stdin via `-F -` over inline shell strings. Use heredocs or temp files for multi-line content and avoid interpolating untrusted text directly into shell commands.
 - When a PR verdict is requested for a pull request not opened by the active GitHub user (`<self>`), submit a formal GitHub review: use Approve when the verdict is merge-ready, or Request Changes when the verdict includes must-fix findings. Do not leave only a plain PR comment for these verdicts.
