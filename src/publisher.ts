@@ -5,16 +5,27 @@ import { fileExists } from './utils/fs.js';
 import { getGitStatus, runGit } from './utils/git.js';
 import { applyFrontmatterPolicy, type FrontmatterPolicy } from './frontmatter.js';
 
+export interface PublishWikiOptions {
+  wikiDir?: string;
+  remote?: string;
+  branch?: string;
+  message?: string;
+  dryRun?: boolean;
+  frontmatterPolicy?: FrontmatterPolicy;
+  gitUserName?: string;
+  gitUserEmail?: string;
+}
+
 export async function publishWiki({
   wikiDir,
   remote,
   branch = 'master',
   message,
   dryRun = false,
-  frontmatterPolicy = 'strip' as FrontmatterPolicy,
+  frontmatterPolicy = 'strip',
   gitUserName = process.env.LLMWIKI_GIT_USER_NAME || 'repo-wiki-bot',
   gitUserEmail = process.env.LLMWIKI_GIT_USER_EMAIL || 'repo-wiki-bot@users.noreply.github.com'
-}) {
+}: PublishWikiOptions) {
   const absoluteWikiDir = path.resolve(wikiDir || '.llmwiki/wiki');
   const publishRemote = remote || process.env.LLMWIKI_PUBLISH_REMOTE || process.env.GITHUB_WIKI_REMOTE;
 
@@ -105,7 +116,7 @@ export async function publishWiki({
   }
 }
 
-async function copyGeneratedWiki(sourceDir, targetDir, frontmatterPolicy: FrontmatterPolicy = 'strip') {
+async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatterPolicy: FrontmatterPolicy = 'strip') {
   await fs.mkdir(targetDir, { recursive: true });
   const entries = await fs.readdir(sourceDir, { withFileTypes: true });
 
@@ -114,7 +125,7 @@ async function copyGeneratedWiki(sourceDir, targetDir, frontmatterPolicy: Frontm
     const target = path.join(targetDir, entry.name);
 
     if (entry.isDirectory()) {
-      await fs.cp(source, target, { recursive: true, force: true });
+      await copyGeneratedWiki(source, target, frontmatterPolicy);
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
       const content = await fs.readFile(source, 'utf8');
       const transformed = applyFrontmatterPolicy(content, frontmatterPolicy);
@@ -125,7 +136,14 @@ async function copyGeneratedWiki(sourceDir, targetDir, frontmatterPolicy: Frontm
   }
 }
 
-async function listMarkdownFiles(wikiDir) {
+async function listMarkdownFiles(wikiDir: string): Promise<string[]> {
   const entries = await fs.readdir(wikiDir, { withFileTypes: true });
-  return entries.filter((entry) => entry.isFile() && entry.name.endsWith('.md')).map((entry) => entry.name).sort();
+  const nestedFiles = await Promise.all(entries.map(async (entry) => {
+    const entryPath = path.join(wikiDir, entry.name);
+    if (entry.isDirectory()) {
+      return listMarkdownFiles(entryPath);
+    }
+    return entry.isFile() && entry.name.endsWith('.md') ? [entry.name] : [];
+  }));
+  return nestedFiles.flat().sort();
 }

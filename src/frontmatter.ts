@@ -8,14 +8,14 @@
 
 export type FrontmatterPolicy = 'strip' | 'html-comment' | 'preserve';
 
-const VALID_POLICIES: readonly FrontmatterPolicy[] = ['strip', 'html-comment', 'preserve'];
+export const FRONTMATTER_POLICIES: readonly FrontmatterPolicy[] = ['strip', 'html-comment', 'preserve'];
 
 /**
  * Validates a raw string as a FrontmatterPolicy, returning the default `'strip'`
  * if the value is undefined or not a recognised policy name.
  */
 export function parseFrontmatterPolicy(value: string | undefined): FrontmatterPolicy {
-  if (value !== undefined && (VALID_POLICIES as readonly string[]).includes(value)) {
+  if (value !== undefined && (FRONTMATTER_POLICIES as readonly string[]).includes(value)) {
     return value as FrontmatterPolicy;
   }
   return 'strip';

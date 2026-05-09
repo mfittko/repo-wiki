@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { stripFrontmatter, applyFrontmatterPolicy } from '../src/frontmatter.js';
+import { stripFrontmatter, applyFrontmatterPolicy, parseFrontmatterPolicy } from '../src/frontmatter.js';
 
 // ---------------------------------------------------------------------------
 // stripFrontmatter
@@ -113,4 +113,23 @@ test('applyFrontmatterPolicy strip is a no-op when content has no frontmatter', 
   const input = '# Page\n\nContent.\n';
   const result = applyFrontmatterPolicy(input, 'strip');
   assert.equal(result, input);
+});
+
+// ---------------------------------------------------------------------------
+// parseFrontmatterPolicy
+// ---------------------------------------------------------------------------
+
+test('parseFrontmatterPolicy defaults undefined to strip', () => {
+  assert.equal(parseFrontmatterPolicy(undefined), 'strip');
+});
+
+test('parseFrontmatterPolicy accepts all known policy values', () => {
+  assert.equal(parseFrontmatterPolicy('strip'), 'strip');
+  assert.equal(parseFrontmatterPolicy('html-comment'), 'html-comment');
+  assert.equal(parseFrontmatterPolicy('preserve'), 'preserve');
+});
+
+test('parseFrontmatterPolicy defaults invalid values to strip', () => {
+  assert.equal(parseFrontmatterPolicy('strp'), 'strip');
+  assert.equal(parseFrontmatterPolicy('STRIP'), 'strip');
 });

@@ -6,7 +6,7 @@ import { compileWiki } from './compiler.js';
 import { lintWiki } from './linter.js';
 import { lintDocs } from './docs-linter.js';
 import { publishWiki } from './publisher.js';
-import { parseFrontmatterPolicy } from './frontmatter.js';
+import { FRONTMATTER_POLICIES, parseFrontmatterPolicy, type FrontmatterPolicy } from './frontmatter.js';
 
 const HELP = `
 repo-wiki <command> [options]
@@ -21,6 +21,11 @@ Commands:
   publish   Push local wiki pages to OWNER/REPO.wiki.git.
   run       Run scan -> plan -> compile -> lint, optionally followed by publish.
 
+Options:
+  --frontmatter-policy <strip|html-comment|preserve>
+            Frontmatter handling when publishing to GitHub Wiki (default: strip).
+            html-comment is accepted for forward compatibility and currently behaves like strip.
+
 Examples:
   repo-wiki init --repo . --write-agents
   repo-wiki run --mode bootstrap --repo . --scan .llmwiki/run --plan .llmwiki/bootstrap-plan.json --wiki .llmwiki/wiki
@@ -31,6 +36,19 @@ Examples:
 function getStringOption(options: ParsedArgs, key: string) {
   const value = options[key];
   return typeof value === 'string' ? value : undefined;
+}
+
+function getFrontmatterPolicyOption(options: ParsedArgs): FrontmatterPolicy {
+  const value = getStringOption(options, 'frontmatter-policy');
+  const policy = parseFrontmatterPolicy(value);
+
+  if (value !== undefined && !(FRONTMATTER_POLICIES as readonly string[]).includes(value)) {
+    console.error(`Warning: unknown --frontmatter-policy "${value}"; falling back to "strip".`);
+  } else if (policy === 'html-comment') {
+    console.error('Warning: --frontmatter-policy html-comment is reserved for future metadata comments and currently behaves like strip.');
+  }
+
+  return policy;
 }
 
 export async function runCli(argv: string[]) {
@@ -115,7 +133,7 @@ export async function runCli(argv: string[]) {
         branch: getStringOption(options, 'branch') || 'master',
         message: getStringOption(options, 'message'),
         dryRun: Boolean(options['dry-run']),
-        frontmatterPolicy: parseFrontmatterPolicy(getStringOption(options, 'frontmatter-policy'))
+        frontmatterPolicy: getFrontmatterPolicyOption(options)
       });
       console.log(JSON.stringify(result.summary, null, 2));
       return;
@@ -179,7 +197,7 @@ async function runPipeline(options: ParsedArgs) {
       branch: getStringOption(options, 'branch') || 'master',
       message: getStringOption(options, 'message'),
       dryRun: Boolean(options['dry-run']),
-      frontmatterPolicy: parseFrontmatterPolicy(getStringOption(options, 'frontmatter-policy'))
+      frontmatterPolicy: getFrontmatterPolicyOption(options)
     });
   }
 
