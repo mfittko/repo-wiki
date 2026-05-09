@@ -13,6 +13,27 @@ async function git(args: string[], cwd?: string) {
   return execFileAsync('git', args, cwd ? { cwd } : undefined);
 }
 
+test('publishWiki redacts credential-bearing remotes in dry-run summaries', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+
+    const result = await publishWiki({
+      wikiDir,
+      remote: 'https://x-access-token:super-secret@github.com/OWNER/REPO.wiki.git',
+      dryRun: true
+    });
+
+    assert.equal(result.summary.status, 'dry-run');
+    assert.equal(result.summary.remote, 'https://***:***@github.com/OWNER/REPO.wiki.git');
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('publishWiki strips frontmatter from top-level and nested markdown without changing local wiki files', async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
   const wikiDir = path.join(tempDir, 'wiki');

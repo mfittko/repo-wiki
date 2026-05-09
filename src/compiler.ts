@@ -510,7 +510,7 @@ function encodePathSegments(filePath: string) {
 }
 
 function escapeMarkdownLinkText(value: string) {
-  return String(value).replace(/\\/g, '\\\\').replace(/\]/g, '\\]');
+  return String(value).replace(/\\/g, '\\\\').replace(/\[/g, '\\[').replace(/\]/g, '\\]');
 }
 
 function uniqueSorted(values: Array<string | number>) {

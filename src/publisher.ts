@@ -28,6 +28,7 @@ export async function publishWiki({
 }: PublishWikiOptions) {
   const absoluteWikiDir = path.resolve(wikiDir || '.llmwiki/wiki');
   const publishRemote = remote || process.env.LLMWIKI_PUBLISH_REMOTE || process.env.GITHUB_WIKI_REMOTE;
+  const summaryRemote = sanitizeRemote(publishRemote);
 
   if (!await fileExists(absoluteWikiDir)) {
     throw new Error(`Wiki directory does not exist: ${absoluteWikiDir}`);
@@ -40,7 +41,7 @@ export async function publishWiki({
       summary: {
         status: 'dry-run',
         wikiDir: absoluteWikiDir,
-        remote: publishRemote || null,
+        remote: summaryRemote,
         branch,
         pages: markdownFileCount,
         frontmatterPolicy
@@ -88,7 +89,7 @@ export async function publishWiki({
         summary: {
           status: 'no-changes',
           wikiDir: absoluteWikiDir,
-          remote: publishRemote,
+          remote: summaryRemote,
           branch,
           pages: markdownFileCount,
           frontmatterPolicy,
@@ -104,7 +105,7 @@ export async function publishWiki({
       summary: {
         status: 'published',
         wikiDir: absoluteWikiDir,
-        remote: publishRemote.replace(/x-access-token:[^@]+@/, 'x-access-token:***@'),
+        remote: summaryRemote,
         branch,
         pages: markdownFileCount,
         frontmatterPolicy,
@@ -114,6 +115,13 @@ export async function publishWiki({
   } finally {
     await fs.rm(tempRoot, { recursive: true, force: true });
   }
+}
+
+function sanitizeRemote(remote: string | undefined) {
+  if (!remote) {
+    return null;
+  }
+  return remote.replace(/\/\/([^/@:]+):[^/@]+@/, '//***:***@');
 }
 
 async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatterPolicy: FrontmatterPolicy = 'strip') {

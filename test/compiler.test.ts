@@ -287,17 +287,17 @@ test('compileWiki renders source file paths as commit-pinned GitHub links when r
     },
     files: [
       { path: 'package.json', category: 'config', language: 'JSON', imports: [], runtime_hints: [], reasons: ['config'] },
-      { path: 'src/file with spaces.ts', category: 'source', language: 'TypeScript', imports: [], runtime_hints: [], reasons: ['source'] },
-      { path: 'test/file with spaces.test.ts', category: 'test', language: 'TypeScript', imports: ['../src/file with spaces.ts'], runtime_hints: [], reasons: ['test'] }
+      { path: 'src/file [with] spaces.ts', category: 'source', language: 'TypeScript', imports: [], runtime_hints: [], reasons: ['source'] },
+      { path: 'test/file with spaces.test.ts', category: 'test', language: 'TypeScript', imports: ['../src/file [with] spaces.ts'], runtime_hints: [], reasons: ['test'] }
     ],
     analysis: {
       package_scripts: [{ path: 'package.json', name: 'example', scripts: { test: 'node --test' } }],
       dependency_graph: {
-        edges: [{ from: 'test/file with spaces.test.ts', to: 'src/file with spaces.ts', specifier: '../src/file with spaces.ts' }],
+        edges: [{ from: 'test/file with spaces.test.ts', to: 'src/file [with] spaces.ts', specifier: '../src/file [with] spaces.ts' }],
         summary: { edges: 1, importers: 1, imported_files: 1 }
       },
       test_to_source: {
-        mappings: [{ test: 'test/file with spaces.test.ts', sources: ['src/file with spaces.ts'], heuristics: ['imports'] }],
+        mappings: [{ test: 'test/file with spaces.test.ts', sources: ['src/file [with] spaces.ts'], heuristics: ['imports'] }],
         summary: { mapped_tests: 1, source_files: 1 }
       }
     }
@@ -309,7 +309,7 @@ test('compileWiki renders source file paths as commit-pinned GitHub links when r
       {
         slug: 'Module-Source',
         name: 'Source',
-        files: ['src/file with spaces.ts'],
+        files: ['src/file [with] spaces.ts'],
         categories: { source: 1 },
         languages: { TypeScript: 1 },
         runtime_hints: {},
@@ -328,10 +328,10 @@ test('compileWiki renders source file paths as commit-pinned GitHub links when r
     const testingPage = await fs.readFile(path.join(wikiDir, 'Testing-Strategy.md'), 'utf8');
     const dependencyPage = await fs.readFile(path.join(wikiDir, 'Dependency-Map.md'), 'utf8');
 
-    assert.match(modulePage, /\[src\/file with spaces\.ts\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/src\/file%20with%20spaces\.ts\)/);
+    assert.ok(modulePage.includes('[src/file \\[with\\] spaces.ts](https://github.com/owner/example/blob/abc123456789/src/file%20%5Bwith%5D%20spaces.ts)'));
     assert.match(buildPage, /\[package\.json\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/package\.json\)/);
     assert.match(testingPage, /\[test\/file with spaces\.test\.ts\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/test\/file%20with%20spaces\.test\.ts\)/);
-    assert.match(dependencyPage, /\[src\/file with spaces\.ts\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/src\/file%20with%20spaces\.ts\)/);
+    assert.ok(dependencyPage.includes('[src/file \\[with\\] spaces.ts](https://github.com/owner/example/blob/abc123456789/src/file%20%5Bwith%5D%20spaces.ts)'));
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
