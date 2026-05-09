@@ -324,7 +324,7 @@ repo-wiki plan      Produce bootstrap or incremental page plan.
 repo-wiki lint-docs Validate ingested markdown before compilation.
 repo-wiki compile   Generate local wiki markdown.
 repo-wiki lint      Validate generated wiki markdown.
-repo-wiki publish   Push local wiki markdown to GitHub Wiki.
+repo-wiki publish   Publish local wiki markdown to GitHub Wiki or GitHub Pages.
 repo-wiki run       Orchestrate scan -> plan -> lint-docs -> compile -> lint -> optional publish.
 ```
 
@@ -341,6 +341,7 @@ Publishing this repository's own wiki:
 
 ```bash
 LLMWIKI_PUBLISH_REMOTE=https://github.com/OWNER/repo-wiki.wiki.git npm run kb:publish
+npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --remote https://github.com/OWNER/repo-wiki.git --branch gh-pages --pages-path .
 ```
 
 ## GitHub Actions workflow

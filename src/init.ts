@@ -52,6 +52,18 @@ const DEFAULT_CONFIG = {
     max_pages: 500,
     preserve_human_sections: true
   },
+  publish: {
+    target: 'github-wiki',
+    wiki: {
+      branch: 'master',
+      frontmatter: 'strip'
+    },
+    pages: {
+      branch: 'gh-pages',
+      path: '.',
+      frontmatter: 'preserve'
+    }
+  },
   lint: {
     fail_on_errors: true,
     warn_on_orphans: true,

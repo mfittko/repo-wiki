@@ -41,7 +41,7 @@ repo-wiki plan      Create a bootstrap or incremental wiki compilation plan.
 repo-wiki lint-docs Validate ingested markdown documentation before compilation.
 repo-wiki compile   Generate or update local wiki markdown pages.
 repo-wiki lint      Validate generated wiki pages.
-repo-wiki publish   Push local wiki pages to OWNER/REPO.wiki.git.
+repo-wiki publish   Publish local wiki pages to GitHub Wiki or GitHub Pages.
 repo-wiki run       Run scan -> plan -> lint-docs -> compile -> lint, optionally followed by publish.
 ```
 
@@ -76,11 +76,46 @@ Generated wikis include `Documentation-Debt-Report.md`, which summarizes stale d
 
 ```bash
 repo-wiki publish \
+  --target github-wiki \
   --wiki .llmwiki/wiki \
   --remote https://github.com/OWNER/REPO.wiki.git
 ```
 
-or:
+## Publish to GitHub Pages
+
+```bash
+repo-wiki publish \
+  --target github-pages \
+  --wiki .llmwiki/wiki \
+  --remote https://github.com/OWNER/REPO.git \
+  --branch gh-pages \
+  --pages-path .
+```
+
+For Pages-from-branch in `/docs`, use `--pages-path docs`. For `github-pages`, frontmatter is preserved by default.
+
+Configuration example:
+
+```json
+{
+  "publish": {
+    "target": "github-pages",
+    "pages": {
+      "branch": "gh-pages",
+      "path": ".",
+      "frontmatter": "preserve"
+    },
+    "wiki": {
+      "branch": "master",
+      "frontmatter": "strip"
+    }
+  }
+}
+```
+
+GitHub Wiki target defaults to frontmatter stripping; GitHub Pages defaults to preserving frontmatter. You can override with `--frontmatter-policy`.
+
+GitHub Wiki via environment variable:
 
 ```bash
 LLMWIKI_PUBLISH_REMOTE=https://github.com/OWNER/REPO.wiki.git npm run kb:publish

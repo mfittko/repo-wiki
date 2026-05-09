@@ -5,10 +5,16 @@ import { fileExists } from './utils/fs.js';
 import { getGitStatus, runGit } from './utils/git.js';
 import { applyFrontmatterPolicy, type FrontmatterPolicy } from './frontmatter.js';
 
+export type PublishTarget = 'github-wiki' | 'github-pages' | 'local-artifact';
+
+export const PUBLISH_TARGETS: readonly PublishTarget[] = ['github-wiki', 'github-pages', 'local-artifact'];
+
 export interface PublishWikiOptions {
   wikiDir?: string;
   remote?: string;
   branch?: string;
+  target?: PublishTarget;
+  pagesPath?: string;
   message?: string;
   dryRun?: boolean;
   frontmatterPolicy?: FrontmatterPolicy;
@@ -19,16 +25,22 @@ export interface PublishWikiOptions {
 export async function publishWiki({
   wikiDir,
   remote,
-  branch = 'master',
+  branch,
+  target = 'github-wiki',
+  pagesPath = '.',
   message,
   dryRun = false,
-  frontmatterPolicy = 'strip',
+  frontmatterPolicy,
   gitUserName = process.env.LLMWIKI_GIT_USER_NAME || 'repo-wiki-bot',
   gitUserEmail = process.env.LLMWIKI_GIT_USER_EMAIL || 'repo-wiki-bot@users.noreply.github.com'
 }: PublishWikiOptions) {
   const absoluteWikiDir = path.resolve(wikiDir || '.llmwiki/wiki');
   const publishRemote = remote || process.env.LLMWIKI_PUBLISH_REMOTE || process.env.GITHUB_WIKI_REMOTE;
   const summaryRemote = sanitizeRemote(publishRemote);
+  const publishTarget: PublishTarget = target;
+  const publishBranch = branch || defaultBranchForTarget(publishTarget);
+  const publishFrontmatterPolicy = frontmatterPolicy || defaultFrontmatterPolicyForTarget(publishTarget);
+  const resolvedPublishPath = resolvePublishPath(publishTarget, pagesPath);
 
   if (!await fileExists(absoluteWikiDir)) {
     throw new Error(`Wiki directory does not exist: ${absoluteWikiDir}`);
@@ -42,9 +54,11 @@ export async function publishWiki({
         status: 'dry-run',
         wikiDir: absoluteWikiDir,
         remote: summaryRemote,
-        branch,
+        branch: publishBranch,
+        target: publishTarget,
+        path: resolvedPublishPath.relative,
         pages: markdownFileCount,
-        frontmatterPolicy
+        frontmatterPolicy: publishFrontmatterPolicy
       }
     };
   }
@@ -55,10 +69,14 @@ export async function publishWiki({
         status: 'skipped-no-remote',
         wikiDir: absoluteWikiDir,
         remote: null,
-        branch,
+        branch: publishBranch,
+        target: publishTarget,
+        path: resolvedPublishPath.relative,
         pages: markdownFileCount,
-        frontmatterPolicy,
-        next_step: 'Set LLMWIKI_PUBLISH_REMOTE or pass --remote with an OWNER/REPO.wiki.git URL.'
+        frontmatterPolicy: publishFrontmatterPolicy,
+        next_step: publishTarget === 'github-pages'
+          ? 'Set LLMWIKI_PUBLISH_REMOTE or pass --remote with a target repository URL, for example OWNER/REPO.git.'
+          : 'Set LLMWIKI_PUBLISH_REMOTE or pass --remote with an OWNER/REPO.wiki.git URL.'
       }
     };
   }
@@ -70,7 +88,7 @@ export async function publishWiki({
 
   try {
     try {
-      await runGit(['clone', '--branch', branch, publishRemote, checkoutDir]);
+      await runGit(['clone', '--branch', publishBranch, publishRemote, checkoutDir]);
       cloned = true;
     } catch (error) {
       if (!isCloneFallbackError(error)) {
@@ -81,8 +99,12 @@ export async function publishWiki({
       await runGit(['remote', 'add', 'origin', publishRemote], { cwd: checkoutDir });
     }
 
-    await cleanCheckout(checkoutDir);
-    await copyGeneratedWiki(absoluteWikiDir, checkoutDir, frontmatterPolicy);
+    const publishDir = resolvedPublishPath.absoluteResolver(checkoutDir);
+    await cleanPublishPath(checkoutDir, publishDir);
+    await copyGeneratedWiki(absoluteWikiDir, publishDir, publishFrontmatterPolicy);
+    if (publishTarget === 'github-pages') {
+      await ensurePagesEntryAndNavigation(publishDir, publishFrontmatterPolicy);
+    }
     await runGit(['config', 'user.name', gitUserName], { cwd: checkoutDir });
     await runGit(['config', 'user.email', gitUserEmail], { cwd: checkoutDir });
     await runGit(['add', '.'], { cwd: checkoutDir });
@@ -94,25 +116,29 @@ export async function publishWiki({
           status: 'no-changes',
           wikiDir: absoluteWikiDir,
           remote: summaryRemote,
-          branch,
+          branch: publishBranch,
+          target: publishTarget,
+          path: resolvedPublishPath.relative,
           pages: markdownFileCount,
-          frontmatterPolicy,
+          frontmatterPolicy: publishFrontmatterPolicy,
           cloned
         }
       };
     }
 
     await runGit(['commit', '-m', commitMessage], { cwd: checkoutDir });
-    await runGit(['push', 'origin', `HEAD:${branch}`], { cwd: checkoutDir });
+    await runGit(['push', 'origin', `HEAD:${publishBranch}`], { cwd: checkoutDir });
 
     return {
       summary: {
         status: 'published',
         wikiDir: absoluteWikiDir,
         remote: summaryRemote,
-        branch,
+        branch: publishBranch,
+        target: publishTarget,
+        path: resolvedPublishPath.relative,
         pages: markdownFileCount,
-        frontmatterPolicy,
+        frontmatterPolicy: publishFrontmatterPolicy,
         cloned
       }
     };
@@ -180,6 +206,15 @@ async function cleanCheckout(targetDir: string) {
     .map((entry) => fs.rm(path.join(targetDir, entry.name), { recursive: true, force: true })));
 }
 
+async function cleanPublishPath(checkoutDir: string, publishDir: string) {
+  if (checkoutDir === publishDir) {
+    await cleanCheckout(checkoutDir);
+    return;
+  }
+  await fs.rm(publishDir, { recursive: true, force: true });
+  await fs.mkdir(publishDir, { recursive: true });
+}
+
 async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatterPolicy: FrontmatterPolicy = 'strip') {
   await fs.mkdir(targetDir, { recursive: true });
   const entries = await fs.readdir(sourceDir, { withFileTypes: true });
@@ -222,4 +257,46 @@ async function countMarkdownFiles(wikiDir: string): Promise<number> {
     return entry.isFile() && entry.name.endsWith('.md') ? 1 : 0;
   }));
   return nestedCounts.reduce((total, count) => total + count, 0);
+}
+
+function defaultBranchForTarget(target: PublishTarget) {
+  return target === 'github-pages' ? 'gh-pages' : 'master';
+}
+
+function defaultFrontmatterPolicyForTarget(target: PublishTarget): FrontmatterPolicy {
+  return target === 'github-wiki' ? 'strip' : 'preserve';
+}
+
+function resolvePublishPath(target: PublishTarget, pagesPath?: string) {
+  const rawPath = target === 'github-pages' ? (pagesPath || '.').trim() || '.' : '.';
+
+  if (path.isAbsolute(rawPath)) {
+    throw new Error(`Publish path must be relative: ${rawPath}`);
+  }
+
+  const normalized = rawPath.replace(/\\/g, '/').replace(/^\.\/+/, '') || '.';
+  if (normalized === '..' || normalized.startsWith('../') || normalized.includes('/../')) {
+    throw new Error(`Publish path must not escape repository root: ${rawPath}`);
+  }
+
+  return {
+    relative: normalized,
+    absoluteResolver: (checkoutDir: string) => path.resolve(checkoutDir, normalized)
+  };
+}
+
+async function ensurePagesEntryAndNavigation(targetDir: string, frontmatterPolicy: FrontmatterPolicy) {
+  const homePath = path.join(targetDir, 'Home.md');
+  const indexPath = path.join(targetDir, 'index.md');
+  if (await fileExists(homePath) && !await fileExists(indexPath)) {
+    const homeContent = await fs.readFile(homePath, 'utf8');
+    await fs.writeFile(indexPath, applyFrontmatterPolicy(homeContent, frontmatterPolicy), 'utf8');
+  }
+
+  const sidebarPath = path.join(targetDir, '_Sidebar.md');
+  const navigationPath = path.join(targetDir, 'Navigation.md');
+  if (await fileExists(sidebarPath) && !await fileExists(navigationPath)) {
+    const sidebarContent = await fs.readFile(sidebarPath, 'utf8');
+    await fs.writeFile(navigationPath, applyFrontmatterPolicy(sidebarContent, frontmatterPolicy), 'utf8');
+  }
 }
