@@ -115,7 +115,7 @@ Configuration example:
 
 GitHub Wiki target defaults to frontmatter stripping; GitHub Pages defaults to preserving frontmatter. You can override with `--frontmatter-policy`.
 
-The repository wiki workflow publishes GitHub Wiki output on `main` and can publish GitHub Pages output to the `gh-pages` branch. Use the workflow dispatch inputs to smoke-test Pages publishing manually (`publish_pages=true`, `pages_path=docs`).
+The repository wiki workflow publishes GitHub Wiki output on `main` and can publish GitHub Pages output to the `gh-pages` branch. Use the workflow dispatch inputs to smoke-test Pages publishing manually before merge (`publish_pages=true`, `pages_path=smoke/pr-N`); automatic `main` publishes can use the production path such as `docs`.
 
 GitHub Wiki via environment variable:
 

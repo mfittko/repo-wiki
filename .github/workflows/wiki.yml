@@ -16,9 +16,9 @@ on:
           - 'false'
           - 'true'
       pages_path:
-        description: Path on the gh-pages branch to publish into
+        description: Path on the gh-pages branch to publish into. Use smoke/pr-N for pre-merge smoke tests.
         required: true
-        default: docs
+        default: smoke/manual
   push:
     branches:
       - main
@@ -98,7 +98,7 @@ jobs:
         run: node ./dist/bin/repo-wiki.js publish --target github-wiki --wiki .llmwiki/wiki
 
   publish-pages:
-    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event.inputs.publish_pages == 'true')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' && github.event.inputs.publish_pages == 'true'
     needs: compile-wiki
     runs-on: ubuntu-latest
     permissions:
