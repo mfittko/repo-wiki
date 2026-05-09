@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileExists } from './utils/fs.js';
 import { getGitStatus, runGit } from './utils/git.js';
+import { applyFrontmatterPolicy, type FrontmatterPolicy } from './frontmatter.js';
 
 export async function publishWiki({
   wikiDir,
@@ -10,6 +11,7 @@ export async function publishWiki({
   branch = 'master',
   message,
   dryRun = false,
+  frontmatterPolicy = 'strip' as FrontmatterPolicy,
   gitUserName = process.env.LLMWIKI_GIT_USER_NAME || 'repo-wiki-bot',
   gitUserEmail = process.env.LLMWIKI_GIT_USER_EMAIL || 'repo-wiki-bot@users.noreply.github.com'
 }) {
@@ -29,7 +31,8 @@ export async function publishWiki({
         wikiDir: absoluteWikiDir,
         remote: publishRemote || null,
         branch,
-        pages: markdownFiles.length
+        pages: markdownFiles.length,
+        frontmatterPolicy
       }
     };
   }
@@ -42,6 +45,7 @@ export async function publishWiki({
         remote: null,
         branch,
         pages: markdownFiles.length,
+        frontmatterPolicy,
         next_step: 'Set LLMWIKI_PUBLISH_REMOTE or pass --remote with an OWNER/REPO.wiki.git URL.'
       }
     };
@@ -62,7 +66,7 @@ export async function publishWiki({
       await runGit(['remote', 'add', 'origin', publishRemote], { cwd: checkoutDir });
     }
 
-    await copyGeneratedWiki(absoluteWikiDir, checkoutDir);
+    await copyGeneratedWiki(absoluteWikiDir, checkoutDir, frontmatterPolicy);
     await runGit(['config', 'user.name', gitUserName], { cwd: checkoutDir });
     await runGit(['config', 'user.email', gitUserEmail], { cwd: checkoutDir });
     await runGit(['add', '.'], { cwd: checkoutDir });
@@ -76,6 +80,7 @@ export async function publishWiki({
           remote: publishRemote,
           branch,
           pages: markdownFiles.length,
+          frontmatterPolicy,
           cloned
         }
       };
@@ -91,6 +96,7 @@ export async function publishWiki({
         remote: publishRemote.replace(/x-access-token:[^@]+@/, 'x-access-token:***@'),
         branch,
         pages: markdownFiles.length,
+        frontmatterPolicy,
         cloned
       }
     };
@@ -99,7 +105,7 @@ export async function publishWiki({
   }
 }
 
-async function copyGeneratedWiki(sourceDir, targetDir) {
+async function copyGeneratedWiki(sourceDir, targetDir, frontmatterPolicy: FrontmatterPolicy = 'strip') {
   await fs.mkdir(targetDir, { recursive: true });
   const entries = await fs.readdir(sourceDir, { withFileTypes: true });
 
@@ -109,6 +115,10 @@ async function copyGeneratedWiki(sourceDir, targetDir) {
 
     if (entry.isDirectory()) {
       await fs.cp(source, target, { recursive: true, force: true });
+    } else if (entry.isFile() && entry.name.endsWith('.md')) {
+      const content = await fs.readFile(source, 'utf8');
+      const transformed = applyFrontmatterPolicy(content, frontmatterPolicy);
+      await fs.writeFile(target, transformed, 'utf8');
     } else if (entry.isFile()) {
       await fs.copyFile(source, target);
     }

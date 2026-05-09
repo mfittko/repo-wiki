@@ -6,6 +6,7 @@ import { compileWiki } from './compiler.js';
 import { lintWiki } from './linter.js';
 import { lintDocs } from './docs-linter.js';
 import { publishWiki } from './publisher.js';
+import { parseFrontmatterPolicy } from './frontmatter.js';
 
 const HELP = `
 repo-wiki <command> [options]
@@ -113,7 +114,8 @@ export async function runCli(argv: string[]) {
         remote: getStringOption(options, 'remote'),
         branch: getStringOption(options, 'branch') || 'master',
         message: getStringOption(options, 'message'),
-        dryRun: Boolean(options['dry-run'])
+        dryRun: Boolean(options['dry-run']),
+        frontmatterPolicy: parseFrontmatterPolicy(getStringOption(options, 'frontmatter-policy'))
       });
       console.log(JSON.stringify(result.summary, null, 2));
       return;
@@ -176,7 +178,8 @@ async function runPipeline(options: ParsedArgs) {
       remote: getStringOption(options, 'remote'),
       branch: getStringOption(options, 'branch') || 'master',
       message: getStringOption(options, 'message'),
-      dryRun: Boolean(options['dry-run'])
+      dryRun: Boolean(options['dry-run']),
+      frontmatterPolicy: parseFrontmatterPolicy(getStringOption(options, 'frontmatter-policy'))
     });
   }
 

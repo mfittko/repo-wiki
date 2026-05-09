@@ -15,3 +15,5 @@ export { MockLLMProvider, OpenAICompatibleProvider, LLMProviderError, LLM_DEFAUL
 export type { LLMProvider, LLMRequest, LLMResponse, LLMProviderConfig, ResolvedLLMProviderConfig, BuildRequestOptions } from './llm-provider.js';
 export { detectPageState, extractHumanNotes, injectHumanNotes, preserveHumanNotes } from './page-ownership.js';
 export type { PageState } from './page-ownership.js';
+export { stripFrontmatter, applyFrontmatterPolicy, parseFrontmatterPolicy } from './frontmatter.js';
+export type { FrontmatterPolicy } from './frontmatter.js';
