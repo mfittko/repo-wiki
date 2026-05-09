@@ -7,6 +7,18 @@ on:
         description: bootstrap or incremental
         required: true
         default: bootstrap
+      publish_pages:
+        description: Publish compiled wiki to GitHub Pages branch
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+      pages_path:
+        description: Path on the gh-pages branch to publish into
+        required: true
+        default: docs
   push:
     branches:
       - main
@@ -83,4 +95,33 @@ jobs:
       - name: Publish wiki
         env:
           LLMWIKI_PUBLISH_REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.wiki.git
-        run: node ./dist/bin/repo-wiki.js publish --wiki .llmwiki/wiki
+        run: node ./dist/bin/repo-wiki.js publish --target github-wiki --wiki .llmwiki/wiki
+
+  publish-pages:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event.inputs.publish_pages == 'true')
+    needs: compile-wiki
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: compiled-wiki
+          path: .llmwiki/wiki
+
+      - name: Publish GitHub Pages
+        env:
+          LLMWIKI_PUBLISH_REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git
+          PAGES_PATH: ${{ github.event.inputs.pages_path || 'docs' }}
+        run: node ./dist/bin/repo-wiki.js publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --pages-path "$PAGES_PATH"
