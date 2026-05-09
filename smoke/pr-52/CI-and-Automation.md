@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "b53c0639ff3f1e1d616403ddd6e297456e7a5c27"
-compiled_at: "2026-05-09T23:16:22.628Z"
+source_commit: "7cfbc938941623f13ab3a22b03aaeddd588e8d5a"
+compiled_at: "2026-05-09T23:33:50.503Z"
 kind: "module"
 module: "CI and Automation"
 source_paths: [".github/ISSUE_TEMPLATE/config.yml",".github/ISSUE_TEMPLATE/epic.yml",".github/ISSUE_TEMPLATE/task.yml",".github/agents/coordinator.agent.md",".github/agents/developer.agent.md",".github/agents/docs.agent.md",".github/agents/fixer.agent.md",".github/agents/quality.agent.md",".github/agents/review.agent.md",".github/copilot-review-instructions.md",".github/pull_request_template.md",".github/skills/keep-a-changelog/SKILL.md",".github/skills/repo-wiki-navigation/SKILL.md",".github/workflows/changelog-on-merge.yml",".github/workflows/changelog-release.yml",".github/workflows/ci.yml",".github/workflows/wiki.yml"]
@@ -23,23 +23,23 @@ Generated first-pass page for files grouped under CI and Automation. This should
 
 ## Source files
 
-- [.github/ISSUE_TEMPLATE/config.yml](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/ISSUE_TEMPLATE/config.yml)
-- [.github/ISSUE_TEMPLATE/epic.yml](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/ISSUE_TEMPLATE/epic.yml)
-- [.github/ISSUE_TEMPLATE/task.yml](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/ISSUE_TEMPLATE/task.yml)
-- [.github/agents/coordinator.agent.md](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/agents/coordinator.agent.md)
-- [.github/agents/developer.agent.md](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/agents/developer.agent.md)
-- [.github/agents/docs.agent.md](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/agents/docs.agent.md)
-- [.github/agents/fixer.agent.md](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/agents/fixer.agent.md)
-- [.github/agents/quality.agent.md](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/agents/quality.agent.md)
-- [.github/agents/review.agent.md](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/agents/review.agent.md)
-- [.github/copilot-review-instructions.md](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/copilot-review-instructions.md)
-- [.github/pull_request_template.md](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/pull_request_template.md)
-- [.github/skills/keep-a-changelog/SKILL.md](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/skills/keep-a-changelog/SKILL.md)
-- [.github/skills/repo-wiki-navigation/SKILL.md](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/skills/repo-wiki-navigation/SKILL.md)
-- [.github/workflows/changelog-on-merge.yml](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/workflows/changelog-on-merge.yml)
-- [.github/workflows/changelog-release.yml](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/workflows/changelog-release.yml)
-- [.github/workflows/ci.yml](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/workflows/ci.yml)
-- [.github/workflows/wiki.yml](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/.github/workflows/wiki.yml)
+- [.github/ISSUE_TEMPLATE/config.yml](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/ISSUE_TEMPLATE/config.yml)
+- [.github/ISSUE_TEMPLATE/epic.yml](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/ISSUE_TEMPLATE/epic.yml)
+- [.github/ISSUE_TEMPLATE/task.yml](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/ISSUE_TEMPLATE/task.yml)
+- [.github/agents/coordinator.agent.md](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/agents/coordinator.agent.md)
+- [.github/agents/developer.agent.md](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/agents/developer.agent.md)
+- [.github/agents/docs.agent.md](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/agents/docs.agent.md)
+- [.github/agents/fixer.agent.md](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/agents/fixer.agent.md)
+- [.github/agents/quality.agent.md](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/agents/quality.agent.md)
+- [.github/agents/review.agent.md](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/agents/review.agent.md)
+- [.github/copilot-review-instructions.md](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/copilot-review-instructions.md)
+- [.github/pull_request_template.md](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/pull_request_template.md)
+- [.github/skills/keep-a-changelog/SKILL.md](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/skills/keep-a-changelog/SKILL.md)
+- [.github/skills/repo-wiki-navigation/SKILL.md](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/skills/repo-wiki-navigation/SKILL.md)
+- [.github/workflows/changelog-on-merge.yml](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/workflows/changelog-on-merge.yml)
+- [.github/workflows/changelog-release.yml](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/workflows/changelog-release.yml)
+- [.github/workflows/ci.yml](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/workflows/ci.yml)
+- [.github/workflows/wiki.yml](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/.github/workflows/wiki.yml)
 
 ## Related pages
 

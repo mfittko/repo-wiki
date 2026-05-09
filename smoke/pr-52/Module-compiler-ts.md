@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "b53c0639ff3f1e1d616403ddd6e297456e7a5c27"
-compiled_at: "2026-05-09T23:16:22.628Z"
+source_commit: "7cfbc938941623f13ab3a22b03aaeddd588e8d5a"
+compiled_at: "2026-05-09T23:33:50.503Z"
 kind: "module"
 module: "Module compiler.ts"
 source_paths: ["src/compiler.ts"]
@@ -23,11 +23,11 @@ Generated first-pass page for files grouped under Module compiler.ts. This shoul
 
 ## Source files
 
-- [src/compiler.ts](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/src/compiler.ts)
+- [src/compiler.ts](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/src/compiler.ts)
 
 ## Related tests
 
-- [test/compiler.test.ts](https://github.com/mfittko/repo-wiki/blob/b53c0639ff3f1e1d616403ddd6e297456e7a5c27/test/compiler.test.ts)
+- [test/compiler.test.ts](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/test/compiler.test.ts)
 
 ## Related pages
 
