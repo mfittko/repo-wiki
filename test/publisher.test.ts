@@ -360,6 +360,20 @@ test('publishWiki rejects unsafe git branch and remote arguments', async () => {
     await assert.rejects(
       () => publishWiki({
         wikiDir,
+        remote: ' https://super-secret-token@github.com/OWNER/REPO.git',
+        dryRun: true
+      }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.equal(error.message.includes('super-secret-token'), false);
+        assert.match(error.message, /Publish remote must not start with whitespace or "-"\./);
+        return true;
+      }
+    );
+
+    await assert.rejects(
+      () => publishWiki({
+        wikiDir,
         branch: 'main\ninjected',
         dryRun: true
       }),

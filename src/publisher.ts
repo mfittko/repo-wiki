@@ -282,7 +282,7 @@ function assertSafeGitArgument(value: string | undefined, label: string) {
     return;
   }
   if (/^[\s-]/.test(value)) {
-    throw new Error(`Publish ${label} must not start with whitespace or "-": ${value}`);
+    throw new Error(`Publish ${label} must not start with whitespace or "-".`);
   }
   if (/[\u0000\r\n]/.test(value)) {
     throw new Error(`Publish ${label} contains unsupported control characters.`);
