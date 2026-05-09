@@ -13,6 +13,15 @@ async function git(args: string[], cwd?: string) {
   return execFileAsync('git', args, cwd ? { cwd } : undefined);
 }
 
+async function fileExists(filePath: string) {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 test('publishWiki redacts credential-bearing remotes in dry-run summaries', async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
   const wikiDir = path.join(tempDir, 'wiki');
@@ -29,6 +38,40 @@ test('publishWiki redacts credential-bearing remotes in dry-run summaries', asyn
 
     assert.equal(result.summary.status, 'dry-run');
     assert.equal(result.summary.remote, 'https://***:***@github.com/OWNER/REPO.wiki.git');
+
+    const tokenOnlyResult = await publishWiki({
+      wikiDir,
+      remote: 'https://super-secret-token@github.com/OWNER/REPO.wiki.git',
+      dryRun: true
+    });
+
+    assert.equal(tokenOnlyResult.summary.remote, 'https://***@github.com/OWNER/REPO.wiki.git');
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki rethrows non-fallback clone errors with credential-bearing remotes redacted', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+
+    await assert.rejects(
+      () => publishWiki({
+        wikiDir,
+        remote: 'https://super-secret-token@127.0.0.1:1/OWNER/REPO.wiki.git',
+        branch: 'master'
+      }),
+      (error: unknown) => {
+        const serialized = JSON.stringify(error, Object.getOwnPropertyNames(error));
+        assert.equal(serialized.includes('super-secret-token'), false);
+        assert.equal(serialized.includes('https://***@127.0.0.1:1/OWNER/REPO.wiki.git'), true);
+        return true;
+      }
+    );
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
@@ -72,6 +115,46 @@ test('publishWiki strips frontmatter from top-level and nested markdown without 
 
     assert.equal(await fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8'), '---\nkind: home\n---\n# Home\n');
     assert.equal(await fs.readFile(path.join(nestedDir, 'Page.md'), 'utf8'), '---\nkind: nested\n---\n# Nested\n');
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki removes checkout files deleted from the local wiki', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, 'Removed.md'), '# Remove me\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    const firstPublish = await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      branch: 'master',
+      message: 'Publish initial test wiki'
+    });
+
+    assert.equal(firstPublish.summary.status, 'published');
+
+    await fs.rm(path.join(wikiDir, 'Removed.md'));
+
+    const secondPublish = await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      branch: 'master',
+      message: 'Publish deleted test wiki page'
+    });
+
+    assert.equal(secondPublish.summary.status, 'published');
+
+    await git(['clone', '--branch', 'master', remoteDir, checkoutDir]);
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'Home.md'), 'utf8'), '# Home\n');
+    assert.equal(await fileExists(path.join(checkoutDir, 'Removed.md')), false);
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }

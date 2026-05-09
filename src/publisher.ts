@@ -72,12 +72,16 @@ export async function publishWiki({
     try {
       await runGit(['clone', '--branch', branch, publishRemote, checkoutDir]);
       cloned = true;
-    } catch {
+    } catch (error) {
+      if (!isCloneFallbackError(error)) {
+        throw error;
+      }
       await fs.mkdir(checkoutDir, { recursive: true });
       await runGit(['init'], { cwd: checkoutDir });
       await runGit(['remote', 'add', 'origin', publishRemote], { cwd: checkoutDir });
     }
 
+    await cleanCheckout(checkoutDir);
     await copyGeneratedWiki(absoluteWikiDir, checkoutDir, frontmatterPolicy);
     await runGit(['config', 'user.name', gitUserName], { cwd: checkoutDir });
     await runGit(['config', 'user.email', gitUserEmail], { cwd: checkoutDir });
@@ -112,6 +116,8 @@ export async function publishWiki({
         cloned
       }
     };
+  } catch (error) {
+    throw redactGitError(error, publishRemote);
   } finally {
     await fs.rm(tempRoot, { recursive: true, force: true });
   }
@@ -121,7 +127,57 @@ function sanitizeRemote(remote: string | undefined) {
   if (!remote) {
     return null;
   }
-  return remote.replace(/\/\/([^/@:]+):[^/@]+@/, '//***:***@');
+  return remote.replace(/([a-z][a-z\d+.-]*:\/\/)([^/?#@]+):([^/?#@]+)@/gi, '$1***:***@')
+    .replace(/([a-z][a-z\d+.-]*:\/\/)([^/?#@:]+)@/gi, '$1***@');
+}
+
+function redactGitError(error: unknown, remote: string | undefined) {
+  const redactedRemote = sanitizeRemote(remote);
+  const redact = (value: unknown) => {
+    if (typeof value !== 'string') {
+      return value;
+    }
+    const sanitized = sanitizeRemote(value) || value;
+    return remote && redactedRemote ? sanitized.split(remote).join(redactedRemote) : sanitized;
+  };
+
+  if (!(error instanceof Error)) {
+    return new Error(String(redact(error)));
+  }
+
+  const redactedError = new Error(String(redact(error.message)));
+  redactedError.name = error.name;
+  redactedError.stack = typeof error.stack === 'string' ? String(redact(error.stack)) : error.stack;
+
+  for (const key of ['code', 'signal', 'stdout', 'stderr', 'cmd'] as const) {
+    const value = (error as NodeJS.ErrnoException & Record<string, unknown>)[key];
+    if (value !== undefined) {
+      (redactedError as unknown as Record<string, unknown>)[key] = redact(value);
+    }
+  }
+
+  return redactedError;
+}
+
+function isCloneFallbackError(error: unknown) {
+  const details = [
+    error instanceof Error ? error.message : '',
+    typeof (error as Record<string, unknown>)?.stderr === 'string' ? (error as Record<string, string>).stderr : ''
+  ].join('\n').toLowerCase();
+
+  return details.includes('remote branch') && details.includes('not found')
+    || details.includes('repository') && details.includes('not found')
+    || details.includes('repository') && details.includes('does not exist')
+    || details.includes('does not appear to be a git repository');
+}
+
+async function cleanCheckout(targetDir: string) {
+  await fs.mkdir(targetDir, { recursive: true });
+  const entries = await fs.readdir(targetDir, { withFileTypes: true });
+
+  await Promise.all(entries
+    .filter((entry) => entry.name !== '.git')
+    .map((entry) => fs.rm(path.join(targetDir, entry.name), { recursive: true, force: true })));
 }
 
 async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatterPolicy: FrontmatterPolicy = 'strip') {
@@ -129,6 +185,10 @@ async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatt
   const entries = await fs.readdir(sourceDir, { withFileTypes: true });
 
   for (const entry of entries) {
+    if (entry.name === '.git') {
+      continue;
+    }
+
     const source = path.join(sourceDir, entry.name);
     const target = path.join(targetDir, entry.name);
 
