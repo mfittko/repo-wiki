@@ -1,36 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import os from 'node:os';
 import path from 'node:path';
-import { runCli } from '../src/cli.js';
+
+const execFileAsync = promisify(execFile);
+const cliPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../bin/repo-wiki.js');
 
 async function captureCli(argv: string[], cwd: string) {
-  const originalCwd = process.cwd();
-  const originalLog = console.log;
-  const originalError = console.error;
-  const originalExitCode = process.exitCode;
-  const lines: string[] = [];
-  const errors: string[] = [];
-  process.chdir(cwd);
-  process.exitCode = undefined;
-  console.log = (value?: unknown) => {
-    lines.push(String(value));
-  };
-  console.error = (value?: unknown) => {
-    errors.push(String(value));
-  };
-
-  try {
-    await runCli(argv);
-  } finally {
-    console.log = originalLog;
-    console.error = originalError;
-    process.exitCode = originalExitCode;
-    process.chdir(originalCwd);
-  }
-
-  return { stdout: lines.join('\n'), stderr: errors.join('\n') };
+  const result = await execFileAsync(process.execPath, [cliPath, ...argv], { cwd });
+  return { stdout: result.stdout.trim(), stderr: result.stderr.trim() };
 }
 
 test('CLI help describes GitHub Wiki and GitHub Pages publish targets', async () => {
