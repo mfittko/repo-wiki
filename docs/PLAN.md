@@ -325,7 +325,7 @@ Planned query behavior:
 
 ## Wiki health linting
 
-Karpathy's lint operation is broader than syntax checks. `repo-wiki lint` should grow into a wiki health check.
+Karpathy's lint operation is broader than syntax checks. The existing `repo-wiki lint` command should remain the primary validation gate and grow to include wiki-health checks; a future `repo-wiki health` command can expose the same graph-oriented checks as a focused diagnostic surface rather than a competing gate.
 
 Health checks should detect:
 
@@ -509,7 +509,7 @@ repo-wiki doctor    Explain readiness, detected stacks, skipped files, config ga
 repo-wiki diff      Show wiki pages that would change for a branch or PR.
 repo-wiki query     Ask a source-cited question against the wiki, cards, and source files.
 repo-wiki search    Local search over generated wiki pages, cards, and selected source metadata.
-repo-wiki health    Full wiki health lint, including graph, orphan, stale, and contradiction checks.
+repo-wiki health    Focused wiki-health diagnostics, using the graph/orphan/stale/contradiction checks also enforced by lint policy.
 ```
 
 ## Local dogfooding workflow

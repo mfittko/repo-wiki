@@ -1,8 +1,8 @@
 # repo-wiki Backlog Planning Notes
 
-GitHub Issues are the execution backlog for this repository. This file is a planning bridge that translates `docs/WHY.md` and the Karpathy LLM Wiki alignment work in `docs/PLAN.md` into issue-sized epics and task drafts. When work is accepted, create or update GitHub Issues and keep this file as a high-level map rather than a parallel tracker.
+GitHub Issues are the execution backlog for this repository. This file is a temporary planning bridge that translates `docs/WHY.md` and the Karpathy LLM Wiki alignment work in `docs/PLAN.md` into issue-sized epics and task drafts. It should not be used as a parallel backlog: when work is accepted, create or update GitHub Issues, then keep this file only as a high-level planning map.
 
-## Existing open issues this work should connect to
+## Related GitHub issues and recently closed work
 
 - #2 - Incremental maintenance and safe publishing
 - #3 - LLM compiler and source-grounded wiki synthesis
@@ -12,9 +12,9 @@ GitHub Issues are the execution backlog for this repository. This file is a plan
 - #20 - CI publishing and release workflow
 - #35 - Structured wiki patch format and lint-gated acceptance
 - #37 - Citation, confidence, and contradiction enforcement for generated pages
-- #39 - Validate documented file paths and environment variables
+- #39 - Validate documented file paths and environment variables (closed; informs follow-up validation work)
 - #40 - Documentation debt report strictness and route-claim validation
-- #46 - Honor source excludes and ignore nested worktree noise during scan
+- #46 - Honor source excludes and ignore nested worktree noise during scan (closed; informs trust-hardening follow-up work)
 
 ## Priority roadmap
 

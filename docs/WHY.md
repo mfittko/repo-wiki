@@ -1,5 +1,9 @@
 # LLM Wiki
 
+> External reference snapshot: this document is a non-normative copy of Andrej Karpathy's LLM Wiki concept note, included for product inspiration and provenance. It is not authoritative repository guidance; use `docs/PLAN.md`, `.llmwiki/schema.md`, `AGENTS.md`, source code, tests, and GitHub Issues for repo-wiki operating decisions.
+>
+> Source: <https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f>
+
 A pattern for building personal knowledge bases using LLMs.
 
 This is an idea file, it is designed to be copy-pasted to your own LLM Agent (e.g. OpenAI Codex, Claude Code, OpenCode / Pi, etc.). Its goal is to communicate the high-level idea, but your agent will build out the specifics in collaboration with you.
@@ -74,4 +78,4 @@ The idea is related in spirit to Vannevar Bush's Memex (1945) — a personal, cu
 
 This document is intentionally abstract. It describes the idea, not a specific implementation. The exact directory structure, the schema conventions, the page formats, the tooling — all of that will depend on your domain, your preferences, and your LLM of choice. Everything mentioned above is optional and modular — pick what's useful, ignore what isn't. For example: your sources might be text-only, so you don't need image handling at all. Your wiki might be small enough that the index file is all you need, no search engine required. You might not care about slide decks and just want markdown pages. You might want a completely different set of output formats. The right way to use this is to share it with your LLM agent and work together to instantiate a version that fits your needs. The document's only job is to communicate the pattern. Your LLM can figure out the rest.
 
-From: https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f
+Snapshot source: <https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f>
