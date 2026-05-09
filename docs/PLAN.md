@@ -2,19 +2,43 @@
 
 `repo-wiki` is a dual-role Node.js project:
 
-1. It is a package and CLI that can be applied to any existing GitHub repository.
-2. It dogfoods the same package to create and maintain its own GitHub Wiki knowledge base.
+1. It is a package and CLI that can be applied to any existing Git repository, with GitHub Wiki as the first supported publication target.
+2. It dogfoods the same package to create and maintain this repository's own GitHub Wiki knowledge base.
 
-The project follows the LLM Wiki pattern: source material is treated as immutable input, the wiki is a compiled artifact, and a schema controls ingestion, query behavior, linting, and publication.
+This project explicitly instantiates Karpathy's LLM Wiki pattern for software repositories: raw sources stay immutable, the wiki becomes a persistent compounding artifact, and a schema tells the LLM and deterministic tooling how to maintain that artifact over time. The product goal is not to be another query-time RAG layer over code. The product goal is to compile repository knowledge once, keep it current after every change, and make that compiled knowledge useful to humans and coding agents.
+
+## Product vision
+
+Karpathy's LLM Wiki idea starts from a simple critique of ordinary RAG: when an LLM retrieves raw chunks at query time, it rediscovers and re-synthesizes knowledge from scratch on every question. The synthesis does not compound. Contradictions are not remembered unless they happen to be retrieved again. Useful answers disappear into chat history.
+
+`repo-wiki` applies the alternative pattern to software repositories:
+
+- The Git repository at a pinned commit is the immutable source collection.
+- The generated GitHub Wiki is the persistent, interlinked, compounding artifact.
+- `.llmwiki/schema.md`, `.llmwiki/config.json`, and agent pointers are the schema that discipline future maintenance.
+- `Index.md` is the content-oriented catalog used by people and agents to route questions.
+- `Log.md` is the chronological history of ingests, rebuilds, queries, lint passes, and publication events.
+- Lint and validation gates keep the wiki source-grounded instead of letting it become confident generated fiction.
+
+The long-term vision is repository memory infrastructure:
+
+- Developers use the wiki to understand unfamiliar repositories faster.
+- Coding agents use the wiki as their first navigation layer before reading source files.
+- Maintainers use the documentation debt report to see where docs, commands, routes, and code disagree.
+- CI uses incremental maintenance to keep the wiki fresh after merges.
+- Good answers to repository questions can be filed back into the wiki as durable pages instead of being lost in chat.
 
 ## Goals
 
 - Bootstrap a useful GitHub Wiki from an existing repository.
 - Maintain the wiki incrementally after merges.
 - Support both human developers and coding agents.
-- Treat code as authoritative and documentation as configurable secondary evidence.
+- Treat code at the pinned commit as authoritative and documentation as configurable secondary evidence.
 - Detect stale, misleading, contradictory, or unvalidated markdown before it influences the wiki.
-- Keep the package installable through `npx`, CI, or a direct Node API.
+- Compile repository knowledge into a persistent artifact instead of re-deriving it from raw files on every query.
+- Keep `Index.md` and `Log.md` parseable enough for agents, shell tools, and humans.
+- Let high-value query outputs become new wiki pages when they add durable repository knowledge.
+- Keep the package installable through `npx`, CI, a direct Node API, and a future GitHub Action.
 - Let this repository maintain its own wiki with the same public interface used by external consumers.
 
 ## Non-goals for the initial implementation
@@ -23,7 +47,38 @@ The project follows the LLM Wiki pattern: source material is treated as immutabl
 - Fully automated trust in pre-existing documentation.
 - One wiki page per file or symbol.
 - Replacing source-level investigation.
+- Replacing code search or IDE navigation.
 - Publishing from untrusted pull requests.
+- Building a general personal wiki product outside the software-repository domain.
+
+## Karpathy LLM Wiki alignment
+
+Karpathy's pattern has three layers and three operations. `repo-wiki` maps them as follows.
+
+### Layers
+
+| Karpathy LLM Wiki layer | repo-wiki implementation |
+|---|---|
+| Raw sources | Git repository files at a pinned commit, plus ingested markdown docs treated as source evidence. |
+| Wiki | Generated GitHub Wiki markdown under `.llmwiki/wiki`, optionally published to `OWNER/REPO.wiki.git`. |
+| Schema | `.llmwiki/config.json`, `.llmwiki/schema.md`, generated agent pointers, prompt contracts, lint policy, and page conventions. |
+
+### Operations
+
+| Karpathy operation | repo-wiki implementation |
+|---|---|
+| Ingest | `scan -> plan -> lint-docs -> compile -> lint`, producing source cards, doc cards, page plans, and generated wiki pages. |
+| Query | Future `repo-wiki query` and search surfaces read the wiki first, then drill into source cards and source files for verification. Durable answers may be filed back into the wiki. |
+| Lint | `lint-docs`, `lint`, and future wiki-health checks detect contradictions, stale claims, orphan pages, missing cross-references, undocumented concepts, and unsafe content. |
+
+### Design implications
+
+- The wiki is not a cache. It is a maintained knowledge artifact.
+- The LLM is a wiki maintainer, not a one-shot summarizer.
+- The source repository remains authoritative when the wiki is stale or incomplete.
+- The schema is part of the product; it teaches future LLM sessions how to maintain the wiki correctly.
+- Queries can create durable artifacts. A useful comparison, investigation, or architecture answer should be eligible for filing into the wiki with provenance.
+- Index and log files are first-class operating surfaces, not decorative pages.
 
 ## High-level architecture
 
@@ -31,16 +86,25 @@ The project follows the LLM Wiki pattern: source material is treated as immutabl
 flowchart TD
   Repo[Git repository at pinned commit] --> Scanner[Repository scanner]
   Repo --> Docs[Markdown documentation ingestor]
+  Repo --> Schema[.llmwiki schema and config]
   Scanner --> Cards[Source cards]
   Docs --> DocCards[Documentation cards]
   Cards --> Planner[Bootstrap or incremental planner]
   DocCards --> DocLint[Documentation linter]
-  Planner --> Compiler[Wiki compiler]
+  Schema --> Planner
+  Schema --> Compiler[Wiki compiler]
+  Planner --> Compiler
   DocLint --> Compiler
   Compiler --> Wiki[Local GitHub Wiki markdown]
+  Wiki --> Index[Index.md]
+  Wiki --> Log[Log.md]
   Wiki --> WikiLint[Wiki linter]
-  WikiLint --> Publisher[Git-based GitHub Wiki publisher]
+  WikiLint --> Publisher[Git-based publisher]
   Publisher --> GitHubWiki[OWNER/REPO.wiki.git]
+  Publisher --> GitHubPages[GitHub Pages branch or docs path]
+  Wiki --> Query[Future query and search]
+  Query --> DurableAnswer[Optional filed-back wiki page]
+  DurableAnswer --> Wiki
 ```
 
 ## Dual-role operating model
@@ -70,6 +134,15 @@ npx repo-wiki run --mode bootstrap --repo . --wiki .llmwiki/wiki
 npx repo-wiki publish --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git
 ```
 
+Planned richer publication should make the target explicit, including a GitHub Wiki target and a GitHub Pages target:
+
+```bash
+npx repo-wiki publish --target github-wiki --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git
+npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --path .
+```
+
+Publish targets should own destination-specific rendering policy. GitHub Wiki should strip or transform leading YAML frontmatter by default because hosted wiki pages render it visibly. GitHub Pages/Jekyll should preserve frontmatter by default because Jekyll consumes it as page metadata.
+
 ## Source authority model
 
 ```mermaid
@@ -82,6 +155,8 @@ flowchart TB
   Secondary --> Authority
   Issues[Issues, PRs, comments] --> Context[Context only]
   Context --> Authority
+  Wiki[Existing wiki pages] --> Derived[Derived artifact]
+  Derived --> Authority
   Authority --> WikiClaim[Compiled wiki claim]
 ```
 
@@ -92,7 +167,8 @@ Default authority order:
 3. CI, build, and runtime configuration.
 4. Generated schemas, route maps, and migrations.
 5. Markdown documentation as secondary evidence.
-6. Issues, PRs, and comments as context only.
+6. Issues, PRs, comments, and meeting notes as context only when explicitly ingested.
+7. Existing generated wiki pages as derived evidence only.
 
 Markdown should not be excluded by default. It contains intent, product language, onboarding flows, architectural rationale, and operational practice. The risk is not ingestion; the risk is trusting it without validation.
 
@@ -154,6 +230,7 @@ Current scaffold validation is intentionally conservative. It extracts operation
 - environment-variable validation against config/schema/code usage.
 - file-reference validation against the repository tree.
 - ADR recency and supersession detection.
+- generated-wiki claim validation against source paths and previous compiled state.
 
 ## Bootstrap ingestion for existing repositories
 
@@ -182,7 +259,7 @@ sequenceDiagram
   CLI->>WikiLint: Validate wiki
   WikiLint-->>CLI: wiki issues
   alt publish requested and lint passed
-    CLI->>Publisher: Push OWNER/REPO.wiki.git
+    CLI->>Publisher: Push selected target: GitHub Wiki or GitHub Pages
   end
 ```
 
@@ -218,6 +295,63 @@ Affected-page mapping should use:
 - route/schema/config extractors.
 - documentation links and claims.
 - previous wiki page frontmatter source paths.
+- `Index.md` and `Log.md` updates for changed knowledge.
+- stale generated-page detection for renamed or removed modules.
+
+## Query and filing-back workflow
+
+Karpathy's pattern treats good answers as durable knowledge. `repo-wiki` should eventually support this directly.
+
+```mermaid
+sequenceDiagram
+  participant User
+  participant CLI
+  participant Search
+  participant Wiki
+  participant Source
+  participant Compiler
+
+  User->>CLI: repo-wiki query "How does auth work?"
+  CLI->>Search: Search Index.md, wiki pages, cards
+  Search-->>CLI: Candidate pages and source paths
+  CLI->>Wiki: Read relevant compiled pages
+  CLI->>Source: Verify material claims against source cards/files
+  CLI-->>User: Source-cited answer
+  alt answer is durable
+    User->>CLI: file this answer
+    CLI->>Compiler: Create or update wiki page with provenance
+    Compiler->>Wiki: Write generated or mixed page
+  end
+```
+
+Planned query behavior:
+
+- Read `Index.md` first at small and medium scale.
+- Use local search over wiki pages and cards as scale grows.
+- Treat the wiki as the first navigation layer, not the final authority.
+- Verify operational or behavioral claims against source evidence.
+- Offer to file durable answers into topic, module, runbook, or investigation pages.
+- Append query and file-back events to `Log.md`.
+
+## Wiki health linting
+
+Karpathy's lint operation is broader than syntax checks. The existing `repo-wiki lint` command should remain the primary validation gate and grow to include wiki-health checks; a future `repo-wiki health` command can expose the same graph-oriented checks as a focused diagnostic surface rather than a competing gate.
+
+Health checks should detect:
+
+- missing required pages.
+- broken wiki links.
+- orphan pages with no inbound links.
+- important concepts mentioned repeatedly but lacking their own page.
+- stale pages whose source commit is far behind HEAD.
+- pages with low or missing source coverage.
+- contradictions between wiki pages, documentation cards, and source cards.
+- missing cross-references between related module and cross-cutting pages.
+- oversized pages that should be split.
+- generated pages for files or modules that no longer exist.
+- human-owned pages that conflict with current source behavior.
+
+The output should be both human-readable and machine-readable so CI can fail on configured policy and agents can propose repair patches.
 
 ## Required components
 
@@ -232,6 +366,9 @@ classDiagram
     lint()
     publish()
     run()
+    query()
+    doctor()
+    diff()
   }
 
   class Scanner {
@@ -270,6 +407,7 @@ classDiagram
     renderModulePages()
     renderCrossCuttingPages()
     renderDocumentationDebtReport()
+    applyStructuredPatch()
   }
 
   class WikiLinter {
@@ -277,11 +415,22 @@ classDiagram
     brokenWikiLinks()
     secretLikeContent()
     frontmatterPolicy()
+    graphHealth()
+  }
+
+  class QueryEngine {
+    searchWiki()
+    searchCards()
+    assembleAnswerContext()
+    fileBackAnswer()
   }
 
   class Publisher {
-    cloneWiki()
+    selectTarget()
+    applyTargetTransforms()
+    cloneDestination()
     copyPages()
+    deleteStaleGeneratedPages()
     commit()
     push()
   }
@@ -292,6 +441,7 @@ classDiagram
   CLI --> Planner
   CLI --> Compiler
   CLI --> WikiLinter
+  CLI --> QueryEngine
   CLI --> Publisher
 ```
 
@@ -304,18 +454,55 @@ flowchart TD
   Home --> Architecture
   Home --> Build[Build-Test-and-Run]
   Home --> Index
+  Home --> Log
   Home --> DocsDebt[Documentation-Debt-Report]
   Index --> Modules[Module Pages]
   Index --> Cross[Cross-cutting Pages]
+  Index --> Investigations[Filed Query and Investigation Pages]
   DocsDebt --> Open[Open-Questions]
   Architecture --> Modules
   Modules --> Dependency[Dependency-Map]
   Modules --> Testing[Testing-Strategy]
+  Modules --> API[API-HTTP-Routes]
+  Modules --> Data[Data-Model-and-Migrations]
   Cross --> Security[Security-and-Secrets]
   Cross --> Runbook[Operational-Runbook]
+  Investigations --> Modules
+  Investigations --> Cross
+```
+
+## Page conventions
+
+Every generated local wiki page should eventually include:
+
+- YAML frontmatter with `kind`, `source_commit`, `compiled_at`, `source_paths`, `page_state`, and optional confidence metadata.
+- Target-specific publish transforms should hide or move metadata when the destination renders frontmatter visibly. GitHub Wiki publishing should default to stripping leading YAML frontmatter from the published copy while preserving it in local `.llmwiki/wiki` artifacts and machine-readable provenance.
+- source path citations for material claims.
+- stable headings suitable for wiki links.
+- compact summaries first, detail later.
+- links to related module and cross-cutting pages.
+- open questions or uncertainty when evidence is incomplete.
+- `HUMAN_NOTES` markers when human annotation should be preserved.
+
+`Index.md` should include:
+
+- every wiki page.
+- one-line summaries.
+- page category.
+- source count or source paths when useful.
+- freshness or source commit metadata.
+
+`Log.md` should include parseable chronological entries such as:
+
+```markdown
+## [2026-05-08] ingest | bootstrap | abc1234
+## [2026-05-08] query | auth routing investigation
+## [2026-05-08] lint | wiki health | 0 errors, 4 warnings
 ```
 
 ## CLI contract
+
+Current commands:
 
 ```text
 repo-wiki init      Add config/schema/agent pointer files to a repo.
@@ -324,8 +511,22 @@ repo-wiki plan      Produce bootstrap or incremental page plan.
 repo-wiki lint-docs Validate ingested markdown before compilation.
 repo-wiki compile   Generate local wiki markdown.
 repo-wiki lint      Validate generated wiki markdown.
-repo-wiki publish   Push local wiki markdown to GitHub Wiki.
+repo-wiki publish   Publish local wiki markdown to a configured Git remote, normally a GitHub Wiki repository.
 repo-wiki run       Orchestrate scan -> plan -> lint-docs -> compile -> lint -> optional publish.
+```
+
+Current `run` invokes `lint-docs`, but making documentation-lint errors block publish is planned P0 hardening rather than fully enforced behavior today.
+
+Planned commands:
+
+```text
+repo-wiki doctor    Explain readiness, detected stacks, skipped files, config gaps, and publish safety.
+repo-wiki diff      Show wiki pages that would change for a branch or PR.
+repo-wiki query     Ask a source-cited question against the wiki, cards, and source files.
+repo-wiki search    Local search over generated wiki pages, cards, and selected source metadata.
+repo-wiki health    Focused wiki-health diagnostics, using the graph/orphan/stale/contradiction checks also enforced by lint policy.
+repo-wiki publish --target github-wiki|github-pages
+                  Select destination-specific publish behavior and frontmatter policy.
 ```
 
 ## Local dogfooding workflow
@@ -343,6 +544,14 @@ Publishing this repository's own wiki:
 LLMWIKI_PUBLISH_REMOTE=https://github.com/OWNER/repo-wiki.wiki.git npm run kb:publish
 ```
 
+A future GitHub Pages target should support richer static-site publication while preserving YAML frontmatter for Jekyll:
+
+```bash
+repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --path .
+```
+
+The public repo should use its own generated GitHub Wiki as the flagship demo. The README should link to the published wiki when available and explain which pages are generated, mixed, human-owned, and source authoritative.
+
 ## GitHub Actions workflow
 
 ```mermaid
@@ -351,18 +560,19 @@ flowchart TD
   Checkout --> Install[npm ci]
   Install --> Test[npm test]
   Test --> Wiki[repo-wiki run]
-  Wiki --> Policy{WIKI_PUSH_TOKEN configured?}
+  Wiki --> Policy{publish credentials configured?}
   Policy -->|no| Artifact[Keep local wiki / no publish]
-  Policy -->|yes| Publish[Push GitHub Wiki]
+  Policy -->|yes| Publish[Push selected target: GitHub Wiki or GitHub Pages]
 ```
 
 Security policy:
 
 - Do not publish from untrusted pull requests.
-- Use a dedicated GitHub App token or fine-grained PAT for wiki push.
-- Never expose tokens in generated wiki pages.
+- Use a dedicated GitHub App token or fine-grained PAT for wiki or Pages push.
+- Never expose tokens in generated wiki pages, scan artifacts, logs, or publish summaries.
 - Fail publication on secret-like content.
 - Optionally require human review for auth, billing, deployment, and security-sensitive pages.
+- Treat hosted LLM output as an untrusted patch that must pass validation before it can modify files.
 
 ## Linting gates
 
@@ -374,7 +584,7 @@ Documentation lint gates:
 | contradicted documentation | error | Block docs that contain strong contradiction signals when configured. |
 | broken relative links | warning | Detect doc rot. |
 | unvalidated operational claims | warning | Prevent unchecked commands/API claims from becoming authoritative. |
-| secret-like content | error | Prevent sensitive values from reaching the wiki. |
+| secret-like content | error | Prevent sensitive values from reaching generated artifacts. |
 
 Wiki lint gates:
 
@@ -385,11 +595,259 @@ Wiki lint gates:
 | missing source commit | warning | Keep generated pages auditable. |
 | secret-like content | error | Prevent credential leaks. |
 | excessive page count or size | warning | Avoid GitHub Wiki sprawl and agent-unfriendly pages. |
+| orphan pages | warning | Keep the graph navigable and reduce stale knowledge. |
+| missing citations | warning in deterministic mode, error in LLM mode | Prevent unsupported material claims. |
+| stale generated pages | warning or error by policy | Remove pages for deleted or renamed sources. |
+
+## Backlog epics
+
+GitHub Issues are the execution backlog. This section is not a parallel backlog; it is the planning source used to create or update Issues, milestones, labels, and detailed feature plans under `docs/plans/`. Once an item is accepted for execution, track status in GitHub Issues rather than by checking boxes in this document.
+
+Related GitHub issues and recently closed work:
+
+- #2 - Incremental maintenance and safe publishing
+- #3 - LLM compiler and source-grounded wiki synthesis
+- #4 - Production scanner and repository analysis (closed; parent for scanner extraction work)
+- #5 - Agent integration and query workflows
+- #7 - Add TypeScript/JavaScript AST-level symbol extraction (closed)
+- #8 - Complete framework route and API surface detection (closed)
+- #9 - Build import graph and dependency metadata for scanner output (closed)
+- #10 - Map tests to source modules (closed)
+- #11 - Detect database migrations and ORM model surfaces (closed)
+- #12 - Add affected-page graph inputs for incremental mode (closed)
+- #14 - Add Python source extraction support (closed)
+- #15 - Add Go source extraction support (closed)
+- #16 - Add Rust source extraction support (closed)
+- #17 - Add Ruby source extraction support (closed)
+- #18 - Documentation validation and debt reporting
+- #19 - Wiki knowledge graph and navigation
+- #20 - CI publishing and release workflow
+- #33 - Compiler context assembly and token budgeting (closed)
+- #34 - LLM provider boundary and prompt templates (closed)
+- #35 - Structured wiki patch format and lint-gated acceptance
+- #36 - Human section preservation and page ownership metadata (closed)
+- #37 - Citation, confidence, and contradiction enforcement for generated pages
+- #38 - Validate documented commands and package scripts (closed)
+- #39 - Validate documented file paths and environment variables (closed; informs follow-up validation work)
+- #40 - Documentation debt report strictness and route-claim validation
+- #46 - Honor source excludes and ignore nested worktree noise during scan (closed; informs remaining source-filtering follow-up work)
+- #49 - Strip or transform YAML frontmatter when publishing to GitHub Wiki
+- #50 - Add GitHub Pages publish target
+
+### P0: Trust, correctness, and safety hardening
+
+These items make the current scaffold match its stated policy.
+
+- Make `repo-wiki run` fail or stop before publish when `lint-docs` reports error-level issues.
+- Complete source filtering policy, including `source.include` and remaining nested-worktree or edge-case exclusions.
+- Hash every file, including files whose content is too large or binary to parse.
+- Redact secret-like strings before writing manifests, documentation cards, page contexts, logs, or generated pages.
+- Sanitize all remotes and URLs before displaying or writing them.
+- Delete stale generated wiki pages during publish while preserving unmanaged and human-owned pages.
+- Add explicit publish-target selection, starting with `github-wiki` and `github-pages`.
+- Add a target-aware GitHub Wiki publish transform that strips or converts leading YAML frontmatter so generated metadata does not render as noisy tables on hosted wiki pages.
+- Preserve YAML frontmatter by default for GitHub Pages/Jekyll publication.
+- Add JSON schema validation for `.llmwiki/config.json`.
+- Make lint severity fully config-driven.
+- Add golden end-to-end tests for `init -> scan -> plan -> lint-docs -> compile -> lint -> publish --dry-run`.
+
+### P1: Karpathy pattern completeness
+
+These items make `repo-wiki` a faithful software-repository version of the LLM Wiki pattern.
+
+- Treat `Index.md` and `Log.md` as first-class, parseable operating surfaces.
+- Append deterministic log entries for ingest, compile, lint, query, and publish operations.
+- Add wiki health linting for orphan pages, stale pages, missing cross-references, and recurring unpageified concepts.
+- Add filed-back query pages for durable analyses and investigations.
+- Add page frontmatter suitable for Obsidian, Dataview, GitHub Wiki navigation, and future search.
+- Add graph metadata that can power both navigation and incremental maintenance.
+- Preserve page metadata locally and in provenance artifacts even when GitHub Wiki publishing strips visible frontmatter from the pushed markdown.
+- Publish this repository's own generated wiki as the canonical demo.
+- Offer GitHub Pages as a richer static-site destination for generated repository knowledge bases.
+
+### P2: LLM compiler and structured patch acceptance
+
+These items turn the deterministic compiler into a semantic compiler.
+
+- Wire `compiler.mode=llm` into `compileWiki` using the provider boundary and prompt templates.
+- Use assembled page contexts with explicit budgets and omitted-context reporting.
+- Require structured patches from hosted LLMs instead of accepting free-form markdown.
+- Validate patch shape, page ownership, source paths, citations, and lint gates before writing.
+- Preserve human notes byte-for-byte across deterministic and LLM modes.
+- Add retry/failure behavior for invalid provider output.
+- Add citation, confidence, contradiction, and open-question metadata to generated pages.
+- Add evaluation fixtures that compare generated pages against expected source-grounded claims.
+
+### P3: Query, search, and file-back workflows
+
+These items make the wiki useful after generation.
+
+- Implement `repo-wiki search` over wiki pages, source cards, and documentation cards.
+- Implement `repo-wiki query` with source-cited answers and explicit confidence.
+- Support a `--file-back` mode that creates or updates investigation/topic pages.
+- Add local search adapters, starting with a simple built-in index and optionally supporting qmd or MCP later.
+- Ensure query answers never treat stale or contradicted docs as authoritative.
+- Log query and file-back events in `Log.md`.
+
+### P4: Real incremental maintenance
+
+These items make the wiki stay current at low cost.
+
+- Persist previous compiled commit and manifest metadata.
+- Compute changed files from `base..head`.
+- Rescan changed files and required graph neighbors.
+- Use affected-page graph data to update only relevant pages.
+- Regenerate global pages only when relevant source or graph inputs change.
+- Handle deleted and renamed files/modules by updating index, links, and stale generated pages.
+- Add PR-oriented `repo-wiki diff` output for review before publish.
+
+### P5: Production scanner and framework plugins
+
+These items increase repository coverage and confidence.
+
+- Add TypeScript/JavaScript AST extraction for exports, imports, route handlers, config, and framework surfaces.
+- Detect Express, Fastify, NestJS, Next.js, Hono, Koa, tRPC, GraphQL, and OpenAPI surfaces.
+- Add Python support for Django, FastAPI, Flask, pytest, pyproject, and common config conventions.
+- Add Go support for modules, HTTP routes, packages, tests, and common framework patterns.
+- Add Rust support for Cargo, Axum, Actix, Rocket, tests, and feature flags.
+- Add Ruby/Rails and PHP/Laravel extraction where useful.
+- Improve test-to-source mapping across languages.
+- Extract database migrations and ORM models across Prisma, TypeORM, Sequelize, Rails, Django, SQLAlchemy, and raw SQL.
+
+### P6: Adoption, CI, and developer experience
+
+These items make the tool easy to adopt.
+
+- Add GitHub Pages publishing support for richer static-site output.
+- Add a reusable GitHub Action.
+- Add `repo-wiki doctor` for readiness and configuration diagnostics.
+- Add `repo-wiki init --profile` templates for Node, Python, Go, Rust, Rails, and monorepos.
+- Add `--dry-run` and machine-readable JSON output to every command that mutates state.
+- Publish example generated wikis for representative repositories.
+- Document safe token setup and wiki publishing permissions.
+- Add package smoke tests for `npx repo-wiki` against packed output.
+
+### Recommended new or expanded issues
+
+The following issue drafts should be filed as GitHub Issues or used to expand the related issues above. They are included here to preserve acceptance criteria while keeping planning in one document.
+
+#### Trust hardening for generated wiki artifacts
+
+Parent: new epic or attach to #2, #3, #18, and #20.
+
+Acceptance criteria:
+
+- Error-level docs lint failures can block run/publish according to config.
+- Scan output respects configured source filtering, including remaining `source.include` and nested-worktree edge cases.
+- Every source card has a stable hash or an explicit hash failure reason.
+- No scan artifact or generated page contains known secret-like patterns from fixtures.
+- Publisher removes stale generated pages without touching unmanaged or human-owned pages.
+
+Suggested verification:
+
+- `npm test`
+- `npm run check`
+- `npm run coverage`
+- End-to-end fixture: `init -> scan -> plan -> lint-docs -> compile -> lint -> publish --dry-run`
+
+#### First-class parseable `Index.md` and `Log.md`
+
+Parent: #19 and #5.
+
+Acceptance criteria:
+
+- Agents can read `Index.md` first to route to relevant pages.
+- `grep '^## \[' Log.md | tail -5` or an equivalent documented pattern returns the latest operations.
+- Re-running compilation with the same inputs does not create noisy index/log churn.
+
+#### Wiki health linting
+
+Parent: #19, #18, and #37.
+
+Acceptance criteria:
+
+- Health findings are deterministic under the same wiki and manifest inputs.
+- Config controls warning vs error severity.
+- Lint output can be consumed by CI and by an agent proposing repair patches.
+
+#### Query and file-back workflow
+
+Parent: #5 and #3.
+
+Acceptance criteria:
+
+- Query answers cite source paths for material claims.
+- Filed-back pages include provenance, query text, source paths, and page state.
+- The feature works in deterministic/mock mode for tests.
+
+#### Local search and optional qmd/MCP integration
+
+Parent: #5 and #19.
+
+Acceptance criteria:
+
+- `repo-wiki search "query"` returns ranked wiki pages and evidence paths.
+- Search can run without external services.
+- Optional provider integrations do not change core scan/compile behavior.
+
+#### Publish targets: GitHub Wiki and GitHub Pages
+
+Parent: #50, #49, #20, #2, and #3.
+
+Acceptance criteria:
+
+- `repo-wiki publish` has explicit target selection for `github-wiki` and `github-pages`.
+- GitHub Wiki publishing defaults to hiding generated metadata by stripping or converting leading YAML frontmatter.
+- GitHub Pages publishing defaults to preserving YAML frontmatter for Jekyll/static-site metadata.
+- Dry-run output reports target, destination branch/path or remote, and frontmatter policy.
+- The target abstraction can later support local artifacts, MkDocs, Docusaurus, or other static-site outputs.
+
+#### GitHub Wiki frontmatter publish policy
+
+Parent: #49, #20, #2, and #3.
+
+Acceptance criteria:
+
+- GitHub Wiki publishing does not expose generated YAML metadata as visible tables.
+- Local `.llmwiki/wiki` files can retain frontmatter for tooling, search, Obsidian/Dataview, and incremental maintenance.
+- The publish transform strips only valid leading YAML frontmatter and leaves thematic breaks or later `---` blocks intact.
+- A future config can choose `strip`, `html-comment`, or `preserve`, with GitHub Wiki defaulting to `strip`.
+
+#### Self-wiki flagship demo
+
+Parent: #20 and #5.
+
+Acceptance criteria:
+
+- Public users can inspect a real generated wiki for this repo.
+- README links to `Agent-Context-Pack`, `Architecture`, `Build-Test-and-Run`, `Documentation-Debt-Report`, and `Index` when available.
+- Publish flow is dry-run safe and credential safe.
+
+#### `repo-wiki doctor`
+
+Parent: adoption / new issue.
+
+Acceptance criteria:
+
+- `repo-wiki doctor --repo .` is useful before first `run`.
+- It never requires hosted LLM credentials.
+- It gives clear next steps when the generated wiki would be low quality or unsafe to publish.
+
+#### Reusable GitHub Action
+
+Parent: #20 or new adoption epic.
+
+Acceptance criteria:
+
+- A consumer repo can add repo-wiki with a short workflow snippet.
+- The action works without publish credentials.
+- Publishing requires explicit credentials and safe event context.
 
 ## Detailed feature plans
 
-Detailed planned-feature epics live as one markdown file per feature under `docs/plans/`.
-GitHub Issues are the execution backlog; these docs define scope, acceptance criteria, and implementation direction:
+Detailed planned-feature epics live as one markdown file per feature under `docs/plans/`. GitHub Issues are the execution backlog; these docs define scope, acceptance criteria, and implementation direction.
+
+Existing plans:
 
 - `docs/plans/production-scanner.md`
 - `docs/plans/doc-validation.md`
@@ -399,9 +857,20 @@ GitHub Issues are the execution backlog; these docs define scope, acceptance cri
 - `docs/plans/ci-publishing.md`
 - `docs/plans/agent-integration.md`
 
-## Implementation milestones
+Recommended new plans:
 
-### Milestone 1: Current scaffold
+- `docs/plans/karpathy-llm-wiki-alignment.md` - product vision, operating model, and repo-specific interpretation of the LLM Wiki pattern.
+- `docs/plans/wiki-health.md` - graph linting, orphan detection, stale-page detection, cross-reference repair, and page split suggestions.
+- `docs/plans/query-and-file-back.md` - source-cited queries, durable answer filing, investigation pages, and query logs.
+- `docs/plans/search-index.md` - built-in local search, optional qmd adapter, and MCP/search integration.
+- `docs/plans/trust-hardening.md` - redaction, config schema, hash coverage, severity policy, publish safety, and artifact safety.
+- `docs/plans/github-action.md` - reusable action, PR diff comments, artifacts, and safe publication.
+
+## Implementation phases
+
+These phases describe the desired implementation sequence in this plan. They are not one-to-one with GitHub Milestones, because the repository already has GitHub Milestones 1-5 with historical issue assignments. Use GitHub Issues and their assigned milestones for execution tracking; use these phases for roadmap ordering.
+
+### Phase 1: Current scaffold
 
 - CLI package with executable `repo-wiki`.
 - Library exports.
@@ -414,7 +883,17 @@ GitHub Issues are the execution backlog; these docs define scope, acceptance cri
 - Git-based publisher.
 - Self-dogfooding workflow.
 
-### Milestone 2: Production scanner
+### Phase 2: Trust hardening and Karpathy alignment
+
+- Enforce docs-lint errors in `run` and publish paths.
+- Complete source filtering policy, including `source.include` and remaining exclusion edge cases.
+- Hash all files and redact all generated artifacts.
+- Sanitize remotes and unsafe URLs.
+- Treat `Index.md` and `Log.md` as first-class parseable wiki surfaces.
+- Add wiki health linting for orphans, stale pages, missing links, and generated-page drift.
+- Publish this repository's generated wiki as the flagship example.
+
+### Phase 3: Production scanner
 
 - Parse package scripts.
 - Add TypeScript/JavaScript AST extraction.
@@ -423,35 +902,55 @@ GitHub Issues are the execution backlog; these docs define scope, acceptance cri
 - Extract database migrations and ORM models.
 - Build import graph and affected-page graph.
 
-### Milestone 3: LLM compiler
+### Phase 4: LLM compiler
 
 - Replace deterministic placeholder summaries with LLM synthesis.
-- Use source cards and targeted excerpts.
+- Use source cards, documentation cards, and targeted excerpts.
 - Preserve human notes.
 - Output structured patches.
 - Enforce source citations.
 - Add contradiction and confidence metadata.
+- Reject or downgrade unsupported claims.
 
-### Milestone 4: Incremental maintenance
+### Phase 5: Query, search, and file-back
+
+- Add local wiki/card search.
+- Add `repo-wiki query`.
+- Add source-cited answers with confidence metadata.
+- Allow durable answers to be filed back into the wiki.
+- Append query and file-back events to `Log.md`.
+
+### Phase 6: Incremental maintenance
 
 - Store previous compiled commit.
 - Compute changed files.
 - Update only affected pages.
 - Re-run cross-link and debt report passes.
+- Delete stale generated pages safely.
 - Publish safely after lint gates.
+- Provide PR-friendly wiki diffs.
 
-### Milestone 5: Agent integration
+### Phase 7: Agent integration and adoption
 
 - Generate `AGENTS.md` or `AGENTS.repo-wiki.md` pointers.
 - Generate `Agent-Context-Pack.md` optimized for coding agents.
 - Add optional local search index or MCP endpoint.
-- Provide a `repo-wiki query` command later.
+- Add a reusable GitHub Action.
+- Add GitHub Pages publish examples and safe branch/path configuration.
+- Add `repo-wiki doctor`.
+- Provide example generated wikis and adoption guides.
 
 ## Open implementation questions
 
-- Should the publisher open a pull request against the wiki repo instead of pushing directly?
+- Should the publisher open a pull request against the wiki repo, a GitHub Pages branch, or both instead of pushing directly?
 - Which documentation claims should block publishing by default?
 - How should ADR supersession be represented?
-- Should generated wiki pages use source line anchors or only path + commit anchors?
+- Should generated wiki pages use source line anchors or only path plus commit anchors?
 - How much raw code should the LLM compiler be allowed to read per page?
 - How should existing human-authored wiki pages be reconciled?
+- What is the right schema for filed-back query pages and investigation pages?
+- Should query outputs be generated only locally or also published automatically after review?
+- Should the first search backend be a built-in simple index, qmd integration, or MCP-first?
+- How should wiki health lint distinguish useful hub pages from overly broad pages?
+- How should confidence metadata be represented in local frontmatter while GitHub Wiki published pages hide or strip that metadata?
+- How should private repositories avoid leaking sensitive path names, remotes, or environment-variable names in published wikis?
