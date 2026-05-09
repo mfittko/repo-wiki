@@ -98,7 +98,7 @@ jobs:
         run: node ./dist/bin/repo-wiki.js publish --target github-wiki --wiki .llmwiki/wiki
 
   publish-pages:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' && github.event.inputs.publish_pages == 'true'
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.event.inputs.publish_pages == 'true')
     needs: compile-wiki
     runs-on: ubuntu-latest
     permissions:

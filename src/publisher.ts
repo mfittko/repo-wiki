@@ -110,7 +110,7 @@ export async function publishWiki({
     }
     await copyGeneratedWiki(absoluteWikiDir, publishDir, publishFrontmatterPolicy);
     if (publishTarget === 'github-pages') {
-      await ensurePagesSiteSupport(publishDir);
+      await ensurePagesSiteSupport(checkoutDir, publishDir);
     }
     await runGit(['config', 'user.name', gitUserName], { cwd: checkoutDir });
     await runGit(['config', 'user.email', gitUserEmail], { cwd: checkoutDir });
@@ -227,15 +227,27 @@ async function cleanGeneratedMarkdown(publishDir: string) {
   const entries = await fs.readdir(publishDir, { withFileTypes: true });
 
   await Promise.all(entries.map(async (entry) => {
+    if (isReservedPublishEntry(entry.name)) {
+      return;
+    }
+
     const entryPath = path.join(publishDir, entry.name);
     if (entry.isDirectory()) {
       await cleanGeneratedMarkdown(entryPath);
       return;
     }
-    if (entry.isFile() && entry.name.endsWith('.md')) {
+    if (entry.isFile() && entry.name.endsWith('.md') && !isPreservedPagesMarkdown(entry.name)) {
       await fs.rm(entryPath, { force: true });
     }
   }));
+}
+
+function isReservedPublishEntry(name: string) {
+  return name === '.git' || name === '.github' || name === '_layouts';
+}
+
+function isPreservedPagesMarkdown(name: string) {
+  return name === 'index.md' || name === 'Navigation.md';
 }
 
 async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatterPolicy: FrontmatterPolicy = 'strip') {
@@ -341,34 +353,34 @@ function assertPublishPathContained(checkoutDir: string, publishDir: string) {
   throw new Error(`Publish path must stay inside checkout: ${publishDir}`);
 }
 
-async function ensurePagesSiteSupport(targetDir: string) {
-  await ensurePagesEntryAndNavigation(targetDir);
-  await ensurePagesMermaidSupport(targetDir);
+async function ensurePagesSiteSupport(siteRootDir: string, publishDir: string) {
+  await ensurePagesEntryAndNavigation(publishDir);
+  await ensurePagesMermaidSupport(siteRootDir);
 }
 
-async function ensurePagesEntryAndNavigation(targetDir: string) {
-  const homePath = path.join(targetDir, 'Home.md');
-  const indexPath = path.join(targetDir, 'index.md');
+async function ensurePagesEntryAndNavigation(publishDir: string) {
+  const homePath = path.join(publishDir, 'Home.md');
+  const indexPath = path.join(publishDir, 'index.md');
   if (await fileExists(homePath) && !await fileExists(indexPath)) {
     const homeContent = await fs.readFile(homePath, 'utf8');
     await fs.writeFile(indexPath, homeContent, 'utf8');
   }
 
-  const sidebarPath = path.join(targetDir, '_Sidebar.md');
-  const navigationPath = path.join(targetDir, 'Navigation.md');
+  const sidebarPath = path.join(publishDir, '_Sidebar.md');
+  const navigationPath = path.join(publishDir, 'Navigation.md');
   if (await fileExists(sidebarPath) && !await fileExists(navigationPath)) {
     const sidebarContent = await fs.readFile(sidebarPath, 'utf8');
     await fs.writeFile(navigationPath, sidebarContent, 'utf8');
   }
 }
 
-async function ensurePagesMermaidSupport(targetDir: string) {
-  const configPath = path.join(targetDir, '_config.yml');
+async function ensurePagesMermaidSupport(siteRootDir: string) {
+  const configPath = path.join(siteRootDir, '_config.yml');
   if (!await fileExists(configPath)) {
     await fs.writeFile(configPath, PAGES_CONFIG, 'utf8');
   }
 
-  const layoutDir = path.join(targetDir, '_layouts');
+  const layoutDir = path.join(siteRootDir, '_layouts');
   const layoutPath = path.join(layoutDir, 'repo-wiki.html');
   if (!await fileExists(layoutPath)) {
     await fs.mkdir(layoutDir, { recursive: true });
