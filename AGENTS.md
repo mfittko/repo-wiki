@@ -23,7 +23,7 @@ The local wiki is not authoritative; verify material claims against source, test
 
 Repository-maintained skills live under `.github/skills/`. Pi-specific skill locations should be symlinks to `.github/skills/`, not duplicate skill copies.
 
-GitHub Issues are the execution backlog for this repository. Use milestones, labels, and issue templates for tracking work; do not create or maintain a separate local backlog file unless a task explicitly requires it.
+GitHub Issues are the execution backlog for this repository. Use milestones, labels, and issue templates for tracking work; do not create or maintain a separate local backlog file unless a task explicitly requires it. When handing an issue to Copilot, assign `copilot-swe-agent` directly rather than `copilot`.
 
 When running repository commands or automation:
 
