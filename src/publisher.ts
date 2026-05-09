@@ -41,6 +41,8 @@ export async function publishWiki({
   const publishBranch = branch || defaultBranchForTarget(publishTarget);
   const publishFrontmatterPolicy = frontmatterPolicy || defaultFrontmatterPolicyForTarget(publishTarget);
   const resolvedPublishPath = resolvePublishPath(publishTarget, pagesPath);
+  assertSafeGitArgument(publishBranch, 'branch');
+  assertSafeGitArgument(publishRemote, 'remote');
 
   if (!await fileExists(absoluteWikiDir)) {
     throw new Error(`Wiki directory does not exist: ${absoluteWikiDir}`);
@@ -88,7 +90,7 @@ export async function publishWiki({
 
   try {
     try {
-      await runGit(['clone', '--branch', publishBranch, publishRemote, checkoutDir]);
+      await runGit(['clone', '--branch', publishBranch, '--', publishRemote, checkoutDir]);
       cloned = true;
     } catch (error) {
       if (!isCloneFallbackError(error)) {
@@ -103,7 +105,7 @@ export async function publishWiki({
     await cleanPublishPath(checkoutDir, publishDir);
     await copyGeneratedWiki(absoluteWikiDir, publishDir, publishFrontmatterPolicy);
     if (publishTarget === 'github-pages') {
-      await ensurePagesEntryAndNavigation(publishDir, publishFrontmatterPolicy);
+      await ensurePagesEntryAndNavigation(publishDir);
     }
     await runGit(['config', 'user.name', gitUserName], { cwd: checkoutDir });
     await runGit(['config', 'user.email', gitUserEmail], { cwd: checkoutDir });
@@ -263,8 +265,20 @@ function defaultBranchForTarget(target: PublishTarget) {
   return target === 'github-pages' ? 'gh-pages' : 'master';
 }
 
-function defaultFrontmatterPolicyForTarget(target: PublishTarget): FrontmatterPolicy {
+export function defaultFrontmatterPolicyForTarget(target: PublishTarget): FrontmatterPolicy {
   return target === 'github-wiki' ? 'strip' : 'preserve';
+}
+
+function assertSafeGitArgument(value: string | undefined, label: string) {
+  if (!value) {
+    return;
+  }
+  if (/^[\s-]/.test(value)) {
+    throw new Error(`Publish ${label} must not start with whitespace or "-": ${value}`);
+  }
+  if (/[\u0000\r\n]/.test(value)) {
+    throw new Error(`Publish ${label} contains unsupported control characters.`);
+  }
 }
 
 function resolvePublishPath(target: PublishTarget, pagesPath?: string) {
@@ -285,18 +299,18 @@ function resolvePublishPath(target: PublishTarget, pagesPath?: string) {
   };
 }
 
-async function ensurePagesEntryAndNavigation(targetDir: string, frontmatterPolicy: FrontmatterPolicy) {
+async function ensurePagesEntryAndNavigation(targetDir: string) {
   const homePath = path.join(targetDir, 'Home.md');
   const indexPath = path.join(targetDir, 'index.md');
   if (await fileExists(homePath) && !await fileExists(indexPath)) {
     const homeContent = await fs.readFile(homePath, 'utf8');
-    await fs.writeFile(indexPath, applyFrontmatterPolicy(homeContent, frontmatterPolicy), 'utf8');
+    await fs.writeFile(indexPath, homeContent, 'utf8');
   }
 
   const sidebarPath = path.join(targetDir, '_Sidebar.md');
   const navigationPath = path.join(targetDir, 'Navigation.md');
   if (await fileExists(sidebarPath) && !await fileExists(navigationPath)) {
     const sidebarContent = await fs.readFile(sidebarPath, 'utf8');
-    await fs.writeFile(navigationPath, applyFrontmatterPolicy(sidebarContent, frontmatterPolicy), 'utf8');
+    await fs.writeFile(navigationPath, sidebarContent, 'utf8');
   }
 }

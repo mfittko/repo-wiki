@@ -7,8 +7,16 @@ import { compileWiki } from './compiler.js';
 import { lintWiki } from './linter.js';
 import { lintDocs } from './docs-linter.js';
 import { loadConfig } from './config.js';
-import { publishWiki, PUBLISH_TARGETS, type PublishTarget } from './publisher.js';
+import { publishWiki, PUBLISH_TARGETS, defaultFrontmatterPolicyForTarget, type PublishTarget } from './publisher.js';
 import { isFrontmatterPolicy, parseFrontmatterPolicy, type FrontmatterPolicy } from './frontmatter.js';
+
+type PublishConfig = {
+  target?: string;
+  branch?: string;
+  frontmatter?: string;
+  wiki?: { branch?: string; frontmatter?: string };
+  pages?: { branch?: string; path?: string; frontmatter?: string };
+};
 
 const HELP = `
 repo-wiki <command> [options]
@@ -261,18 +269,17 @@ function isPublishTarget(value: string): value is PublishTarget {
   return (PUBLISH_TARGETS as readonly string[]).includes(value);
 }
 
-function defaultFrontmatterPolicyForTarget(target: PublishTarget): FrontmatterPolicy {
-  return target === 'github-wiki' ? 'strip' : 'preserve';
-}
-
-function getConfiguredBranch(configuredPublish: any, target: PublishTarget) {
+function getConfiguredBranch(configuredPublish: PublishConfig | undefined, target: PublishTarget) {
   if (target === 'github-pages') {
     return configuredPublish?.pages?.branch || 'gh-pages';
+  }
+  if (target === 'local-artifact') {
+    return configuredPublish?.branch || 'master';
   }
   return configuredPublish?.wiki?.branch || 'master';
 }
 
-function getConfiguredFrontmatterPolicy(configuredPublish: any, target: PublishTarget) {
+function getConfiguredFrontmatterPolicy(configuredPublish: PublishConfig | undefined, target: PublishTarget) {
   if (target === 'github-pages') {
     return configuredPublish?.pages?.frontmatter || configuredPublish?.frontmatter;
   }

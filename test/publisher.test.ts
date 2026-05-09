@@ -279,3 +279,33 @@ test('publishWiki publishes github-pages output into configured path and preserv
     await fs.rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test('publishWiki rejects unsafe git branch and remote arguments', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+
+    await assert.rejects(
+      () => publishWiki({
+        wikiDir,
+        branch: '--upload-pack=echo pwned',
+        dryRun: true
+      }),
+      /must not start with whitespace or "-"/
+    );
+
+    await assert.rejects(
+      () => publishWiki({
+        wikiDir,
+        remote: '--upload-pack=echo pwned',
+        dryRun: true
+      }),
+      /must not start with whitespace or "-"/
+    );
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
