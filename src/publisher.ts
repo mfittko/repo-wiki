@@ -5,9 +5,9 @@ import { fileExists } from './utils/fs.js';
 import { getGitStatus, runGit } from './utils/git.js';
 import { applyFrontmatterPolicy, type FrontmatterPolicy } from './frontmatter.js';
 
-export type PublishTarget = 'github-wiki' | 'github-pages' | 'local-artifact';
+export type PublishTarget = 'github-wiki' | 'github-pages';
 
-export const PUBLISH_TARGETS: readonly PublishTarget[] = ['github-wiki', 'github-pages', 'local-artifact'];
+export const PUBLISH_TARGETS: readonly PublishTarget[] = ['github-wiki', 'github-pages'];
 
 export interface PublishWikiOptions {
   wikiDir?: string;
@@ -288,10 +288,16 @@ function resolvePublishPath(target: PublishTarget, pagesPath?: string) {
     throw new Error(`Publish path must be relative: ${rawPath}`);
   }
 
-  const normalized = rawPath.replace(/\\/g, '/').replace(/^\.\/+/, '') || '.';
-  if (normalized === '..' || normalized.startsWith('../') || normalized.includes('/../')) {
-    throw new Error(`Publish path must not escape repository root: ${rawPath}`);
+  const pathForSegments = rawPath.replace(/\\/g, '/');
+  const segments = pathForSegments.split('/').filter(Boolean);
+  if (segments.includes('..')) {
+    throw new Error(`Publish path must not contain ".." path segments: ${rawPath}`);
   }
+  if (segments.includes('.git')) {
+    throw new Error(`Publish path must not target reserved .git paths: ${rawPath}`);
+  }
+
+  const normalized = path.posix.normalize(pathForSegments).replace(/^\.\/+/, '') || '.';
 
   return {
     relative: normalized,

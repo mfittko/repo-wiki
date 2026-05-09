@@ -12,7 +12,6 @@ import { isFrontmatterPolicy, parseFrontmatterPolicy, type FrontmatterPolicy } f
 
 type PublishConfig = {
   target?: string;
-  branch?: string;
   frontmatter?: string;
   wiki?: { branch?: string; frontmatter?: string };
   pages?: { branch?: string; path?: string; frontmatter?: string };
@@ -28,11 +27,11 @@ Commands:
   compile   Generate or update local wiki markdown pages.
   lint      Validate generated wiki pages.
   lint-docs Validate ingested markdown documentation before compilation.
-  publish   Push local wiki pages to OWNER/REPO.wiki.git.
+  publish   Push local wiki pages to GitHub Wiki or GitHub Pages.
   run       Run scan -> plan -> compile -> lint, optionally followed by publish.
 
 Options:
-  --target <github-wiki|github-pages|local-artifact>
+  --target <github-wiki|github-pages>
             Publish destination (default: github-wiki).
   --pages-path <path>
             Publish path for github-pages target (default: .).
@@ -272,9 +271,6 @@ function isPublishTarget(value: string): value is PublishTarget {
 function getConfiguredBranch(configuredPublish: PublishConfig | undefined, target: PublishTarget) {
   if (target === 'github-pages') {
     return configuredPublish?.pages?.branch || 'gh-pages';
-  }
-  if (target === 'local-artifact') {
-    return configuredPublish?.branch || 'master';
   }
   return configuredPublish?.wiki?.branch || 'master';
 }

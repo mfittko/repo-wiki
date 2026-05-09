@@ -138,7 +138,7 @@ Planned richer publication should make the target explicit, including a GitHub W
 
 ```bash
 npx repo-wiki publish --target github-wiki --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git
-npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --path .
+npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --pages-path .
 ```
 
 Publish targets should own destination-specific rendering policy. GitHub Wiki should strip or transform leading YAML frontmatter by default because hosted wiki pages render it visibly. GitHub Pages/Jekyll should preserve frontmatter by default because Jekyll consumes it as page metadata.

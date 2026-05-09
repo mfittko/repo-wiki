@@ -228,17 +228,17 @@ test('publishWiki uses target-specific defaults in dry-run summaries', async () 
     assert.equal(pagesResult.summary.path, '.');
     assert.equal(pagesResult.summary.frontmatterPolicy, 'preserve');
 
-    const localResult = await publishWiki({
+    const wikiResult = await publishWiki({
       wikiDir,
-      target: 'local-artifact',
+      target: 'github-wiki',
       dryRun: true
     });
 
-    assert.equal(localResult.summary.status, 'dry-run');
-    assert.equal(localResult.summary.target, 'local-artifact');
-    assert.equal(localResult.summary.branch, 'master');
-    assert.equal(localResult.summary.path, '.');
-    assert.equal(localResult.summary.frontmatterPolicy, 'preserve');
+    assert.equal(wikiResult.summary.status, 'dry-run');
+    assert.equal(wikiResult.summary.target, 'github-wiki');
+    assert.equal(wikiResult.summary.branch, 'master');
+    assert.equal(wikiResult.summary.path, '.');
+    assert.equal(wikiResult.summary.frontmatterPolicy, 'strip');
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
@@ -334,13 +334,34 @@ test('publishWiki rejects unsafe github-pages publish paths', async () => {
 
     await assert.rejects(
       () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '../sibling', dryRun: true }),
-      /must not escape repository root/
+      /must not contain "\.\." path segments/
     );
 
     await assert.rejects(
       () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs/../secret', dryRun: true }),
-      /must not escape repository root/
+      /must not contain "\.\." path segments/
     );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs/..', dryRun: true }),
+      /must not contain "\.\." path segments/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '.git', dryRun: true }),
+      /reserved \.git paths/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs/.git', dryRun: true }),
+      /reserved \.git paths/
+    );
+
+    const safeDotSegment = await publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs/./site', dryRun: true });
+    assert.equal(safeDotSegment.summary.path, 'docs/site');
+
+    const safeSimilarSegment = await publishWiki({ wikiDir, target: 'github-pages', pagesPath: '.github/pages', dryRun: true });
+    assert.equal(safeSimilarSegment.summary.path, '.github/pages');
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
