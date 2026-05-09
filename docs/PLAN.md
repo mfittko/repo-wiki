@@ -502,6 +502,8 @@ repo-wiki publish   Push local wiki markdown to GitHub Wiki.
 repo-wiki run       Orchestrate scan -> plan -> lint-docs -> compile -> lint -> optional publish.
 ```
 
+Current `run` invokes `lint-docs`, but making documentation-lint errors block publish is planned P0 hardening rather than fully enforced behavior today.
+
 Planned commands:
 
 ```text
@@ -578,94 +580,201 @@ Wiki lint gates:
 
 ## Backlog epics
 
-GitHub Issues are the execution backlog. The epics below should be reflected either in existing issues or new issues, with detailed plans under `docs/plans/` where scope is large.
+GitHub Issues are the execution backlog. This section is not a parallel backlog; it is the planning source used to create or update Issues, milestones, labels, and detailed feature plans under `docs/plans/`. Once an item is accepted for execution, track status in GitHub Issues rather than by checking boxes in this document.
+
+Related GitHub issues and recently closed work:
+
+- #2 - Incremental maintenance and safe publishing
+- #3 - LLM compiler and source-grounded wiki synthesis
+- #5 - Agent integration and query workflows
+- #18 - Documentation validation and debt reporting
+- #19 - Wiki knowledge graph and navigation
+- #20 - CI publishing and release workflow
+- #35 - Structured wiki patch format and lint-gated acceptance
+- #37 - Citation, confidence, and contradiction enforcement for generated pages
+- #39 - Validate documented file paths and environment variables (closed; informs follow-up validation work)
+- #40 - Documentation debt report strictness and route-claim validation
+- #46 - Honor source excludes and ignore nested worktree noise during scan (closed; informs remaining source-filtering follow-up work)
 
 ### P0: Trust, correctness, and safety hardening
 
 These items make the current scaffold match its stated policy.
 
-- [ ] Make `repo-wiki run` fail or stop before publish when `lint-docs` reports error-level issues.
-- [ ] Honor configured `source.exclude` and future `source.include` rules during scanning.
-- [ ] Hash every file, including files whose content is too large or binary to parse.
-- [ ] Redact secret-like strings before writing manifests, documentation cards, page contexts, logs, or generated pages.
-- [ ] Sanitize all remotes and URLs before displaying or writing them.
-- [ ] Delete stale generated wiki pages during publish while preserving unmanaged and human-owned pages.
-- [ ] Add JSON schema validation for `.llmwiki/config.json`.
-- [ ] Make lint severity fully config-driven.
-- [ ] Add golden end-to-end tests for `init -> scan -> plan -> lint-docs -> compile -> lint -> publish --dry-run`.
+- Make `repo-wiki run` fail or stop before publish when `lint-docs` reports error-level issues.
+- Complete source filtering policy, including `source.include` and remaining nested-worktree or edge-case exclusions.
+- Hash every file, including files whose content is too large or binary to parse.
+- Redact secret-like strings before writing manifests, documentation cards, page contexts, logs, or generated pages.
+- Sanitize all remotes and URLs before displaying or writing them.
+- Delete stale generated wiki pages during publish while preserving unmanaged and human-owned pages.
+- Add JSON schema validation for `.llmwiki/config.json`.
+- Make lint severity fully config-driven.
+- Add golden end-to-end tests for `init -> scan -> plan -> lint-docs -> compile -> lint -> publish --dry-run`.
 
 ### P1: Karpathy pattern completeness
 
 These items make `repo-wiki` a faithful software-repository version of the LLM Wiki pattern.
 
-- [ ] Treat `Index.md` and `Log.md` as first-class, parseable operating surfaces.
-- [ ] Append deterministic log entries for ingest, compile, lint, query, and publish operations.
-- [ ] Add wiki health linting for orphan pages, stale pages, missing cross-references, and recurring unpageified concepts.
-- [ ] Add filed-back query pages for durable analyses and investigations.
-- [ ] Add page frontmatter suitable for Obsidian, Dataview, GitHub Wiki navigation, and future search.
-- [ ] Add graph metadata that can power both navigation and incremental maintenance.
-- [ ] Publish this repository's own generated wiki as the canonical demo.
+- Treat `Index.md` and `Log.md` as first-class, parseable operating surfaces.
+- Append deterministic log entries for ingest, compile, lint, query, and publish operations.
+- Add wiki health linting for orphan pages, stale pages, missing cross-references, and recurring unpageified concepts.
+- Add filed-back query pages for durable analyses and investigations.
+- Add page frontmatter suitable for Obsidian, Dataview, GitHub Wiki navigation, and future search.
+- Add graph metadata that can power both navigation and incremental maintenance.
+- Publish this repository's own generated wiki as the canonical demo.
 
 ### P2: LLM compiler and structured patch acceptance
 
 These items turn the deterministic compiler into a semantic compiler.
 
-- [ ] Wire `compiler.mode=llm` into `compileWiki` using the provider boundary and prompt templates.
-- [ ] Use assembled page contexts with explicit budgets and omitted-context reporting.
-- [ ] Require structured patches from hosted LLMs instead of accepting free-form markdown.
-- [ ] Validate patch shape, page ownership, source paths, citations, and lint gates before writing.
-- [ ] Preserve human notes byte-for-byte across deterministic and LLM modes.
-- [ ] Add retry/failure behavior for invalid provider output.
-- [ ] Add citation, confidence, contradiction, and open-question metadata to generated pages.
-- [ ] Add evaluation fixtures that compare generated pages against expected source-grounded claims.
+- Wire `compiler.mode=llm` into `compileWiki` using the provider boundary and prompt templates.
+- Use assembled page contexts with explicit budgets and omitted-context reporting.
+- Require structured patches from hosted LLMs instead of accepting free-form markdown.
+- Validate patch shape, page ownership, source paths, citations, and lint gates before writing.
+- Preserve human notes byte-for-byte across deterministic and LLM modes.
+- Add retry/failure behavior for invalid provider output.
+- Add citation, confidence, contradiction, and open-question metadata to generated pages.
+- Add evaluation fixtures that compare generated pages against expected source-grounded claims.
 
 ### P3: Query, search, and file-back workflows
 
 These items make the wiki useful after generation.
 
-- [ ] Implement `repo-wiki search` over wiki pages, source cards, and documentation cards.
-- [ ] Implement `repo-wiki query` with source-cited answers and explicit confidence.
-- [ ] Support a `--file-back` mode that creates or updates investigation/topic pages.
-- [ ] Add local search adapters, starting with a simple built-in index and optionally supporting qmd or MCP later.
-- [ ] Ensure query answers never treat stale or contradicted docs as authoritative.
-- [ ] Log query and file-back events in `Log.md`.
+- Implement `repo-wiki search` over wiki pages, source cards, and documentation cards.
+- Implement `repo-wiki query` with source-cited answers and explicit confidence.
+- Support a `--file-back` mode that creates or updates investigation/topic pages.
+- Add local search adapters, starting with a simple built-in index and optionally supporting qmd or MCP later.
+- Ensure query answers never treat stale or contradicted docs as authoritative.
+- Log query and file-back events in `Log.md`.
 
 ### P4: Real incremental maintenance
 
 These items make the wiki stay current at low cost.
 
-- [ ] Persist previous compiled commit and manifest metadata.
-- [ ] Compute changed files from `base..head`.
-- [ ] Rescan changed files and required graph neighbors.
-- [ ] Use affected-page graph data to update only relevant pages.
-- [ ] Regenerate global pages only when relevant source or graph inputs change.
-- [ ] Handle deleted and renamed files/modules by updating index, links, and stale generated pages.
-- [ ] Add PR-oriented `repo-wiki diff` output for review before publish.
+- Persist previous compiled commit and manifest metadata.
+- Compute changed files from `base..head`.
+- Rescan changed files and required graph neighbors.
+- Use affected-page graph data to update only relevant pages.
+- Regenerate global pages only when relevant source or graph inputs change.
+- Handle deleted and renamed files/modules by updating index, links, and stale generated pages.
+- Add PR-oriented `repo-wiki diff` output for review before publish.
 
 ### P5: Production scanner and framework plugins
 
 These items increase repository coverage and confidence.
 
-- [ ] Add TypeScript/JavaScript AST extraction for exports, imports, route handlers, config, and framework surfaces.
-- [ ] Detect Express, Fastify, NestJS, Next.js, Hono, Koa, tRPC, GraphQL, and OpenAPI surfaces.
-- [ ] Add Python support for Django, FastAPI, Flask, pytest, pyproject, and common config conventions.
-- [ ] Add Go support for modules, HTTP routes, packages, tests, and common framework patterns.
-- [ ] Add Rust support for Cargo, Axum, Actix, Rocket, tests, and feature flags.
-- [ ] Add Ruby/Rails and PHP/Laravel extraction where useful.
-- [ ] Improve test-to-source mapping across languages.
-- [ ] Extract database migrations and ORM models across Prisma, TypeORM, Sequelize, Rails, Django, SQLAlchemy, and raw SQL.
+- Add TypeScript/JavaScript AST extraction for exports, imports, route handlers, config, and framework surfaces.
+- Detect Express, Fastify, NestJS, Next.js, Hono, Koa, tRPC, GraphQL, and OpenAPI surfaces.
+- Add Python support for Django, FastAPI, Flask, pytest, pyproject, and common config conventions.
+- Add Go support for modules, HTTP routes, packages, tests, and common framework patterns.
+- Add Rust support for Cargo, Axum, Actix, Rocket, tests, and feature flags.
+- Add Ruby/Rails and PHP/Laravel extraction where useful.
+- Improve test-to-source mapping across languages.
+- Extract database migrations and ORM models across Prisma, TypeORM, Sequelize, Rails, Django, SQLAlchemy, and raw SQL.
 
 ### P6: Adoption, CI, and developer experience
 
 These items make the tool easy to adopt.
 
-- [ ] Add a reusable GitHub Action.
-- [ ] Add `repo-wiki doctor` for readiness and configuration diagnostics.
-- [ ] Add `repo-wiki init --profile` templates for Node, Python, Go, Rust, Rails, and monorepos.
-- [ ] Add `--dry-run` and machine-readable JSON output to every command that mutates state.
-- [ ] Publish example generated wikis for representative repositories.
-- [ ] Document safe token setup and wiki publishing permissions.
-- [ ] Add package smoke tests for `npx repo-wiki` against packed output.
+- Add a reusable GitHub Action.
+- Add `repo-wiki doctor` for readiness and configuration diagnostics.
+- Add `repo-wiki init --profile` templates for Node, Python, Go, Rust, Rails, and monorepos.
+- Add `--dry-run` and machine-readable JSON output to every command that mutates state.
+- Publish example generated wikis for representative repositories.
+- Document safe token setup and wiki publishing permissions.
+- Add package smoke tests for `npx repo-wiki` against packed output.
+
+### Recommended new or expanded issues
+
+The following issue drafts should be filed as GitHub Issues or used to expand the related issues above. They are included here to preserve acceptance criteria while keeping planning in one document.
+
+#### Trust hardening for generated wiki artifacts
+
+Parent: new epic or attach to #2, #3, #18, and #20.
+
+Acceptance criteria:
+
+- Error-level docs lint failures can block run/publish according to config.
+- Scan output respects configured source filtering, including remaining `source.include` and nested-worktree edge cases.
+- Every source card has a stable hash or an explicit hash failure reason.
+- No scan artifact or generated page contains known secret-like patterns from fixtures.
+- Publisher removes stale generated pages without touching unmanaged or human-owned pages.
+
+Suggested verification:
+
+- `npm test`
+- `npm run check`
+- `npm run coverage`
+- End-to-end fixture: `init -> scan -> plan -> lint-docs -> compile -> lint -> publish --dry-run`
+
+#### First-class parseable `Index.md` and `Log.md`
+
+Parent: #19 and #5.
+
+Acceptance criteria:
+
+- Agents can read `Index.md` first to route to relevant pages.
+- `grep '^## \\[' Log.md | tail -5` or an equivalent documented pattern returns the latest operations.
+- Re-running compilation with the same inputs does not create noisy index/log churn.
+
+#### Wiki health linting
+
+Parent: #19, #18, and #37.
+
+Acceptance criteria:
+
+- Health findings are deterministic under the same wiki and manifest inputs.
+- Config controls warning vs error severity.
+- Lint output can be consumed by CI and by an agent proposing repair patches.
+
+#### Query and file-back workflow
+
+Parent: #5 and #3.
+
+Acceptance criteria:
+
+- Query answers cite source paths for material claims.
+- Filed-back pages include provenance, query text, source paths, and page state.
+- The feature works in deterministic/mock mode for tests.
+
+#### Local search and optional qmd/MCP integration
+
+Parent: #5 and #19.
+
+Acceptance criteria:
+
+- `repo-wiki search "query"` returns ranked wiki pages and evidence paths.
+- Search can run without external services.
+- Optional provider integrations do not change core scan/compile behavior.
+
+#### Self-wiki flagship demo
+
+Parent: #20 and #5.
+
+Acceptance criteria:
+
+- Public users can inspect a real generated wiki for this repo.
+- README links to `Agent-Context-Pack`, `Architecture`, `Build-Test-and-Run`, `Documentation-Debt-Report`, and `Index` when available.
+- Publish flow is dry-run safe and credential safe.
+
+#### `repo-wiki doctor`
+
+Parent: adoption / new issue.
+
+Acceptance criteria:
+
+- `repo-wiki doctor --repo .` is useful before first `run`.
+- It never requires hosted LLM credentials.
+- It gives clear next steps when the generated wiki would be low quality or unsafe to publish.
+
+#### Reusable GitHub Action
+
+Parent: #20 or new adoption epic.
+
+Acceptance criteria:
+
+- A consumer repo can add repo-wiki with a short workflow snippet.
+- The action works without publish credentials.
+- Publishing requires explicit credentials and safe event context.
 
 ## Detailed feature plans
 
@@ -708,7 +817,7 @@ Recommended new plans:
 ### Milestone 2: Trust hardening and Karpathy alignment
 
 - Enforce docs-lint errors in `run` and publish paths.
-- Honor source include/exclude configuration.
+- Complete source filtering policy, including `source.include` and remaining exclusion edge cases.
 - Hash all files and redact all generated artifacts.
 - Sanitize remotes and unsafe URLs.
 - Treat `Index.md` and `Log.md` as first-class parseable wiki surfaces.
