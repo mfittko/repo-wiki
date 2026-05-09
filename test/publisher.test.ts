@@ -244,6 +244,42 @@ test('publishWiki uses target-specific defaults in dry-run summaries', async () 
   }
 });
 
+test('publishWiki skipped-no-remote guidance mentions supported wiki remote environment variables', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const previousPublishRemote = process.env.LLMWIKI_PUBLISH_REMOTE;
+  const previousWikiRemote = process.env.GITHUB_WIKI_REMOTE;
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    delete process.env.LLMWIKI_PUBLISH_REMOTE;
+    delete process.env.GITHUB_WIKI_REMOTE;
+
+    const result = await publishWiki({
+      wikiDir,
+      target: 'github-wiki'
+    });
+
+    assert.equal(result.summary.status, 'skipped-no-remote');
+    assert.match(result.summary.next_step, /LLMWIKI_PUBLISH_REMOTE/);
+    assert.match(result.summary.next_step, /GITHUB_WIKI_REMOTE/);
+    assert.match(result.summary.next_step, /--remote/);
+  } finally {
+    if (previousPublishRemote === undefined) {
+      delete process.env.LLMWIKI_PUBLISH_REMOTE;
+    } else {
+      process.env.LLMWIKI_PUBLISH_REMOTE = previousPublishRemote;
+    }
+    if (previousWikiRemote === undefined) {
+      delete process.env.GITHUB_WIKI_REMOTE;
+    } else {
+      process.env.GITHUB_WIKI_REMOTE = previousWikiRemote;
+    }
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('publishWiki resolves target-specific remote environment variables', async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
   const wikiDir = path.join(tempDir, 'wiki');
@@ -447,6 +483,36 @@ test('publishWiki rejects unsafe github-pages publish paths', async () => {
 
     const safeSimilarSegment = await publishWiki({ wikiDir, target: 'github-pages', pagesPath: '.github/pages', dryRun: true });
     assert.equal(safeSimilarSegment.summary.path, '.github/pages');
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki accepts contained github-pages paths whose names begin with dot-dot', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    const result = await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      pagesPath: '..docs',
+      message: 'Publish pages wiki into dot-dot-prefixed path'
+    });
+
+    assert.equal(result.summary.status, 'published');
+    assert.equal(result.summary.path, '..docs');
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    assert.equal(await fs.readFile(path.join(checkoutDir, '..docs', 'Home.md'), 'utf8'), '# Home\n');
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }

@@ -78,7 +78,7 @@ export async function publishWiki({
         frontmatterPolicy: publishFrontmatterPolicy,
         next_step: publishTarget === 'github-pages'
           ? 'Set LLMWIKI_PUBLISH_REMOTE or pass --remote with a target repository URL, for example OWNER/REPO.git.'
-          : 'Set LLMWIKI_PUBLISH_REMOTE or pass --remote with an OWNER/REPO.wiki.git URL.'
+          : 'Set LLMWIKI_PUBLISH_REMOTE, GITHUB_WIKI_REMOTE, or pass --remote with an OWNER/REPO.wiki.git URL.'
       }
     };
   }
@@ -315,7 +315,7 @@ function resolvePublishPath(target: PublishTarget, pagesPath?: string) {
 
 function assertPublishPathContained(checkoutDir: string, publishDir: string) {
   const relative = path.relative(checkoutDir, publishDir);
-  if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) {
+  if (relative === '' || (!path.isAbsolute(relative) && relative !== '..' && !relative.startsWith(`..${path.sep}`))) {
     return;
   }
   throw new Error(`Publish path must stay inside checkout: ${publishDir}`);
