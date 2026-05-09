@@ -1,6 +1,8 @@
 import { createReadStream, promises as fs } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { Writable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { DEFAULT_WALK_EXCLUDES, ensureDir, walkFiles, writeJson } from './utils/fs.js';
 import { getGitCommit, getGitRemote } from './utils/git.js';
 import { classifyPath, detectLanguage } from './language.js';
@@ -270,12 +272,15 @@ function hashBuffer(buffer: Buffer): string {
 
 async function hashFile(filePath: string): Promise<string> {
   const hash = crypto.createHash('sha256');
-  await new Promise<void>((resolve, reject) => {
-    const stream = createReadStream(filePath);
-    stream.on('data', (chunk) => hash.update(chunk));
-    stream.on('error', reject);
-    stream.on('end', resolve);
-  });
+  await pipeline(
+    createReadStream(filePath),
+    new Writable({
+      write(chunk, encoding, callback) {
+        hash.update(typeof chunk === 'string' ? Buffer.from(chunk, encoding) : chunk);
+        callback();
+      }
+    })
+  );
   return hash.digest('hex');
 }
 

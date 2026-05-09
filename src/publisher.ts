@@ -103,7 +103,11 @@ export async function publishWiki({
 
     const publishDir = resolvedPublishPath.absoluteResolver(checkoutDir);
     assertPublishPathContained(checkoutDir, publishDir);
-    await cleanPublishPath(checkoutDir, publishDir);
+    if (publishTarget === 'github-pages') {
+      await cleanGeneratedMarkdown(publishDir);
+    } else {
+      await cleanPublishPath(checkoutDir, publishDir);
+    }
     await copyGeneratedWiki(absoluteWikiDir, publishDir, publishFrontmatterPolicy);
     if (publishTarget === 'github-pages') {
       await ensurePagesEntryAndNavigation(publishDir);
@@ -216,6 +220,22 @@ async function cleanPublishPath(checkoutDir: string, publishDir: string) {
   }
   await fs.rm(publishDir, { recursive: true, force: true });
   await fs.mkdir(publishDir, { recursive: true });
+}
+
+async function cleanGeneratedMarkdown(publishDir: string) {
+  await fs.mkdir(publishDir, { recursive: true });
+  const entries = await fs.readdir(publishDir, { withFileTypes: true });
+
+  await Promise.all(entries.map(async (entry) => {
+    const entryPath = path.join(publishDir, entry.name);
+    if (entry.isDirectory()) {
+      await cleanGeneratedMarkdown(entryPath);
+      return;
+    }
+    if (entry.isFile() && entry.name.endsWith('.md')) {
+      await fs.rm(entryPath, { force: true });
+    }
+  }));
 }
 
 async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatterPolicy: FrontmatterPolicy = 'strip') {

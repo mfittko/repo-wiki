@@ -488,6 +488,51 @@ test('publishWiki rejects unsafe github-pages publish paths', async () => {
   }
 });
 
+test('publishWiki preserves non-markdown files under github-pages publish path', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const seedDir = path.join(tempDir, 'seed');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# New home\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+    await git(['clone', remoteDir, seedDir]);
+    await git(['config', 'user.name', 'repo-wiki-test'], seedDir);
+    await git(['config', 'user.email', 'repo-wiki-test@example.com'], seedDir);
+    await fs.mkdir(path.join(seedDir, 'docs', 'assets'), { recursive: true });
+    await fs.writeFile(path.join(seedDir, 'docs', 'Old.md'), '# Old generated page\n', 'utf8');
+    await fs.writeFile(path.join(seedDir, 'docs', 'assets', 'logo.txt'), 'keep asset\n', 'utf8');
+    await fs.writeFile(path.join(seedDir, 'docs', '_config.yml'), 'title: Existing site\n', 'utf8');
+    await fs.writeFile(path.join(seedDir, 'docs', 'CNAME'), 'example.com\n', 'utf8');
+    await git(['add', '.'], seedDir);
+    await git(['commit', '-m', 'Seed existing pages site'], seedDir);
+    await git(['push', 'origin', 'HEAD:gh-pages'], seedDir);
+
+    const result = await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      pagesPath: 'docs',
+      message: 'Publish pages without deleting site assets'
+    });
+
+    assert.equal(result.summary.status, 'published');
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'Home.md'), 'utf8'), '# New home\n');
+    assert.equal(await fileExists(path.join(checkoutDir, 'docs', 'Old.md')), false);
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'assets', 'logo.txt'), 'utf8'), 'keep asset\n');
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', '_config.yml'), 'utf8'), 'title: Existing site\n');
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'CNAME'), 'utf8'), 'example.com\n');
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('publishWiki accepts contained github-pages paths whose names begin with dot-dot', async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
   const wikiDir = path.join(tempDir, 'wiki');
