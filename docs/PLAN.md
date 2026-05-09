@@ -799,9 +799,11 @@ Recommended new plans:
 - `docs/plans/trust-hardening.md` - redaction, config schema, hash coverage, severity policy, publish safety, and artifact safety.
 - `docs/plans/github-action.md` - reusable action, PR diff comments, artifacts, and safe publication.
 
-## Implementation milestones
+## Implementation phases
 
-### Milestone 1: Current scaffold
+These phases describe the desired implementation sequence in this plan. They are not one-to-one with GitHub Milestones, because the repository already has GitHub Milestones 1-5 with historical issue assignments. Use GitHub Issues and their assigned milestones for execution tracking; use these phases for roadmap ordering.
+
+### Phase 1: Current scaffold
 
 - CLI package with executable `repo-wiki`.
 - Library exports.
@@ -814,7 +816,7 @@ Recommended new plans:
 - Git-based publisher.
 - Self-dogfooding workflow.
 
-### Milestone 2: Trust hardening and Karpathy alignment
+### Phase 2: Trust hardening and Karpathy alignment
 
 - Enforce docs-lint errors in `run` and publish paths.
 - Complete source filtering policy, including `source.include` and remaining exclusion edge cases.
@@ -824,7 +826,7 @@ Recommended new plans:
 - Add wiki health linting for orphans, stale pages, missing links, and generated-page drift.
 - Publish this repository's generated wiki as the flagship example.
 
-### Milestone 3: Production scanner
+### Phase 3: Production scanner
 
 - Parse package scripts.
 - Add TypeScript/JavaScript AST extraction.
@@ -833,7 +835,7 @@ Recommended new plans:
 - Extract database migrations and ORM models.
 - Build import graph and affected-page graph.
 
-### Milestone 4: LLM compiler
+### Phase 4: LLM compiler
 
 - Replace deterministic placeholder summaries with LLM synthesis.
 - Use source cards, documentation cards, and targeted excerpts.
@@ -843,7 +845,7 @@ Recommended new plans:
 - Add contradiction and confidence metadata.
 - Reject or downgrade unsupported claims.
 
-### Milestone 5: Query, search, and file-back
+### Phase 5: Query, search, and file-back
 
 - Add local wiki/card search.
 - Add `repo-wiki query`.
@@ -851,7 +853,7 @@ Recommended new plans:
 - Allow durable answers to be filed back into the wiki.
 - Append query and file-back events to `Log.md`.
 
-### Milestone 6: Incremental maintenance
+### Phase 6: Incremental maintenance
 
 - Store previous compiled commit.
 - Compute changed files.
@@ -861,7 +863,7 @@ Recommended new plans:
 - Publish safely after lint gates.
 - Provide PR-friendly wiki diffs.
 
-### Milestone 7: Agent integration and adoption
+### Phase 7: Agent integration and adoption
 
 - Generate `AGENTS.md` or `AGENTS.repo-wiki.md` pointers.
 - Generate `Agent-Context-Pack.md` optimized for coding agents.
