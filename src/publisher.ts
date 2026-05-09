@@ -132,7 +132,9 @@ async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatt
     const source = path.join(sourceDir, entry.name);
     const target = path.join(targetDir, entry.name);
 
-    if (entry.isDirectory()) {
+    if (entry.isSymbolicLink()) {
+      await copySymlink(source, target);
+    } else if (entry.isDirectory()) {
       await copyGeneratedWiki(source, target, frontmatterPolicy);
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
       const content = await fs.readFile(source, 'utf8');
@@ -142,6 +144,12 @@ async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatt
       await fs.copyFile(source, target);
     }
   }
+}
+
+async function copySymlink(source: string, target: string) {
+  const linkTarget = await fs.readlink(source);
+  await fs.rm(target, { recursive: true, force: true });
+  await fs.symlink(linkTarget, target);
 }
 
 async function countMarkdownFiles(wikiDir: string): Promise<number> {

@@ -53,10 +53,9 @@ function getFrontmatterPolicyOption(options: ParsedArgs): FrontmatterPolicy {
 }
 
 export async function runCli(argv: string[]) {
-  await loadDotEnv();
-
   const [command, ...rest] = argv;
   const options = parseArgs(rest);
+  await loadDotEnv(getDotEnvBaseDir(command, options));
 
   if (!command || command === 'help' || command === '--help' || command === '-h') {
     console.log(HELP);
@@ -154,6 +153,14 @@ export async function runCli(argv: string[]) {
     default:
       throw new Error(`Unknown command: ${command}\n\n${HELP}`);
   }
+}
+
+function getDotEnvBaseDir(command: string | undefined, options: ParsedArgs) {
+  const repoPath = getStringOption(options, 'repo');
+  if (repoPath && ['init', 'scan', 'lint-docs', 'run'].includes(command || '')) {
+    return repoPath;
+  }
+  return process.cwd();
 }
 
 async function runPipeline(options: ParsedArgs) {
