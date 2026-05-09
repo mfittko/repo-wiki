@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f6fa9cd8d40529ec9635fe39175ec63f3a861bfc"
-compiled_at: "2026-05-09T23:44:16.141Z"
+source_commit: "57f31fb6202a15b1b0598d7ae36a693c21359721"
+compiled_at: "2026-05-09T23:55:11.595Z"
 kind: "architecture"
 page_state: "generated"
 ---
@@ -13,7 +13,7 @@ This page is a first-pass architecture summary based on repository structure. Th
 
 ```mermaid
 flowchart TD
-  Repo[Repository at f6fa9cd8]
+  Repo[Repository at 57f31fb6]
   Repo --> M0[Repository Root]
   Repo --> M1[CI and Automation]
   Repo --> M2[Documentation]

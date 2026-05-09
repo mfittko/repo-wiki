@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f6fa9cd8d40529ec9635fe39175ec63f3a861bfc"
-compiled_at: "2026-05-09T23:44:16.141Z"
+source_commit: "57f31fb6202a15b1b0598d7ae36a693c21359721"
+compiled_at: "2026-05-09T23:55:11.594Z"
 kind: "agent_context_pack"
 page_state: "generated"
 ---
@@ -12,7 +12,7 @@ This page is the compact entry point for coding agents and developers.
 ## Repository snapshot
 
 - Source: `https://github.com/mfittko/repo-wiki`
-- Commit: `f6fa9cd8d40529ec9635fe39175ec63f3a861bfc`
+- Commit: `57f31fb6202a15b1b0598d7ae36a693c21359721`
 - Files scanned: 89
 
 ## Read first

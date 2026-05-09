@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f6fa9cd8d40529ec9635fe39175ec63f3a861bfc"
-compiled_at: "2026-05-09T23:44:16.157Z"
+source_commit: "57f31fb6202a15b1b0598d7ae36a693c21359721"
+compiled_at: "2026-05-09T23:55:11.607Z"
 kind: "module"
 module: "Module docs-validation.ts"
 source_paths: ["src/docs-validation.ts"]
@@ -23,7 +23,7 @@ Generated first-pass page for files grouped under Module docs-validation.ts. Thi
 
 ## Source files
 
-- [src/docs-validation.ts](https://github.com/mfittko/repo-wiki/blob/f6fa9cd8d40529ec9635fe39175ec63f3a861bfc/src/docs-validation.ts)
+- [src/docs-validation.ts](https://github.com/mfittko/repo-wiki/blob/57f31fb6202a15b1b0598d7ae36a693c21359721/src/docs-validation.ts)
 
 ## Related pages
 
