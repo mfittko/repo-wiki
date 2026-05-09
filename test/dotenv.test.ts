@@ -4,23 +4,31 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { loadDotEnv, parseDotEnv } from '../src/utils/dotenv.js';
-import { runCli } from '../src/cli.js';
 
 test('parseDotEnv parses common .env forms without treating quoted hashes as comments', () => {
   const parsed = parseDotEnv([
     '# ignored',
+    '',
     'LLMWIKI_PUBLISH_REMOTE=https://github.com/OWNER/REPO.wiki.git',
     'export LLMWIKI_GIT_USER_NAME="repo wiki # bot"',
+    'DOUBLE_ESCAPES="line\\nnext\\t\\"quoted\\"\\\\slash"',
     "LLMWIKI_GIT_USER_EMAIL='bot@example.com'",
+    'UNCLOSED_SINGLE=\'left open',
+    'UNCLOSED_DOUBLE="left open',
     'INLINE_COMMENT=value # comment',
     'HASH_VALUE=value#not-comment',
+    'NO_EQUALS',
+    '=NO_KEY',
     'INVALID-NAME=ignored'
   ].join('\n'));
 
   assert.deepEqual(parsed, {
     LLMWIKI_PUBLISH_REMOTE: 'https://github.com/OWNER/REPO.wiki.git',
     LLMWIKI_GIT_USER_NAME: 'repo wiki # bot',
+    DOUBLE_ESCAPES: 'line\nnext\t"quoted"\\slash',
     LLMWIKI_GIT_USER_EMAIL: 'bot@example.com',
+    UNCLOSED_SINGLE: 'left open',
+    UNCLOSED_DOUBLE: 'left open',
     INLINE_COMMENT: 'value',
     HASH_VALUE: 'value#not-comment'
   });
@@ -52,31 +60,16 @@ test('loadDotEnv loads .env values without overriding existing process environme
   }
 });
 
-test('runCli reads publish remote from .env for dry-run publishing', async () => {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-dotenv-cli-test-'));
-  const wikiDir = path.join(tempDir, 'wiki');
-  const previousRemote = process.env.LLMWIKI_PUBLISH_REMOTE;
-  const previousCwd = process.cwd();
-  const logs: string[] = [];
-  const originalLog = console.log;
+test('loadDotEnv returns loaded false when .env is absent', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-dotenv-test-'));
 
   try {
-    delete process.env.LLMWIKI_PUBLISH_REMOTE;
-    await fs.mkdir(wikiDir, { recursive: true });
-    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
-    await fs.writeFile(path.join(tempDir, '.env'), 'LLMWIKI_PUBLISH_REMOTE=https://github.com/OWNER/REPO.wiki.git\n', 'utf8');
-    process.chdir(tempDir);
-    console.log = (message?: unknown) => {
-      logs.push(String(message));
-    };
+    const result = await loadDotEnv(tempDir);
 
-    await runCli(['publish', '--wiki', wikiDir, '--dry-run']);
-
-    assert.equal(JSON.parse(logs[0]).remote, 'https://github.com/OWNER/REPO.wiki.git');
+    assert.equal(result.loaded, false);
+    assert.deepEqual(result.keys, []);
+    assert.equal(result.path, path.join(tempDir, '.env'));
   } finally {
-    console.log = originalLog;
-    process.chdir(previousCwd);
-    restoreEnv('LLMWIKI_PUBLISH_REMOTE', previousRemote);
     await fs.rm(tempDir, { recursive: true, force: true });
   }
 });
