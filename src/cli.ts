@@ -6,7 +6,7 @@ import { compileWiki } from './compiler.js';
 import { lintWiki } from './linter.js';
 import { lintDocs } from './docs-linter.js';
 import { publishWiki } from './publisher.js';
-import { FRONTMATTER_POLICIES, parseFrontmatterPolicy, type FrontmatterPolicy } from './frontmatter.js';
+import { isFrontmatterPolicy, parseFrontmatterPolicy, type FrontmatterPolicy } from './frontmatter.js';
 
 const HELP = `
 repo-wiki <command> [options]
@@ -42,7 +42,7 @@ function getFrontmatterPolicyOption(options: ParsedArgs): FrontmatterPolicy {
   const value = getStringOption(options, 'frontmatter-policy');
   const policy = parseFrontmatterPolicy(value);
 
-  if (value !== undefined && !(FRONTMATTER_POLICIES as readonly string[]).includes(value)) {
+  if (value !== undefined && !isFrontmatterPolicy(value)) {
     console.error(`Warning: unknown --frontmatter-policy "${value}"; falling back to "strip".`);
   } else if (policy === 'html-comment') {
     console.error('Warning: --frontmatter-policy html-comment is reserved for future metadata comments and currently behaves like strip.');

@@ -10,13 +10,19 @@ export type FrontmatterPolicy = 'strip' | 'html-comment' | 'preserve';
 
 export const FRONTMATTER_POLICIES: readonly FrontmatterPolicy[] = ['strip', 'html-comment', 'preserve'];
 
+const FRONTMATTER_POLICY_NAMES: ReadonlySet<string> = new Set(FRONTMATTER_POLICIES);
+
+export function isFrontmatterPolicy(value: string): value is FrontmatterPolicy {
+  return FRONTMATTER_POLICY_NAMES.has(value);
+}
+
 /**
  * Validates a raw string as a FrontmatterPolicy, returning the default `'strip'`
  * if the value is undefined or not a recognised policy name.
  */
 export function parseFrontmatterPolicy(value: string | undefined): FrontmatterPolicy {
-  if (value !== undefined && (FRONTMATTER_POLICIES as readonly string[]).includes(value)) {
-    return value as FrontmatterPolicy;
+  if (value !== undefined && isFrontmatterPolicy(value)) {
+    return value;
   }
   return 'strip';
 }

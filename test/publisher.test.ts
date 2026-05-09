@@ -23,6 +23,7 @@ test('publishWiki strips frontmatter from top-level and nested markdown without 
   try {
     await fs.mkdir(nestedDir, { recursive: true });
     await fs.writeFile(path.join(wikiDir, 'Home.md'), '---\nkind: home\n---\n# Home\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, 'Page.md'), '---\nkind: page\n---\n# Top-level page\n', 'utf8');
     await fs.writeFile(path.join(nestedDir, 'Page.md'), '---\nkind: nested\n---\n# Nested\n', 'utf8');
     await fs.writeFile(path.join(wikiDir, 'asset.txt'), '---\nnot markdown\n---\n', 'utf8');
     await git(['init', '--bare', remoteDir]);
@@ -37,11 +38,12 @@ test('publishWiki strips frontmatter from top-level and nested markdown without 
 
     assert.equal(result.summary.status, 'published');
     assert.equal(result.summary.frontmatterPolicy, 'strip');
-    assert.equal(result.summary.pages, 2);
+    assert.equal(result.summary.pages, 3);
 
     await git(['clone', '--branch', 'master', remoteDir, checkoutDir]);
 
     assert.equal(await fs.readFile(path.join(checkoutDir, 'Home.md'), 'utf8'), '# Home\n');
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'Page.md'), 'utf8'), '# Top-level page\n');
     assert.equal(await fs.readFile(path.join(checkoutDir, 'nested', 'Page.md'), 'utf8'), '# Nested\n');
     assert.equal(await fs.readFile(path.join(checkoutDir, 'asset.txt'), 'utf8'), '---\nnot markdown\n---\n');
 

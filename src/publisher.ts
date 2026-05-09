@@ -33,7 +33,7 @@ export async function publishWiki({
     throw new Error(`Wiki directory does not exist: ${absoluteWikiDir}`);
   }
 
-  const markdownFiles = await listMarkdownFiles(absoluteWikiDir);
+  const markdownFileCount = await countMarkdownFiles(absoluteWikiDir);
 
   if (dryRun) {
     return {
@@ -42,7 +42,7 @@ export async function publishWiki({
         wikiDir: absoluteWikiDir,
         remote: publishRemote || null,
         branch,
-        pages: markdownFiles.length,
+        pages: markdownFileCount,
         frontmatterPolicy
       }
     };
@@ -55,7 +55,7 @@ export async function publishWiki({
         wikiDir: absoluteWikiDir,
         remote: null,
         branch,
-        pages: markdownFiles.length,
+        pages: markdownFileCount,
         frontmatterPolicy,
         next_step: 'Set LLMWIKI_PUBLISH_REMOTE or pass --remote with an OWNER/REPO.wiki.git URL.'
       }
@@ -90,7 +90,7 @@ export async function publishWiki({
           wikiDir: absoluteWikiDir,
           remote: publishRemote,
           branch,
-          pages: markdownFiles.length,
+          pages: markdownFileCount,
           frontmatterPolicy,
           cloned
         }
@@ -106,7 +106,7 @@ export async function publishWiki({
         wikiDir: absoluteWikiDir,
         remote: publishRemote.replace(/x-access-token:[^@]+@/, 'x-access-token:***@'),
         branch,
-        pages: markdownFiles.length,
+        pages: markdownFileCount,
         frontmatterPolicy,
         cloned
       }
@@ -136,14 +136,14 @@ async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatt
   }
 }
 
-async function listMarkdownFiles(wikiDir: string): Promise<string[]> {
+async function countMarkdownFiles(wikiDir: string): Promise<number> {
   const entries = await fs.readdir(wikiDir, { withFileTypes: true });
-  const nestedFiles = await Promise.all(entries.map(async (entry) => {
+  const nestedCounts = await Promise.all(entries.map(async (entry) => {
     const entryPath = path.join(wikiDir, entry.name);
     if (entry.isDirectory()) {
-      return listMarkdownFiles(entryPath);
+      return countMarkdownFiles(entryPath);
     }
-    return entry.isFile() && entry.name.endsWith('.md') ? [entry.name] : [];
+    return entry.isFile() && entry.name.endsWith('.md') ? 1 : 0;
   }));
-  return nestedFiles.flat().sort();
+  return nestedCounts.reduce((total, count) => total + count, 0);
 }
