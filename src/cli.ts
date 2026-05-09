@@ -1,4 +1,5 @@
 import { parseArgs, type ParsedArgs } from './utils/args.js';
+import { loadDotEnv } from './utils/dotenv.js';
 import { initProject } from './init.js';
 import { scanRepository } from './scanner.js';
 import { createBootstrapPlan } from './planner.js';
@@ -52,6 +53,8 @@ function getFrontmatterPolicyOption(options: ParsedArgs): FrontmatterPolicy {
 }
 
 export async function runCli(argv: string[]) {
+  await loadDotEnv();
+
   const [command, ...rest] = argv;
   const options = parseArgs(rest);
 
