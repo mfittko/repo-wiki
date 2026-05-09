@@ -28,32 +28,34 @@ export async function lintWiki({ wikiDir, scanDir }: { wikiDir: string; scanDir:
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
   const issues = [];
   const files = await listMarkdown(wikiDir);
+  const topLevelPages = await listTopLevelMarkdown(wikiDir);
   const existing = new Set(files.map((file) => path.basename(file)));
+  const topLevelExisting = new Set(topLevelPages.map((file) => path.basename(file)));
 
   for (const required of REQUIRED_PAGES) {
-    if (!existing.has(required)) {
+    if (!topLevelExisting.has(required)) {
       issues.push(error('missing-required-page', `${required} is missing.`));
     }
   }
 
   for (const file of files) {
     const content = await fs.readFile(file, 'utf8');
-    const basename = path.basename(file);
+    const relativePath = path.relative(wikiDir, file).replaceAll(path.sep, '/');
 
-    if (!content.includes('source_commit') && basename !== '_Sidebar.md') {
-      issues.push(warning('missing-source-commit', `${basename} does not include source_commit frontmatter.`));
+    if (!hasSourceCommitFrontmatter(content)) {
+      issues.push(warning('missing-source-commit', `${relativePath} does not include source_commit frontmatter.`));
     }
 
     for (const pattern of SECRET_PATTERNS) {
       if (pattern.test(content)) {
-        issues.push(error('secret-like-content', `${basename} contains secret-like content.`));
+        issues.push(error('secret-like-content', `${relativePath} contains secret-like content.`));
       }
     }
 
     for (const link of extractWikiLinks(content)) {
       const target = `${link}.md`;
       if (!existing.has(target) && !existing.has(link)) {
-        issues.push(warning('broken-wiki-link', `${basename} links to missing page ${link}.`));
+        issues.push(warning('broken-wiki-link', `${relativePath} links to missing page ${link}.`));
       }
     }
   }
@@ -74,12 +76,38 @@ export async function lintWiki({ wikiDir, scanDir }: { wikiDir: string; scanDir:
   };
 }
 
-async function listMarkdown(wikiDir: string) {
+async function listTopLevelMarkdown(wikiDir: string) {
   const entries = await fs.readdir(wikiDir, { withFileTypes: true });
   return entries
     .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
     .map((entry) => path.join(wikiDir, entry.name))
     .sort();
+}
+
+async function listMarkdown(wikiDir: string): Promise<string[]> {
+  const entries = await fs.readdir(wikiDir, { withFileTypes: true });
+  const files = await Promise.all(entries.map(async (entry) => {
+    const entryPath = path.join(wikiDir, entry.name);
+    if (entry.isDirectory()) {
+      return listMarkdown(entryPath);
+    }
+    return entry.isFile() && entry.name.endsWith('.md') ? [entryPath] : [];
+  }));
+  return files.flat().sort();
+}
+
+function hasSourceCommitFrontmatter(content: string): boolean {
+  const normalized = content.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+  if (!normalized.startsWith('---\n')) {
+    return false;
+  }
+
+  const end = normalized.indexOf('\n---', 4);
+  if (end === -1) {
+    return false;
+  }
+
+  return /^source_commit:/m.test(normalized.slice(4, end));
 }
 
 function extractWikiLinks(content: string): string[] {

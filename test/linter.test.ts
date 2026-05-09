@@ -14,7 +14,9 @@ async function writeWikiFixture(pages: Record<string, string>) {
   await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({ commit: 'abc123', files: [] }), 'utf8');
 
   for (const [name, content] of Object.entries(pages)) {
-    await writeFile(path.join(wikiDir, name), content, 'utf8');
+    const pagePath = path.join(wikiDir, name);
+    await mkdir(path.dirname(pagePath), { recursive: true });
+    await writeFile(pagePath, content, 'utf8');
   }
 
   return { dir, wikiDir, scanDir };
@@ -26,7 +28,7 @@ function generatedPage(title: string, body = '') {
 
 const requiredPages = {
   'Home.md': generatedPage('Home', '[Index](Index)'),
-  '_Sidebar.md': '# Navigation\n\n- [Home](Home)\n',
+  '_Sidebar.md': generatedPage('Navigation', '- [Home](Home)'),
   'Index.md': generatedPage('Index'),
   'Log.md': generatedPage('Log'),
   'Agent-Context-Pack.md': generatedPage('Agent Context Pack'),
@@ -67,6 +69,39 @@ test('lintWiki reports missing required pages, source commit, broken links, and 
     assert.ok(codes.includes('secret-like-content'));
     assert.ok(result.summary.errors > 0);
     assert.ok(result.summary.warnings > 0);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintWiki validates nested markdown without letting nested pages satisfy required top-level pages', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    'nested/Home.md': generatedPage('Nested Home', 'token=super-secret-value')
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const missingHome = result.issues.find((issue) => issue.code === 'missing-required-page' && issue.message.includes('Home.md'));
+    const nestedSecret = result.issues.find((issue) => issue.code === 'secret-like-content' && issue.message.includes('nested/Home.md'));
+
+    assert.ok(missingHome);
+    assert.ok(nestedSecret);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintWiki requires source_commit in frontmatter, not just page body text', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Home.md': '# Home\n\nThe source_commit is abc123.\n'
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const sourceCommitIssue = result.issues.find((issue) => issue.code === 'missing-source-commit' && issue.message.includes('Home.md'));
+
+    assert.ok(sourceCommitIssue);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
+import crypto from 'node:crypto';
 import os from 'node:os';
 import path from 'node:path';
 import { scanRepository } from '../src/scanner.js';
@@ -127,6 +128,43 @@ test('scanRepository creates a manifest and source cards', async () => {
     ]);
     assert.ok(indexCard.runtime_hints.includes('environment-variable'));
     assert.ok(indexCard.runtime_hints.includes('http-route'));
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
+});
+
+test('scanRepository hashes files even when content is skipped', async () => {
+  const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-large-hash-test-'));
+
+  try {
+    await fs.mkdir(path.join(repo, 'fixtures'), { recursive: true });
+    const largeContent = `${'x'.repeat(512_001)}\n`;
+    const binaryContent = Buffer.from([0, 1, 2, 3, 4, 5]);
+    await fs.writeFile(path.join(repo, 'fixtures', 'empty.txt'), '', 'utf8');
+    await fs.writeFile(path.join(repo, 'fixtures', 'large.txt'), largeContent, 'utf8');
+    await fs.writeFile(path.join(repo, 'fixtures', 'image.png'), binaryContent);
+
+    const result = await scanRepository({
+      mode: 'bootstrap',
+      repoPath: repo,
+      outDir: path.join(repo, '.llmwiki', 'run')
+    });
+
+    const emptyCard = result.manifest.files.find((file) => file.path === 'fixtures/empty.txt');
+    assert.ok(emptyCard);
+    assert.equal(emptyCard.skipped_content, false);
+    assert.equal(emptyCard.lines, 0);
+    assert.equal(emptyCard.sha256, crypto.createHash('sha256').update('').digest('hex'));
+
+    const largeCard = result.manifest.files.find((file) => file.path === 'fixtures/large.txt');
+    assert.ok(largeCard);
+    assert.equal(largeCard.skipped_content, true);
+    assert.equal(largeCard.sha256, crypto.createHash('sha256').update(largeContent).digest('hex'));
+
+    const binaryCard = result.manifest.files.find((file) => file.path === 'fixtures/image.png');
+    assert.ok(binaryCard);
+    assert.equal(binaryCard.skipped_content, true);
+    assert.equal(binaryCard.sha256, crypto.createHash('sha256').update(binaryContent).digest('hex'));
   } finally {
     await fs.rm(repo, { recursive: true, force: true });
   }
