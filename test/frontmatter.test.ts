@@ -87,6 +87,12 @@ test('stripFrontmatter strips a single blank line immediately after closing deli
   assert.equal(result, 'Content.\n');
 });
 
+test('stripFrontmatter strips a single CRLF blank line immediately after closing delimiter', () => {
+  const input = '---\r\nkind: "x"\r\n---\r\n\r\nContent.\r\n';
+  const result = stripFrontmatter(input);
+  assert.equal(result, 'Content.\r\n');
+});
+
 // ---------------------------------------------------------------------------
 // applyFrontmatterPolicy
 // ---------------------------------------------------------------------------

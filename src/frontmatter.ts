@@ -67,7 +67,7 @@ export function stripFrontmatter(content: string): string {
       // Found the closing delimiter; return everything after it
       const afterFm = lines.slice(i + 1).join('\n');
       // Strip a single leading blank line that was separating frontmatter from body
-      return afterFm.startsWith('\n') ? afterFm.slice(1) : afterFm;
+      return afterFm.replace(/^(?:\r\n|\n)/, '');
     }
   }
 
