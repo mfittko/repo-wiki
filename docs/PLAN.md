@@ -99,8 +99,9 @@ flowchart TD
   Wiki --> Index[Index.md]
   Wiki --> Log[Log.md]
   Wiki --> WikiLint[Wiki linter]
-  WikiLint --> Publisher[Git-based GitHub Wiki publisher]
+  WikiLint --> Publisher[Git-based publisher]
   Publisher --> GitHubWiki[OWNER/REPO.wiki.git]
+  Publisher --> GitHubPages[GitHub Pages branch or docs path]
   Wiki --> Query[Future query and search]
   Query --> DurableAnswer[Optional filed-back wiki page]
   DurableAnswer --> Wiki
@@ -130,8 +131,16 @@ External usage should be equivalent:
 ```bash
 npx repo-wiki init --repo . --write-agents
 npx repo-wiki run --mode bootstrap --repo . --wiki .llmwiki/wiki
-npx repo-wiki publish --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git
+npx repo-wiki publish --target github-wiki --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git
 ```
+
+Richer static-site publication should be available through a GitHub Pages target:
+
+```bash
+npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --path .
+```
+
+Publish targets should own destination-specific rendering policy. GitHub Wiki should strip or transform leading YAML frontmatter by default because hosted wiki pages render it visibly. GitHub Pages/Jekyll should preserve frontmatter by default because Jekyll consumes it as page metadata.
 
 ## Source authority model
 
@@ -249,7 +258,7 @@ sequenceDiagram
   CLI->>WikiLint: Validate wiki
   WikiLint-->>CLI: wiki issues
   alt publish requested and lint passed
-    CLI->>Publisher: Push OWNER/REPO.wiki.git
+    CLI->>Publisher: Push selected target: GitHub Wiki or GitHub Pages
   end
 ```
 
@@ -416,7 +425,9 @@ classDiagram
   }
 
   class Publisher {
-    cloneWiki()
+    selectTarget()
+    applyTargetTransforms()
+    cloneDestination()
     copyPages()
     deleteStaleGeneratedPages()
     commit()
@@ -461,9 +472,10 @@ flowchart TD
 
 ## Page conventions
 
-Every generated page should eventually include:
+Every generated local wiki page should eventually include:
 
 - YAML frontmatter with `kind`, `source_commit`, `compiled_at`, `source_paths`, `page_state`, and optional confidence metadata.
+- Target-specific publish transforms should hide or move metadata when the destination renders frontmatter visibly. GitHub Wiki publishing should default to stripping leading YAML frontmatter from the published copy while preserving it in local `.llmwiki/wiki` artifacts and machine-readable provenance.
 - source path citations for material claims.
 - stable headings suitable for wiki links.
 - compact summaries first, detail later.
@@ -498,7 +510,7 @@ repo-wiki plan      Produce bootstrap or incremental page plan.
 repo-wiki lint-docs Validate ingested markdown before compilation.
 repo-wiki compile   Generate local wiki markdown.
 repo-wiki lint      Validate generated wiki markdown.
-repo-wiki publish   Push local wiki markdown to GitHub Wiki.
+repo-wiki publish   Publish local wiki markdown to a target such as GitHub Wiki or GitHub Pages.
 repo-wiki run       Orchestrate scan -> plan -> lint-docs -> compile -> lint -> optional publish.
 ```
 
@@ -529,6 +541,12 @@ Publishing this repository's own wiki:
 LLMWIKI_PUBLISH_REMOTE=https://github.com/OWNER/repo-wiki.wiki.git npm run kb:publish
 ```
 
+A future GitHub Pages target should support richer static-site publication while preserving YAML frontmatter for Jekyll:
+
+```bash
+repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --path .
+```
+
 The public repo should use its own generated GitHub Wiki as the flagship demo. The README should link to the published wiki when available and explain which pages are generated, mixed, human-owned, and source authoritative.
 
 ## GitHub Actions workflow
@@ -539,15 +557,15 @@ flowchart TD
   Checkout --> Install[npm ci]
   Install --> Test[npm test]
   Test --> Wiki[repo-wiki run]
-  Wiki --> Policy{WIKI_PUSH_TOKEN configured?}
+  Wiki --> Policy{publish credentials configured?}
   Policy -->|no| Artifact[Keep local wiki / no publish]
-  Policy -->|yes| Publish[Push GitHub Wiki]
+  Policy -->|yes| Publish[Push selected target: GitHub Wiki or GitHub Pages]
 ```
 
 Security policy:
 
 - Do not publish from untrusted pull requests.
-- Use a dedicated GitHub App token or fine-grained PAT for wiki push.
+- Use a dedicated GitHub App token or fine-grained PAT for wiki or Pages push.
 - Never expose tokens in generated wiki pages, scan artifacts, logs, or publish summaries.
 - Fail publication on secret-like content.
 - Optionally require human review for auth, billing, deployment, and security-sensitive pages.
@@ -586,15 +604,32 @@ Related GitHub issues and recently closed work:
 
 - #2 - Incremental maintenance and safe publishing
 - #3 - LLM compiler and source-grounded wiki synthesis
+- #4 - Production scanner and repository analysis (closed; parent for scanner extraction work)
 - #5 - Agent integration and query workflows
+- #7 - Add TypeScript/JavaScript AST-level symbol extraction (closed)
+- #8 - Complete framework route and API surface detection (closed)
+- #9 - Build import graph and dependency metadata for scanner output (closed)
+- #10 - Map tests to source modules (closed)
+- #11 - Detect database migrations and ORM model surfaces (closed)
+- #12 - Add affected-page graph inputs for incremental mode (closed)
+- #14 - Add Python source extraction support (closed)
+- #15 - Add Go source extraction support (closed)
+- #16 - Add Rust source extraction support (closed)
+- #17 - Add Ruby source extraction support (closed)
 - #18 - Documentation validation and debt reporting
 - #19 - Wiki knowledge graph and navigation
 - #20 - CI publishing and release workflow
+- #33 - Compiler context assembly and token budgeting (closed)
+- #34 - LLM provider boundary and prompt templates (closed)
 - #35 - Structured wiki patch format and lint-gated acceptance
+- #36 - Human section preservation and page ownership metadata (closed)
 - #37 - Citation, confidence, and contradiction enforcement for generated pages
+- #38 - Validate documented commands and package scripts (closed)
 - #39 - Validate documented file paths and environment variables (closed; informs follow-up validation work)
 - #40 - Documentation debt report strictness and route-claim validation
 - #46 - Honor source excludes and ignore nested worktree noise during scan (closed; informs remaining source-filtering follow-up work)
+- #49 - Strip or transform YAML frontmatter when publishing to GitHub Wiki
+- #50 - Add GitHub Pages publish target
 
 ### P0: Trust, correctness, and safety hardening
 
@@ -606,6 +641,9 @@ These items make the current scaffold match its stated policy.
 - Redact secret-like strings before writing manifests, documentation cards, page contexts, logs, or generated pages.
 - Sanitize all remotes and URLs before displaying or writing them.
 - Delete stale generated wiki pages during publish while preserving unmanaged and human-owned pages.
+- Add explicit publish-target selection, starting with `github-wiki` and `github-pages`.
+- Add a target-aware GitHub Wiki publish transform that strips or converts leading YAML frontmatter so generated metadata does not render as noisy tables on hosted wiki pages.
+- Preserve YAML frontmatter by default for GitHub Pages/Jekyll publication.
 - Add JSON schema validation for `.llmwiki/config.json`.
 - Make lint severity fully config-driven.
 - Add golden end-to-end tests for `init -> scan -> plan -> lint-docs -> compile -> lint -> publish --dry-run`.
@@ -620,7 +658,9 @@ These items make `repo-wiki` a faithful software-repository version of the LLM W
 - Add filed-back query pages for durable analyses and investigations.
 - Add page frontmatter suitable for Obsidian, Dataview, GitHub Wiki navigation, and future search.
 - Add graph metadata that can power both navigation and incremental maintenance.
+- Preserve page metadata locally and in provenance artifacts even when GitHub Wiki publishing strips visible frontmatter from the pushed markdown.
 - Publish this repository's own generated wiki as the canonical demo.
+- Offer GitHub Pages as a richer static-site destination for generated repository knowledge bases.
 
 ### P2: LLM compiler and structured patch acceptance
 
@@ -675,6 +715,7 @@ These items increase repository coverage and confidence.
 
 These items make the tool easy to adopt.
 
+- Add GitHub Pages publishing support for richer static-site output.
 - Add a reusable GitHub Action.
 - Add `repo-wiki doctor` for readiness and configuration diagnostics.
 - Add `repo-wiki init --profile` templates for Node, Python, Go, Rust, Rails, and monorepos.
@@ -745,6 +786,29 @@ Acceptance criteria:
 - `repo-wiki search "query"` returns ranked wiki pages and evidence paths.
 - Search can run without external services.
 - Optional provider integrations do not change core scan/compile behavior.
+
+#### Publish targets: GitHub Wiki and GitHub Pages
+
+Parent: #50, #49, #20, #2, and #3.
+
+Acceptance criteria:
+
+- `repo-wiki publish` has explicit target selection for `github-wiki` and `github-pages`.
+- GitHub Wiki publishing defaults to hiding generated metadata by stripping or converting leading YAML frontmatter.
+- GitHub Pages publishing defaults to preserving YAML frontmatter for Jekyll/static-site metadata.
+- Dry-run output reports target, destination branch/path or remote, and frontmatter policy.
+- The target abstraction can later support local artifacts, MkDocs, Docusaurus, or other static-site outputs.
+
+#### GitHub Wiki frontmatter publish policy
+
+Parent: #49, #20, #2, and #3.
+
+Acceptance criteria:
+
+- GitHub Wiki publishing does not expose generated YAML metadata as visible tables.
+- Local `.llmwiki/wiki` files can retain frontmatter for tooling, search, Obsidian/Dataview, and incremental maintenance.
+- The publish transform strips only valid leading YAML frontmatter and leaves thematic breaks or later `---` blocks intact.
+- A future config can choose `strip`, `html-comment`, or `preserve`, with GitHub Wiki defaulting to `strip`.
 
 #### Self-wiki flagship demo
 
@@ -869,12 +933,13 @@ These phases describe the desired implementation sequence in this plan. They are
 - Generate `Agent-Context-Pack.md` optimized for coding agents.
 - Add optional local search index or MCP endpoint.
 - Add a reusable GitHub Action.
+- Add GitHub Pages publish examples and safe branch/path configuration.
 - Add `repo-wiki doctor`.
 - Provide example generated wikis and adoption guides.
 
 ## Open implementation questions
 
-- Should the publisher open a pull request against the wiki repo instead of pushing directly?
+- Should the publisher open a pull request against the wiki repo, a GitHub Pages branch, or both instead of pushing directly?
 - Which documentation claims should block publishing by default?
 - How should ADR supersession be represented?
 - Should generated wiki pages use source line anchors or only path plus commit anchors?
@@ -884,5 +949,5 @@ These phases describe the desired implementation sequence in this plan. They are
 - Should query outputs be generated only locally or also published automatically after review?
 - Should the first search backend be a built-in simple index, qmd integration, or MCP-first?
 - How should wiki health lint distinguish useful hub pages from overly broad pages?
-- How should confidence metadata be represented in frontmatter without making pages noisy?
+- How should confidence metadata be represented in local frontmatter while GitHub Wiki published pages hide or strip that metadata?
 - How should private repositories avoid leaking sensitive path names, remotes, or environment-variable names in published wikis?
