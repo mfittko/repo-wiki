@@ -3,6 +3,18 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileExists } from './utils/fs.js';
 import { getGitStatus, runGit } from './utils/git.js';
+import { applyFrontmatterPolicy, type FrontmatterPolicy } from './frontmatter.js';
+
+export interface PublishWikiOptions {
+  wikiDir?: string;
+  remote?: string;
+  branch?: string;
+  message?: string;
+  dryRun?: boolean;
+  frontmatterPolicy?: FrontmatterPolicy;
+  gitUserName?: string;
+  gitUserEmail?: string;
+}
 
 export async function publishWiki({
   wikiDir,
@@ -10,26 +22,29 @@ export async function publishWiki({
   branch = 'master',
   message,
   dryRun = false,
+  frontmatterPolicy = 'strip',
   gitUserName = process.env.LLMWIKI_GIT_USER_NAME || 'repo-wiki-bot',
   gitUserEmail = process.env.LLMWIKI_GIT_USER_EMAIL || 'repo-wiki-bot@users.noreply.github.com'
-}) {
+}: PublishWikiOptions) {
   const absoluteWikiDir = path.resolve(wikiDir || '.llmwiki/wiki');
   const publishRemote = remote || process.env.LLMWIKI_PUBLISH_REMOTE || process.env.GITHUB_WIKI_REMOTE;
+  const summaryRemote = sanitizeRemote(publishRemote);
 
   if (!await fileExists(absoluteWikiDir)) {
     throw new Error(`Wiki directory does not exist: ${absoluteWikiDir}`);
   }
 
-  const markdownFiles = await listMarkdownFiles(absoluteWikiDir);
+  const markdownFileCount = await countMarkdownFiles(absoluteWikiDir);
 
   if (dryRun) {
     return {
       summary: {
         status: 'dry-run',
         wikiDir: absoluteWikiDir,
-        remote: publishRemote || null,
+        remote: summaryRemote,
         branch,
-        pages: markdownFiles.length
+        pages: markdownFileCount,
+        frontmatterPolicy
       }
     };
   }
@@ -41,7 +56,8 @@ export async function publishWiki({
         wikiDir: absoluteWikiDir,
         remote: null,
         branch,
-        pages: markdownFiles.length,
+        pages: markdownFileCount,
+        frontmatterPolicy,
         next_step: 'Set LLMWIKI_PUBLISH_REMOTE or pass --remote with an OWNER/REPO.wiki.git URL.'
       }
     };
@@ -54,15 +70,19 @@ export async function publishWiki({
 
   try {
     try {
-      await runGit(['clone', publishRemote, checkoutDir]);
+      await runGit(['clone', '--branch', branch, publishRemote, checkoutDir]);
       cloned = true;
-    } catch {
+    } catch (error) {
+      if (!isCloneFallbackError(error)) {
+        throw error;
+      }
       await fs.mkdir(checkoutDir, { recursive: true });
       await runGit(['init'], { cwd: checkoutDir });
       await runGit(['remote', 'add', 'origin', publishRemote], { cwd: checkoutDir });
     }
 
-    await copyGeneratedWiki(absoluteWikiDir, checkoutDir);
+    await cleanCheckout(checkoutDir);
+    await copyGeneratedWiki(absoluteWikiDir, checkoutDir, frontmatterPolicy);
     await runGit(['config', 'user.name', gitUserName], { cwd: checkoutDir });
     await runGit(['config', 'user.email', gitUserEmail], { cwd: checkoutDir });
     await runGit(['add', '.'], { cwd: checkoutDir });
@@ -73,9 +93,10 @@ export async function publishWiki({
         summary: {
           status: 'no-changes',
           wikiDir: absoluteWikiDir,
-          remote: publishRemote,
+          remote: summaryRemote,
           branch,
-          pages: markdownFiles.length,
+          pages: markdownFileCount,
+          frontmatterPolicy,
           cloned
         }
       };
@@ -88,34 +109,117 @@ export async function publishWiki({
       summary: {
         status: 'published',
         wikiDir: absoluteWikiDir,
-        remote: publishRemote.replace(/x-access-token:[^@]+@/, 'x-access-token:***@'),
+        remote: summaryRemote,
         branch,
-        pages: markdownFiles.length,
+        pages: markdownFileCount,
+        frontmatterPolicy,
         cloned
       }
     };
+  } catch (error) {
+    throw redactGitError(error, publishRemote);
   } finally {
     await fs.rm(tempRoot, { recursive: true, force: true });
   }
 }
 
-async function copyGeneratedWiki(sourceDir, targetDir) {
+function sanitizeRemote(remote: string | undefined) {
+  if (!remote) {
+    return null;
+  }
+  return remote.replace(/([a-z][a-z\d+.-]*:\/\/)([^/?#@]+):([^/?#@]+)@/gi, '$1***:***@')
+    .replace(/([a-z][a-z\d+.-]*:\/\/)([^/?#@:]+)@/gi, '$1***@');
+}
+
+function redactGitError(error: unknown, remote: string | undefined) {
+  const redactedRemote = sanitizeRemote(remote);
+  const redact = (value: unknown) => {
+    if (typeof value !== 'string') {
+      return value;
+    }
+    const sanitized = sanitizeRemote(value) || value;
+    return remote && redactedRemote ? sanitized.split(remote).join(redactedRemote) : sanitized;
+  };
+
+  if (!(error instanceof Error)) {
+    return new Error(String(redact(error)));
+  }
+
+  const redactedError = new Error(String(redact(error.message)));
+  redactedError.name = error.name;
+  redactedError.stack = typeof error.stack === 'string' ? String(redact(error.stack)) : error.stack;
+
+  for (const key of ['code', 'signal', 'stdout', 'stderr', 'cmd'] as const) {
+    const value = (error as NodeJS.ErrnoException & Record<string, unknown>)[key];
+    if (value !== undefined) {
+      (redactedError as unknown as Record<string, unknown>)[key] = redact(value);
+    }
+  }
+
+  return redactedError;
+}
+
+function isCloneFallbackError(error: unknown) {
+  const details = [
+    error instanceof Error ? error.message : '',
+    typeof (error as Record<string, unknown>)?.stderr === 'string' ? (error as Record<string, string>).stderr : ''
+  ].join('\n').toLowerCase();
+
+  return details.includes('remote branch') && details.includes('not found')
+    || details.includes('repository') && details.includes('not found')
+    || details.includes('repository') && details.includes('does not exist')
+    || details.includes('does not appear to be a git repository');
+}
+
+async function cleanCheckout(targetDir: string) {
+  await fs.mkdir(targetDir, { recursive: true });
+  const entries = await fs.readdir(targetDir, { withFileTypes: true });
+
+  await Promise.all(entries
+    .filter((entry) => entry.name !== '.git')
+    .map((entry) => fs.rm(path.join(targetDir, entry.name), { recursive: true, force: true })));
+}
+
+async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatterPolicy: FrontmatterPolicy = 'strip') {
   await fs.mkdir(targetDir, { recursive: true });
   const entries = await fs.readdir(sourceDir, { withFileTypes: true });
 
   for (const entry of entries) {
+    if (entry.name === '.git') {
+      continue;
+    }
+
     const source = path.join(sourceDir, entry.name);
     const target = path.join(targetDir, entry.name);
 
-    if (entry.isDirectory()) {
-      await fs.cp(source, target, { recursive: true, force: true });
+    if (entry.isSymbolicLink()) {
+      await copySymlink(source, target);
+    } else if (entry.isDirectory()) {
+      await copyGeneratedWiki(source, target, frontmatterPolicy);
+    } else if (entry.isFile() && entry.name.endsWith('.md')) {
+      const content = await fs.readFile(source, 'utf8');
+      const transformed = applyFrontmatterPolicy(content, frontmatterPolicy);
+      await fs.writeFile(target, transformed, 'utf8');
     } else if (entry.isFile()) {
       await fs.copyFile(source, target);
     }
   }
 }
 
-async function listMarkdownFiles(wikiDir) {
+async function copySymlink(source: string, target: string) {
+  const linkTarget = await fs.readlink(source);
+  await fs.rm(target, { recursive: true, force: true });
+  await fs.symlink(linkTarget, target);
+}
+
+async function countMarkdownFiles(wikiDir: string): Promise<number> {
   const entries = await fs.readdir(wikiDir, { withFileTypes: true });
-  return entries.filter((entry) => entry.isFile() && entry.name.endsWith('.md')).map((entry) => entry.name).sort();
+  const nestedCounts = await Promise.all(entries.map(async (entry) => {
+    const entryPath = path.join(wikiDir, entry.name);
+    if (entry.isDirectory()) {
+      return countMarkdownFiles(entryPath);
+    }
+    return entry.isFile() && entry.name.endsWith('.md') ? 1 : 0;
+  }));
+  return nestedCounts.reduce((total, count) => total + count, 0);
 }

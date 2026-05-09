@@ -164,12 +164,12 @@ function renderBuildTestAndRun(manifest) {
   const packageFiles = manifest.files.filter((file) => file.path.endsWith('package.json'));
   const ciFiles = manifest.files.filter((file) => file.category === 'ci');
   const packageScripts = (manifest.analysis?.package_scripts || []).filter((entry) => Object.keys(entry.scripts || {}).length > 0);
-  const scriptRows = packageScripts.flatMap((entry) => Object.entries(entry.scripts || {}).map(([name, command]) => [code(entry.path), entry.name ? code(entry.name) : 'unknown', code(name), code(String(command))]));
+  const scriptRows = packageScripts.flatMap((entry) => Object.entries(entry.scripts || {}).map(([name, command]) => [sourcePathLink(manifest, entry.path), entry.name ? code(entry.name) : 'unknown', code(name), code(String(command))]));
   const scriptsSection = scriptRows.length
     ? `## Package scripts\n\n- Package manifests with scripts: ${packageScripts.length}\n- Scripts detected: ${scriptRows.length}\n\n${markdownTable(['Manifest', 'Package', 'Script', 'Command'], scriptRows)}\n`
     : `## Package scripts\n\nNo package scripts were extracted from manifest analysis. Inspect package manifests, task runners, and CI workflows directly when confirming canonical commands.\n`;
 
-  return `${frontmatter(manifest, { kind: 'build_test_run' })}# Build, Test, and Run\n\n## Detected package manifests\n\n${packageFiles.map((file) => `- \`${file.path}\``).join('\n') || '- No package manifests detected.'}\n\n## Detected CI files\n\n${ciFiles.map((file) => `- \`${file.path}\``).join('\n') || '- No CI files detected.'}\n\n${scriptsSection}\n## Manual verification guidance\n\nTreat extracted scripts as a starting point. Verify the canonical build, test, and run paths against CI workflows, container entrypoints, and deployment configs when they exist.\n`;
+  return `${frontmatter(manifest, { kind: 'build_test_run' })}# Build, Test, and Run\n\n## Detected package manifests\n\n${packageFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No package manifests detected.'}\n\n## Detected CI files\n\n${ciFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No CI files detected.'}\n\n${scriptsSection}\n## Manual verification guidance\n\nTreat extracted scripts as a starting point. Verify the canonical build, test, and run paths against CI workflows, container entrypoints, and deployment configs when they exist.\n`;
 }
 
 function renderOpenQuestions(manifest, plan) {
@@ -310,7 +310,7 @@ function renderDependencyMap(manifest) {
   const dependencyEdges = manifest.analysis?.dependency_graph?.edges || [];
 
   if (dependencyEdges.length > 0) {
-    const rows = dependencyEdges.slice(0, 200).map((edge) => [code(edge.from), code(edge.to), code(edge.specifier)]);
+    const rows = dependencyEdges.slice(0, 200).map((edge) => [sourcePathLink(manifest, edge.from), sourcePathLink(manifest, edge.to), code(edge.specifier)]);
     const summary = manifest.analysis?.dependency_graph?.summary || {};
 
     return `${frontmatter(manifest, { kind: 'dependency_map' })}# Dependency Map\n\n## Resolved internal dependency edges\n\n- Edges detected: ${summary.edges ?? dependencyEdges.length}\n- Importing files: ${summary.importers ?? uniqueCount(dependencyEdges.map((edge) => edge.from))}\n- Imported files: ${summary.imported_files ?? uniqueCount(dependencyEdges.map((edge) => edge.to))}\n\n${markdownTable(['From', 'To', 'Specifier'], rows)}\n`;
@@ -319,7 +319,7 @@ function renderDependencyMap(manifest) {
   const importRows = manifest.files
     .filter((file) => file.imports?.length)
     .slice(0, 100)
-    .map((file) => `| \`${file.path}\` | ${file.imports.map((imp) => `\`${imp}\``).join(', ')} |`);
+    .map((file) => `| ${sourcePathLink(manifest, file.path)} | ${file.imports.map((imp) => `\`${imp}\``).join(', ')} |`);
 
   return `${frontmatter(manifest, { kind: 'dependency_map' })}# Dependency Map\n\n| Source file | Imports |\n|---|---|\n${importRows.join('\n') || '| None detected | |'}\n`;
 }
@@ -328,10 +328,10 @@ function renderTestingStrategy(manifest) {
   const tests = manifest.files.filter((file) => file.category === 'test');
   const mappings = manifest.analysis?.test_to_source?.mappings || [];
   const mappingSection = mappings.length
-    ? `## Test-to-source mappings\n\n- Mapped tests: ${manifest.analysis?.test_to_source?.summary?.mapped_tests ?? mappings.length}\n- Source files covered: ${manifest.analysis?.test_to_source?.summary?.source_files ?? uniqueCount(mappings.flatMap((mapping) => mapping.sources))}\n\n${markdownTable(['Test', 'Source files', 'Heuristics'], mappings.map((mapping) => [code(mapping.test), formatCodeList(mapping.sources), mapping.heuristics.join(', ') || 'unknown']))}\n`
+    ? `## Test-to-source mappings\n\n- Mapped tests: ${manifest.analysis?.test_to_source?.summary?.mapped_tests ?? mappings.length}\n- Source files covered: ${manifest.analysis?.test_to_source?.summary?.source_files ?? uniqueCount(mappings.flatMap((mapping) => mapping.sources))}\n\n${markdownTable(['Test', 'Source files', 'Heuristics'], mappings.map((mapping) => [sourcePathLink(manifest, mapping.test), formatSourcePathList(manifest, mapping.sources), mapping.heuristics.join(', ') || 'unknown']))}\n`
     : `## Next refinement\n\nThe compiler will add direct test-to-source mappings when manifest analysis includes them.\n`;
 
-  return `${frontmatter(manifest, { kind: 'testing_strategy' })}# Testing Strategy\n\n## Detected test files\n\n${tests.map((file) => `- \`${file.path}\``).join('\n') || '- No tests detected by the sketch scanner.'}\n\n${mappingSection}`;
+  return `${frontmatter(manifest, { kind: 'testing_strategy' })}# Testing Strategy\n\n## Detected test files\n\n${tests.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No tests detected by the sketch scanner.'}\n\n${mappingSection}`;
 }
 
 function renderConfiguration(manifest) {
@@ -339,42 +339,42 @@ function renderConfiguration(manifest) {
   const envRows = collectEnvironmentRows(manifest.files);
   const envNames = uniqueSorted(envRows.flatMap((row) => row.variables));
   const envSection = envRows.length
-    ? `## Explicit environment variables\n\n- Unique variable names detected: ${envNames.length}\n- Variable names: ${formatCodeList(envNames)}\n\n${markdownTable(['Source file', 'Variables'], envRows.map((row) => [code(row.path), formatCodeList(row.variables)]))}\n`
+    ? `## Explicit environment variables\n\n- Unique variable names detected: ${envNames.length}\n- Variable names: ${formatCodeList(envNames)}\n\n${markdownTable(['Source file', 'Variables'], envRows.map((row) => [sourcePathLink(manifest, row.path), formatCodeList(row.variables)]))}\n`
     : `## Explicit environment variables\n\nNo explicit environment variable names were extracted from source cards.\n`;
 
-  return `${frontmatter(manifest, { kind: 'configuration' })}# Configuration and Environment\n\n## Detected configuration-related files\n\n${configFiles.map((file) => `- \`${file.path}\``).join('\n') || '- No configuration surfaces detected by the sketch scanner.'}\n\n${envSection}\n## Secret handling\n\nGenerated wiki pages must describe variable names and configuration concepts, not copy secret values.\n`;
+  return `${frontmatter(manifest, { kind: 'configuration' })}# Configuration and Environment\n\n## Detected configuration-related files\n\n${configFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No configuration surfaces detected by the sketch scanner.'}\n\n${envSection}\n## Secret handling\n\nGenerated wiki pages must describe variable names and configuration concepts, not copy secret values.\n`;
 }
 
 function renderSecurity(manifest) {
   const securityFiles = manifest.files.filter((file) => file.reasons?.some((reason) => ['auth', 'billing-or-payment', 'configuration'].includes(reason)));
-  return `${frontmatter(manifest, { kind: 'security' })}# Security and Secrets\n\n## Security-sensitive source areas\n\n${securityFiles.map((file) => `- \`${file.path}\` - ${file.reasons.join(', ')}`).join('\n') || '- No obvious security-sensitive areas detected by the sketch scanner.'}\n\n## Policy\n\n- Do not copy secrets or private tokens into wiki pages.\n- Cite source paths instead of embedding sensitive source content.\n- Require human review before publishing changes to authentication, authorization, billing, or deployment documentation.\n`;
+  return `${frontmatter(manifest, { kind: 'security' })}# Security and Secrets\n\n## Security-sensitive source areas\n\n${securityFiles.map((file) => `- ${sourcePathLink(manifest, file.path)} - ${file.reasons.join(', ')}`).join('\n') || '- No obvious security-sensitive areas detected by the sketch scanner.'}\n\n## Policy\n\n- Do not copy secrets or private tokens into wiki pages.\n- Cite source paths instead of embedding sensitive source content.\n- Require human review before publishing changes to authentication, authorization, billing, or deployment documentation.\n`;
 }
 
 function renderRunbook(manifest) {
   const infra = manifest.files.filter((file) => file.category === 'infra' || file.runtime_hints?.includes('deployment'));
-  return `${frontmatter(manifest, { kind: 'runbook' })}# Operational Runbook\n\n## Deployment and operations files\n\n${infra.map((file) => `- \`${file.path}\``).join('\n') || '- No deployment or operations files detected by the sketch scanner.'}\n\n## Next refinement\n\nThe production compiler should extract deployment commands, rollback notes, service dependencies, queue names, cron jobs, and operational dashboards when those are represented in source.\n`;
+  return `${frontmatter(manifest, { kind: 'runbook' })}# Operational Runbook\n\n## Deployment and operations files\n\n${infra.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No deployment or operations files detected by the sketch scanner.'}\n\n## Next refinement\n\nThe production compiler should extract deployment commands, rollback notes, service dependencies, queue names, cron jobs, and operational dashboards when those are represented in source.\n`;
 }
 
 function renderHttpRoutes(manifest) {
   const routeFiles = manifest.files.filter((file) => file.runtime_hints?.includes('http-route') || file.reasons?.includes('api-surface'));
   const routes = collectRoutes(manifest.files);
   const routeSection = routes.length
-    ? `## Detected routes\n\n- Route surfaces detected: ${routes.length}\n\n${markdownTable(['Source file', 'Framework', 'Target', 'Methods', 'Path', 'Handler'], routes.map((route) => [code(route.file), route.framework, code(route.target), route.methods.join(', ') || 'ANY', code(route.path), code(route.handler)]))}\n`
-    : `## Detected route-related files\n\n${routeFiles.map((file) => `- \`${file.path}\``).join('\n') || '- No HTTP routes detected.'}\n`;
+    ? `## Detected routes\n\n- Route surfaces detected: ${routes.length}\n\n${markdownTable(['Source file', 'Framework', 'Target', 'Methods', 'Path', 'Handler'], routes.map((route) => [sourcePathLink(manifest, route.file), route.framework, code(route.target), route.methods.join(', ') || 'ANY', code(route.path), code(route.handler)]))}\n`
+    : `## Detected route-related files\n\n${routeFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No HTTP routes detected.'}\n`;
 
   return `${frontmatter(manifest, { kind: 'api_http_routes' })}# API: HTTP Routes\n\n${routeSection}\n## Next refinement\n\nAdd framework-specific extractors for Express, Fastify, NestJS, Next.js route handlers, Hono, Koa, tRPC, OpenAPI, and GraphQL.\n`;
 }
 
 function renderDataModel(manifest) {
   const dataFiles = manifest.files.filter((file) => file.category === 'data' || file.reasons?.includes('data-model'));
-  return `${frontmatter(manifest, { kind: 'data_model' })}# Data Model and Migrations\n\n## Detected data-related files\n\n${dataFiles.map((file) => `- \`${file.path}\``).join('\n') || '- No data files detected.'}\n`;
+  return `${frontmatter(manifest, { kind: 'data_model' })}# Data Model and Migrations\n\n## Detected data-related files\n\n${dataFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No data files detected.'}\n`;
 }
 
 function renderModulePage(manifest, module, sourceToTestsIndex: Map<string, Set<string>>) {
-  const sampleFiles = module.files.slice(0, 80).map((file) => `- \`${file}\``).join('\n');
+  const sampleFiles = module.files.slice(0, 80).map((file) => `- ${sourcePathLink(manifest, file)}`).join('\n');
   const relatedTests = lookupRelatedTests(module.files, sourceToTestsIndex);
   const relatedTestsSection = relatedTests.length
-    ? `## Related tests\n\n${relatedTests.map((t) => `- \`${t}\``).join('\n')}\n\n`
+    ? `## Related tests\n\n${relatedTests.map((testPath) => `- ${sourcePathLink(manifest, testPath)}`).join('\n')}\n\n`
     : '';
   return `${frontmatter(manifest, { kind: 'module', module: module.name, source_paths: module.files.slice(0, 20) })}# ${module.name}\n\n## Purpose\n\nGenerated first-pass page for files grouped under ${module.name}. This should be refined by the LLM compiler using source cards and targeted source excerpts.\n\n## Signals\n\n- Files: ${module.files.length}\n- Categories: ${Object.keys(module.categories).join(', ') || 'unknown'}\n- Languages: ${Object.keys(module.languages).join(', ') || 'unknown'}\n- Runtime hints: ${Object.keys(module.runtime_hints).join(', ') || 'none'}\n- Reasons: ${module.important_reasons.join(', ') || 'none'}\n\n## Source files\n\n${sampleFiles || '- None'}\n\n${relatedTestsSection}## Related pages\n\n- ${wikiLink('Dependency-Map.md')}\n- ${wikiLink('Testing-Strategy.md')}\n- ${wikiLink('Open-Questions.md')}\n\n<!-- HUMAN_NOTES_START -->\n<!-- HUMAN_NOTES_END -->\n`;
 }
@@ -458,6 +458,59 @@ function collectRoutes(files: any[]) {
 
 function formatCodeList(values: Array<string | number>) {
   return values.map((value) => code(value)).join(', ');
+}
+
+function formatSourcePathList(manifest: any, values: string[]) {
+  return values.map((value) => sourcePathLink(manifest, value)).join(', ');
+}
+
+function sourcePathLink(manifest: any, filePath: string) {
+  const browserUrl = githubSourceUrl(manifest, filePath);
+  if (!browserUrl) {
+    return code(filePath);
+  }
+  return `[${escapeMarkdownLinkText(filePath)}](${browserUrl})`;
+}
+
+function githubSourceUrl(manifest: any, filePath: string) {
+  const repoUrl = githubRepositoryUrl(manifest?.remote);
+  const commit = manifest?.commit;
+  if (!repoUrl || !commit || !filePath) {
+    return null;
+  }
+  return `${repoUrl}/blob/${encodeURIComponent(String(commit))}/${encodePathSegments(filePath)}`;
+}
+
+function githubRepositoryUrl(remote: string | undefined) {
+  if (!remote) {
+    return null;
+  }
+
+  const normalized = String(remote).trim();
+  const httpsMatch = /^https:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/.exec(normalized);
+  if (httpsMatch) {
+    return `https://github.com/${httpsMatch[1]}/${httpsMatch[2]}`;
+  }
+
+  const sshMatch = /^git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/.exec(normalized);
+  if (sshMatch) {
+    return `https://github.com/${sshMatch[1]}/${sshMatch[2]}`;
+  }
+
+  const sshUrlMatch = /^ssh:\/\/git@github\.com\/([^/]+)\/([^/]+?)(?:\.git)?\/?$/.exec(normalized);
+  if (sshUrlMatch) {
+    return `https://github.com/${sshUrlMatch[1]}/${sshUrlMatch[2]}`;
+  }
+
+  return null;
+}
+
+function encodePathSegments(filePath: string) {
+  return String(filePath).split('/').map((segment) => encodeURIComponent(segment)).join('/');
+}
+
+function escapeMarkdownLinkText(value: string) {
+  return String(value).replace(/\\/g, '\\\\').replace(/\[/g, '\\[').replace(/\]/g, '\\]');
 }
 
 function uniqueSorted(values: Array<string | number>) {

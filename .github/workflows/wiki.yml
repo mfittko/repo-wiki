@@ -52,6 +52,35 @@ jobs:
       - name: Lint
         run: node ./dist/bin/repo-wiki.js lint --wiki .llmwiki/wiki --scan .llmwiki/run
 
-      - name: Publish placeholder
-        if: github.ref == 'refs/heads/main'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: compiled-wiki
+          path: .llmwiki/wiki
+
+  publish-wiki:
+    if: github.ref == 'refs/heads/main'
+    needs: compile-wiki
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+
+      - uses: actions/download-artifact@v5
+        with:
+          name: compiled-wiki
+          path: .llmwiki/wiki
+
+      - name: Publish wiki
+        env:
+          LLMWIKI_PUBLISH_REMOTE: https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.wiki.git
         run: node ./dist/bin/repo-wiki.js publish --wiki .llmwiki/wiki

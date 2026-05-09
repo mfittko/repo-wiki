@@ -1,4 +1,5 @@
 import { parseArgs, type ParsedArgs } from './utils/args.js';
+import { loadDotEnv } from './utils/dotenv.js';
 import { initProject } from './init.js';
 import { scanRepository } from './scanner.js';
 import { createBootstrapPlan } from './planner.js';
@@ -6,6 +7,7 @@ import { compileWiki } from './compiler.js';
 import { lintWiki } from './linter.js';
 import { lintDocs } from './docs-linter.js';
 import { publishWiki } from './publisher.js';
+import { isFrontmatterPolicy, parseFrontmatterPolicy, type FrontmatterPolicy } from './frontmatter.js';
 
 const HELP = `
 repo-wiki <command> [options]
@@ -20,6 +22,11 @@ Commands:
   publish   Push local wiki pages to OWNER/REPO.wiki.git.
   run       Run scan -> plan -> compile -> lint, optionally followed by publish.
 
+Options:
+  --frontmatter-policy <strip|html-comment|preserve>
+            Frontmatter handling when publishing to GitHub Wiki (default: strip).
+            html-comment is accepted for forward compatibility and currently behaves like strip.
+
 Examples:
   repo-wiki init --repo . --write-agents
   repo-wiki run --mode bootstrap --repo . --scan .llmwiki/run --plan .llmwiki/bootstrap-plan.json --wiki .llmwiki/wiki
@@ -32,9 +39,23 @@ function getStringOption(options: ParsedArgs, key: string) {
   return typeof value === 'string' ? value : undefined;
 }
 
+function getFrontmatterPolicyOption(options: ParsedArgs): FrontmatterPolicy {
+  const value = getStringOption(options, 'frontmatter-policy');
+  const policy = parseFrontmatterPolicy(value);
+
+  if (value !== undefined && !isFrontmatterPolicy(value)) {
+    console.error(`Warning: unknown --frontmatter-policy "${value}"; falling back to "strip".`);
+  } else if (policy === 'html-comment') {
+    console.error('Warning: --frontmatter-policy html-comment is reserved for future metadata comments and currently behaves like strip.');
+  }
+
+  return policy;
+}
+
 export async function runCli(argv: string[]) {
   const [command, ...rest] = argv;
   const options = parseArgs(rest);
+  await loadDotEnv(getDotEnvBaseDir(command, options));
 
   if (!command || command === 'help' || command === '--help' || command === '-h') {
     console.log(HELP);
@@ -113,7 +134,8 @@ export async function runCli(argv: string[]) {
         remote: getStringOption(options, 'remote'),
         branch: getStringOption(options, 'branch') || 'master',
         message: getStringOption(options, 'message'),
-        dryRun: Boolean(options['dry-run'])
+        dryRun: Boolean(options['dry-run']),
+        frontmatterPolicy: getFrontmatterPolicyOption(options)
       });
       console.log(JSON.stringify(result.summary, null, 2));
       return;
@@ -131,6 +153,14 @@ export async function runCli(argv: string[]) {
     default:
       throw new Error(`Unknown command: ${command}\n\n${HELP}`);
   }
+}
+
+function getDotEnvBaseDir(command: string | undefined, options: ParsedArgs) {
+  const repoPath = getStringOption(options, 'repo');
+  if (repoPath && ['init', 'scan', 'lint-docs', 'run'].includes(command || '')) {
+    return repoPath;
+  }
+  return process.cwd();
 }
 
 async function runPipeline(options: ParsedArgs) {
@@ -176,7 +206,8 @@ async function runPipeline(options: ParsedArgs) {
       remote: getStringOption(options, 'remote'),
       branch: getStringOption(options, 'branch') || 'master',
       message: getStringOption(options, 'message'),
-      dryRun: Boolean(options['dry-run'])
+      dryRun: Boolean(options['dry-run']),
+      frontmatterPolicy: getFrontmatterPolicyOption(options)
     });
   }
 

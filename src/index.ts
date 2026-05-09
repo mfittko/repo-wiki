@@ -8,6 +8,7 @@ export type { AssemblePageContextInput, PageContext, PageContextBudget, PageCont
 export { lintWiki } from './linter.js';
 export { lintDocs } from './docs-linter.js';
 export { publishWiki } from './publisher.js';
+export type { PublishWikiOptions } from './publisher.js';
 export { loadConfig, DEFAULT_CONFIG } from './config.js';
 export { buildPrompt, buildFoundationPrompt, buildModulePrompt, buildCrossCuttingPrompt } from './prompts.js';
 export type { PageArchetype, PromptContext, BuiltPrompt, SourceCardContext, DocCardContext, ModuleInfo } from './prompts.js';
@@ -15,3 +16,5 @@ export { MockLLMProvider, OpenAICompatibleProvider, LLMProviderError, LLM_DEFAUL
 export type { LLMProvider, LLMRequest, LLMResponse, LLMProviderConfig, ResolvedLLMProviderConfig, BuildRequestOptions } from './llm-provider.js';
 export { detectPageState, extractHumanNotes, injectHumanNotes, preserveHumanNotes } from './page-ownership.js';
 export type { PageState } from './page-ownership.js';
+export { FRONTMATTER_POLICIES, isFrontmatterPolicy, stripFrontmatter, applyFrontmatterPolicy, parseFrontmatterPolicy } from './frontmatter.js';
+export type { FrontmatterPolicy } from './frontmatter.js';
