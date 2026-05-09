@@ -32,7 +32,7 @@ When running repository commands or automation:
 - Questions, preferences, future-tense statements, or implied approval are not confirmation. Confirmation is valid when it is either an imperative instruction naming the action, such as “edit AGENTS.md”, “commit it”, “push to main”, “merge PR #12”, “assign issue #50”, or “resolve the threads”, or a direct response to a confirmation request using “go ahead”, “yes”, or “confirmed”. The bare response “ok” is not confirmation.
 - Prefer single commands where practical. If the logic is too involved for one command, write a temporary `.mjs` script under `tmp/` instead of building up fragile shell sequences.
 - For GitHub issue/PR descriptions and comments, prefer `--body-file` / `-F` or stdin via `-F -` over inline shell strings. Use heredocs or temp files for multi-line content and avoid interpolating untrusted text directly into shell commands.
-- When a PR verdict is requested for a pull request not opened by the active GitHub user (`<self>`), submit a formal GitHub review: use Approve when the verdict is merge-ready, or Request Changes when the verdict includes must-fix findings. Do not leave only a plain PR comment for these verdicts.
+- When a PR verdict is requested, first summarize pending inline comments, proposed resolution status, and the intended verdict text, then ask for confirmation before submitting the review so the user can correct wording or the verdict. For a pull request not opened by the active GitHub user (`<self>`), submit the confirmed verdict as a formal GitHub review: use Approve when the verdict is merge-ready, or Request Changes when the verdict includes must-fix findings. Do not leave only a plain PR comment for these verdicts.
 
 When adding new capabilities:
 
