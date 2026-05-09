@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "7cfbc938941623f13ab3a22b03aaeddd588e8d5a"
-compiled_at: "2026-05-09T23:33:50.503Z"
+source_commit: "f6fa9cd8d40529ec9635fe39175ec63f3a861bfc"
+compiled_at: "2026-05-09T23:44:16.157Z"
 kind: "module"
 module: "Module docs-linter.ts"
 source_paths: ["src/docs-linter.ts"]
@@ -23,11 +23,11 @@ Generated first-pass page for files grouped under Module docs-linter.ts. This sh
 
 ## Source files
 
-- [src/docs-linter.ts](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/src/docs-linter.ts)
+- [src/docs-linter.ts](https://github.com/mfittko/repo-wiki/blob/f6fa9cd8d40529ec9635fe39175ec63f3a861bfc/src/docs-linter.ts)
 
 ## Related tests
 
-- [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/test/docs-linter.test.ts)
+- [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/f6fa9cd8d40529ec9635fe39175ec63f3a861bfc/test/docs-linter.test.ts)
 
 ## Related pages
 

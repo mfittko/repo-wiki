@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "7cfbc938941623f13ab3a22b03aaeddd588e8d5a"
-compiled_at: "2026-05-09T23:33:50.504Z"
+source_commit: "f6fa9cd8d40529ec9635fe39175ec63f3a861bfc"
+compiled_at: "2026-05-09T23:44:16.157Z"
 kind: "module"
 module: "Module llm-provider.ts"
 source_paths: ["src/llm-provider.ts"]
@@ -23,11 +23,11 @@ Generated first-pass page for files grouped under Module llm-provider.ts. This s
 
 ## Source files
 
-- [src/llm-provider.ts](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/src/llm-provider.ts)
+- [src/llm-provider.ts](https://github.com/mfittko/repo-wiki/blob/f6fa9cd8d40529ec9635fe39175ec63f3a861bfc/src/llm-provider.ts)
 
 ## Related tests
 
-- [test/llm-provider.test.ts](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/test/llm-provider.test.ts)
+- [test/llm-provider.test.ts](https://github.com/mfittko/repo-wiki/blob/f6fa9cd8d40529ec9635fe39175ec63f3a861bfc/test/llm-provider.test.ts)
 
 ## Related pages
 

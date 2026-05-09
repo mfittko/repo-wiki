@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if page.title %}{{ page.title | escape }}{% else %}{{ page.name | replace: '.md', '' | escape }}{% endif %}</title>
+  <style>
+    body { color: #24292f; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; margin: 0; }
+    main { box-sizing: border-box; margin: 0 auto; max-width: 980px; padding: 2rem; }
+    a { color: #0969da; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    pre { background: #f6f8fa; border-radius: 6px; overflow: auto; padding: 1rem; }
+    code { background: #f6f8fa; border-radius: 4px; padding: 0.1em 0.3em; }
+    pre code { background: transparent; padding: 0; }
+    table { border-collapse: collapse; display: block; overflow: auto; width: 100%; }
+    th, td { border: 1px solid #d0d7de; padding: 0.4rem 0.75rem; }
+    .mermaid { background: #fff; border: 1px solid #d0d7de; border-radius: 6px; margin: 1rem 0; padding: 1rem; }
+  </style>
+</head>
+<body>
+  <main>
+    {{ content }}
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });
+    const blocks = document.querySelectorAll('pre > code.language-mermaid');
+    blocks.forEach((block) => {
+      const container = document.createElement('div');
+      container.className = 'mermaid';
+      container.textContent = block.textContent || '';
+      block.parentElement?.replaceWith(container);
+    });
+    await mermaid.run({ nodes: document.querySelectorAll('.mermaid') });
+  </script>
+</body>
+</html>

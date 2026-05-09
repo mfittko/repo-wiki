@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "7cfbc938941623f13ab3a22b03aaeddd588e8d5a"
-compiled_at: "2026-05-09T23:33:50.503Z"
+source_commit: "f6fa9cd8d40529ec9635fe39175ec63f3a861bfc"
+compiled_at: "2026-05-09T23:44:16.157Z"
 kind: "module"
 module: "Module docs-ingestor.ts"
 source_paths: ["src/docs-ingestor.ts"]
@@ -23,7 +23,7 @@ Generated first-pass page for files grouped under Module docs-ingestor.ts. This 
 
 ## Source files
 
-- [src/docs-ingestor.ts](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/src/docs-ingestor.ts)
+- [src/docs-ingestor.ts](https://github.com/mfittko/repo-wiki/blob/f6fa9cd8d40529ec9635fe39175ec63f3a861bfc/src/docs-ingestor.ts)
 
 ## Related pages
 

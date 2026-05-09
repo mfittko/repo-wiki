@@ -1,13 +1,13 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "7cfbc938941623f13ab3a22b03aaeddd588e8d5a"
-compiled_at: "2026-05-09T23:33:50.488Z"
+source_commit: "f6fa9cd8d40529ec9635fe39175ec63f3a861bfc"
+compiled_at: "2026-05-09T23:44:16.140Z"
 kind: "home"
 page_state: "generated"
 ---
 # Repository Knowledge Base
 
-Generated from `https://github.com/mfittko/repo-wiki` at commit `7cfbc938941623f13ab3a22b03aaeddd588e8d5a`.
+Generated from `https://github.com/mfittko/repo-wiki` at commit `f6fa9cd8d40529ec9635fe39175ec63f3a861bfc`.
 
 ## Start here
 

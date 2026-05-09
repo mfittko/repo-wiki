@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "7cfbc938941623f13ab3a22b03aaeddd588e8d5a"
-compiled_at: "2026-05-09T23:33:50.503Z"
+source_commit: "f6fa9cd8d40529ec9635fe39175ec63f3a861bfc"
+compiled_at: "2026-05-09T23:44:16.157Z"
 kind: "module"
 module: "Module context-assembler.ts"
 source_paths: ["src/context-assembler.ts"]
@@ -23,11 +23,11 @@ Generated first-pass page for files grouped under Module context-assembler.ts. T
 
 ## Source files
 
-- [src/context-assembler.ts](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/src/context-assembler.ts)
+- [src/context-assembler.ts](https://github.com/mfittko/repo-wiki/blob/f6fa9cd8d40529ec9635fe39175ec63f3a861bfc/src/context-assembler.ts)
 
 ## Related tests
 
-- [test/context-assembler.test.ts](https://github.com/mfittko/repo-wiki/blob/7cfbc938941623f13ab3a22b03aaeddd588e8d5a/test/context-assembler.test.ts)
+- [test/context-assembler.test.ts](https://github.com/mfittko/repo-wiki/blob/f6fa9cd8d40529ec9635fe39175ec63f3a861bfc/test/context-assembler.test.ts)
 
 ## Related pages
 
