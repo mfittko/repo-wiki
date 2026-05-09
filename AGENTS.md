@@ -21,12 +21,15 @@ For repository orientation, use the generated local wiki as a navigation aid bef
 
 The local wiki is not authoritative; verify material claims against source, tests, configuration, and CI.
 
-Repository-maintained skills live under `.github/skills/`. Pi-specific skill locations should be symlinks to `.github/skills/`, not duplicate skill copies.
+Repository-maintained cross-platform skills can live under `skills/` when they are intended to ship with or describe repo-wiki itself. Integration-specific skill roots such as `.github/skills/` and `.pi/skills/` may also contain integration-only skills, but any shared repo-wiki skill there should be a symlink to the canonical `skills/` directory, not a duplicate copy.
 
-GitHub Issues are the execution backlog for this repository. Use milestones, labels, and issue templates for tracking work; do not create or maintain a separate local backlog file unless a task explicitly requires it.
+GitHub Issues are the execution backlog for this repository. Use milestones, labels, and issue templates for tracking work; do not create or maintain a separate local backlog file unless a task explicitly requires it. When handing an issue to Copilot, assign `copilot-swe-agent` directly rather than `copilot`.
 
 When running repository commands or automation:
 
+- Treat user wording as authoritative. If the user asks a question about whether an action should be taken (for example, “Would you land this?”, “Can we merge?”, “Should we push?”), answer the question and wait for explicit imperative confirmation before taking action.
+- Before any state-changing action, ask for and receive explicit confirmation unless the user's latest message is already a clear imperative instruction naming that action. State-changing actions include local file edits, generated file updates, dependency changes, commits, pushes, merges, rebases, branch deletion, publishing, assigning issues, changing labels or milestones, closing or resolving issues/PR threads, submitting PR reviews, triggering workflows, installing packages, or any command that mutates repository, filesystem, GitHub, CI, package, or publication state.
+- Questions, preferences, future-tense statements, or implied approval are not confirmation. Confirmation must be an imperative instruction naming the action, such as “edit AGENTS.md”, “commit it”, “push to main”, “merge PR #12”, “assign issue #50”, or “resolve the threads”.
 - Prefer single commands where practical. If the logic is too involved for one command, write a temporary `.mjs` script under `tmp/` instead of building up fragile shell sequences.
 - For GitHub issue/PR descriptions and comments, prefer `--body-file` / `-F` or stdin via `-F -` over inline shell strings. Use heredocs or temp files for multi-line content and avoid interpolating untrusted text directly into shell commands.
 - When a PR verdict is requested for a pull request not opened by the active GitHub user (`<self>`), submit a formal GitHub review: use Approve when the verdict is merge-ready, or Request Changes when the verdict includes must-fix findings. Do not leave only a plain PR comment for these verdicts.
