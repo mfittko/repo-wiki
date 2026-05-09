@@ -35,9 +35,9 @@ export async function publishWiki({
   gitUserEmail = process.env.LLMWIKI_GIT_USER_EMAIL || 'repo-wiki-bot@users.noreply.github.com'
 }: PublishWikiOptions) {
   const absoluteWikiDir = path.resolve(wikiDir || '.llmwiki/wiki');
-  const publishRemote = remote || process.env.LLMWIKI_PUBLISH_REMOTE || process.env.GITHUB_WIKI_REMOTE;
-  const summaryRemote = sanitizeRemote(publishRemote);
   const publishTarget: PublishTarget = target;
+  const publishRemote = resolvePublishRemote(publishTarget, remote);
+  const summaryRemote = sanitizeRemote(publishRemote);
   const publishBranch = branch || defaultBranchForTarget(publishTarget);
   const publishFrontmatterPolicy = frontmatterPolicy || defaultFrontmatterPolicyForTarget(publishTarget);
   const resolvedPublishPath = resolvePublishPath(publishTarget, pagesPath);
@@ -102,6 +102,7 @@ export async function publishWiki({
     }
 
     const publishDir = resolvedPublishPath.absoluteResolver(checkoutDir);
+    assertPublishPathContained(checkoutDir, publishDir);
     await cleanPublishPath(checkoutDir, publishDir);
     await copyGeneratedWiki(absoluteWikiDir, publishDir, publishFrontmatterPolicy);
     if (publishTarget === 'github-pages') {
@@ -261,6 +262,13 @@ async function countMarkdownFiles(wikiDir: string): Promise<number> {
   return nestedCounts.reduce((total, count) => total + count, 0);
 }
 
+function resolvePublishRemote(target: PublishTarget, remote: string | undefined) {
+  if (remote || process.env.LLMWIKI_PUBLISH_REMOTE) {
+    return remote || process.env.LLMWIKI_PUBLISH_REMOTE;
+  }
+  return target === 'github-wiki' ? process.env.GITHUB_WIKI_REMOTE : undefined;
+}
+
 function defaultBranchForTarget(target: PublishTarget) {
   return target === 'github-pages' ? 'gh-pages' : 'master';
 }
@@ -283,17 +291,17 @@ function assertSafeGitArgument(value: string | undefined, label: string) {
 
 function resolvePublishPath(target: PublishTarget, pagesPath?: string) {
   const rawPath = target === 'github-pages' ? (pagesPath || '.').trim() || '.' : '.';
+  const pathForSegments = rawPath.replace(/\\/g, '/');
 
-  if (path.isAbsolute(rawPath)) {
+  if (path.isAbsolute(pathForSegments) || path.posix.isAbsolute(pathForSegments)) {
     throw new Error(`Publish path must be relative: ${rawPath}`);
   }
 
-  const pathForSegments = rawPath.replace(/\\/g, '/');
   const segments = pathForSegments.split('/').filter(Boolean);
   if (segments.includes('..')) {
     throw new Error(`Publish path must not contain ".." path segments: ${rawPath}`);
   }
-  if (segments.includes('.git')) {
+  if (segments.some((segment) => segment.toLowerCase() === '.git')) {
     throw new Error(`Publish path must not target reserved .git paths: ${rawPath}`);
   }
 
@@ -303,6 +311,14 @@ function resolvePublishPath(target: PublishTarget, pagesPath?: string) {
     relative: normalized,
     absoluteResolver: (checkoutDir: string) => path.resolve(checkoutDir, normalized)
   };
+}
+
+function assertPublishPathContained(checkoutDir: string, publishDir: string) {
+  const relative = path.relative(checkoutDir, publishDir);
+  if (relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))) {
+    return;
+  }
+  throw new Error(`Publish path must stay inside checkout: ${publishDir}`);
 }
 
 async function ensurePagesEntryAndNavigation(targetDir: string) {

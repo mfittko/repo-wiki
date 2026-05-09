@@ -244,6 +244,57 @@ test('publishWiki uses target-specific defaults in dry-run summaries', async () 
   }
 });
 
+test('publishWiki resolves target-specific remote environment variables', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const previousPublishRemote = process.env.LLMWIKI_PUBLISH_REMOTE;
+  const previousWikiRemote = process.env.GITHUB_WIKI_REMOTE;
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    delete process.env.LLMWIKI_PUBLISH_REMOTE;
+    process.env.GITHUB_WIKI_REMOTE = 'https://github.com/OWNER/REPO.wiki.git';
+
+    const pagesWithoutPublishRemote = await publishWiki({
+      wikiDir,
+      target: 'github-pages',
+      dryRun: true
+    });
+
+    assert.equal(pagesWithoutPublishRemote.summary.remote, null);
+
+    const wikiResult = await publishWiki({
+      wikiDir,
+      target: 'github-wiki',
+      dryRun: true
+    });
+
+    assert.equal(wikiResult.summary.remote, 'https://github.com/OWNER/REPO.wiki.git');
+
+    process.env.LLMWIKI_PUBLISH_REMOTE = 'https://github.com/OWNER/REPO.git';
+    const pagesWithPublishRemote = await publishWiki({
+      wikiDir,
+      target: 'github-pages',
+      dryRun: true
+    });
+
+    assert.equal(pagesWithPublishRemote.summary.remote, 'https://github.com/OWNER/REPO.git');
+  } finally {
+    if (previousPublishRemote === undefined) {
+      delete process.env.LLMWIKI_PUBLISH_REMOTE;
+    } else {
+      process.env.LLMWIKI_PUBLISH_REMOTE = previousPublishRemote;
+    }
+    if (previousWikiRemote === undefined) {
+      delete process.env.GITHUB_WIKI_REMOTE;
+    } else {
+      process.env.GITHUB_WIKI_REMOTE = previousWikiRemote;
+    }
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('publishWiki publishes github-pages output into configured path and preserves frontmatter by default', async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
   const wikiDir = path.join(tempDir, 'wiki');
@@ -333,6 +384,16 @@ test('publishWiki rejects unsafe github-pages publish paths', async () => {
     );
 
     await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '\\foo', dryRun: true }),
+      /Publish path must be relative/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '\\\\server\\share', dryRun: true }),
+      /Publish path must be relative/
+    );
+
+    await assert.rejects(
       () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '../sibling', dryRun: true }),
       /must not contain "\.\." path segments/
     );
@@ -354,6 +415,16 @@ test('publishWiki rejects unsafe github-pages publish paths', async () => {
 
     await assert.rejects(
       () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs/.git', dryRun: true }),
+      /reserved \.git paths/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '.GIT', dryRun: true }),
+      /reserved \.git paths/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs/.Git', dryRun: true }),
       /reserved \.git paths/
     );
 

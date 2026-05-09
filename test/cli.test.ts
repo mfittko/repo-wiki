@@ -21,6 +21,7 @@ test('CLI help describes GitHub Wiki and GitHub Pages publish targets', async ()
   try {
     const { stdout } = await captureCli(['--help'], tempDir);
     assert.match(stdout, /publish\s+Push local wiki pages to GitHub Wiki or GitHub Pages\./);
+    assert.match(stdout, /run\s+Run scan -> plan -> lint-docs -> compile -> lint, optionally followed by publish\./);
     assert.match(stdout, /--target <github-wiki\|github-pages>/);
     assert.doesNotMatch(stdout, /local-artifact/);
   } finally {
@@ -113,6 +114,31 @@ test('CLI warns and falls back for unknown target and frontmatter policy', async
     assert.equal(summary.frontmatterPolicy, 'strip');
     assert.match(stderr, /unknown --target/);
     assert.match(stderr, /unknown --frontmatter-policy/);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('CLI publish falls back to target default for unknown frontmatter policy', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-cli-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  try {
+    await mkdir(wikiDir, { recursive: true });
+    await writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+
+    const { stdout, stderr } = await captureCli([
+      'publish',
+      '--wiki', wikiDir,
+      '--target', 'github-pages',
+      '--frontmatter-policy', 'unknown-policy',
+      '--dry-run'
+    ], tempDir);
+    const summary = JSON.parse(stdout);
+
+    assert.equal(summary.target, 'github-pages');
+    assert.equal(summary.frontmatterPolicy, 'preserve');
+    assert.match(stderr, /falling back to "preserve"/);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

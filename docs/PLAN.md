@@ -134,7 +134,7 @@ npx repo-wiki run --mode bootstrap --repo . --wiki .llmwiki/wiki
 npx repo-wiki publish --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git
 ```
 
-Planned richer publication should make the target explicit, including a GitHub Wiki target and a GitHub Pages target:
+Publication supports explicit targets, including a GitHub Wiki target and a GitHub Pages target:
 
 ```bash
 npx repo-wiki publish --target github-wiki --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git
@@ -645,9 +645,7 @@ These items make the current scaffold match its stated policy.
 - Redact secret-like strings before writing manifests, documentation cards, page contexts, logs, or generated pages.
 - Sanitize all remotes and URLs before displaying or writing them.
 - Delete stale generated wiki pages during publish while preserving unmanaged and human-owned pages.
-- Add explicit publish-target selection, starting with `github-wiki` and `github-pages`.
-- Add a target-aware GitHub Wiki publish transform that strips or converts leading YAML frontmatter so generated metadata does not render as noisy tables on hosted wiki pages.
-- Preserve YAML frontmatter by default for GitHub Pages/Jekyll publication.
+- Continue hardening publish safety around target-specific remotes, paths, and rendering policies.
 - Add JSON schema validation for `.llmwiki/config.json`.
 - Make lint severity fully config-driven.
 - Add golden end-to-end tests for `init -> scan -> plan -> lint-docs -> compile -> lint -> publish --dry-run`.

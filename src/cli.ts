@@ -28,7 +28,7 @@ Commands:
   lint      Validate generated wiki pages.
   lint-docs Validate ingested markdown documentation before compilation.
   publish   Push local wiki pages to GitHub Wiki or GitHub Pages.
-  run       Run scan -> plan -> compile -> lint, optionally followed by publish.
+  run       Run scan -> plan -> lint-docs -> compile -> lint, optionally followed by publish.
 
 Options:
   --target <github-wiki|github-pages>
@@ -67,7 +67,7 @@ function getPublishTargetOption(options: ParsedArgs, configuredTarget?: string):
 function getFrontmatterPolicyOption(options: ParsedArgs, target: PublishTarget, configuredPolicy?: string): FrontmatterPolicy {
   const value = getStringOption(options, 'frontmatter-policy') || configuredPolicy;
   const defaultPolicy = defaultFrontmatterPolicyForTarget(target);
-  const policy = value === undefined ? defaultPolicy : parseFrontmatterPolicy(value);
+  const policy = value === undefined ? defaultPolicy : isFrontmatterPolicy(value) ? parseFrontmatterPolicy(value) : defaultPolicy;
 
   if (value !== undefined && !isFrontmatterPolicy(value)) {
     console.error(`Warning: unknown --frontmatter-policy "${value}"; falling back to "${defaultPolicy}".`);
