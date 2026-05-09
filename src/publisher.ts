@@ -110,7 +110,7 @@ export async function publishWiki({
     }
     await copyGeneratedWiki(absoluteWikiDir, publishDir, publishFrontmatterPolicy);
     if (publishTarget === 'github-pages') {
-      await ensurePagesEntryAndNavigation(publishDir);
+      await ensurePagesSiteSupport(publishDir);
     }
     await runGit(['config', 'user.name', gitUserName], { cwd: checkoutDir });
     await runGit(['config', 'user.email', gitUserEmail], { cwd: checkoutDir });
@@ -341,6 +341,11 @@ function assertPublishPathContained(checkoutDir: string, publishDir: string) {
   throw new Error(`Publish path must stay inside checkout: ${publishDir}`);
 }
 
+async function ensurePagesSiteSupport(targetDir: string) {
+  await ensurePagesEntryAndNavigation(targetDir);
+  await ensurePagesMermaidSupport(targetDir);
+}
+
 async function ensurePagesEntryAndNavigation(targetDir: string) {
   const homePath = path.join(targetDir, 'Home.md');
   const indexPath = path.join(targetDir, 'index.md');
@@ -356,3 +361,64 @@ async function ensurePagesEntryAndNavigation(targetDir: string) {
     await fs.writeFile(navigationPath, sidebarContent, 'utf8');
   }
 }
+
+async function ensurePagesMermaidSupport(targetDir: string) {
+  const configPath = path.join(targetDir, '_config.yml');
+  if (!await fileExists(configPath)) {
+    await fs.writeFile(configPath, PAGES_CONFIG, 'utf8');
+  }
+
+  const layoutDir = path.join(targetDir, '_layouts');
+  const layoutPath = path.join(layoutDir, 'repo-wiki.html');
+  if (!await fileExists(layoutPath)) {
+    await fs.mkdir(layoutDir, { recursive: true });
+    await fs.writeFile(layoutPath, PAGES_LAYOUT, 'utf8');
+  }
+}
+
+const PAGES_CONFIG = `defaults:
+  - scope:
+      path: ""
+    values:
+      layout: "repo-wiki"
+`;
+
+const PAGES_LAYOUT = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if page.title %}{{ page.title | escape }}{% else %}{{ page.name | replace: '.md', '' | escape }}{% endif %}</title>
+  <style>
+    body { color: #24292f; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; margin: 0; }
+    main { box-sizing: border-box; margin: 0 auto; max-width: 980px; padding: 2rem; }
+    a { color: #0969da; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    pre { background: #f6f8fa; border-radius: 6px; overflow: auto; padding: 1rem; }
+    code { background: #f6f8fa; border-radius: 4px; padding: 0.1em 0.3em; }
+    pre code { background: transparent; padding: 0; }
+    table { border-collapse: collapse; display: block; overflow: auto; width: 100%; }
+    th, td { border: 1px solid #d0d7de; padding: 0.4rem 0.75rem; }
+    .mermaid { background: #fff; border: 1px solid #d0d7de; border-radius: 6px; margin: 1rem 0; padding: 1rem; }
+  </style>
+</head>
+<body>
+  <main>
+    {{ content }}
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });
+    const blocks = document.querySelectorAll('pre > code.language-mermaid');
+    blocks.forEach((block) => {
+      const container = document.createElement('div');
+      container.className = 'mermaid';
+      container.textContent = block.textContent || '';
+      block.parentElement?.replaceWith(container);
+    });
+    await mermaid.run({ nodes: document.querySelectorAll('.mermaid') });
+  </script>
+</body>
+</html>
+`;
+

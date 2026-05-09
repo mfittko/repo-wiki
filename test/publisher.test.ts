@@ -361,6 +361,11 @@ test('publishWiki publishes github-pages output into configured path and preserv
     assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'Home.md'), 'utf8'), '---\nkind: home\n---\n# Home\n');
     assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'index.md'), 'utf8'), '---\nkind: home\n---\n# Home\n');
     assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'Navigation.md'), 'utf8'), '---\nkind: sidebar\n---\n# Navigation\n');
+    const pagesConfig = await fs.readFile(path.join(checkoutDir, 'docs', '_config.yml'), 'utf8');
+    assert.match(pagesConfig, /layout: "repo-wiki"/);
+    const pagesLayout = await fs.readFile(path.join(checkoutDir, 'docs', '_layouts', 'repo-wiki.html'), 'utf8');
+    assert.match(pagesLayout, /mermaid@11/);
+    assert.match(pagesLayout, /code\.language-mermaid/);
     assert.equal(await fileExists(path.join(checkoutDir, 'Home.md')), false);
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
@@ -505,7 +510,9 @@ test('publishWiki preserves non-markdown files under github-pages publish path',
     await fs.mkdir(path.join(seedDir, 'docs', 'assets'), { recursive: true });
     await fs.writeFile(path.join(seedDir, 'docs', 'Old.md'), '# Old generated page\n', 'utf8');
     await fs.writeFile(path.join(seedDir, 'docs', 'assets', 'logo.txt'), 'keep asset\n', 'utf8');
+    await fs.mkdir(path.join(seedDir, 'docs', '_layouts'), { recursive: true });
     await fs.writeFile(path.join(seedDir, 'docs', '_config.yml'), 'title: Existing site\n', 'utf8');
+    await fs.writeFile(path.join(seedDir, 'docs', '_layouts', 'repo-wiki.html'), '<main>{{ content }}</main>\n', 'utf8');
     await fs.writeFile(path.join(seedDir, 'docs', 'CNAME'), 'example.com\n', 'utf8');
     await git(['add', '.'], seedDir);
     await git(['commit', '-m', 'Seed existing pages site'], seedDir);
@@ -527,6 +534,7 @@ test('publishWiki preserves non-markdown files under github-pages publish path',
     assert.equal(await fileExists(path.join(checkoutDir, 'docs', 'Old.md')), false);
     assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'assets', 'logo.txt'), 'utf8'), 'keep asset\n');
     assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', '_config.yml'), 'utf8'), 'title: Existing site\n');
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', '_layouts', 'repo-wiki.html'), 'utf8'), '<main>{{ content }}</main>\n');
     assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'CNAME'), 'utf8'), 'example.com\n');
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
