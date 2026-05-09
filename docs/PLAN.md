@@ -713,7 +713,7 @@ Parent: #19 and #5.
 Acceptance criteria:
 
 - Agents can read `Index.md` first to route to relevant pages.
-- `grep '^## \\[' Log.md | tail -5` or an equivalent documented pattern returns the latest operations.
+- `grep '^## \[' Log.md | tail -5` or an equivalent documented pattern returns the latest operations.
 - Re-running compilation with the same inputs does not create noisy index/log churn.
 
 #### Wiki health linting
