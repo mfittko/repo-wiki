@@ -305,6 +305,73 @@ test('publishWiki rejects unsafe git branch and remote arguments', async () => {
       }),
       /must not start with whitespace or "-"/
     );
+
+    await assert.rejects(
+      () => publishWiki({
+        wikiDir,
+        branch: 'main\ninjected',
+        dryRun: true
+      }),
+      /contains unsupported control characters/
+    );
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki rejects unsafe github-pages publish paths', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '/absolute', dryRun: true }),
+      /Publish path must be relative/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '../sibling', dryRun: true }),
+      /must not escape repository root/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs/../secret', dryRun: true }),
+      /must not escape repository root/
+    );
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki keeps existing pages entry and navigation files when already present', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '---\nkind: home\n---\n# Home\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, '_Sidebar.md'), '---\nkind: sidebar\n---\n# Navigation\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, 'index.md'), '# Existing index\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, 'Navigation.md'), '# Existing navigation\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      pagesPath: 'docs',
+      message: 'Publish pages wiki with existing navigation'
+    });
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'index.md'), 'utf8'), '# Existing index\n');
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'Navigation.md'), 'utf8'), '# Existing navigation\n');
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
