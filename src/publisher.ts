@@ -69,7 +69,7 @@ export async function publishWiki({
 
   try {
     try {
-      await runGit(['clone', publishRemote, checkoutDir]);
+      await runGit(['clone', '--branch', branch, publishRemote, checkoutDir]);
       cloned = true;
     } catch {
       await fs.mkdir(checkoutDir, { recursive: true });

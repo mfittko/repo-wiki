@@ -53,3 +53,46 @@ test('publishWiki strips frontmatter from top-level and nested markdown without 
     await fs.rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test('publishWiki reports no changes when only stripped frontmatter changes', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '---\nkind: home\nsource_commit: abc123\n---\n# Home\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    const firstPublish = await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      branch: 'master',
+      message: 'Publish test wiki',
+      frontmatterPolicy: 'strip'
+    });
+
+    assert.equal(firstPublish.summary.status, 'published');
+
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '---\nkind: home\nsource_commit: def456\n---\n# Home\n', 'utf8');
+
+    const secondPublish = await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      branch: 'master',
+      message: 'Publish changed frontmatter only',
+      frontmatterPolicy: 'strip'
+    });
+
+    assert.equal(secondPublish.summary.status, 'no-changes');
+    assert.equal(secondPublish.summary.frontmatterPolicy, 'strip');
+    assert.equal(secondPublish.summary.pages, 1);
+
+    await git(['clone', '--branch', 'master', remoteDir, checkoutDir]);
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'Home.md'), 'utf8'), '# Home\n');
+    assert.equal(await fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8'), '---\nkind: home\nsource_commit: def456\n---\n# Home\n');
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
