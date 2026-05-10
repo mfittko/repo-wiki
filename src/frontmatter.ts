@@ -126,7 +126,10 @@ type SupportedFrontmatter = {
 };
 
 const MAX_VISIBLE_SOURCE_PATHS = 10;
-const SECONDARY_EVIDENCE_NOTE = 'This page is derived from markdown documentation, which is secondary evidence. Validate operational/current-behavior claims against source, tests, CI, config, or schemas.';
+const SECONDARY_EVIDENCE_NOTE = [
+  'This page is derived from markdown documentation, which is secondary evidence.',
+  'Validate operational/current-behavior claims against source, tests, CI, config, or schemas.'
+].join(' ');
 const REVIEW_ORIENTED_CLAIM_STATUS = /\b(?:review[-_ ]?needed|documentation[-_ ]?derived|docs[-_ ]?derived|documentation[-_ ]?review|docs[-_ ]?review)\b/i;
 
 function renderFrontmatterAsProvenance(content: string): string {
@@ -389,7 +392,7 @@ function formatCommit(commit: string, githubRepoBase: string | null): string {
     return asCodeSpan(commit);
   }
   const shortCommit = commit.length > 7 ? commit.slice(0, 7) : commit;
-  return `[\`${escapeInlineCode(shortCommit)}\`](${githubRepoBase}/tree/${encodeURIComponent(commit)})`;
+  return `[${asCodeSpan(shortCommit)}](${githubRepoBase}/tree/${encodeURIComponent(commit)})`;
 }
 
 function formatSourcePaths(sourcePaths: string[], githubRepoBase: string | null, sourceCommit: string | undefined): string {
@@ -421,9 +424,10 @@ function isDocumentationPath(filePath: string): boolean {
 }
 
 function asCodeSpan(value: string): string {
-  return `\`${escapeInlineCode(value)}\``;
-}
-
-function escapeInlineCode(value: string): string {
-  return value.replace(/`/g, '\\`');
+  const backtickRuns: string[] = value.match(/`+/g) || [];
+  const longestRun = backtickRuns.reduce((max, run) => Math.max(max, run.length), 0);
+  const fence = '`'.repeat(Math.max(1, longestRun + 1));
+  const needsPadding = value.startsWith('`') || value.endsWith('`') || /^\s|\s$/.test(value);
+  const body = needsPadding ? ` ${value} ` : value;
+  return `${fence}${body}${fence}`;
 }

@@ -220,7 +220,7 @@ test('applyFrontmatterPolicy provenance omits secret-like metadata values', () =
 });
 
 test('applyFrontmatterPolicy provenance leaves invalid leading frontmatter unchanged', () => {
-  const input = '---\nsource_paths: ["src/frontmatter.ts"\n---\n# Page\n';
+  const input = '---\nsource_repo: "https://github.com/mfittko/repo-wiki.git\n---\n# Page\n';
   const result = applyFrontmatterPolicy(input, 'provenance');
   assert.equal(result, input);
 });
