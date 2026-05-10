@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { compileWiki } from '../src/compiler.js';
+import { lintWiki } from '../src/linter.js';
 import { extractHumanNotes } from '../src/page-ownership.js';
 import { MockLLMProvider } from '../src/llm-provider.js';
 import type { LLMProvider, LLMRequest, LLMResponse } from '../src/llm-provider.js';
@@ -915,6 +916,96 @@ test('compileWiki normalizes LLM block-list source_paths without leaving sequenc
     assert.match(modulePage, /custom_field: "keep-me"/);
     assert.doesNotMatch(frontmatterBlock, /^\s+- "src\/provider-[ab]\.ts"/m);
     assert.match(modulePage, /Provider generated body/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki in LLM mode normalizes docs-only module evidence conservatively', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'docs-only-commit',
+    mode: 'bootstrap',
+    totals: { languages: { Markdown: 2, JSON: 1 }, categories: { docs: 2, package: 1 }, runtime_hints: {} },
+    files: [
+      { path: 'package.json', category: 'package', language: 'JSON', imports: [], runtime_hints: [], reasons: ['package'] },
+      { path: 'README.md', category: 'docs', language: 'Markdown', imports: [], runtime_hints: [], reasons: ['docs', 'readme'] },
+      { path: 'docs/operations.md', category: 'docs', language: 'Markdown', imports: [], runtime_hints: [], reasons: ['docs'] }
+    ],
+    documentation: {
+      enabled: true,
+      authority: 'secondary',
+      summary: { files: 2, claims: 1, stale: 0, commands: 0, env_vars: 0, file_paths: 0 },
+      files: [
+        { path: 'README.md', status: 'unvalidated', authority: 'secondary', stale: false, claims: [{ text: 'The docs describe usage.' }] },
+        { path: 'docs/operations.md', status: 'unvalidated', authority: 'secondary', stale: false, claims: [{ text: 'The docs describe operations.' }] }
+      ]
+    },
+    analysis: { package_scripts: [], dependency_graph: { edges: [], summary: {} }, test_to_source: { mappings: [], summary: {} } }
+  };
+  const plan = {
+    pages: createPlan().pages,
+    modules: [
+      {
+        slug: 'Documentation',
+        name: 'Documentation',
+        files: ['README.md', 'docs/operations.md'],
+        categories: { docs: 2 },
+        languages: { Markdown: 2 },
+        runtime_hints: {},
+        important_reasons: ['docs', 'readme']
+      }
+    ]
+  };
+  const provider: LLMProvider = {
+    name: 'docs-only-mock',
+    async complete(_request: LLMRequest): Promise<LLMResponse> {
+      return {
+        provider: 'docs-only-mock',
+        content: [
+          '---',
+          'kind: "module"',
+          'compiled_at: "2026-05-10T00:00:00.000Z"',
+          'source_repo: "provider-origin"',
+          'source_commit: "provider-commit"',
+          'source_paths: ["README.md", "docs/operations.md"]',
+          'page_state: "generated"',
+          'confidence: "high"',
+          'claim_status: "source-grounded"',
+          '---',
+          '',
+          '# Documentation',
+          '',
+          'This page summarizes operational behavior from the documentation set.',
+          '',
+          '<!-- HUMAN_NOTES_START -->',
+          '<!-- HUMAN_NOTES_END -->',
+          ''
+        ].join('\n')
+      };
+    }
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+  const config = { compiler: { mode: 'llm' } };
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir, config, _provider: provider });
+
+    const modulePage = await fs.readFile(path.join(wikiDir, 'Documentation.md'), 'utf8');
+    assert.match(modulePage, /source_paths: \["README\.md","docs\/operations\.md"\]/);
+    assert.match(modulePage, /claim_status: "review-needed"/);
+    assert.match(modulePage, /confidence: "low"/);
+    assert.doesNotMatch(modulePage, /claim_status: "source-grounded"/);
+    assert.doesNotMatch(modulePage, /confidence: "high"/);
+    assert.match(modulePage, /markdown documentation is secondary evidence/i);
+    assert.match(modulePage, /validated against source code, tests, CI workflows, runtime configuration, or schemas/i);
+
+    const lint = await lintWiki({ wikiDir, scanDir });
+    const moduleProvenanceWarning = lint.issues.find((issue) => issue.code === 'missing-source-provenance' && issue.message.includes('Documentation.md'));
+    const moduleSourcePathsWarning = lint.issues.find((issue) => issue.code === 'missing-source-paths' && issue.message.includes('Documentation.md'));
+    assert.equal(moduleProvenanceWarning, undefined);
+    assert.equal(moduleSourcePathsWarning, undefined);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

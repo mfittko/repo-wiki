@@ -246,6 +246,7 @@ function buildModulePromptContext(
       excerpt: di.excerpt,
     })),
     existingContent,
+    docsOnlyModule: isDocsOnlyModule(module),
     moduleInfo: {
       name: module.name,
       slug: module.slug,
@@ -255,6 +256,11 @@ function buildModulePromptContext(
       important_reasons: module.important_reasons,
     },
   };
+}
+
+function isDocsOnlyModule(module: any) {
+  const files = Array.isArray(module?.files) ? module.files : [];
+  return files.length > 0 && files.every((entry) => isDocumentationPath(entry));
 }
 
 function formatLLMError(entry: { file: string; error: string; issues?: any[] }): string {
@@ -290,23 +296,52 @@ function normalizeLLMGeneratedContent(content: string, manifest: any, module: an
   }
 
   const frontmatterRaw = content.slice(4, closing);
-  const body = content.slice(closing);
-  const lines = removeNormalizedFrontmatterFields(frontmatterRaw.split('\n'));
-  const withoutNormalized = lines.filter((line) => line.trim().length > 0);
   const sourcePaths = Array.isArray(module?.files) && module.files.length > 0 ? module.files.slice(0, 20) : collectPrimarySourcePaths(manifest).slice(0, 20);
+  const docsOnlyModule = sourcePaths.length > 0 && sourcePaths.every((entry) => isDocumentationPath(entry));
+  const body = normalizeLLMGeneratedBody(content.slice(closing), docsOnlyModule);
+  const lines = removeNormalizedFrontmatterFields(frontmatterRaw.split('\n'), docsOnlyModule);
+  const withoutNormalized = lines.filter((line) => line.trim().length > 0);
   const normalizedLines = [
     `source_repo: ${JSON.stringify(manifest.remote)}`,
     `source_commit: ${JSON.stringify(manifest.commit)}`,
     'page_state: "generated"',
     `source_paths: ${JSON.stringify(sourcePaths)}`,
+    ...(docsOnlyModule ? ['claim_status: "review-needed"', 'confidence: "low"'] : []),
     ...withoutNormalized
   ];
 
   return `---\n${normalizedLines.join('\n')}${body}`;
 }
 
-function removeNormalizedFrontmatterFields(lines: string[]): string[] {
+function normalizeLLMGeneratedBody(body: string, docsOnlyModule: boolean): string {
+  if (!docsOnlyModule || hasSecondaryDocumentationLabel(body)) {
+    return body;
+  }
+
+  const evidenceNote = [
+    '',
+    '> Evidence note: This module page is generated from markdown documentation only. Markdown documentation is secondary evidence; operational and current-behavior claims must be validated against source code, tests, CI workflows, runtime configuration, or schemas before being treated as authoritative.',
+    ''
+  ].join('\n');
+
+  const titleMatch = /^(\n---[^\n]*\n\s*# [^\n]+\n?)/.exec(body);
+  if (titleMatch) {
+    return `${titleMatch[1]}${evidenceNote}${body.slice(titleMatch[1].length)}`;
+  }
+
+  return `${body}${evidenceNote}`;
+}
+
+function hasSecondaryDocumentationLabel(content: string) {
+  return /(secondary evidence|secondary documentation|unvalidated documentation|markdown documentation is ingested as secondary evidence)/i.test(content);
+}
+
+function removeNormalizedFrontmatterFields(lines: string[], removeConservativeEvidenceFields = false): string[] {
   const normalizedFields = new Set(['source_repo', 'source_commit', 'page_state', 'source_paths']);
+  if (removeConservativeEvidenceFields) {
+    normalizedFields.add('claim_status');
+    normalizedFields.add('confidence');
+  }
   const result: string[] = [];
 
   for (let index = 0; index < lines.length;) {
@@ -931,6 +966,24 @@ function collectPrimarySourcePaths(manifest: any) {
   return uniqueSorted((manifest.files || [])
     .filter((file) => file?.path && file.category !== 'docs')
     .map((file) => file.path));
+}
+
+function isDocumentationPath(entry: string | number) {
+  const normalized = String(entry).trim().replace(/\\/g, '/').toLowerCase();
+  const segments = normalized.split('/').filter(Boolean);
+  const basename = segments.at(-1) || '';
+  const extension = path.extname(basename);
+  const firstSegment = segments[0] || '';
+
+  if (['.md', '.mdx', '.markdown'].includes(extension)) {
+    return true;
+  }
+
+  if (['readme', 'changelog'].includes(basename)) {
+    return true;
+  }
+
+  return extension === '.json' && firstSegment === '.llmwiki' && segments.includes('docs');
 }
 
 function sourcePathsOrPrimary(manifest: any, paths: Array<string | number>) {

@@ -71,6 +71,8 @@ export interface PromptContext {
   repoCommit?: string;
   sourceCards: SourceCardContext[];
   docCards?: DocCardContext[];
+  /** True when a module's evidence paths are all markdown/documentation files. */
+  docsOnlyModule?: boolean;
   /** Current wiki page text, if one already exists. */
   existingContent?: string;
   /** Only set for module archetype. */
@@ -252,6 +254,14 @@ Generate a complete "${context.pageTitle}" wiki page that:
  */
 export function buildModulePrompt(context: PromptContext): BuiltPrompt {
   const mod = context.moduleInfo;
+  const docsOnlyInstructions = context.docsOnlyModule ? `
+
+Docs-only evidence constraint:
+- Every module source path is markdown/documentation, so these paths are secondary documentation evidence, not authoritative source evidence.
+- The page body must explicitly state that markdown documentation is secondary evidence and that operational/current-behavior claims must be validated against source code, tests, CI workflows, runtime configuration, or schemas.
+- Use conservative metadata: claim_status: "review-needed" and confidence: "low" (or at most "medium" if the page is purely descriptive of documentation contents).
+- Do not use claim_status: "source-grounded" or confidence: "high" for a docs-only module.
+- Prefer describing what the documentation says, plus validation gaps, over asserting current runtime behavior.` : '';
   return {
     system: BASE_SYSTEM_PROMPT,
     user: `Generate a module wiki page for: ${mod?.name ?? context.pageTitle}
@@ -290,7 +300,7 @@ Generate a complete module wiki page with the following constraints:
   confidence: "medium"
   claim_status: "source-grounded"
   ---
-- Use conservative confidence and claim status metadata that matches the evidence provided.
+- Use conservative confidence and claim status metadata that matches the evidence provided.${docsOnlyInstructions}
 - Include the following sections:
   - Purpose (grounded in source cards, not speculation)
   - Source file list
