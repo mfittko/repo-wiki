@@ -3,6 +3,10 @@ import path from 'node:path';
 import { cleanDocumentedPathTarget, hasParentDirectorySegment, isGeneratedOutputReference, normalizeRoutePath } from './docs-validation.js';
 
 const DOC_EXTENSIONS = ['.md', '.mdx', '.markdown'];
+const ROUTE_PATH_PART_PATTERN = "[A-Za-z0-9._~:@!$&'()*+,;=%\\-[\\]{}]+";
+const ROUTE_PATH_PATTERN = `(?:\\/(?:${ROUTE_PATH_PART_PATTERN}(?:\\/+${ROUTE_PATH_PART_PATTERN})*)?\\/?)`;
+const ROUTE_CLAIM_PATTERN = new RegExp(`\\b(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|ALL)\\b\\s+(${ROUTE_PATH_PATTERN})`, 'gi');
+const ROUTE_TABLE_PATH_PATTERN = new RegExp(`(?:^|[\\s|\`(])(${ROUTE_PATH_PATTERN})(?=$|[\\s|\`),.;:!?])`, 'g');
 
 // Npm lifecycle commands that map directly to package.json scripts
 const NPM_LIFECYCLE_SCRIPTS = new Set(['test', 'start', 'stop', 'restart']);
@@ -242,7 +246,8 @@ function pushRouteMatches(routes: any[], seen: Set<string>, line: string, lineNu
   const snippet = line.trim().slice(0, 280);
   if (!snippet) return;
 
-  for (const match of line.matchAll(/\b(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|ALL)\b\s+((?:\/(?:[A-Za-z0-9._~:@!$&'()*+,;=%\-[\]{}]+(?:\/+[A-Za-z0-9._~:@!$&'()*+,;=%\-[\]{}]+)*)?\/?))/gi)) {
+  ROUTE_CLAIM_PATTERN.lastIndex = 0;
+  for (const match of line.matchAll(ROUTE_CLAIM_PATTERN)) {
     pushRoute(routes, seen, {
       line: lineNumber,
       text: snippet,
@@ -254,7 +259,8 @@ function pushRouteMatches(routes: any[], seen: Set<string>, line: string, lineNu
 
   if (line.includes('|')) {
     const methods = [...line.matchAll(/\b(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|ALL)\b/gi)].map((match) => match[1].toUpperCase());
-    const paths = [...line.matchAll(/(?:^|[\s|`(])((?:\/(?:[A-Za-z0-9._~:@!$&'()*+,;=%\-[\]{}]+(?:\/+[A-Za-z0-9._~:@!$&'()*+,;=%\-[\]{}]+)*)?\/?))(?=$|[\s|`),.;:!?])/g)].map((match) => normalizeRoutePath(match[1]));
+    ROUTE_TABLE_PATH_PATTERN.lastIndex = 0;
+    const paths = [...line.matchAll(ROUTE_TABLE_PATH_PATTERN)].map((match) => normalizeRoutePath(match[1]));
     const pairCount = Math.min(methods.length, paths.length);
     for (let index = 0; index < pairCount; index += 1) {
       pushRoute(routes, seen, {
