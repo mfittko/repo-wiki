@@ -70,6 +70,8 @@ export async function compileWiki({
   // Track which module pages are owned by the LLM synthesis path (success or failure).
   // These are excluded from the deterministic fallback below.
   const llmHandledModules = new Set<string>();
+  // Track successfully LLM-synthesized module pages for summary reporting.
+  const llmGeneratedPages = new Set<string>();
   let skipped = 0;
   const skippedByState: Record<string, number> = {};
 
@@ -129,7 +131,9 @@ export async function compileWiki({
       // below, so invalid LLM output cannot trigger partial wiki writes.
       try {
         const patch = await synthesizeWikiPage(llmProvider!, request, { maxRetries: retries });
-        pages.set(modulePage, normalizeLLMGeneratedContent(patch.content, manifest, module));
+        const normalized = normalizeLLMGeneratedContent(patch.content, manifest, module);
+        pages.set(modulePage, normalized);
+        llmGeneratedPages.add(modulePage);
       } catch (err) {
         if (err instanceof WikiPatchError) {
           llmErrors.push({ file: modulePage, error: err.message, issues: err.issues });
@@ -202,7 +206,10 @@ export async function compileWiki({
     contexts: pageContexts,
     summary: {
       wikiDir,
+      compiler_mode: compilerMode,
       pages: pages.size,
+      deterministic_pages: pages.size - llmGeneratedPages.size,
+      llm_pages: llmGeneratedPages.size,
       skipped,
       skipped_by_state: skippedByState,
       commit: manifest.commit,
