@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { extractFrontmatterBlock, stripFrontmatter } from './frontmatter.js';
 import { containsSecretLikeContent } from './secret-patterns.js';
 import { readJson } from './utils/fs.js';
 
@@ -118,17 +119,7 @@ async function listMarkdown(wikiDir: string): Promise<string[]> {
 }
 
 function hasSourceCommitFrontmatter(content: string): boolean {
-  const normalized = content.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
-  if (!normalized.startsWith('---\n')) {
-    return false;
-  }
-
-  const end = normalized.indexOf('\n---', 4);
-  if (end === -1) {
-    return false;
-  }
-
-  return /^source_commit:/m.test(normalized.slice(4, end));
+  return Object.hasOwn(parseFrontmatter(content), 'source_commit');
 }
 
 function extractWikiLinks(content: string): string[] {
@@ -147,17 +138,13 @@ function extractWikiLinks(content: string): string[] {
 }
 
 function parseFrontmatter(content: string) {
-  const normalized = content.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
-  if (!normalized.startsWith('---\n')) {
-    return {};
-  }
-  const end = normalized.indexOf('\n---', 4);
-  if (end === -1) {
+  const block = extractFrontmatterBlock(content);
+  if (!block) {
     return {};
   }
 
   const result: Record<string, any> = {};
-  const lines = normalized.slice(4, end).split('\n');
+  const lines = block.yaml.split('\n');
   let index = 0;
 
   while (index < lines.length) {
@@ -222,7 +209,20 @@ function hasExplicitSecondaryDocumentationProvenance(content: string, frontmatte
 
 function isDocumentationPath(entry: string) {
   const normalized = entry.trim().replace(/\\/g, '/').toLowerCase();
-  return normalized.endsWith('.md') || normalized.startsWith('docs/') || normalized === 'readme.md' || normalized === 'changelog.md' || normalized.includes('/docs/');
+  const segments = normalized.split('/').filter(Boolean);
+  const basename = segments.at(-1) || '';
+  const extension = path.extname(basename);
+  const firstSegment = segments[0] || '';
+
+  if (['.md', '.mdx', '.markdown'].includes(extension)) {
+    return true;
+  }
+
+  if (['readme', 'changelog'].includes(basename)) {
+    return true;
+  }
+
+  return extension === '.json' && firstSegment === '.llmwiki' && segments.includes('docs');
 }
 
 function shouldCheckGeneratedProvenance(relativePath: string, frontmatter: Record<string, any>, content: string) {
@@ -290,18 +290,6 @@ function hasProvenanceSignal(content: string, frontmatter: Record<string, any>) 
   }
 
   return false;
-}
-
-function stripFrontmatter(content: string) {
-  const normalized = content.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
-  if (!normalized.startsWith('---\n')) {
-    return normalized;
-  }
-  const end = normalized.indexOf('\n---', 4);
-  if (end === -1) {
-    return normalized;
-  }
-  return normalized.slice(end + 4).replace(/^\n/, '');
 }
 
 function error(code: string, message: string) {

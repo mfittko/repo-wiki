@@ -75,6 +75,12 @@ test('stripFrontmatter strips trailing whitespace on opening delimiter', () => {
   assert.equal(result, 'Content.');
 });
 
+test('stripFrontmatter strips BOM-prefixed frontmatter', () => {
+  const input = '\uFEFF---\nkey: value\n---\nContent.';
+  const result = stripFrontmatter(input);
+  assert.equal(result, 'Content.');
+});
+
 test('stripFrontmatter does not strip a second blank line when no blank line follows frontmatter', () => {
   const input = '---\nkind: "x"\n---\nContent.\n';
   const result = stripFrontmatter(input);

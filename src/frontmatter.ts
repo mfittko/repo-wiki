@@ -31,7 +31,7 @@ export function parseFrontmatterPolicy(value: string | undefined): FrontmatterPo
  * Strips a valid leading YAML frontmatter block from markdown content.
  *
  * A valid frontmatter block:
- *   - Starts with `---` (optionally trailing whitespace) on the very first line
+ *   - Starts with `---` (optionally after a UTF-8 BOM, and optionally trailing whitespace) on the very first line
  *   - Contains zero or more lines of YAML
  *   - Ends with `---` or `...` on a subsequent line
  *
@@ -40,39 +40,50 @@ export function parseFrontmatterPolicy(value: string | undefined): FrontmatterPo
  *
  * `---` blocks that appear elsewhere in the document are never touched.
  */
-export function stripFrontmatter(content: string): string {
-  if (!content.startsWith('---')) {
-    return content;
+export type FrontmatterBlock = {
+  yaml: string;
+  body: string;
+};
+
+export function extractFrontmatterBlock(content: string): FrontmatterBlock | null {
+  const source = content.startsWith('\uFEFF') ? content.slice(1) : content;
+  if (!source.startsWith('---')) {
+    return null;
   }
 
   // The opening `---` must be the entire first line (allow trailing whitespace)
-  const firstNewline = content.indexOf('\n');
+  const firstNewline = source.indexOf('\n');
   if (firstNewline === -1) {
     // Single-line document starting with `---` – treat as thematic break
-    return content;
+    return null;
   }
 
-  const firstLine = content.slice(0, firstNewline);
+  const firstLine = source.slice(0, firstNewline);
   if (firstLine.trimEnd() !== '---') {
-    return content;
+    return null;
   }
 
   // Search for the closing `---` or `...` on a line by itself
-  const rest = content.slice(firstNewline + 1);
+  const rest = source.slice(firstNewline + 1);
   const lines = rest.split('\n');
 
   for (let i = 0; i < lines.length; i++) {
     const trimmed = lines[i].trimEnd();
     if (trimmed === '---' || trimmed === '...') {
-      // Found the closing delimiter; return everything after it
-      const afterFm = lines.slice(i + 1).join('\n');
-      // Strip a single leading blank line that was separating frontmatter from body
-      return afterFm.replace(/^(?:\r\n|\n)/, '');
+      const body = lines.slice(i + 1).join('\n').replace(/^(?:\r\n|\n)/, '');
+      return {
+        yaml: lines.slice(0, i).join('\n'),
+        body
+      };
     }
   }
 
-  // No closing delimiter – malformed / unclosed frontmatter; leave unchanged
-  return content;
+  // No closing delimiter – malformed / unclosed frontmatter.
+  return null;
+}
+
+export function stripFrontmatter(content: string): string {
+  return extractFrontmatterBlock(content)?.body ?? content;
 }
 
 /**

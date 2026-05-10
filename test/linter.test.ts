@@ -228,6 +228,58 @@ test('lintWiki does not treat documentation paths as authoritative provenance un
   }
 });
 
+test('lintWiki treats source files under docs-named directories as authoritative provenance', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Module-Docs-Source.md': generatedPage(
+      'Docs Source',
+      'This page claims current runtime behavior based on a source file path.',
+      ['kind: "module"', 'source_paths: ["src/docs/parser.ts"]']
+    )
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const missingProvenance = result.issues.find((issue) => issue.code === 'missing-source-provenance' && issue.message.includes('Module-Docs-Source.md'));
+
+    assert.equal(missingProvenance, undefined);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintWiki parses and strips frontmatter using the shared delimiter rules', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Module-Dot-Delimiter.md': [
+      '---   ',
+      'source_commit: "abc123"',
+      'page_state: "generated"',
+      'kind: "module"',
+      'source_paths:',
+      '  - "src/core.ts"',
+      '...',
+      '',
+      '# Dot Delimiter',
+      '',
+      'This module documents runtime behavior using scanner-derived source files.'
+    ].join('\n')
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const sourceCommitIssue = result.issues.find((issue) => issue.code === 'missing-source-commit' && issue.message.includes('Module-Dot-Delimiter.md'));
+    const missingProvenance = result.issues.find((issue) => issue.code === 'missing-source-provenance' && issue.message.includes('Module-Dot-Delimiter.md'));
+    const missingSourcePaths = result.issues.find((issue) => issue.code === 'missing-source-paths' && issue.message.includes('Module-Dot-Delimiter.md'));
+
+    assert.equal(sourceCommitIssue, undefined);
+    assert.equal(missingProvenance, undefined);
+    assert.equal(missingSourcePaths, undefined);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('lintWiki warns for generated module pages with material claims but missing provenance metadata', async () => {
   const { dir, wikiDir, scanDir } = await writeWikiFixture({
     ...requiredPages,
