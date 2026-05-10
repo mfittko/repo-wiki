@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { publishWiki } from '../src/publisher.js';
+import { publishWiki, rewriteInternalWikiLinks } from '../src/publisher.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -740,4 +740,337 @@ test('publishWiki keeps existing pages entry and navigation files when already p
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
+});
+
+test('publishWiki generates _includes/wiki_nav.html from _Sidebar.md for github-pages', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, '_Sidebar.md'), [
+      '## Contents',
+      '- [Home](Home)',
+      '- [Index](Index)',
+      '## Foundation',
+      '- [Architecture](Architecture)',
+      '- [Build, Test & Run](Build-Test-and-Run)',
+    ].join('\n') + '\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    const result = await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      pagesPath: 'docs',
+      message: 'Publish with sidebar'
+    });
+
+    assert.equal(result.summary.status, 'published');
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    const navHtml = await fs.readFile(path.join(checkoutDir, '_includes', 'wiki_nav.html'), 'utf8');
+    assert.match(navHtml, /<h4 class="nav-section">Contents<\/h4>/);
+    assert.match(navHtml, /<a href="Home\.md">Home<\/a>/);
+    assert.match(navHtml, /<a href="Index\.md">Index<\/a>/);
+    assert.match(navHtml, /<h4 class="nav-section">Foundation<\/h4>/);
+    assert.match(navHtml, /<a href="Architecture\.md">Architecture<\/a>/);
+    assert.match(navHtml, /<a href="Build-Test-and-Run\.md">Build, Test &amp; Run<\/a>/);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki generates _includes/wiki_nav.html from Navigation.md when _Sidebar.md is absent', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, 'Navigation.md'), '## Nav\n- [Home](Home)\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      message: 'Publish with nav'
+    });
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    const navHtml = await fs.readFile(path.join(checkoutDir, '_includes', 'wiki_nav.html'), 'utf8');
+    assert.match(navHtml, /<a href="Home\.md">Home<\/a>/);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki writes empty _includes/wiki_nav.html when no sidebar content exists', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      message: 'Publish without sidebar'
+    });
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    assert.equal(await fileExists(path.join(checkoutDir, '_includes', 'wiki_nav.html')), true);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki preserves existing _includes/wiki_nav.html without overwriting', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const seedDir = path.join(tempDir, 'seed');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, '_Sidebar.md'), '## Nav\n- [Home](Home)\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+    await git(['clone', remoteDir, seedDir]);
+    await git(['config', 'user.name', 'repo-wiki-test'], seedDir);
+    await git(['config', 'user.email', 'repo-wiki-test@example.com'], seedDir);
+    await fs.mkdir(path.join(seedDir, '_includes'), { recursive: true });
+    await fs.writeFile(path.join(seedDir, '_includes', 'wiki_nav.html'), '<nav>custom nav</nav>\n', 'utf8');
+    await git(['add', '.'], seedDir);
+    await git(['commit', '-m', 'Seed custom nav include'], seedDir);
+    await git(['push', 'origin', 'HEAD:gh-pages'], seedDir);
+
+    await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      message: 'Publish without overwriting custom nav'
+    });
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    assert.equal(
+      await fs.readFile(path.join(checkoutDir, '_includes', 'wiki_nav.html'), 'utf8'),
+      '<nav>custom nav</nav>\n'
+    );
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki layout contains navigation sidebar and breadcrumb elements', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      message: 'Publish for layout check'
+    });
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    const layout = await fs.readFile(path.join(checkoutDir, '_layouts', 'repo-wiki.html'), 'utf8');
+
+    assert.match(layout, /class="sidebar"/);
+    assert.match(layout, /class="site-nav"/);
+    assert.match(layout, /class="breadcrumb"/);
+    assert.match(layout, /class="back-link"/);
+    assert.match(layout, /\{% include wiki_nav\.html %\}/);
+    assert.match(layout, /Home\.md/);
+    assert.match(layout, /Index\.md/);
+    assert.match(layout, /Architecture\.md/);
+    assert.match(layout, /Agent-Context-Pack\.md/);
+    assert.match(layout, /Build-Test-and-Run\.md/);
+    assert.match(layout, /Documentation-Debt-Report\.md/);
+    assert.match(layout, /_kind == 'module'/);
+    assert.match(layout, /_kind != 'home'/);
+    assert.match(layout, /Back to Index/);
+    assert.match(layout, /mermaid@11/);
+    assert.match(layout, /code\.language-mermaid/);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki writes wiki_pages_dir to _config.yml when pagesPath is not root', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      pagesPath: 'smoke/pr-test',
+      message: 'Publish under nested path'
+    });
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    const config = await fs.readFile(path.join(checkoutDir, '_config.yml'), 'utf8');
+    assert.match(config, /layout: "repo-wiki"/);
+    assert.match(config, /wiki_pages_dir: "smoke\/pr-test"/);
+    assert.equal(await fileExists(path.join(checkoutDir, 'smoke', 'pr-test', 'Home.md')), true);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki does not add wiki_pages_dir to _config.yml when pagesPath is root', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      pagesPath: '.',
+      message: 'Publish at root'
+    });
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    const config = await fs.readFile(path.join(checkoutDir, '_config.yml'), 'utf8');
+    assert.match(config, /layout: "repo-wiki"/);
+    assert.equal(config.includes('wiki_pages_dir'), false);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki rewrites internal wiki links to use .md extension for github-pages output', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), [
+      '# Home',
+      '',
+      'See [Architecture](Architecture) for the design.',
+      'Also see [Build steps](./Build-Test-and-Run.md).',
+      'And [Index](Index.md#overview) for section links.',
+      'External: [GitHub](https://github.com)',
+      'Anchor only: [Top](#top)',
+      'Image: ![Logo](assets/logo.png)',
+      'Asset: [Download](guide.pdf)',
+      ''
+    ].join('\n'), 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      message: 'Publish with link rewriting'
+    });
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    const published = await fs.readFile(path.join(checkoutDir, 'Home.md'), 'utf8');
+
+    assert.match(published, /\[Architecture\]\(Architecture\.md\)/);
+    assert.match(published, /\[Build steps\]\(Build-Test-and-Run\.md\)/);
+    assert.match(published, /\[Index\]\(Index\.md#overview\)/);
+    assert.match(published, /\[GitHub\]\(https:\/\/github\.com\)/);
+    assert.match(published, /\[Top\]\(#top\)/);
+    assert.match(published, /!\[Logo\]\(assets\/logo\.png\)/);
+    assert.match(published, /\[Download\]\(guide\.pdf\)/);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki does not rewrite internal links for github-wiki target', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n\nSee [Architecture](Architecture).\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      branch: 'master',
+      frontmatterPolicy: 'preserve',
+      message: 'Publish wiki without link rewriting'
+    });
+
+    await git(['clone', '--branch', 'master', remoteDir, checkoutDir]);
+    const published = await fs.readFile(path.join(checkoutDir, 'Home.md'), 'utf8');
+    assert.match(published, /\[Architecture\]\(Architecture\)/);
+    assert.equal(published.includes('Architecture.md'), false);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('rewriteInternalWikiLinks normalises bare page names, strips leading ./, and preserves special links', () => {
+  assert.equal(rewriteInternalWikiLinks('[Home](Home)'), '[Home](Home.md)');
+  assert.equal(rewriteInternalWikiLinks('[Arch](Architecture)'), '[Arch](Architecture.md)');
+  assert.equal(rewriteInternalWikiLinks('[Page](./Page.md)'), '[Page](Page.md)');
+  assert.equal(rewriteInternalWikiLinks('[Page](./Page)'), '[Page](Page.md)');
+  assert.equal(rewriteInternalWikiLinks('[Index](Index.md#section)'), '[Index](Index.md#section)');
+  assert.equal(rewriteInternalWikiLinks('[Index](Index#section)'), '[Index](Index.md#section)');
+  assert.equal(rewriteInternalWikiLinks('[GitHub](https://github.com)'), '[GitHub](https://github.com)');
+  assert.equal(rewriteInternalWikiLinks('[Mail](mailto:test@example.com)'), '[Mail](mailto:test@example.com)');
+  assert.equal(rewriteInternalWikiLinks('[FTP](ftp://example.com)'), '[FTP](ftp://example.com)');
+  assert.equal(rewriteInternalWikiLinks('[Proto](//example.com)'), '[Proto](//example.com)');
+  assert.equal(rewriteInternalWikiLinks('[Top](#top)'), '[Top](#top)');
+  assert.equal(rewriteInternalWikiLinks('![Logo](logo.png)'), '![Logo](logo.png)');
+  assert.equal(rewriteInternalWikiLinks('![Img](photo.jpg)'), '![Img](photo.jpg)');
+  assert.equal(rewriteInternalWikiLinks('![Diagram](diagram.svg)'), '![Diagram](diagram.svg)');
+  assert.equal(rewriteInternalWikiLinks('[PDF](guide.pdf)'), '[PDF](guide.pdf)');
+  assert.equal(rewriteInternalWikiLinks('[JSON](data.json)'), '[JSON](data.json)');
+  assert.equal(rewriteInternalWikiLinks('[YAML](config.yml)'), '[YAML](config.yml)');
+  const result = rewriteInternalWikiLinks('[Home](Home) and [Arch](Architecture) and [GitHub](https://github.com)');
+  assert.equal(result, '[Home](Home.md) and [Arch](Architecture.md) and [GitHub](https://github.com)');
 });

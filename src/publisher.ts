@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileExists } from './utils/fs.js';
 import { getGitStatus, runGit } from './utils/git.js';
-import { applyFrontmatterPolicy, type FrontmatterPolicy } from './frontmatter.js';
+import { applyFrontmatterPolicy, stripFrontmatter, type FrontmatterPolicy } from './frontmatter.js';
 
 export type PublishTarget = 'github-wiki' | 'github-pages';
 
@@ -108,9 +108,9 @@ export async function publishWiki({
     } else {
       await cleanPublishPath(checkoutDir, publishDir);
     }
-    await copyGeneratedWiki(absoluteWikiDir, publishDir, publishFrontmatterPolicy);
+    await copyGeneratedWiki(absoluteWikiDir, publishDir, publishFrontmatterPolicy, publishTarget === 'github-pages');
     if (publishTarget === 'github-pages') {
-      await ensurePagesSiteSupport(checkoutDir, publishDir);
+      await ensurePagesSiteSupport(checkoutDir, publishDir, resolvedPublishPath.relative);
     }
     await runGit(['config', 'user.name', gitUserName], { cwd: checkoutDir });
     await runGit(['config', 'user.email', gitUserEmail], { cwd: checkoutDir });
@@ -250,7 +250,7 @@ function isPreservedPagesMarkdown(name: string) {
   return name === 'index.md' || name === 'Navigation.md';
 }
 
-async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatterPolicy: FrontmatterPolicy) {
+async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatterPolicy: FrontmatterPolicy, isPages = false) {
   await fs.mkdir(targetDir, { recursive: true });
   const entries = await fs.readdir(sourceDir, { withFileTypes: true });
 
@@ -265,11 +265,12 @@ async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatt
     if (entry.isSymbolicLink()) {
       await copySymlink(source, target);
     } else if (entry.isDirectory()) {
-      await copyGeneratedWiki(source, target, frontmatterPolicy);
+      await copyGeneratedWiki(source, target, frontmatterPolicy, isPages);
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
       const content = await fs.readFile(source, 'utf8');
       const transformed = applyFrontmatterPolicy(content, frontmatterPolicy);
-      await fs.writeFile(target, transformed, 'utf8');
+      const finalContent = isPages ? rewriteInternalWikiLinks(transformed) : transformed;
+      await fs.writeFile(target, finalContent, 'utf8');
     } else if (entry.isFile()) {
       await fs.copyFile(source, target);
     }
@@ -357,9 +358,10 @@ function assertPublishPathContained(checkoutDir: string, publishDir: string) {
   throw new Error(`Publish path must stay inside checkout: ${publishDir}`);
 }
 
-async function ensurePagesSiteSupport(siteRootDir: string, publishDir: string) {
+async function ensurePagesSiteSupport(siteRootDir: string, publishDir: string, pagesPath: string) {
   await ensurePagesEntryAndNavigation(publishDir);
-  await ensurePagesMermaidSupport(siteRootDir);
+  await ensurePagesNavInclude(siteRootDir, publishDir);
+  await ensurePagesMermaidSupport(siteRootDir, pagesPath);
 }
 
 async function ensurePagesEntryAndNavigation(publishDir: string) {
@@ -378,10 +380,10 @@ async function ensurePagesEntryAndNavigation(publishDir: string) {
   }
 }
 
-async function ensurePagesMermaidSupport(siteRootDir: string) {
+async function ensurePagesMermaidSupport(siteRootDir: string, pagesPath: string) {
   const configPath = path.join(siteRootDir, '_config.yml');
   if (!await fileExists(configPath)) {
-    await fs.writeFile(configPath, PAGES_CONFIG, 'utf8');
+    await fs.writeFile(configPath, buildPagesConfig(pagesPath), 'utf8');
   }
 
   const layoutDir = path.join(siteRootDir, '_layouts');
@@ -392,22 +394,160 @@ async function ensurePagesMermaidSupport(siteRootDir: string) {
   }
 }
 
-const PAGES_CONFIG = `defaults:
-  - scope:
-      path: ""
-    values:
-      layout: "repo-wiki"
-`;
+function buildPagesConfig(pagesPath: string): string {
+  const normalized = pagesPath === '.' ? '' : pagesPath;
+  const base = `defaults:\n  - scope:\n      path: ""\n    values:\n      layout: "repo-wiki"\n`;
+  return normalized ? `${base}wiki_pages_dir: "${normalized}"\n` : base;
+}
+
+async function ensurePagesNavInclude(siteRootDir: string, publishDir: string) {
+  const includesDir = path.join(siteRootDir, '_includes');
+  const navIncludePath = path.join(includesDir, 'wiki_nav.html');
+
+  if (await fileExists(navIncludePath)) {
+    return;
+  }
+
+  let navHtml = '';
+  const sidebarPath = path.join(publishDir, '_Sidebar.md');
+  const navMdPath = path.join(publishDir, 'Navigation.md');
+
+  if (await fileExists(sidebarPath)) {
+    navHtml = parseSidebarToNavHtml(await fs.readFile(sidebarPath, 'utf8'));
+  } else if (await fileExists(navMdPath)) {
+    navHtml = parseSidebarToNavHtml(await fs.readFile(navMdPath, 'utf8'));
+  }
+
+  await fs.mkdir(includesDir, { recursive: true });
+  await fs.writeFile(navIncludePath, navHtml, 'utf8');
+}
+
+/**
+ * Rewrite internal wiki-style links in markdown content so they include the
+ * `.md` extension, ensuring they resolve correctly under Jekyll GitHub Pages.
+ *
+ * Rules:
+ * - `[text](PageName)` → `[text](PageName.md)` (bare page-name link)
+ * - `[text](./Page.md)` → `[text](Page.md)` (normalise leading `./`)
+ * - External URLs, `mailto:`, anchor-only, and known asset extensions are left unchanged.
+ */
+export function rewriteInternalWikiLinks(content: string): string {
+  return content.replace(/\[([^\]]*)\]\(([^)]+)\)/g, (_match, text, href) => {
+    return `[${text}](${normaliseWikiHref(href)})`;
+  });
+}
+
+function normaliseWikiHref(href: string): string {
+  // Leave external links, mailto, anchor-only, and protocol-relative links unchanged
+  if (/^(?:https?:|mailto:|ftp:|\/\/|#)/.test(href)) {
+    return href;
+  }
+
+  const hashIndex = href.indexOf('#');
+  const pathPart = hashIndex === -1 ? href : href.slice(0, hashIndex);
+  const fragment = hashIndex === -1 ? '' : href.slice(hashIndex);
+
+  // Leave known non-markdown asset extensions unchanged
+  if (/\.(?:png|jpe?g|gif|svg|webp|ico|pdf|txt|json|ya?ml|html?|css|js|ts)$/i.test(pathPart)) {
+    return href;
+  }
+
+  // Normalise leading ./
+  let normalised = pathPart.replace(/^\.\//, '');
+
+  // Add .md if the path has no file extension
+  if (normalised && !/\.[a-z]{1,10}$/i.test(normalised) && !normalised.endsWith('/')) {
+    normalised += '.md';
+  }
+
+  return normalised + fragment;
+}
+
+/**
+ * Convert `_Sidebar.md` or `Navigation.md` content into an HTML navigation
+ * fragment suitable for use as a Jekyll `_includes/wiki_nav.html` file.
+ */
+function parseSidebarToNavHtml(content: string): string {
+  const body = stripFrontmatter(content);
+  const lines = body.split('\n');
+  const parts: string[] = [];
+  let inList = false;
+
+  for (const line of lines) {
+    const headingMatch = /^#{1,4}\s+(.+)$/.exec(line);
+    if (headingMatch) {
+      if (inList) {
+        parts.push('</ul>');
+        inList = false;
+      }
+      parts.push(`<h4 class="nav-section">${escapeHtml(headingMatch[1].trim())}</h4>`);
+      continue;
+    }
+
+    const linkItemMatch = /^[ \t]*[-*+]\s+\[([^\]]*)\]\(([^)]*)\)/.exec(line);
+    if (linkItemMatch) {
+      if (!inList) {
+        parts.push('<ul>');
+        inList = true;
+      }
+      const text = escapeHtml(linkItemMatch[1]);
+      const href = escapeHtml(normaliseWikiHref(linkItemMatch[2]));
+      parts.push(`<li><a href="${href}">${text}</a></li>`);
+      continue;
+    }
+
+    const plainItemMatch = /^[ \t]*[-*+]\s+(.+)$/.exec(line);
+    if (plainItemMatch) {
+      if (!inList) {
+        parts.push('<ul>');
+        inList = true;
+      }
+      parts.push(`<li>${escapeHtml(plainItemMatch[1].trim())}</li>`);
+    }
+  }
+
+  if (inList) {
+    parts.push('</ul>');
+  }
+
+  return parts.join('\n');
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 const PAGES_LAYOUT = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% if page.title %}{{ page.title | escape }}{% else %}{{ page.name | replace: '.md', '' | escape }}{% endif %}</title>
+  <title>{% if page.title %}{{ page.title | escape }}{% else %}{{ page.name | replace: '.md', '' | escape }}{% endif %} &mdash; Wiki</title>
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
     body { color: #24292f; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; margin: 0; }
-    main { box-sizing: border-box; margin: 0 auto; max-width: 980px; padding: 2rem; }
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar { background: #f6f8fa; border-right: 1px solid #d0d7de; flex-shrink: 0; overflow-y: auto; padding: 1rem; width: 220px; }
+    .sidebar-title { font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .sidebar-title a { color: #24292f; text-decoration: none; }
+    .sidebar-title a:hover { color: #0969da; }
+    .site-nav ul { list-style: none; margin: 0; padding: 0; }
+    .site-nav li { margin: 0.15rem 0; }
+    .site-nav a { color: #0969da; font-size: 0.875rem; text-decoration: none; }
+    .site-nav a:hover { text-decoration: underline; }
+    .site-nav .nav-section { color: #57606a; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em; margin: 0.75rem 0 0.25rem; text-transform: uppercase; }
+    .nav-divider { border: none; border-top: 1px solid #d0d7de; margin: 0.5rem 0; }
+    main { flex: 1; min-width: 0; max-width: 980px; padding: 2rem; }
+    .breadcrumb { color: #57606a; font-size: 0.875rem; margin-bottom: 1rem; }
+    .breadcrumb a { color: #0969da; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .back-link { border-top: 1px solid #d0d7de; color: #57606a; font-size: 0.875rem; margin-top: 2rem; padding-top: 1rem; }
+    .back-link a { color: #0969da; text-decoration: none; }
+    .back-link a:hover { text-decoration: underline; }
     a { color: #0969da; text-decoration: none; }
     a:hover { text-decoration: underline; }
     pre { background: #f6f8fa; border-radius: 6px; overflow: auto; padding: 1rem; }
@@ -416,12 +556,43 @@ const PAGES_LAYOUT = `<!doctype html>
     table { border-collapse: collapse; display: block; overflow: auto; width: 100%; }
     th, td { border: 1px solid #d0d7de; padding: 0.4rem 0.75rem; }
     .mermaid { background: #fff; border: 1px solid #d0d7de; border-radius: 6px; margin: 1rem 0; padding: 1rem; }
+    @media (max-width: 768px) { .layout { flex-direction: column; } .sidebar { border-right: none; border-bottom: 1px solid #d0d7de; width: 100%; } }
   </style>
 </head>
 <body>
-  <main>
-    {{ content }}
-  </main>
+{% assign _rp = page.path %}{% assign _wd = site.wiki_pages_dir | default: '.' %}{% if _wd != '.' %}{% assign _wd_prefix = _wd | append: '/' %}{% assign _rp = _rp | remove_first: _wd_prefix %}{% endif %}{% assign _depth = _rp | split: '/' | size | minus: 1 %}{% assign _base = '' %}{% for _i in (1.._depth) %}{% assign _base = _base | append: '../' %}{% endfor %}
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-title"><a href="{{ _base }}Home.md">Wiki</a></div>
+      <nav class="site-nav" aria-label="Site navigation">
+        <h4 class="nav-section">Quick links</h4>
+        <ul>
+          <li><a href="{{ _base }}Home.md">Home</a></li>
+          <li><a href="{{ _base }}Index.md">Index</a></li>
+          <li><a href="{{ _base }}Architecture.md">Architecture</a></li>
+          <li><a href="{{ _base }}Agent-Context-Pack.md">Agent Context Pack</a></li>
+          <li><a href="{{ _base }}Build-Test-and-Run.md">Build, Test &amp; Run</a></li>
+          <li><a href="{{ _base }}Documentation-Debt-Report.md">Documentation Debt</a></li>
+        </ul>
+        <hr class="nav-divider">
+        {% include wiki_nav.html %}
+      </nav>
+    </aside>
+    <main>
+      {% assign _kind = page.kind | default: '' %}{% if _kind == 'module' %}
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ _base }}Home.md">Home</a> &rsaquo;
+        <a href="{{ _base }}Index.md">Index</a> &rsaquo;
+        <span>{{ page.title | default: page.name | replace: '.md', '' }}</span>
+      </nav>{% elsif _kind != '' and _kind != 'home' %}
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ _base }}Home.md">Home</a> &rsaquo;
+        <span>{{ page.title | default: page.name | replace: '.md', '' }}</span>
+      </nav>{% endif %}
+      {{ content }}
+      {% if _kind != 'home' %}<div class="back-link"><a href="{{ _base }}Index.md">&larr; Back to Index</a></div>{% endif %}
+    </main>
+  </div>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
     mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });
