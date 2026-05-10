@@ -1,5 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
+import { containsSecretLikeContent } from './secret-patterns.js';
 import { readJson } from './utils/fs.js';
 
 const REQUIRED_PAGES = [
@@ -12,16 +13,6 @@ const REQUIRED_PAGES = [
   'Architecture.md',
   'Build-Test-and-Run.md',
   'Open-Questions.md'
-];
-
-const SECRET_PATTERNS = [
-  /AKIA[0-9A-Z]{16}/,
-  /-----BEGIN (RSA|DSA|EC|OPENSSH) PRIVATE KEY-----/,
-  /ghp_[A-Za-z0-9_]{30,}/,
-  /xox[baprs]-[A-Za-z0-9-]{20,}/,
-  /sk-[A-Za-z0-9]{20,}/,
-  /authorization:\s*bearer\s+[^\s"']{8,}/i,
-  /(?:token|password|api[_-]?key|secret)=[^\s&]{8,}/i
 ];
 
 export async function lintWiki({ wikiDir, scanDir }: { wikiDir: string; scanDir: string }) {
@@ -45,10 +36,8 @@ export async function lintWiki({ wikiDir, scanDir }: { wikiDir: string; scanDir:
       issues.push(warning('missing-source-commit', `${relativePath} does not include source_commit frontmatter.`));
     }
 
-    for (const pattern of SECRET_PATTERNS) {
-      if (pattern.test(content)) {
-        issues.push(error('secret-like-content', `${relativePath} contains secret-like content.`));
-      }
+    if (containsSecretLikeContent(content)) {
+      issues.push(error('secret-like-content', `${relativePath} contains secret-like content.`));
     }
 
     for (const link of extractWikiLinks(content)) {
