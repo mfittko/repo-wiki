@@ -111,8 +111,9 @@ function extractPackageScriptSources(content: string, scripts: Record<string, st
   const endLine = lineNumberAtIndex(content, scriptsRange.valueEndIndex);
   const rangeLines = lines.slice(startLine - 1, endLine);
   for (const name of Object.keys(scripts || {})) {
-    const escapedName = escapeRegExp(JSON.stringify(name));
-    const pattern = new RegExp(`(?:^|[,{])\\s*${escapedName}\\s*:`);
+    const jsonEscapedName = JSON.stringify(name).slice(1, -1);
+    const escapedName = escapeRegExp(jsonEscapedName);
+    const pattern = new RegExp(`(?:^|[,{])\\s*"${escapedName}"\\s*:`);
     const lineIndex = rangeLines.findIndex((line) => pattern.test(line));
     sources.push(lineIndex === -1 ? { name } : { name, line: startLine + lineIndex });
   }

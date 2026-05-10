@@ -337,11 +337,7 @@ function coalesceMultilineWorkflowCommands(lines: Array<{ line: string; lineNumb
 }
 
 function hasLineContinuation(line: string) {
-  const match = /(\\+)\s*$/.exec(line);
-  if (!match) {
-    return false;
-  }
-  return (match[1].length % 2) === 1;
+  return ((/(\\+)\s*$/.exec(line)?.[1].length ?? 0) % 2) === 1;
 }
 
 function parseNpmRunScript(command: string): string | undefined {
