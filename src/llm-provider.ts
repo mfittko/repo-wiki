@@ -340,8 +340,9 @@ export interface ResolvedLLMProviderConfig extends LLMProviderConfig {
 /**
  * Create an `LLMProvider` from configuration resolved with environment overrides.
  *
- * - Omitting `config` (or setting `provider: "mock"`) returns the mock provider unless
- *   `LLMWIKI_LLM_PROVIDER` or `LLMWIKI_COMPILER_MODE` selects a hosted provider.
+ * - Omitting `config` returns the mock provider unless `LLMWIKI_LLM_PROVIDER`
+ *   or `LLMWIKI_COMPILER_MODE` selects a hosted provider.
+ * - Explicit `provider: "mock"` remains mock unless `LLMWIKI_LLM_PROVIDER` overrides it.
  * - Specifying an OpenAI-compatible provider without an API key throws
  *   `LLMProviderError` with `code: "MISSING_API_KEY"`.
  * - Specifying an unknown provider name throws
@@ -397,7 +398,7 @@ export function resolveProviderConfig(
 
   return {
     ...llmConfig,
-    provider: optionalEnv(env, 'LLMWIKI_LLM_PROVIDER') ?? providerForMode(mode) ?? nonBlank(llmConfig.provider) ?? LLM_DEFAULTS.provider,
+    provider: optionalEnv(env, 'LLMWIKI_LLM_PROVIDER') ?? nonBlank(llmConfig.provider) ?? providerForMode(mode) ?? LLM_DEFAULTS.provider,
     apiKey: optionalEnv(env, apiKeyEnv) ?? nonBlank(llmConfig.apiKey),
     apiKeyEnv,
     model: optionalEnv(env, 'LLMWIKI_LLM_MODEL') ?? nonBlank(llmConfig.model) ?? LLM_DEFAULTS.model,

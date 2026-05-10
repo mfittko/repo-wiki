@@ -201,6 +201,7 @@ test('resolveProviderConfig applies env overrides and resolves api key', () => {
       retries: 1,
     },
     {
+      LLMWIKI_LLM_PROVIDER: 'openai-compatible',
       LLMWIKI_COMPILER_MODE: 'llm',
       LLMWIKI_LLM_BASE_URL: 'https://env.example/v1',
       LLMWIKI_LLM_MODEL: 'env-model',
@@ -223,31 +224,66 @@ test('resolveProviderConfig applies env overrides and resolves api key', () => {
   assert.equal(resolved.retries, 1);
 });
 
-test('resolveProviderConfig lets deterministic mode override hosted provider config', () => {
+test('resolveProviderConfig honors explicit hosted provider config before deterministic mode default', () => {
   const resolved = resolveProviderConfig(
     { provider: 'openai-compatible', apiKey: 'secret-key' },
     { LLMWIKI_COMPILER_MODE: 'deterministic' },
   );
 
+  assert.equal(resolved.provider, 'openai-compatible');
+});
+
+test('resolveProviderConfig honors explicit mock provider config before llm mode default', () => {
+  const resolved = resolveProviderConfig(
+    { provider: 'mock' },
+    { LLMWIKI_COMPILER_MODE: 'llm' },
+  );
+
   assert.equal(resolved.provider, 'mock');
 });
 
-test('resolveProviderConfig uses OpenAI-compatible provider for llm mode', () => {
+test('resolveProviderConfig uses OpenAI-compatible provider for llm mode without explicit provider', () => {
   const resolved = resolveProviderConfig(
-    { provider: 'mock' },
+    {},
     { LLMWIKI_COMPILER_MODE: 'llm' },
   );
 
   assert.equal(resolved.provider, 'openai-compatible');
 });
 
-test('resolveProviderConfig honors compiler config mode before nested llm provider default', () => {
+test('createProvider requires API key for llm mode without explicit provider', () => {
+  assert.throws(
+    () => createProvider({ mode: 'llm' }),
+    (err: unknown) => {
+      assert.ok(err instanceof LLMProviderError);
+      assert.equal(err.code, 'MISSING_API_KEY');
+      assert.equal(err.provider, 'openai-compatible');
+      return true;
+    },
+  );
+});
+
+test('resolveProviderConfig honors nested explicit mock provider before llm mode default', () => {
+  const resolved = resolveProviderConfig({
+    mode: 'llm',
+    llm: { provider: 'mock' },
+  });
+
+  assert.equal(resolved.provider, 'mock');
+});
+
+test('createProvider honors nested explicit mock provider in llm mode without API key', () => {
+  const provider = createProvider({ mode: 'llm', llm: { provider: 'mock' } });
+  assert.equal(provider.name, 'mock');
+});
+
+test('resolveProviderConfig honors compiler config mode only as a default after nested llm provider', () => {
   const resolved = resolveProviderConfig({
     mode: 'deterministic',
     llm: { provider: 'openai-compatible', apiKey: 'secret-key' },
   });
 
-  assert.equal(resolved.provider, 'mock');
+  assert.equal(resolved.provider, 'openai-compatible');
 });
 
 test('resolveProviderConfig treats blank environment variables as unset', () => {

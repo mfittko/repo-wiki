@@ -69,6 +69,8 @@ jobs:
           LLMWIKI_LLM_TIMEOUT_MS: ${{ vars.LLMWIKI_LLM_TIMEOUT_MS }}
           LLMWIKI_LLM_RETRIES: ${{ vars.LLMWIKI_LLM_RETRIES }}
           LLMWIKI_LLM_API_KEY: ${{ secrets.LLMWIKI_LLM_API_KEY }}
+          LLMWIKI_LLM_SYSTEM_PROMPT: ${{ vars.LLMWIKI_LLM_SYSTEM_PROMPT }}
+          LLMWIKI_LLM_SYSTEM_PROMPT_FILE: ${{ vars.LLMWIKI_LLM_SYSTEM_PROMPT_FILE }}
         run: node ./dist/bin/repo-wiki.js compile --scan .llmwiki/run --plan .llmwiki/plan.json --wiki .llmwiki/wiki
 
       - name: Lint
