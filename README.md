@@ -71,7 +71,7 @@ Configuration:
 }
 ```
 
-Generated wikis include `Documentation-Debt-Report.md`, which summarizes stale docs, contradicted docs, unvalidated claims (including route/API claims), and broken references with deterministic validation tables.
+Generated wikis include a `Documentation-Debt-Report` wiki page, which summarizes stale docs, contradicted docs, unvalidated claims (including route/API claims), and broken references with deterministic validation tables.
 
 ## Publish to GitHub Wiki
 
@@ -116,7 +116,7 @@ Configuration example:
 
 GitHub Wiki target defaults to frontmatter stripping; GitHub Pages defaults to preserving frontmatter. You can override with `--frontmatter-policy`.
 
-The repository wiki workflow publishes GitHub Wiki output on `main` and can publish GitHub Pages output to the `gh-pages` branch. Use the workflow dispatch inputs to smoke-test Pages publishing manually before merge (`publish_pages=true`, `pages_path=smoke/pr-N`); automatic `main` publishes can use the production path such as `docs`.
+The repository wiki workflow publishes GitHub Wiki output on `main` and can publish GitHub Pages output to the `gh-pages` branch. Use the workflow dispatch inputs to smoke-test Pages publishing manually before merge (set `publish_pages=true` and `pages_path` to a smoke path such as `smoke/pr-N`); automatic `main` publishes can use the production path such as `docs`.
 
 GitHub Wiki via environment variable:
 

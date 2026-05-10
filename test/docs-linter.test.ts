@@ -722,3 +722,73 @@ test('lintDocs does not report missing-package-script for validated scripts', as
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('lintDocs does not flag wiki page name references as broken paths when the page exists in .llmwiki/wiki', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-wikiref-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki', 'wiki'), { recursive: true });
+    await mkdir(path.join(dir, 'docs'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: { ingest: true, include: ['docs/**/*.md'], exclude: [], stale_after_days: 9999 }
+    }), 'utf8');
+    // Plan doc references bare wiki page names that live in .llmwiki/wiki/
+    await writeFile(path.join(dir, 'docs', 'PLAN.md'), '# Plan\n\nSee `Index.md` and `Log.md`.\n', 'utf8');
+    await writeFile(path.join(dir, '.llmwiki', 'wiki', 'Index.md'), '# Index\n', 'utf8');
+    await writeFile(path.join(dir, '.llmwiki', 'wiki', 'Log.md'), '# Log\n', 'utf8');
+    await writeFile(path.join(dir, 'package.json'), JSON.stringify({ scripts: {} }), 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    const broken = lint.issues.filter((i) => i.code === 'broken-documented-file-path');
+    assert.equal(broken.length, 0, 'should not flag wiki page references that exist in .llmwiki/wiki/');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintDocs still flags bare .md references that do not exist in repo or .llmwiki/wiki', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-missingwiki-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki', 'wiki'), { recursive: true });
+    await mkdir(path.join(dir, 'docs'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: { ingest: true, include: ['docs/**/*.md'], exclude: [], stale_after_days: 9999 }
+    }), 'utf8');
+    await writeFile(path.join(dir, 'docs', 'PLAN.md'), '# Plan\n\nSee `TotallyMissingPage.md`.\n', 'utf8');
+    await writeFile(path.join(dir, 'package.json'), JSON.stringify({ scripts: {} }), 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    const broken = lint.issues.filter((i) => i.code === 'broken-documented-file-path');
+    assert.ok(broken.length >= 1, 'should flag .md references that do not exist anywhere');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('extractDocumentedFilePaths does not treat .git remote URLs as file path candidates', () => {
+  const refs = extractDocumentedFilePaths('# Publish\n\nPublish to `OWNER/REPO.wiki.git` using the CLI.\n');
+  assert.ok(!refs.some((r) => r.path.endsWith('.git')), '.git remote URL should not be extracted as a file path');
+});
+
+test('isEnvironmentVariableMention does not flag HUMAN_NOTES or CHANGES_REQUESTED', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-envmarker-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: { ingest: true, include: ['README.md'], exclude: [], stale_after_days: 9999 }
+    }), 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Guide\n\nPreserve `HUMAN_NOTES` sections. Use `CHANGES_REQUESTED` for review states.\n', 'utf8');
+    await writeFile(path.join(dir, 'package.json'), JSON.stringify({ scripts: {} }), 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    const scan = await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+    const readmeCard = scan.manifest.documentation.files.find((doc) => doc.path === 'README.md');
+    assert.ok(!readmeCard.validation.env_vars.includes('HUMAN_NOTES'), 'HUMAN_NOTES should not be extracted as env var');
+    assert.ok(!readmeCard.validation.env_vars.includes('CHANGES_REQUESTED'), 'CHANGES_REQUESTED should not be extracted as env var');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

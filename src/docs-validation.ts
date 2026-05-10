@@ -221,6 +221,28 @@ export async function resolveDocumentedPathOnDisk(referencePath: string, docPath
     }
   }
 
+  // Fallback: check wiki output directory for bare .md references.
+  // Wiki pages are generated outputs and should not be flagged as broken references.
+  const normalizedRef = normalizeRepoPath(referencePath);
+  if (!normalizedRef.includes('/') && normalizedRef.endsWith('.md')) {
+    const wikiCandidate = path.join(absoluteRoot, '.llmwiki', 'wiki', normalizedRef);
+    if (isPathInside(absoluteRoot, wikiCandidate)) {
+      let wikiExists = accessCache.get(wikiCandidate);
+      if (wikiExists === undefined) {
+        try {
+          await fs.access(wikiCandidate);
+          wikiExists = true;
+        } catch {
+          wikiExists = false;
+        }
+        accessCache.set(wikiCandidate, wikiExists);
+      }
+      if (wikiExists) {
+        return { valid: true, path: `.llmwiki/wiki/${normalizedRef}` };
+      }
+    }
+  }
+
   return { valid: false, path: candidates[0] || referencePath };
 }
 
