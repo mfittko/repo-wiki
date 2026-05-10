@@ -108,12 +108,14 @@ function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && 'code' in error;
 }
 
-function frontmatter(manifest, extra = {}) {
+function frontmatter(manifest, extra: any = {}) {
+  const kind = typeof extra.kind === 'string' ? extra.kind : undefined;
   const fields = {
     source_repo: manifest.remote,
     source_commit: manifest.commit,
     compiled_at: new Date().toISOString(),
     ...extra,
+    confidence: extra.confidence || confidenceForKind(kind),
     page_state: 'generated'
   };
 
@@ -186,7 +188,15 @@ function renderBuildTestAndRun(manifest) {
 }
 
 function renderOpenQuestions(manifest, plan) {
-  return `${frontmatter(manifest, { kind: 'open_questions' })}# Open Questions\n\n- What pages should be human-owned versus generated?\n- Which source paths should be excluded from wiki compilation?\n- Which modules require deeper AST-level extraction?\n- Which package manager and CI commands should be treated as canonical?\n- How should large files and generated files be summarized?\n- What confidence threshold should block publishing?\n\n## Bootstrap gaps\n\n- This first-pass compiler uses repository structure, not an LLM synthesis pass.\n- Existing human wiki reconciliation is not implemented yet.\n- GitHub Wiki publishing is a placeholder.\n`;
+  const docs = manifest.documentation?.files || [];
+  const reviewQueue = buildDocumentationReviewQueue(docs);
+  const reviewRows = reviewQueue.map((entry) => `- \`${entry.path}\` - ${entry.reasons.join(', ')}.`);
+  return `${frontmatter(manifest, {
+    kind: 'open_questions',
+    claim_status: 'review-needed',
+    confidence: 'low',
+    source_paths: uniqueSorted(reviewQueue.map((entry) => entry.path)).slice(0, 50)
+  })}# Open Questions\n\n- What pages should be human-owned versus generated?\n- Which source paths should be excluded from wiki compilation?\n- Which modules require deeper AST-level extraction?\n- Which package manager and CI commands should be treated as canonical?\n- How should large files and generated files be summarized?\n- What confidence threshold should block publishing?\n\n## Documentation review queue\n\nDocumentation cards listed below are secondary evidence and require review. Do not promote these items as authoritative wiki claims until validated against source, tests, CI, config, or generated schemas.\n\n${reviewRows.join('\n') || '- No stale, contradicted, or unvalidated documentation findings detected.'}\n\n## Bootstrap gaps\n\n- This first-pass compiler uses repository structure, not an LLM synthesis pass.\n- Existing human wiki reconciliation is not implemented yet.\n- GitHub Wiki publishing is a placeholder.\n`;
 }
 
 function renderDocumentationDebtReport(manifest) {
@@ -276,7 +286,13 @@ function renderDocumentationDebtReport(manifest) {
     return tableRow([code(location), code(`${method} ${routePath}`), badge, evidence]);
   });
 
-  return `${frontmatter(manifest, { kind: 'documentation_debt_report', documentation_authority: manifest.documentation?.authority || 'secondary' })}# Documentation Debt Report
+  return `${frontmatter(manifest, {
+    kind: 'documentation_debt_report',
+    documentation_authority: manifest.documentation?.authority || 'secondary',
+    claim_status: 'review-needed',
+    confidence: 'low',
+    source_paths: uniqueSorted(docs.map((doc) => doc.path)).slice(0, 50)
+  })}# Documentation Debt Report
 
 Markdown documentation is ingested as secondary evidence. It is useful for intent, terminology, onboarding, and architectural rationale, but material claims should be validated against code, tests, configuration, generated schemas, or CI before the wiki presents them as current behavior.
 
@@ -437,7 +453,13 @@ function renderModulePage(manifest, module, sourceToTestsIndex: Map<string, Set<
   const relatedTestsSection = relatedTests.length
     ? `## Related tests\n\n${relatedTests.map((testPath) => `- ${sourcePathLink(manifest, testPath)}`).join('\n')}\n\n`
     : '';
-  return `${frontmatter(manifest, { kind: 'module', module: module.name, source_paths: module.files.slice(0, 20) })}# ${module.name}\n\n## Purpose\n\nGenerated first-pass page for files grouped under ${module.name}. This should be refined by the LLM compiler using source cards and targeted source excerpts.\n\n## Signals\n\n- Files: ${module.files.length}\n- Categories: ${Object.keys(module.categories).join(', ') || 'unknown'}\n- Languages: ${Object.keys(module.languages).join(', ') || 'unknown'}\n- Runtime hints: ${Object.keys(module.runtime_hints).join(', ') || 'none'}\n- Reasons: ${module.important_reasons.join(', ') || 'none'}\n\n## Source files\n\n${sampleFiles || '- None'}\n\n${relatedTestsSection}## Related pages\n\n- ${wikiLink('Dependency-Map.md')}\n- ${wikiLink('Testing-Strategy.md')}\n- ${wikiLink('Open-Questions.md')}\n\n<!-- HUMAN_NOTES_START -->\n<!-- HUMAN_NOTES_END -->\n`;
+  return `${frontmatter(manifest, {
+    kind: 'module',
+    module: module.name,
+    claim_status: 'grounded',
+    confidence: 'high',
+    source_paths: module.files.slice(0, 20)
+  })}# ${module.name}\n\n## Purpose\n\nGenerated first-pass page for files grouped under ${module.name}. This should be refined by the LLM compiler using source cards and targeted source excerpts.\n\n## Signals\n\n- Files: ${module.files.length}\n- Categories: ${Object.keys(module.categories).join(', ') || 'unknown'}\n- Languages: ${Object.keys(module.languages).join(', ') || 'unknown'}\n- Runtime hints: ${Object.keys(module.runtime_hints).join(', ') || 'none'}\n- Reasons: ${module.important_reasons.join(', ') || 'none'}\n\n## Source files\n\n${sampleFiles || '- None'}\n\n${relatedTestsSection}## Related pages\n\n- ${wikiLink('Dependency-Map.md')}\n- ${wikiLink('Testing-Strategy.md')}\n- ${wikiLink('Open-Questions.md')}\n\n<!-- HUMAN_NOTES_START -->\n<!-- HUMAN_NOTES_END -->\n`;
 }
 
 function buildSourceToTestsIndex(manifest: any): Map<string, Set<string>> {
@@ -616,6 +638,48 @@ function uniqueSorted(values: Array<string | number>) {
 
 function uniqueCount(values: Array<string | number>) {
   return new Set(values || []).size;
+}
+
+function confidenceForKind(kind: string | undefined): 'high' | 'medium' | 'low' {
+  switch (kind) {
+    case 'module':
+    case 'build_test_run':
+    case 'testing_strategy':
+    case 'dependency_map':
+    case 'configuration':
+    case 'api_http_routes':
+    case 'data_model':
+      return 'high';
+    case 'documentation_debt_report':
+    case 'open_questions':
+    case 'log':
+      return 'low';
+    default:
+      return 'medium';
+  }
+}
+
+function buildDocumentationReviewQueue(docs: any[]) {
+  const queue = new Map<string, Set<string>>();
+
+  for (const doc of docs || []) {
+    const reasons = new Set<string>();
+    if (doc.stale) reasons.add(`stale (${doc.age_days} days old)`);
+    if (doc.validation?.contradictions?.length) reasons.add(`contradicted (${doc.validation.contradictions.length} signal${doc.validation.contradictions.length === 1 ? '' : 's'})`);
+    if (doc.status === 'unvalidated') reasons.add('unvalidated status');
+    if ((doc.claims?.length || 0) > 0 && doc.status !== 'validated') reasons.add('claims need validation');
+
+    if (!reasons.size) continue;
+
+    if (!queue.has(doc.path)) queue.set(doc.path, new Set<string>());
+    for (const reason of reasons) {
+      queue.get(doc.path)!.add(reason);
+    }
+  }
+
+  return [...queue.entries()]
+    .map(([path, reasons]) => ({ path, reasons: [...reasons].sort() }))
+    .sort((left, right) => left.path.localeCompare(right.path));
 }
 
 function code(value: string | number) {

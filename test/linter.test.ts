@@ -22,8 +22,8 @@ async function writeWikiFixture(pages: Record<string, string>) {
   return { dir, wikiDir, scanDir };
 }
 
-function generatedPage(title: string, body = '') {
-  return ['---', 'source_commit: "abc123"', 'page_state: "generated"', '---', '', `# ${title}`, '', body].join('\n');
+function generatedPage(title: string, body = '', extraFrontmatter: string[] = []) {
+  return ['---', 'source_commit: "abc123"', 'page_state: "generated"', ...extraFrontmatter, '---', '', `# ${title}`, '', body].join('\n');
 }
 
 const requiredPages = {
@@ -140,6 +140,68 @@ test('lintWiki ignores external, anchor, and path-like markdown links', async ()
 
     assert.equal(result.summary.errors, 0);
     assert.equal(result.summary.warnings, 0);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintWiki accepts generated module pages with source_paths provenance metadata', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Module-Core.md': generatedPage(
+      'Core',
+      'This module documents runtime behavior using scanner-derived source files.',
+      ['kind: "module"', 'source_paths: ["src/core.ts"]', 'confidence: "high"']
+    )
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const missingProvenance = result.issues.find((issue) => issue.code === 'missing-source-provenance');
+    const missingSourcePaths = result.issues.find((issue) => issue.code === 'missing-source-paths');
+
+    assert.equal(missingProvenance, undefined);
+    assert.equal(missingSourcePaths, undefined);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintWiki warns for generated module pages with material claims but missing provenance metadata', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Module-Core.md': generatedPage(
+      'Core',
+      'This module provides authentication and request lifecycle behavior for production traffic.',
+      ['kind: "module"', 'confidence: "high"']
+    )
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const missingProvenance = result.issues.find((issue) => issue.code === 'missing-source-provenance' && issue.message.includes('Module-Core.md'));
+    const missingSourcePaths = result.issues.find((issue) => issue.code === 'missing-source-paths' && issue.message.includes('Module-Core.md'));
+
+    assert.ok(missingProvenance);
+    assert.ok(missingSourcePaths);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintWiki exempts hub pages from provenance warnings', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Home.md': generatedPage('Home', 'This generated home page summarizes repository behavior without source citations yet.', ['kind: "home"']),
+    'Index.md': generatedPage('Index', 'This index page references generated content only.', ['kind: "index"']),
+    'Log.md': generatedPage('Log', 'This log records compilation history.', ['kind: "log"'])
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const provenanceWarnings = result.issues.filter((issue) => issue.code === 'missing-source-provenance');
+
+    assert.equal(provenanceWarnings.length, 0);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
