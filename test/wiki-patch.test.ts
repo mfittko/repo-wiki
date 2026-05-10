@@ -214,7 +214,8 @@ test('validateWikiPatch returns error for AWS access key pattern', () => {
 });
 
 test('validateWikiPatch returns error for GitHub token pattern', () => {
-  const content = validPatch({ body: '\n# Body\n\nghp_aAbBcCdDeEfFgGhHiIjJkKlLmMnNoO\n' });
+  const syntheticToken = 'ghp_' + 'aAbBcCdDeEfFgGhHiIjJkKlLmMnNoO';
+  const content = validPatch({ body: `\n# Body\n\n${syntheticToken}\n` });
   const issues = validateWikiPatch(content, 'Module-Auth');
   assert.ok(codes(issues).includes('secret-like-content'));
 });
@@ -248,7 +249,7 @@ test('validateWikiPatch handles YAML block sequences for source_paths', () => {
     'source_commit: "abc123"',
     'kind: "module"',
     'compiled_at: "2026-01-01T00:00:00.000Z"',
-    'source_paths:'},{
+    'source_paths:',
     '  - "src/a.ts"',
     '  - "src/b.ts"',
     '---',
@@ -353,6 +354,7 @@ test('parseWikiPatch parses source_paths as array', () => {
     '---',
     'source_commit: "abc123"',
     'kind: "module"',
+    'compiled_at: "2026-01-01T00:00:00.000Z"',
     'source_paths:',
     '  - "src/a.ts"',
     '  - "src/b.ts"',

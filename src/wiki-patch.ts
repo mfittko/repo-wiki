@@ -320,7 +320,7 @@ export function validateWikiPatch(rawContent: string, pageName: string): WikiPat
       });
     }
 
-    // 8. Warning: source_paths should be a list
+    // 8/9. source_paths must be an array when present; a missing array is a warning.
     const sourcePaths = fields['source_paths'];
     if (!Array.isArray(sourcePaths)) {
       issues.push({
@@ -337,7 +337,7 @@ export function validateWikiPatch(rawContent: string, pageName: string): WikiPat
     }
   }
 
-  // 6. Secret-like content check (run over the full content)
+  // 7. Secret-like content check (run over the full content)
   if (containsSecretLikeContent(rawContent)) {
     issues.push({
       level: 'error',
