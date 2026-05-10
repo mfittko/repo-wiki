@@ -222,6 +222,30 @@ jobs:
   ]);
 });
 
+test('extractCiCommandSources handles multiple multiline blocks and keeps single-line commands un-ranged', () => {
+  const yaml = `
+jobs:
+  test:
+    steps:
+      - run: |-
+          npm run lint \\
+            && npm run test
+      - run: npm run pack:check
+      - run: |-
+          npm run build \\
+            && npm run coverage
+`;
+
+  const sources = extractCiCommandSources(yaml);
+  assert.deepEqual(sources, [
+    { command: 'npm run lint', line: 6, end_line: 7 },
+    { command: 'npm run test', line: 6, end_line: 7 },
+    { command: 'npm run pack:check', line: 8 },
+    { command: 'npm run build', line: 10, end_line: 11 },
+    { command: 'npm run coverage', line: 10, end_line: 11 }
+  ]);
+});
+
 test('lintDocs reports missing-package-script for commands not in package.json', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-cmd-'));
   try {

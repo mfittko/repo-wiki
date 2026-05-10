@@ -300,8 +300,10 @@ function coalesceMultilineWorkflowCommands(lines: Array<{ line: string; lineNumb
   const commands: Array<{ command: string; start_line: number; end_line: number }> = [];
   let pending = '';
   let startLine = 0;
+  let lastLineNumber = 0;
 
   for (const entry of lines) {
+    lastLineNumber = entry.lineNumber;
     const line = entry.line;
     const continues = /\\\s*$/.test(line);
     const normalized = line.replace(/\\\s*$/, '').trim();
@@ -327,8 +329,8 @@ function coalesceMultilineWorkflowCommands(lines: Array<{ line: string; lineNumb
     }
   }
 
-  if (pending) {
-    commands.push({ command: pending, start_line: startLine || lines[lines.length - 1]?.lineNumber || 0, end_line: lines[lines.length - 1]?.lineNumber || startLine || 0 });
+  if (pending && startLine > 0) {
+    commands.push({ command: pending, start_line: startLine, end_line: lastLineNumber || startLine });
   }
 
   return commands;
