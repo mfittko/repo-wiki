@@ -440,6 +440,7 @@ test('compileWiki adds page_state: "generated" frontmatter to new pages', async 
     const homePage = await fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8');
     const sidebarPage = await fs.readFile(path.join(wikiDir, '_Sidebar.md'), 'utf8');
     assert.match(homePage, /page_state: "generated"/);
+    assert.match(homePage, /Last compiled: `\d{4}-\d{2}-\d{2}T/);
     assert.match(sidebarPage, /source_commit: "abc123"/);
     assert.match(sidebarPage, /page_state: "generated"/);
   } finally {

@@ -289,6 +289,7 @@ flowchart TD
 Affected-page mapping should use:
 
 - file path to module mapping.
+- bounded file-hierarchy propagation from a touched file to directory/module pages and parent aggregate pages only when those pages summarize the changed subtree.
 - symbol extraction.
 - import/dependency graph.
 - test-to-source relationships.
@@ -297,6 +298,8 @@ Affected-page mapping should use:
 - previous wiki page frontmatter source paths.
 - `Index.md` and `Log.md` updates for changed knowledge.
 - stale generated-page detection for renamed or removed modules.
+
+Propagation should be evidence-based rather than automatic. A changed file always affects its directly owned page and the operation log. It should affect parent hierarchy pages only when page membership, summarized counts, public API, runtime behavior, or subtree-level claims change. It should affect semantic aggregate pages only when their inputs changed: dependency graph pages for import changes, testing pages for test or test-to-source changes, API pages for route changes, configuration/security pages for environment or sensitive-surface changes, and documentation debt pages for documentation-card changes. In LLM mode, enrichment must run only for the affected wiki pages selected by this policy; untouched enriched pages should remain byte-stable to avoid unnecessary model cost and noisy publishes.
 
 ## Query and filing-back workflow
 
@@ -698,7 +701,10 @@ These items make the wiki stay current at low cost.
 - Compute changed files from `base..head`.
 - Rescan changed files and required graph neighbors.
 - Use affected-page graph data to update only relevant pages.
-- Regenerate global pages only when relevant source or graph inputs change.
+- Propagate changes upward through the file hierarchy only to parent aggregate pages whose subtree summaries or claims are affected.
+- Propagate changes semantically to cross-cutting pages only when route, dependency, test, config, security, data-model, documentation, or similar signals change.
+- Regenerate global pages only when relevant source, graph, navigation, or metadata inputs change.
+- Keep untouched LLM-enriched pages byte-stable across incremental builds.
 - Handle deleted and renamed files/modules by updating index, links, and stale generated pages.
 - Add PR-oriented `repo-wiki diff` output for review before publish.
 
@@ -943,6 +949,9 @@ These phases describe the desired implementation sequence in this plan. They are
 - Store previous compiled commit.
 - Compute changed files.
 - Update only affected pages.
+- Apply bounded hierarchy propagation from changed files to affected parent aggregate pages.
+- Apply semantic propagation to affected cross-cutting pages.
+- Keep untouched LLM-enriched pages byte-stable.
 - Re-run cross-link and debt report passes.
 - Delete stale generated pages safely.
 - Publish safely after lint gates.

@@ -13,8 +13,11 @@ flowchart TD
   ExistingWiki[Current Wiki Checkout] --> Ownership[Generated Page Ownership Map]
   Diff --> Changed[Changed Files]
   Changed --> CardMap[Source Card Mapping]
+  CardMap --> Hierarchy[Bounded Hierarchy Propagation]
   CardMap --> ImportGraph[Import Graph Lookup]
-  ImportGraph --> AffectedCards[Affected Source Cards]
+  ImportGraph --> Semantic[Semantic Propagation]
+  Hierarchy --> AffectedCards[Affected Source Cards]
+  Semantic --> AffectedCards
   AffectedCards --> PageMap[Page Frontmatter Mapping]
   PageMap --> AffectedPages[Affected Wiki Pages]
   Ownership --> AffectedPages
@@ -58,6 +61,8 @@ stateDiagram-v2
 - Git diff computation (base..head changed files)
 - Changed-file to source-card mapping
 - Affected-page identification via import graph and page frontmatter
+- Bounded hierarchy propagation from touched files to parent aggregate pages whose subtree summaries, page membership, public APIs, runtime behavior, or claims are affected
+- Semantic propagation to cross-cutting pages when dependency, test, route, config, security, data-model, documentation, or similar signals change
 - Targeted page patching (update only affected sections)
 - Existing wiki checkout and page ownership manifest loading
 - Safe reconciliation of mixed human/generated pages during incremental runs
@@ -69,7 +74,8 @@ stateDiagram-v2
 
 ## Success Criteria
 
-- Incremental run touches only pages affected by the diff
+- Incremental run touches only pages affected by the diff, bounded hierarchy propagation, or semantic propagation rules
+- Untouched LLM-enriched pages remain byte-stable and do not incur model calls
 - Cross-links remain valid after partial updates
 - Incremental output matches what a full bootstrap would produce for affected pages
 - Untouched human-owned wiki pages remain byte-stable across incremental runs
@@ -87,5 +93,6 @@ stateDiagram-v2
 - What triggers a full re-bootstrap vs incremental patch?
 - Should incremental mode track page staleness independently?
 - How to handle transitive dependency changes (A imports B, B changes)?
+- What thresholds should escalate from bounded propagation to full bootstrap, such as broad renames, large dependency graph shifts, or many parent aggregate pages changing?
 - Where should generated-page ownership state live: frontmatter, sidecar manifest, or graph store?
 - When should reconcile mode escalate to manual review instead of auto-merging?
