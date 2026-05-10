@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2ce19fbe28dc7fd82aa053ba642325b8a9e91f02"
+source_commit: "176374fc6ec27cb41eb2b6ed9e5833b68ee7778a"
 page_state: "generated"
 source_paths: ["src/frontmatter.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides utilities and types for handling frontmatter in source files. It includes functionality to extract, parse, and apply policies to frontmatter blocks, as well as to strip frontmatter from content. The module is designed to support structured metadata embedded at the beginning of text files, commonly used in markdown and other markup languages.
+This module provides utilities and types for handling frontmatter in source files. It includes functionality to extract, parse, apply policies to, and strip frontmatter blocks. The module defines policies and types related to frontmatter processing, enabling controlled manipulation and validation of frontmatter content.
 
 ## Source file list
 
@@ -22,27 +22,27 @@ This module provides utilities and types for handling frontmatter in source file
 ## Key symbols and entry points
 
 - **applyFrontmatterPolicy**: Applies a specified frontmatter policy to a frontmatter block.
-- **extractFrontmatterBlock**: Extracts the frontmatter block from a given text input.
+- **extractFrontmatterBlock**: Extracts the frontmatter block from a given source text.
 - **FRONTMATTER_POLICIES**: A collection of predefined frontmatter policies.
 - **FrontmatterBlock**: Type representing a frontmatter block.
 - **FrontmatterPolicy**: Type defining the structure of a frontmatter policy.
-- **isFrontmatterPolicy**: Type guard to check if a value is a frontmatter policy.
-- **parseFrontmatterPolicy**: Parses a frontmatter policy from input.
-- **stripFrontmatter**: Removes the frontmatter block from a text input.
+- **isFrontmatterPolicy**: Type guard to check if an object is a frontmatter policy.
+- **parseFrontmatterPolicy**: Parses a frontmatter policy from a given input.
+- **stripFrontmatter**: Removes the frontmatter block from a source text.
 
 ## Dependencies and imports
 
-- This module does not import any external modules or dependencies.
+- Imports from `./secret-patterns.js` (details of this dependency are not specified here).
 
 ## Related tests
 
-- No documentation or test files are explicitly associated with this module in the provided source cards.
+No documentation or test files are explicitly linked or mentioned for this module.
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or test coverage referenced for this module.
-- The exact nature and structure of the frontmatter policies and their usage contexts are not detailed.
-- The repository and commit information are unknown, limiting traceability.
+- No explicit documentation or test coverage is referenced.
+- The exact nature and implementation details of `./secret-patterns.js` are not described.
+- The module's integration context or usage examples are not provided.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2ce19fbe28dc7fd82aa053ba642325b8a9e91f02"
+source_commit: "176374fc6ec27cb41eb2b6ed9e5833b68ee7778a"
 page_state: "generated"
 source_paths: ["src/index.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module serves as the main entry point for the source code located in `src/index.ts`. It consolidates and exports core functionalities related to assembling page contexts, building prompts, and applying policies within the system. The module orchestrates various components such as CLI handling, compilation, configuration, context assembly, and linting by importing and integrating them. It provides foundational building blocks for constructing requests and prompts, as well as managing frontmatter policies.
+This module serves as the main entry point for the source code located in `src/index.ts`. It consolidates and exports core functionalities related to assembling page contexts, building prompts, and applying frontmatter policies. The module orchestrates various components such as CLI handling, compilation, configuration, context assembly, and linting by importing from related internal modules. It provides foundational building blocks for constructing requests and prompts used throughout the system.
 
 ## Source file list
 
@@ -21,40 +21,44 @@ This module serves as the main entry point for the source code located in `src/i
 
 ## Key symbols and entry points
 
-The module exports and defines several important symbols, including:
+- `applyFrontmatterPolicy`
+- `assembleAllPageContexts`
+- `assemblePageContext`
+- `AssemblePageContextInput` (type/interface)
+- `buildCrossCuttingPrompt`
+- `buildFoundationPrompt`
+- `buildModulePrompt`
+- `buildPrompt`
+- `buildRequest`
+- `BuildRequestOptions` (type/interface)
 
-- `applyFrontmatterPolicy` — Function to enforce or apply policies on frontmatter data.
-- `assembleAllPageContexts` — Function to assemble contexts for all pages collectively.
-- `assemblePageContext` — Function to assemble context for a single page.
-- `AssemblePageContextInput` — Type or interface defining input structure for assembling page context.
-- `buildCrossCuttingPrompt` — Function to build prompts that span multiple concerns or modules.
-- `buildFoundationPrompt` — Function to build foundational prompts used as base templates.
-- `buildModulePrompt` — Function to build prompts specific to modules.
-- `buildPrompt` — General function to build prompts.
-- `buildRequest` — Function to construct requests based on prompts and options.
-- `BuildRequestOptions` — Type or interface defining options for building requests.
+These symbols represent the primary exported functions and types that enable the assembly of page contexts and the construction of various prompts and requests.
 
 ## Dependencies and imports
 
-The module imports several other source files to compose its functionality:
+The module imports from the following internal modules:
 
-- `./cli.js` — Command-line interface related utilities.
-- `./compiler.js` — Compilation-related logic.
-- `./config.js` — Configuration management.
-- `./context-assembler.js` — Logic for assembling page contexts.
-- `./docs-linter.js` — Documentation linting utilities.
-- Additionally, it imports from `./frontmatter.js`, `./init.js`, and `./linter.js` as indicated by the excerpt, though these are not explicitly listed in the source cards.
+- `./cli.js`
+- `./compiler.js`
+- `./config.js`
+- `./context-assembler.js`
+- `./docs-linter.js`
+- `./frontmatter.js`
+- `./init.js`
+- `./linter.js`
+
+These dependencies indicate that `index.ts` integrates CLI utilities, compilation logic, configuration management, context assembly, documentation linting, frontmatter processing, initialization routines, and general linting capabilities.
 
 ## Related tests
 
-No documentation or source cards indicate the presence of related test files or test modules for `index.ts`. Further investigation in the repository may be required to locate tests covering this module.
+No explicit test files or test-related documentation are referenced in the source cards or metadata for this module. Further investigation into the repository may be required to identify associated test suites.
 
 ## Known gaps or open questions
 
-- The exact repository remote URL and commit SHA are unknown, limiting traceability.
-- No explicit documentation or test coverage is referenced for this module.
-- The role and implementation details of some imported modules (e.g., `./frontmatter.js`, `./init.js`, `./linter.js`) are not fully detailed in the source cards.
-- The relationships and usage patterns of the exported symbols within the broader system are not described here and may require exploration of dependent modules.
+- The module documentation does not specify detailed behavior or usage examples for the exported symbols.
+- There is no direct reference to test coverage or test files related to this module.
+- The source repository and commit SHA are unknown, limiting traceability.
+- The exact relationships and interactions between the imported modules and the exported symbols are not fully detailed in the available metadata.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

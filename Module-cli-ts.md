@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2ce19fbe28dc7fd82aa053ba642325b8a9e91f02"
+source_commit: "176374fc6ec27cb41eb2b6ed9e5833b68ee7778a"
 page_state: "generated"
 source_paths: ["src/cli.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "2024-06-05T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -32,20 +32,19 @@ The module imports several other internal modules, indicating its role in coordi
 - `./docs-linter.js`
 - `./frontmatter.js`
 - `./init.js`
-- (Also imports mentioned in excerpt but not explicitly listed in the source card: `./linter.js`, `./planner.js`, `./publisher.js`)
+- (Also noted in the excerpt but not explicitly listed in the imports: `./linter.js`, `./planner.js`, `./publisher.js`)
 
-These dependencies suggest that `runCli` integrates compilation, configuration, documentation linting, frontmatter processing, initialization, linting, planning, and publishing functionalities.
+These dependencies suggest that the CLI interacts with compilation, configuration, documentation linting, frontmatter processing, initialization, linting, planning, and publishing functionalities.
 
 ## Related tests
 
-No documentation or test cards are currently associated with this module. It is unknown if dedicated tests exist for `cli.ts`.
+No documentation or source cards indicate the presence of related test files or test coverage for this module.
 
 ## Known gaps or open questions
 
-- The exact behavior and CLI commands supported by `runCli` are not detailed here.
-- No documentation or test coverage information is available.
-- The source commit and repository information are unknown, limiting traceability.
-- The role of some imported modules (e.g., `planner.js`, `publisher.js`) in the CLI context is not explicitly described.
+- The exact CLI commands and options handled by `runCli` are not detailed in the available source cards.
+- There is no explicit documentation or test coverage linked to this module.
+- The role of some imported modules (e.g., `linter.js`, `planner.js`, `publisher.js`) in the CLI workflow is not fully clear from the provided information.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
