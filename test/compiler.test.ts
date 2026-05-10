@@ -205,6 +205,66 @@ test('compileWiki falls back cleanly when richer analysis is absent', async () =
   }
 });
 
+test('compileWiki redacts sensitive CI command arguments in Build-Test-and-Run output', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'aa11bb22cc33',
+    mode: 'bootstrap',
+    totals: {
+      languages: { YAML: 1, JSON: 1 },
+      categories: { ci: 1, config: 1 },
+      runtime_hints: {}
+    },
+    files: [
+      {
+        path: '.github/workflows/ci.yml',
+        category: 'ci',
+        language: 'YAML',
+        imports: [],
+        runtime_hints: [],
+        reasons: ['ci']
+      },
+      {
+        path: 'package.json',
+        category: 'config',
+        language: 'JSON',
+        imports: [],
+        runtime_hints: [],
+        reasons: ['config']
+      }
+    ],
+    analysis: {
+      package_scripts: [],
+      ci_workflow_command_sources: [
+        {
+          path: '.github/workflows/ci.yml',
+          command: 'curl -H "authorization: bearer super-secret-token" https://example.test',
+          line: 12
+        },
+        {
+          path: '.github/workflows/ci.yml',
+          command: 'npm run deploy --token abc123',
+          line: 18
+        }
+      ]
+    }
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan: createPlan() });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+
+    const buildPage = await fs.readFile(path.join(wikiDir, 'Build-Test-and-Run.md'), 'utf8');
+    assert.match(buildPage, /authorization: bearer \[REDACTED\]/i);
+    assert.doesNotMatch(buildPage, /super-secret-token/);
+    assert.match(buildPage, /--token \[REDACTED\]/);
+    assert.doesNotMatch(buildPage, /--token abc123/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('compileWiki renders related tests in module pages', async () => {
   const manifest = {
     remote: 'origin',

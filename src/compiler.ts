@@ -170,16 +170,16 @@ function renderBuildTestAndRun(manifest) {
     sourcePathLink(manifest, entry.path, findNamedSourceRange(entry.script_sources, name)),
     entry.name ? code(entry.name) : 'unknown',
     code(name),
-    code(String(command))
+    code(redactSensitiveText(String(command)))
   ]));
   const scriptsSection = scriptRows.length
     ? `## Package scripts\n\n- Package manifests with scripts: ${packageScripts.length}\n- Scripts detected: ${scriptRows.length}\n\n${markdownTable(['Manifest', 'Package', 'Script', 'Command'], scriptRows)}\n`
     : `## Package scripts\n\nNo package scripts were extracted from manifest analysis. Inspect package manifests, task runners, and CI workflows directly when confirming canonical commands.\n`;
   const ciCommandSources = manifest.analysis?.ci_workflow_command_sources || [];
   const ciCommandsSection = ciCommandSources.length
-    ? `## CI workflow commands\n\n- Commands detected: ${ciCommandSources.length}\n\n${markdownTable(['Source', 'Command'], ciCommandSources.map((entry) => [sourcePathLink(manifest, entry.path, entry), code(entry.command)]))}\n`
+    ? `## CI workflow commands\n\n- Commands detected: ${ciCommandSources.length}\n\n${markdownTable(['Source', 'Command'], ciCommandSources.map((entry) => [sourcePathLink(manifest, entry.path, entry), code(redactSensitiveText(entry.command))]))}\n`
     : manifest.analysis?.ci_workflow_commands?.length
-      ? `## CI workflow commands\n\n- Commands detected: ${manifest.analysis.ci_workflow_commands.length}\n\n${manifest.analysis.ci_workflow_commands.map((command) => `- ${code(command)}`).join('\n')}\n`
+      ? `## CI workflow commands\n\n- Commands detected: ${manifest.analysis.ci_workflow_commands.length}\n\n${manifest.analysis.ci_workflow_commands.map((command) => `- ${code(redactSensitiveText(command))}`).join('\n')}\n`
       : `## CI workflow commands\n\nNo workflow commands were extracted from CI analysis.\n`;
 
   return `${frontmatter(manifest, { kind: 'build_test_run' })}# Build, Test, and Run\n\n## Detected package manifests\n\n${packageFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No package manifests detected.'}\n\n## Detected CI files\n\n${ciFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No CI files detected.'}\n\n${scriptsSection}\n${ciCommandsSection}\n## Manual verification guidance\n\nTreat extracted scripts as a starting point. Verify the canonical build, test, and run paths against CI workflows, container entrypoints, and deployment configs when they exist.\n`;
