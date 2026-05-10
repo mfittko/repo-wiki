@@ -148,14 +148,19 @@ test('compileWiki renders richer scanner analysis into wiki pages', async () => 
     const routesPage = await fs.readFile(path.join(wikiDir, 'API-HTTP-Routes.md'), 'utf8');
     const testingPage = await fs.readFile(path.join(wikiDir, 'Testing-Strategy.md'), 'utf8');
 
+    assert.match(buildPage, /source_paths: \["package\.json"\]/);
     assert.match(buildPage, /Package scripts/);
     assert.match(buildPage, /node --test/);
+    assert.match(dependencyPage, /source_paths: \["src\/index\.js","src\/utils\.js","test\/index\.test\.js"\]/);
     assert.match(dependencyPage, /Resolved internal dependency edges/);
     assert.match(dependencyPage, /src\/utils\.js/);
+    assert.match(configPage, /source_paths: \["src\/index\.js"\]/);
     assert.match(configPage, /APP_MODE/);
     assert.match(configPage, /PORT/);
+    assert.match(routesPage, /source_paths: \["src\/index\.js"\]/);
     assert.match(routesPage, /\/health/);
     assert.match(routesPage, /healthCheck/);
+    assert.match(testingPage, /source_paths: \["src\/index\.js","test\/index\.test\.js"\]/);
     assert.match(testingPage, /Test-to-source mappings/);
     assert.match(testingPage, /test\/index\.test\.js/);
     assert.match(testingPage, /src\/index\.js/);
@@ -509,9 +514,98 @@ test('compileWiki adds page_state: "generated" frontmatter to new pages', async 
     const homePage = await fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8');
     const sidebarPage = await fs.readFile(path.join(wikiDir, '_Sidebar.md'), 'utf8');
     assert.match(homePage, /page_state: "generated"/);
+    assert.match(homePage, /confidence: "medium"/);
     assert.match(homePage, /Last compiled: `\d{4}-\d{2}-\d{2}T/);
     assert.match(sidebarPage, /source_commit: "abc123"/);
     assert.match(sidebarPage, /page_state: "generated"/);
+    assert.match(sidebarPage, /confidence: "medium"/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki sets high-confidence grounded metadata for generated module pages', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'abc123',
+    mode: 'bootstrap',
+    totals: { languages: { JavaScript: 1 }, categories: { source: 1 }, runtime_hints: {} },
+    files: [{ path: 'src/core.js', category: 'source', language: 'JavaScript', imports: [], runtime_hints: [], reasons: ['source'] }],
+    analysis: { package_scripts: [], dependency_graph: { edges: [], summary: {} }, test_to_source: { mappings: [], summary: {} } }
+  };
+
+  const plan = {
+    pages: createPlan().pages,
+    modules: [
+      {
+        slug: 'Module-Core',
+        name: 'Core',
+        files: ['src/core.js'],
+        categories: { source: 1 },
+        languages: { JavaScript: 1 },
+        runtime_hints: {},
+        important_reasons: ['source']
+      }
+    ]
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+    const modulePage = await fs.readFile(path.join(wikiDir, 'Module-Core.md'), 'utf8');
+    assert.match(modulePage, /kind: "module"/);
+    assert.match(modulePage, /confidence: "high"/);
+    assert.match(modulePage, /claim_status: "grounded"/);
+    assert.match(modulePage, /source_paths: \["src\/core\.js"\]/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki routes stale, contradicted, and unvalidated documentation cards to Open Questions', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'abc123',
+    mode: 'bootstrap',
+    totals: { languages: { Markdown: 3 }, categories: { docs: 3 }, runtime_hints: {} },
+    files: [],
+    documentation: {
+      enabled: true,
+      authority: 'secondary',
+      summary: { files: 3, claims: 3, stale: 1, commands: 0, env_vars: 0, file_paths: 0 },
+      files: [
+        { path: 'docs/stale.md', status: 'validated', stale: true, age_days: 400, claims: [{ text: 'old claim' }], validation: { contradictions: [] } },
+        { path: 'docs/contradicted.md', status: 'validated', stale: false, age_days: 2, claims: [{ text: 'conflict claim' }], validation: { contradictions: ['conflict'] } },
+        { path: 'docs/unvalidated.md', status: 'unvalidated', stale: false, age_days: 1, claims: [{ text: 'unknown claim' }], validation: { contradictions: [] } }
+      ]
+    },
+    analysis: { package_scripts: [], dependency_graph: { edges: [], summary: {} }, test_to_source: { mappings: [], summary: {} } }
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan: createPlan() });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+    const openQuestions = await fs.readFile(path.join(wikiDir, 'Open-Questions.md'), 'utf8');
+    const debtReport = await fs.readFile(path.join(wikiDir, 'Documentation-Debt-Report.md'), 'utf8');
+
+    assert.match(openQuestions, /claim_status: "review-needed"/);
+    assert.match(openQuestions, /confidence: "low"/);
+    assert.match(openQuestions, /source_paths:/);
+    assert.match(openQuestions, /docs\/stale\.md/);
+    assert.match(openQuestions, /docs\/contradicted\.md/);
+    assert.match(openQuestions, /docs\/unvalidated\.md/);
+    assert.match(openQuestions, /`docs\/stale\.md` - .*stale/);
+    assert.match(openQuestions, /`docs\/contradicted\.md` - .*contradicted/);
+    assert.match(openQuestions, /`docs\/unvalidated\.md` - .*unvalidated/);
+    assert.match(openQuestions, /Do not promote these items as authoritative wiki claims until validated/);
+
+    assert.match(debtReport, /source_paths:/);
+    assert.match(debtReport, /docs\/stale\.md/);
+    assert.match(debtReport, /docs\/contradicted\.md/);
+    assert.match(debtReport, /docs\/unvalidated\.md/);
+    assert.match(debtReport, /## Findings by category/);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
