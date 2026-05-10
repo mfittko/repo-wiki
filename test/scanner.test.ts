@@ -193,7 +193,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: npm ci
-      - run: npm run test
+      - run: |-
+          npm run test \\
+            -- --watch=false
 `, 'utf8');
 
     const result = await scanRepository({
@@ -213,7 +215,7 @@ jobs:
     assert.ok(ciCard);
     assert.deepEqual(ciCard.ci_workflow_command_sources, [
       { command: 'npm ci', line: 6 },
-      { command: 'npm run test', line: 7 }
+      { command: 'npm run test -- --watch=false', line: 8, end_line: 9 }
     ]);
 
     assert.deepEqual(result.manifest.analysis.package_scripts, [
@@ -232,7 +234,7 @@ jobs:
     ]);
     assert.deepEqual(result.manifest.analysis.ci_workflow_command_sources, [
       { path: '.github/workflows/ci.yml', command: 'npm ci', line: 6 },
-      { path: '.github/workflows/ci.yml', command: 'npm run test', line: 7 }
+      { path: '.github/workflows/ci.yml', command: 'npm run test -- --watch=false', line: 8, end_line: 9 }
     ]);
   } finally {
     await fs.rm(repo, { recursive: true, force: true });

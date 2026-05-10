@@ -5,7 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { scanRepository } from '../src/scanner.js';
 import { lintDocs } from '../src/docs-linter.js';
-import { classifyDocumentedCommands, extractCiCommands, extractDocumentedFilePaths } from '../src/docs-ingestor.js';
+import { classifyDocumentedCommands, extractCiCommandSources, extractCiCommands, extractDocumentedFilePaths } from '../src/docs-ingestor.js';
 import { compileWiki } from '../src/compiler.js';
 import { candidateRepoPaths } from '../src/docs-validation.js';
 
@@ -203,6 +203,23 @@ jobs:
   assert.ok(cmds.includes('npm run pack:check'));
   // Template expressions anywhere in the command should be excluded
   assert.ok(!cmds.some((c) => c.includes('${{')));
+});
+
+test('extractCiCommandSources captures end_line for multiline run blocks', () => {
+  const yaml = `
+jobs:
+  test:
+    steps:
+      - run: |-
+          npm run build \\
+            && npm run test
+`;
+
+  const sources = extractCiCommandSources(yaml);
+  assert.deepEqual(sources, [
+    { command: 'npm run build', line: 6, end_line: 7 },
+    { command: 'npm run test', line: 6, end_line: 7 }
+  ]);
 });
 
 test('lintDocs reports missing-package-script for commands not in package.json', async () => {

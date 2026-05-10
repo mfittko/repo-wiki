@@ -250,27 +250,32 @@ function isEnvironmentVariableMention(value: string) {
 
 function extractWorkflowCommandValue(value: string, lines: string[], lineIndex: number, baseIndent: number): { parts: CiWorkflowCommandSource[]; lastLineIndex: number } {
   if (/^[|>](?:[+-]?\d*|\d*[+-]?)$/.test(value.trim())) {
-    const blockEntries: CiWorkflowCommandSource[] = [];
+    const blockLines: Array<{ line: string; lineNumber: number }> = [];
     let lastLineIndex = lineIndex;
     for (let index = lineIndex + 1; index < lines.length; index += 1) {
       const line = lines[index];
       if (line.trim() && leadingSpaces(line) <= baseIndent) break;
       lastLineIndex = index;
       if (!line.trim()) continue;
-      blockEntries.push(...extractWorkflowCommandParts(line.trim(), index + 1));
+      blockLines.push({ line: line.trim(), lineNumber: index + 1 });
     }
-    return { parts: blockEntries, lastLineIndex };
+    const parts = coalesceMultilineWorkflowCommands(blockLines).flatMap((entry) => extractWorkflowCommandParts(entry.command, entry.start_line, entry.end_line));
+    return { parts, lastLineIndex };
   }
 
   return { parts: extractWorkflowCommandParts(value, lineIndex + 1), lastLineIndex: lineIndex };
 }
 
-function extractWorkflowCommandParts(command: string, line: number): CiWorkflowCommandSource[] {
+function extractWorkflowCommandParts(command: string, line: number, endLine?: number): CiWorkflowCommandSource[] {
   const unquoted = command.trim().replace(/^["']|["']$/g, '');
   if (!unquoted || unquoted.includes('${{')) return [];
   return splitShellCommand(unquoted, false)
     .filter((part) => !isShellReservedCommand(part))
-    .map((part) => ({ command: part, line }));
+    .map((part) => ({
+      command: part,
+      line,
+      ...(typeof endLine === 'number' && endLine > line ? { end_line: endLine } : {})
+    }));
 }
 
 function isShellReservedCommand(command: string): boolean {
@@ -289,6 +294,44 @@ function pushCiWorkflowCommandSource(target: CiWorkflowCommandSource[], seen: Se
   }
   seen.add(key);
   target.push(value);
+}
+
+function coalesceMultilineWorkflowCommands(lines: Array<{ line: string; lineNumber: number }>) {
+  const commands: Array<{ command: string; start_line: number; end_line: number }> = [];
+  let pending = '';
+  let startLine = 0;
+
+  for (const entry of lines) {
+    const line = entry.line;
+    const continues = /\\\s*$/.test(line);
+    const normalized = line.replace(/\\\s*$/, '').trim();
+    if (!normalized) {
+      if (!continues) {
+        pending = '';
+        startLine = 0;
+      }
+      continue;
+    }
+
+    if (!pending) {
+      pending = normalized;
+      startLine = entry.lineNumber;
+    } else {
+      pending = `${pending} ${normalized}`;
+    }
+
+    if (!continues) {
+      commands.push({ command: pending, start_line: startLine, end_line: entry.lineNumber });
+      pending = '';
+      startLine = 0;
+    }
+  }
+
+  if (pending) {
+    commands.push({ command: pending, start_line: startLine || lines[lines.length - 1]?.lineNumber || 0, end_line: lines[lines.length - 1]?.lineNumber || startLine || 0 });
+  }
+
+  return commands;
 }
 
 function parseNpmRunScript(command: string): string | undefined {

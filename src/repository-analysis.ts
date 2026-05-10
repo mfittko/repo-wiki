@@ -102,13 +102,169 @@ export function buildRepositoryAnalysis(cards: SourceCard[]) {
 function extractPackageScriptSources(content: string, scripts: Record<string, string>) {
   const lines = content.split('\n');
   const sources: Array<{ name: string; line?: number; end_line?: number }> = [];
+  const scriptsRange = locateTopLevelObjectPropertyRange(content, 'scripts');
+  if (!scriptsRange) {
+    return Object.keys(scripts || {}).map((name) => ({ name }));
+  }
+
+  const startLine = lineNumberAtIndex(content, scriptsRange.valueStartIndex);
+  const endLine = lineNumberAtIndex(content, scriptsRange.valueEndIndex);
+  const rangeLines = lines.slice(startLine - 1, endLine);
   for (const name of Object.keys(scripts || {})) {
     const escapedName = escapeRegExp(name);
-    const pattern = new RegExp(`(?:["']${escapedName}["']|\\b${escapedName}\\b)\\s*:`);
-    const lineIndex = lines.findIndex((line) => pattern.test(line));
-    sources.push(lineIndex === -1 ? { name } : { name, line: lineIndex + 1 });
+    const pattern = new RegExp(`(?:^|[,{])\\s*"${escapedName}"\\s*:`);
+    const lineIndex = rangeLines.findIndex((line) => pattern.test(line));
+    sources.push(lineIndex === -1 ? { name } : { name, line: startLine + lineIndex });
   }
   return sources;
+}
+
+function locateTopLevelObjectPropertyRange(content: string, propertyName: string) {
+  let inString = false;
+  let escaped = false;
+  let depth = 0;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const char = content[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      const key = readJsonString(content, index);
+      if (!key) {
+        inString = true;
+        continue;
+      }
+
+      if (depth === 1 && key.value === propertyName) {
+        const colonIndex = skipWhitespace(content, key.endIndex + 1);
+        if (content[colonIndex] !== ':') {
+          index = key.endIndex;
+          continue;
+        }
+        const valueStartIndex = skipWhitespace(content, colonIndex + 1);
+        if (content[valueStartIndex] !== '{') {
+          return null;
+        }
+        const valueEndIndex = findMatchingBrace(content, valueStartIndex);
+        if (valueEndIndex === -1) {
+          return null;
+        }
+        return { valueStartIndex, valueEndIndex };
+      }
+
+      index = key.endIndex;
+      continue;
+    }
+
+    if (char === '{') {
+      depth += 1;
+      continue;
+    }
+
+    if (char === '}') {
+      depth = Math.max(0, depth - 1);
+    }
+  }
+
+  return null;
+}
+
+function readJsonString(content: string, quoteIndex: number) {
+  let escaped = false;
+  for (let index = quoteIndex + 1; index < content.length; index += 1) {
+    const char = content[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (char === '"') {
+      return { value: content.slice(quoteIndex + 1, index), endIndex: index };
+    }
+  }
+  return null;
+}
+
+function findMatchingBrace(content: string, startIndex: number) {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = startIndex; index < content.length; index += 1) {
+    const char = content[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (char === '{') {
+      depth += 1;
+      continue;
+    }
+
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return index;
+      }
+    }
+  }
+
+  return -1;
+}
+
+function skipWhitespace(content: string, startIndex: number) {
+  let index = startIndex;
+  while (index < content.length && /\s/.test(content[index])) {
+    index += 1;
+  }
+  return index;
+}
+
+function lineNumberAtIndex(content: string, index: number) {
+  if (index <= 0) {
+    return 1;
+  }
+  let line = 1;
+  for (let cursor = 0; cursor < Math.min(index, content.length); cursor += 1) {
+    if (content[cursor] === '\n') {
+      line += 1;
+    }
+  }
+  return line;
 }
 
 function collectDependencyGraph(cards, fileIndex) {

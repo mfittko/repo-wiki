@@ -166,3 +166,28 @@ test('buildRepositoryAnalysis resolves package subpaths and remains deterministi
   });
   assert.deepEqual(forward.dependency_graph, reversed.dependency_graph);
 });
+
+test('extractPackageMetadata resolves script lines only from top-level scripts object', () => {
+  const content = `{
+  "dependencies": {
+    "test": "not-a-script"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test"
+  }
+}
+`;
+
+  assert.deepEqual(extractPackageMetadata('package.json', content), {
+    package_name: null,
+    package_scripts: {
+      build: 'tsc',
+      test: 'node --test'
+    },
+    package_script_sources: [
+      { name: 'build', line: 6 },
+      { name: 'test', line: 7 }
+    ]
+  });
+});
