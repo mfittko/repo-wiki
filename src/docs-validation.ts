@@ -26,7 +26,15 @@ export function normalizeRepoPath(filePath: string) {
 }
 
 export function normalizeRoutePath(routePath: string | null | undefined) {
-  const cleaned = String(routePath || '').trim();
+  let cleaned = String(routePath || '').trim();
+  if (!cleaned) return '';
+  cleaned = cleaned
+    .replace(/^[`'"\[({<]+/, '')
+    .replace(/[`'"\])}>.,;:!?]+$/, '')
+    .trim();
+  if (!cleaned) return '';
+
+  cleaned = cleaned.replace(/[?#].*$/, '').replace(/\/{2,}/g, '/');
   if (!cleaned) return '';
   if (cleaned === '/') return '/';
   return cleaned.replace(/\/+$/, '');

@@ -7,7 +7,7 @@ import { scanRepository } from '../src/scanner.js';
 import { lintDocs } from '../src/docs-linter.js';
 import { classifyDocumentedCommands, extractCiCommands, extractDocumentedFilePaths, extractRouteClaims } from '../src/docs-ingestor.js';
 import { compileWiki } from '../src/compiler.js';
-import { candidateRepoPaths } from '../src/docs-validation.js';
+import { candidateRepoPaths, normalizeRoutePath } from '../src/docs-validation.js';
 
 test('documentation ingestion produces documentation cards and lint issues', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-docs-'));
@@ -108,6 +108,33 @@ test('extractRouteClaims captures prose, lists, tables, and fenced route mention
     { line: 7, text: '| GET | /table-health |', snippet: '| GET | /table-health |', path: '/table-health', method: 'GET' },
     { line: 9, text: 'POST /from-fence', snippet: 'POST /from-fence', path: '/from-fence', method: 'POST' }
   ]);
+});
+
+test('extractRouteClaims normalizes punctuation, query/fragment suffixes, and duplicate slashes', () => {
+  const claims = extractRouteClaims([
+    'Use GET /health.',
+    'Use GET /api/users?active=true',
+    'Use GET /api/users#list',
+    'Use GET /api//users',
+    'Use GET /api/users, POST /api/items.'
+  ].join('\n'));
+
+  assert.deepEqual(claims, [
+    { line: 1, text: 'Use GET /health.', snippet: 'Use GET /health.', path: '/health', method: 'GET' },
+    { line: 2, text: 'Use GET /api/users?active=true', snippet: 'Use GET /api/users?active=true', path: '/api/users', method: 'GET' },
+    { line: 3, text: 'Use GET /api/users#list', snippet: 'Use GET /api/users#list', path: '/api/users', method: 'GET' },
+    { line: 4, text: 'Use GET /api//users', snippet: 'Use GET /api//users', path: '/api/users', method: 'GET' },
+    { line: 5, text: 'Use GET /api/users, POST /api/items.', snippet: 'Use GET /api/users, POST /api/items.', path: '/api/users', method: 'GET' },
+    { line: 5, text: 'Use GET /api/users, POST /api/items.', snippet: 'Use GET /api/users, POST /api/items.', path: '/api/items', method: 'POST' }
+  ]);
+});
+
+test('normalizeRoutePath aligns scanner and documented route path variants', () => {
+  assert.equal(normalizeRoutePath('`/api/users`.'), '/api/users');
+  assert.equal(normalizeRoutePath('/api/users?active=true'), '/api/users');
+  assert.equal(normalizeRoutePath('/api/users#list'), '/api/users');
+  assert.equal(normalizeRoutePath('/api//users'), '/api/users');
+  assert.equal(normalizeRoutePath('/api/users/'), '/api/users');
 });
 
 test('classifyDocumentedCommands validates known package scripts, flags missing scripts, and marks unknowns', () => {
