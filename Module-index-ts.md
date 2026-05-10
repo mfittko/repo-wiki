@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "528199e7807b6ebf4f26ca37b222056e8b4e4c9f"
-compiled_at: "2026-05-10T00:16:37.813Z"
+source_commit: "8aa93c6e99a61f3c2d7a6b527fc351443c0d7c1c"
+compiled_at: "2026-05-10T06:11:31.860Z"
 kind: "module"
 module: "Module index.ts"
 source_paths: ["src/index.ts"]
@@ -23,7 +23,7 @@ Generated first-pass page for files grouped under Module index.ts. This should b
 
 ## Source files
 
-- [src/index.ts](https://github.com/mfittko/repo-wiki/blob/528199e7807b6ebf4f26ca37b222056e8b4e4c9f/src/index.ts)
+- [src/index.ts](https://github.com/mfittko/repo-wiki/blob/8aa93c6e99a61f3c2d7a6b527fc351443c0d7c1c/src/index.ts)
 
 ## Related pages
 
