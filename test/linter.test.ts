@@ -228,6 +228,63 @@ test('lintWiki does not treat documentation paths as authoritative provenance un
   }
 });
 
+test('lintWiki does not treat documentation body paths as authoritative inline provenance unless labeled secondary', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Module-Docs-Body.md': generatedPage(
+      'Docs Body',
+      'This page claims current runtime behavior based only on `docs/usage.md`, `README.md`, and `docs/reference.mdx`.'
+    )
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const missingProvenance = result.issues.find((issue) => issue.code === 'missing-source-provenance' && issue.message.includes('Module-Docs-Body.md'));
+
+    assert.ok(missingProvenance);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintWiki accepts explicitly labeled secondary documentation body paths as provenance', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Module-Secondary-Docs-Body.md': generatedPage(
+      'Secondary Docs Body',
+      'This page records secondary documentation evidence from `docs/usage.md`, `README.md`, and `docs/reference.mdx` and does not promote it as authoritative runtime behavior.'
+    )
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const missingProvenance = result.issues.find((issue) => issue.code === 'missing-source-provenance' && issue.message.includes('Module-Secondary-Docs-Body.md'));
+
+    assert.equal(missingProvenance, undefined);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintWiki accepts non-documentation source and config body paths as authoritative inline provenance', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Module-Source-Body.md': generatedPage(
+      'Source Body',
+      'This page claims current runtime behavior with inline provenance from `src/foo.ts`, `.github/workflows/ci.yml`, and `package.json`.'
+    )
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const missingProvenance = result.issues.find((issue) => issue.code === 'missing-source-provenance' && issue.message.includes('Module-Source-Body.md'));
+
+    assert.equal(missingProvenance, undefined);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('lintWiki treats source files under docs-named directories as authoritative provenance', async () => {
   const { dir, wikiDir, scanDir } = await writeWikiFixture({
     ...requiredPages,

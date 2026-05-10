@@ -279,17 +279,28 @@ function hasProvenanceSignal(content: string, frontmatter: Record<string, any>) 
   if (/https:\/\/github\.com\/[^)\s]+\/blob\/[^)\s]+/i.test(body)) {
     return true;
   }
-  if (/`[^`\n]*\/[^`\n]*\.[A-Za-z0-9]+`/.test(body)) {
+  if (extractBacktickedPaths(body).some((candidate) => isAuthoritativeInlinePathProvenance(candidate))) {
     return true;
   }
-  if (/`[^`\n]+\.(?:ya?ml|json|toml)`/.test(body)) {
-    return true;
-  }
-  if (/(secondary evidence|secondary documentation|unvalidated documentation|documentation debt)/i.test(body) && /`[^`\n]+\.md`/.test(body)) {
+  if (/(secondary evidence|secondary documentation|unvalidated documentation|documentation debt)/i.test(body) && extractBacktickedPaths(body).some((candidate) => isDocumentationPath(candidate))) {
     return true;
   }
 
   return false;
+}
+
+function extractBacktickedPaths(content: string) {
+  return [...content.matchAll(/`([^`\n]+)`/g)]
+    .map((match) => String(match[1]).trim())
+    .filter((candidate) => isPathLikeProvenanceCandidate(candidate));
+}
+
+function isPathLikeProvenanceCandidate(candidate: string) {
+  return /^[^\s`]+\.[A-Za-z0-9]+$/.test(candidate) && (candidate.includes('/') || /\.(?:ya?ml|json|toml)$/.test(candidate) || isDocumentationPath(candidate));
+}
+
+function isAuthoritativeInlinePathProvenance(candidate: string) {
+  return !isDocumentationPath(candidate);
 }
 
 function error(code: string, message: string) {
