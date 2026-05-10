@@ -322,6 +322,8 @@ function isEnvironmentVariableMention(value: string) {
   if (COMMON_ENV_VAR_NAMES.has(value)) return true;
   if (!value.includes('_')) return false;
   if (/^(README|TODO|HTTP|HTTPS|JSON|YAML|CLI|API)$/.test(value)) return false;
+  // Exclude known template markers, GitHub review states, and other non-env-var constants
+  if (/^(HUMAN_NOTES|CHANGES_REQUESTED|APPROVED|DISMISSED|COMMENT_ONLY)$/.test(value)) return false;
   return true;
 }
 
@@ -587,6 +589,7 @@ function isDocumentedPathCandidate(value: string, fromLink: boolean) {
   if (/\s/.test(value)) return false;
   if (/^[A-Za-z][A-Za-z0-9+.-]*:/.test(value)) return false;
   if (value.startsWith('/')) return false;
+  if (value.endsWith('.git')) return false; // git remote URL, not a file path
   if (isGeneratedOutputReference(value)) return false;
   if (hasParentDirectorySegment(value)) return true;
   if (value.startsWith('./') || value.startsWith('../')) return true;
