@@ -1,41 +1,49 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
-compiled_at: "2026-05-10T17:16:36.236Z"
-kind: "module"
-module: "Module context-assembler.ts"
-claim_status: "grounded"
-confidence: "high"
-source_paths: ["src/context-assembler.ts"]
+source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
 page_state: "generated"
+source_paths: ["src/context-assembler.ts"]
+compiled_at: "2024-06-01T00:00:00Z"
+kind: "module"
+confidence: "medium"
+claim_status: "source-grounded"
 ---
-# Module context-assembler.ts
+
+# Module: context-assembler.ts
 
 ## Purpose
 
-Generated first-pass page for files grouped under Module context-assembler.ts. This should be refined by the LLM compiler using source cards and targeted source excerpts.
+This module provides functionality for assembling and managing page context data structures in a TypeScript environment. It exports several symbols related to constructing comprehensive page contexts, including assembling all page contexts or individual page contexts, handling page context budgets, and redacting sensitive or secret-like text within these contexts. The module appears to be a core part of source code responsible for context assembly without external dependencies.
 
-## Signals
+## Source file list
 
-- Files: 1
-- Categories: source
-- Languages: TypeScript
-- Runtime hints: none
-- Reasons: source
+- `src/context-assembler.ts`
 
-## Source files
+## Key symbols and entry points
 
-- [src/context-assembler.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/context-assembler.ts)
+- **assembleAllPageContexts**: Likely a function to assemble context data for all pages collectively.
+- **assemblePageContext**: Likely a function to assemble context data for a single page.
+- **AssemblePageContextInput**: A type or interface defining the input structure for assembling a page context.
+- **PageContext**: A type or interface representing the assembled page context.
+- **PageContextBudget**: A type or interface related to budgeting or limiting aspects of the page context.
+- **PageContextPage**: A type or interface representing a page within the context.
+- **PageContextType**: A type or enum defining different types of page contexts.
+- **redactSecretLikeText**: A function to redact or mask secret-like or sensitive text within the context data.
+
+## Dependencies and imports
+
+- The module does not import any external modules or dependencies, indicating it is self-contained.
 
 ## Related tests
 
-- [test/context-assembler.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/context-assembler.test.ts)
+- No documentation or source cards indicate the presence of related test files or test cases for this module.
 
-## Related pages
+## Known gaps or open questions
 
-- [Dependency Map](Dependency-Map)
-- [Testing Strategy](Testing-Strategy)
-- [Open Questions](Open-Questions)
+- The exact behavior and implementation details of the exported functions and types are not described beyond their names and inferred roles.
+- There is no information about how this module integrates with other parts of the system or its runtime environment.
+- No test coverage or examples are provided to illustrate usage or verify correctness.
+- The source repository and commit SHA are unknown, limiting traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

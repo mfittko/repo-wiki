@@ -1,37 +1,45 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
-compiled_at: "2026-05-10T17:16:36.236Z"
-kind: "module"
-module: "Module init.ts"
-claim_status: "grounded"
-confidence: "high"
-source_paths: ["src/init.ts"]
+source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
 page_state: "generated"
+source_paths: ["src/init.ts"]
+compiled_at: "2024-06-05T00:00:00Z"
+kind: "module"
+confidence: "medium"
+claim_status: "source-grounded"
 ---
-# Module init.ts
+
+# Module `init.ts`
 
 ## Purpose
 
-Generated first-pass page for files grouped under Module init.ts. This should be refined by the LLM compiler using source cards and targeted source excerpts.
+This module provides functionality related to project initialization. It exports the symbol `initProject`, which likely encapsulates the logic to set up or initialize a project environment or configuration. The module is implemented in TypeScript and serves as a source module within the codebase.
 
-## Signals
+## Source file list
 
-- Files: 1
-- Categories: source
-- Languages: TypeScript
-- Runtime hints: none
-- Reasons: source
+- `src/init.ts`
 
-## Source files
+## Key symbols and entry points
 
-- [src/init.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/init.ts)
+- `initProject`: The primary exported symbol from this module, representing the main entry point for project initialization tasks.
 
-## Related pages
+## Dependencies and imports
 
-- [Dependency Map](Dependency-Map)
-- [Testing Strategy](Testing-Strategy)
-- [Open Questions](Open-Questions)
+The module imports the following dependencies:
+
+- `./llm-provider.js`: A local module, possibly related to language model management or provisioning.
+- `./utils/fs.js`: A local utility module for filesystem operations.
+- `node:path`: The Node.js built-in module for handling and transforming file paths.
+
+## Related tests
+
+No documentation or test cards are currently associated with this module. It is unknown if there are dedicated tests for `initProject` or the `init.ts` module.
+
+## Known gaps or open questions
+
+- There is no explicit documentation or test coverage information available for this module.
+- The exact behavior and implementation details of `initProject` are not described here.
+- The role and interaction of the imported modules (`llm-provider.js`, `utils/fs.js`) within `initProject` remain unspecified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

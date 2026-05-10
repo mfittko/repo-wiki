@@ -1,10 +1,10 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
-compiled_at: "2026-05-10T17:16:36.234Z"
+source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
+compiled_at: "2026-05-10T21:41:07.766Z"
 kind: "configuration"
 claim_status: "grounded"
-source_paths: [".env.example",".github/ISSUE_TEMPLATE/config.yml",".github/workflows/changelog-on-merge.yml",".github/workflows/wiki.yml",".pi/settings.json","src/config.ts","src/llm-provider.ts","src/publisher.ts","test/docs-linter.test.ts","test/dotenv.test.ts","test/extractors-utils.test.ts","test/publisher.test.ts","test/scanner.test.ts","test/update-changelog.test.ts"]
+source_paths: [".env.example",".github/ISSUE_TEMPLATE/config.yml",".github/workflows/changelog-on-merge.yml",".github/workflows/wiki.yml",".pi/settings.json","src/compiler.ts","src/config.ts","src/llm-provider.ts","src/publisher.ts","test/compiler.test.ts","test/docs-linter.test.ts","test/dotenv.test.ts","test/extractors-utils.test.ts","test/publisher.test.ts","test/scanner.test.ts","test/update-changelog.test.ts"]
 confidence: "high"
 page_state: "generated"
 ---
@@ -12,39 +12,43 @@ page_state: "generated"
 
 ## Detected configuration-related files
 
-- [.env.example](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/.env.example)
-- [.github/ISSUE_TEMPLATE/config.yml](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/.github/ISSUE_TEMPLATE/config.yml)
-- [.github/workflows/changelog-on-merge.yml](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/.github/workflows/changelog-on-merge.yml)
-- [.github/workflows/wiki.yml](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/.github/workflows/wiki.yml)
-- [.pi/settings.json](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/.pi/settings.json)
-- [src/config.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/config.ts)
-- [src/llm-provider.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/llm-provider.ts)
-- [src/publisher.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/publisher.ts)
-- [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/docs-linter.test.ts)
-- [test/dotenv.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/dotenv.test.ts)
-- [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/extractors-utils.test.ts)
-- [test/publisher.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/publisher.test.ts)
-- [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/scanner.test.ts)
-- [test/update-changelog.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/update-changelog.test.ts)
+- [.env.example](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/.env.example)
+- [.github/ISSUE_TEMPLATE/config.yml](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/.github/ISSUE_TEMPLATE/config.yml)
+- [.github/workflows/changelog-on-merge.yml](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/.github/workflows/changelog-on-merge.yml)
+- [.github/workflows/wiki.yml](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/.github/workflows/wiki.yml)
+- [.pi/settings.json](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/.pi/settings.json)
+- [src/compiler.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/src/compiler.ts)
+- [src/config.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/src/config.ts)
+- [src/llm-provider.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/src/llm-provider.ts)
+- [src/publisher.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/src/publisher.ts)
+- [test/compiler.test.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/test/compiler.test.ts)
+- [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/test/docs-linter.test.ts)
+- [test/dotenv.test.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/test/dotenv.test.ts)
+- [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/test/extractors-utils.test.ts)
+- [test/publisher.test.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/test/publisher.test.ts)
+- [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/test/scanner.test.ts)
+- [test/update-changelog.test.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/test/update-changelog.test.ts)
 
 ## Explicit environment variables
 
-- Unique variable names detected: 25
-- Variable names: `API_KEY`, `API_TOKEN`, `APP_MODE`, `GH_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_TOKEN`, `GITHUB_WIKI_REMOTE`, `LLMWIKI_COMPILER_MODE`, `LLMWIKI_GIT_USER_EMAIL`, `LLMWIKI_GIT_USER_NAME`, `LLMWIKI_LLM_API_KEY`, `LLMWIKI_LLM_BASE_URL`, `LLMWIKI_LLM_MAX_OUTPUT_TOKENS`, `LLMWIKI_LLM_MODEL`, `LLMWIKI_LLM_PROVIDER`, `LLMWIKI_LLM_RETRIES`, `LLMWIKI_LLM_SYSTEM_PROMPT`, `LLMWIKI_LLM_SYSTEM_PROMPT_FILE`, `LLMWIKI_LLM_TEMPERATURE`, `LLMWIKI_LLM_TIMEOUT_MS`, `LLMWIKI_PUBLISH_REMOTE`, `OPENAI_API_KEY`, `PATH`, `PORT`, `VITE_HOST`
+- Unique variable names detected: 26
+- Variable names: `API_KEY`, `API_TOKEN`, `APP_MODE`, `GH_TOKEN`, `GITHUB_REPOSITORY`, `GITHUB_TOKEN`, `GITHUB_WIKI_REMOTE`, `LLMWIKI_COMPILER_MODE`, `LLMWIKI_GIT_USER_EMAIL`, `LLMWIKI_GIT_USER_NAME`, `LLMWIKI_LLM_API_KEY`, `LLMWIKI_LLM_BASE_URL`, `LLMWIKI_LLM_MAX_OUTPUT_TOKENS`, `LLMWIKI_LLM_MODEL`, `LLMWIKI_LLM_PROVIDER`, `LLMWIKI_LLM_RETRIES`, `LLMWIKI_LLM_SYSTEM_PROMPT`, `LLMWIKI_LLM_SYSTEM_PROMPT_FILE`, `LLMWIKI_LLM_TEMPERATURE`, `LLMWIKI_LLM_TIMEOUT_MS`, `LLMWIKI_LLM_VALIDATION_RETRIES`, `LLMWIKI_PUBLISH_REMOTE`, `PATH`, `PORT`, `REPO_WIKI_MISSING_TEST_KEY`, `VITE_HOST`
 
 | Source file | Variables |
 | --- | --- |
-| [.env.example](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/.env.example) | `GITHUB_REPOSITORY`, `GITHUB_TOKEN`, `OPENAI_API_KEY` |
-| [.github/workflows/changelog-on-merge.yml](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/.github/workflows/changelog-on-merge.yml) | `GH_TOKEN` |
-| [.github/workflows/wiki.yml](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/.github/workflows/wiki.yml) | `LLMWIKI_PUBLISH_REMOTE` |
-| [src/llm-provider.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/llm-provider.ts) | `LLMWIKI_COMPILER_MODE`, `LLMWIKI_LLM_API_KEY`, `LLMWIKI_LLM_BASE_URL`, `LLMWIKI_LLM_MAX_OUTPUT_TOKENS`, `LLMWIKI_LLM_MODEL`, `LLMWIKI_LLM_PROVIDER`, `LLMWIKI_LLM_RETRIES`, `LLMWIKI_LLM_SYSTEM_PROMPT`, `LLMWIKI_LLM_SYSTEM_PROMPT_FILE`, `LLMWIKI_LLM_TEMPERATURE`, `LLMWIKI_LLM_TIMEOUT_MS` |
-| [src/publisher.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/publisher.ts) | `GITHUB_WIKI_REMOTE`, `LLMWIKI_GIT_USER_EMAIL`, `LLMWIKI_GIT_USER_NAME`, `LLMWIKI_PUBLISH_REMOTE` |
-| [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/docs-linter.test.ts) | `APP_MODE`, `LLMWIKI_LLM_BASE_URL`, `PORT` |
-| [test/dotenv.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/dotenv.test.ts) | `LLMWIKI_GIT_USER_NAME`, `LLMWIKI_PUBLISH_REMOTE` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/extractors-utils.test.ts) | `API_KEY`, `API_TOKEN`, `LLMWIKI_LLM_BASE_URL`, `PORT`, `VITE_HOST` |
-| [test/publisher.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/publisher.test.ts) | `GITHUB_WIKI_REMOTE`, `LLMWIKI_PUBLISH_REMOTE` |
-| [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/scanner.test.ts) | `APP_MODE`, `PORT` |
-| [test/update-changelog.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/update-changelog.test.ts) | `PATH` |
+| [.env.example](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/.env.example) | `GITHUB_REPOSITORY`, `GITHUB_TOKEN`, `LLMWIKI_COMPILER_MODE`, `LLMWIKI_LLM_API_KEY` |
+| [.github/workflows/changelog-on-merge.yml](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/.github/workflows/changelog-on-merge.yml) | `GH_TOKEN` |
+| [.github/workflows/wiki.yml](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/.github/workflows/wiki.yml) | `LLMWIKI_COMPILER_MODE`, `LLMWIKI_PUBLISH_REMOTE` |
+| [src/compiler.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/src/compiler.ts) | `LLMWIKI_COMPILER_MODE` |
+| [src/llm-provider.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/src/llm-provider.ts) | `LLMWIKI_COMPILER_MODE`, `LLMWIKI_LLM_API_KEY`, `LLMWIKI_LLM_BASE_URL`, `LLMWIKI_LLM_MAX_OUTPUT_TOKENS`, `LLMWIKI_LLM_MODEL`, `LLMWIKI_LLM_PROVIDER`, `LLMWIKI_LLM_RETRIES`, `LLMWIKI_LLM_SYSTEM_PROMPT`, `LLMWIKI_LLM_SYSTEM_PROMPT_FILE`, `LLMWIKI_LLM_TEMPERATURE`, `LLMWIKI_LLM_TIMEOUT_MS`, `LLMWIKI_LLM_VALIDATION_RETRIES` |
+| [src/publisher.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/src/publisher.ts) | `GITHUB_WIKI_REMOTE`, `LLMWIKI_GIT_USER_EMAIL`, `LLMWIKI_GIT_USER_NAME`, `LLMWIKI_PUBLISH_REMOTE` |
+| [test/compiler.test.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/test/compiler.test.ts) | `LLMWIKI_COMPILER_MODE`, `LLMWIKI_LLM_API_KEY`, `LLMWIKI_LLM_PROVIDER`, `REPO_WIKI_MISSING_TEST_KEY` |
+| [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/test/docs-linter.test.ts) | `APP_MODE`, `LLMWIKI_LLM_BASE_URL`, `PORT` |
+| [test/dotenv.test.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/test/dotenv.test.ts) | `LLMWIKI_GIT_USER_NAME`, `LLMWIKI_PUBLISH_REMOTE` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/test/extractors-utils.test.ts) | `API_KEY`, `API_TOKEN`, `LLMWIKI_LLM_BASE_URL`, `PORT`, `VITE_HOST` |
+| [test/publisher.test.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/test/publisher.test.ts) | `GITHUB_WIKI_REMOTE`, `LLMWIKI_PUBLISH_REMOTE` |
+| [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/test/scanner.test.ts) | `APP_MODE`, `PORT` |
+| [test/update-changelog.test.ts](https://github.com/mfittko/repo-wiki/blob/253792a37296e0d106c4c2c79c48e57e4e30e395/test/update-changelog.test.ts) | `PATH` |
 
 ## Secret handling
 

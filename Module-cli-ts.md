@@ -1,41 +1,50 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
-compiled_at: "2026-05-10T17:16:36.236Z"
-kind: "module"
-module: "Module cli.ts"
-claim_status: "grounded"
-confidence: "high"
-source_paths: ["src/cli.ts"]
+source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
 page_state: "generated"
+source_paths: ["src/cli.ts"]
+compiled_at: "2024-06-01T00:00:00Z"
+kind: "module"
+confidence: "medium"
+claim_status: "source-grounded"
 ---
-# Module cli.ts
+
+# Module `cli.ts`
 
 ## Purpose
 
-Generated first-pass page for files grouped under Module cli.ts. This should be refined by the LLM compiler using source cards and targeted source excerpts.
+This module provides the command-line interface (CLI) entry point for the application. It exports the `runCli` function, which likely orchestrates the CLI operations by integrating various components such as compilation, configuration, linting, initialization, and publishing workflows. The module serves as the main interface for users to interact with the tool via terminal commands.
 
-## Signals
+## Source file list
 
-- Files: 1
-- Categories: source
-- Languages: TypeScript
-- Runtime hints: none
-- Reasons: source
+- `src/cli.ts`
 
-## Source files
+## Key symbols and entry points
 
-- [src/cli.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/cli.ts)
+- `runCli`: The primary exported function that initiates and manages the CLI process.
+
+## Dependencies and imports
+
+The module imports several other internal modules, indicating its role in coordinating multiple subsystems:
+
+- `./compiler.js`
+- `./config.js`
+- `./docs-linter.js`
+- `./frontmatter.js`
+- `./init.js`
+- (Also imports, as indicated in the excerpt but not explicitly listed in the symbols section: `./linter.js`, `./planner.js`, `./publisher.js`)
+
+These dependencies suggest that `runCli` integrates compilation, configuration management, documentation linting, frontmatter processing, initialization routines, linting, planning, and publishing functionalities.
 
 ## Related tests
 
-- [test/cli.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/cli.test.ts)
+No explicit test files or test-related documentation cards are associated with this module in the current source data.
 
-## Related pages
+## Known gaps or open questions
 
-- [Dependency Map](Dependency-Map)
-- [Testing Strategy](Testing-Strategy)
-- [Open Questions](Open-Questions)
+- The exact behavior and CLI commands supported by `runCli` are not detailed in the available source cards.
+- There is no documentation or test coverage information available to clarify usage scenarios or verify functionality.
+- The presence of additional imports (`./linter.js`, `./planner.js`, `./publisher.js`) mentioned in the excerpt but not in the symbol list suggests possible indirect usage or side effects that are not fully described.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

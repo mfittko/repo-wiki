@@ -1,37 +1,53 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
-compiled_at: "2026-05-10T17:16:36.236Z"
-kind: "module"
-module: "Module docs-validation.ts"
-claim_status: "grounded"
-confidence: "high"
-source_paths: ["src/docs-validation.ts"]
+source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
 page_state: "generated"
+source_paths: ["src/docs-validation.ts"]
+compiled_at: "2024-06-01T00:00:00Z"
+kind: "module"
+confidence: "medium"
+claim_status: "source-grounded"
 ---
-# Module docs-validation.ts
+
+# Module `docs-validation.ts`
 
 ## Purpose
 
-Generated first-pass page for files grouped under Module docs-validation.ts. This should be refined by the LLM compiler using source cards and targeted source excerpts.
+This module provides utilities and functions related to validating documentation paths and route surfaces within a codebase. It includes mechanisms to build route surface indexes, clean and normalize documented path targets, collect environment variables and manifest directories, and deduplicate validation findings. The module appears to focus on ensuring the integrity and correctness of documentation references and route definitions, likely to support documentation generation or validation workflows.
 
-## Signals
+## Source file list
 
-- Files: 1
-- Categories: source
-- Languages: TypeScript
-- Runtime hints: none
-- Reasons: source
+- `src/docs-validation.ts`
 
-## Source files
+## Key symbols and entry points
 
-- [src/docs-validation.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/docs-validation.ts)
+- **buildRouteSurfaceIndex**: Constructs an index of route surfaces, potentially mapping routes to their documentation or validation metadata.
+- **candidateRepoPaths**: Likely a collection or generator of repository paths considered for validation or documentation.
+- **cleanDocumentedPathTarget**: Cleans or normalizes documented path targets to a consistent format.
+- **collectKnownEnvironmentVariables**: Gathers environment variables known or relevant to the documentation or validation process.
+- **collectManifestDirectories**: Collects directories containing manifest files, possibly to identify documentation or route manifests.
+- **dedupeRouteValidationFindings**: Deduplicates findings from route validation to avoid redundant reports.
+- **DocumentedPathSource**: A type or interface representing the source of a documented path.
+- **hasParentDirectorySegment**: Checks if a path includes a parent directory segment (e.g., `..`).
+- **isGeneratedOutputReference**: Determines if a reference points to generated output.
+- **normalizeRepoPath**: Normalizes repository paths to a standard form.
 
-## Related pages
+## Dependencies and imports
 
-- [Dependency Map](Dependency-Map)
-- [Testing Strategy](Testing-Strategy)
-- [Open Questions](Open-Questions)
+- Node.js built-in modules:
+  - `fs` (file system operations)
+  - `path` (path manipulations)
+
+## Related tests
+
+No explicit test files or test-related documentation cards are present in the source information. It is unknown if this module is covered by tests or if tests exist elsewhere.
+
+## Known gaps or open questions
+
+- The exact behavior and usage context of the key functions and types are not documented.
+- No documentation or test cards are available to clarify usage scenarios or expected inputs/outputs.
+- The repository remote URL and commit SHA are unknown, limiting traceability.
+- The relationship of this module to other parts of the system or documentation pipeline is not specified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

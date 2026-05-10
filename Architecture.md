@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
-compiled_at: "2026-05-10T17:16:36.226Z"
+source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
+compiled_at: "2026-05-10T21:41:07.760Z"
 kind: "architecture"
 claim_status: "grounded"
 source_paths: [".env.example",".github/ISSUE_TEMPLATE/config.yml",".github/ISSUE_TEMPLATE/epic.yml",".github/ISSUE_TEMPLATE/task.yml",".github/workflows/changelog-on-merge.yml",".github/workflows/changelog-release.yml",".github/workflows/ci.yml",".github/workflows/wiki.yml",".gitignore",".pi/settings.json",".tsbuildinfo","bin/repo-wiki.ts","LICENSE","package-lock.json","package.json","scripts/update-changelog.mjs","src/cli.ts","src/compiler.ts","src/config.ts","src/context-assembler.ts","src/data-model-signals.ts","src/docs-ingestor.ts","src/docs-linter.ts","src/docs-validation.ts","src/extractors.ts","src/frontmatter.ts","src/index.ts","src/init.ts","src/language.ts","src/linter.ts","src/llm-provider.ts","src/page-ownership.ts","src/planner.ts","src/prompts.ts","src/publisher.ts","src/repository-analysis.ts","src/scanner.ts","src/secret-patterns.ts","src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts","src/wiki-patch.ts","test/cli.test.ts","test/compiler.test.ts","test/context-assembler.test.ts","test/docs-linter.test.ts","test/dotenv.test.ts","test/extractors-go.test.ts","test/extractors-rust.test.ts"]
@@ -16,7 +16,7 @@ This page is a first-pass architecture summary based on repository structure. Th
 
 ```mermaid
 flowchart TD
-  Repo[Repository at abdb6f46]
+  Repo[Repository at 253792a3]
   Repo --> M0[Repository Root]
   Repo --> M1[CI and Automation]
   Repo --> M2[Documentation]
@@ -73,7 +73,7 @@ flowchart TD
 - Files: 1
 - Dominant categories: source
 - Dominant languages: TypeScript
-- Important reasons: source
+- Important reasons: configuration, source
 
 ### Module config.ts
 

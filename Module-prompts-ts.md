@@ -1,37 +1,54 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
-compiled_at: "2026-05-10T17:16:36.236Z"
-kind: "module"
-module: "Module prompts.ts"
-claim_status: "grounded"
-confidence: "high"
-source_paths: ["src/prompts.ts"]
+source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
 page_state: "generated"
+source_paths: ["src/prompts.ts"]
+compiled_at: "2024-06-05T00:00:00Z"
+kind: "module"
+confidence: "medium"
+claim_status: "source-grounded"
 ---
-# Module prompts.ts
+
+# Module `prompts.ts`
 
 ## Purpose
 
-Generated first-pass page for files grouped under Module prompts.ts. This should be refined by the LLM compiler using source cards and targeted source excerpts.
+This module provides a collection of functions and types related to constructing and managing prompts within the system. It includes utilities to build various specialized prompts such as cross-cutting, foundation, and module-specific prompts. The module also defines several context and metadata types that support prompt construction and documentation generation workflows.
 
-## Signals
+## Source file list
 
-- Files: 1
-- Categories: source
-- Languages: TypeScript
-- Runtime hints: none
-- Reasons: source
+- `src/prompts.ts`
 
-## Source files
+## Key symbols and entry points
 
-- [src/prompts.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/prompts.ts)
+- **Functions:**
+  - `buildCrossCuttingPrompt` — Constructs prompts that address cross-cutting concerns.
+  - `buildFoundationPrompt` — Builds foundational prompts likely used as base templates.
+  - `buildModulePrompt` — Creates prompts specific to individual modules.
+  - `buildPrompt` — A general prompt builder function.
 
-## Related pages
+- **Types and Interfaces:**
+  - `BuiltPrompt` — Represents a constructed prompt object.
+  - `DocCardContext` — Contextual information for documentation cards.
+  - `MigrationContext` — Context related to migration processes.
+  - `ModelContext` — Context for model-related operations.
+  - `ModuleInfo` — Metadata describing a module.
+  - `PageArchetype` — Defines archetypes for pages, possibly for documentation or UI.
 
-- [Dependency Map](Dependency-Map)
-- [Testing Strategy](Testing-Strategy)
-- [Open Questions](Open-Questions)
+## Dependencies and imports
+
+- The source card indicates that `src/prompts.ts` does not import any external modules or dependencies.
+
+## Related tests
+
+- No test files or test-related documentation cards are listed for this module.
+
+## Known gaps or open questions
+
+- There is no explicit documentation or comments describing the detailed behavior or usage scenarios of the prompt-building functions.
+- The relationships and intended usage patterns between the various context types (`DocCardContext`, `MigrationContext`, `ModelContext`) are not detailed.
+- No information is available about how these prompts integrate with other parts of the system or how they are consumed.
+- Absence of related tests or examples limits understanding of practical application and robustness.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

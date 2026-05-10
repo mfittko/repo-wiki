@@ -1,41 +1,50 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
-compiled_at: "2026-05-10T17:16:36.236Z"
-kind: "module"
-module: "Module linter.ts"
-claim_status: "grounded"
-confidence: "high"
-source_paths: ["src/linter.ts"]
+source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
 page_state: "generated"
+source_paths: ["src/linter.ts"]
+compiled_at: "2024-06-05T00:00:00Z"
+kind: "module"
+confidence: "medium"
+claim_status: "source-grounded"
 ---
+
 # Module linter.ts
 
 ## Purpose
 
-Generated first-pass page for files grouped under Module linter.ts. This should be refined by the LLM compiler using source cards and targeted source excerpts.
+This module provides linting functionality as indicated by the presence of the `lintWiki` symbol. It is implemented in TypeScript and serves as a source module within the codebase. The module likely performs linting operations related to wiki content or markdown files, given the import of frontmatter and secret pattern utilities.
 
-## Signals
+## Source file list
 
-- Files: 1
-- Categories: source
-- Languages: TypeScript
-- Runtime hints: none
-- Reasons: source
+- `src/linter.ts`
 
-## Source files
+## Key symbols and entry points
 
-- [src/linter.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/linter.ts)
+- `lintWiki`: The primary exported symbol from this module, presumably the main function or object responsible for linting operations.
+
+## Dependencies and imports
+
+The module imports several internal and external dependencies:
+
+- Internal modules:
+  - `./frontmatter.js` — likely for parsing or handling frontmatter metadata in files.
+  - `./secret-patterns.js` — possibly for detecting sensitive or secret patterns during linting.
+  - `./utils/fs.js` — utility functions related to filesystem operations.
+- Node.js built-in modules:
+  - `node:fs` — Node.js filesystem API.
+  - `node:path` — Node.js path utilities.
 
 ## Related tests
 
-- [test/linter.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/linter.test.ts)
+No documentation or test cards are currently associated with this module, so related tests are unknown or not documented.
 
-## Related pages
+## Known gaps or open questions
 
-- [Dependency Map](Dependency-Map)
-- [Testing Strategy](Testing-Strategy)
-- [Open Questions](Open-Questions)
+- The exact functionality and API of `lintWiki` are not detailed in the available source cards.
+- There is no documentation or test coverage information available.
+- The repository remote URL and commit SHA are unknown, limiting traceability.
+- The module’s environment and usage context are not specified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

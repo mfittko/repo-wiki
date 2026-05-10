@@ -1,37 +1,47 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
-compiled_at: "2026-05-10T17:16:36.236Z"
-kind: "module"
-module: "Module planner.ts"
-claim_status: "grounded"
-confidence: "high"
-source_paths: ["src/planner.ts"]
+source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
 page_state: "generated"
+source_paths: ["src/planner.ts"]
+compiled_at: "2024-06-01T00:00:00Z"
+kind: "module"
+confidence: "medium"
+claim_status: "source-grounded"
 ---
-# Module planner.ts
+
+# Module `planner.ts`
 
 ## Purpose
 
-Generated first-pass page for files grouped under Module planner.ts. This should be refined by the LLM compiler using source cards and targeted source excerpts.
+This module provides functionality related to planning operations within the codebase. Specifically, it exports the symbol `createBootstrapPlan`, which suggests it is responsible for creating or managing a bootstrap plan, likely related to initialization or setup processes. The module is implemented in TypeScript and serves as a source module within the project.
 
-## Signals
+## Source file list
 
-- Files: 1
-- Categories: source
-- Languages: TypeScript
-- Runtime hints: none
-- Reasons: source
+- `src/planner.ts`
 
-## Source files
+## Key symbols and entry points
 
-- [src/planner.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/planner.ts)
+- `createBootstrapPlan`: The primary exported symbol from this module. It likely represents a function or factory that generates a bootstrap plan, though detailed behavior is not documented here.
 
-## Related pages
+## Dependencies and imports
 
-- [Dependency Map](Dependency-Map)
-- [Testing Strategy](Testing-Strategy)
-- [Open Questions](Open-Questions)
+The module imports the following dependencies:
+
+- `./data-model-signals.js`: A local module, possibly providing reactive or signal-based data model utilities.
+- `./utils/fs.js`: A local utility module related to filesystem operations.
+- `node:path`: The Node.js built-in module for handling and transforming file paths.
+
+These imports indicate that `planner.ts` interacts with data models, filesystem utilities, and path manipulations as part of its planning functionality.
+
+## Related tests
+
+No test files or test-related documentation cards are currently associated with this module.
+
+## Known gaps or open questions
+
+- There is no explicit documentation or comments describing the internal workings or intended use cases of `createBootstrapPlan`.
+- No related tests or usage examples are provided, limiting insight into how this module integrates with the broader system.
+- The exact nature of the bootstrap plan and its role within the application remains unspecified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

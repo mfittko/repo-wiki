@@ -1,41 +1,56 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
-compiled_at: "2026-05-10T17:16:36.236Z"
-kind: "module"
-module: "Module compiler.ts"
-claim_status: "grounded"
-confidence: "high"
-source_paths: ["src/compiler.ts"]
+source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
 page_state: "generated"
+source_paths: ["src/compiler.ts"]
+compiled_at: "<ISO-8601 timestamp>"
+kind: "module"
+confidence: "medium"
+claim_status: "source-grounded"
 ---
-# Module compiler.ts
+
+# Module: compiler.ts
 
 ## Purpose
 
-Generated first-pass page for files grouped under Module compiler.ts. This should be refined by the LLM compiler using source cards and targeted source excerpts.
+This module provides the core functionality for compiling a wiki, as indicated by the primary exported symbol `compileWiki`. It is implemented in TypeScript and serves as a source-level configuration and compilation component within the system. The module is designed to operate with environment-based configuration, specifically influenced by the `LLMWIKI_COMPILER_MODE` environment variable, suggesting runtime mode control.
 
-## Signals
+## Source file list
 
-- Files: 1
-- Categories: source
-- Languages: TypeScript
-- Runtime hints: none
-- Reasons: source
+- `src/compiler.ts`
 
-## Source files
+## Key symbols and entry points
 
-- [src/compiler.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/compiler.ts)
+- `compileWiki`: The main exported function or symbol responsible for compiling the wiki content. This is the primary entry point for consumers of this module.
+
+## Dependencies and imports
+
+The module imports several other internal modules, indicating its integration with various subsystems:
+
+- `./context-assembler.js`
+- `./data-model-signals.js`
+- `./docs-ingestor.js`
+- `./docs-validation.js`
+- `./llm-provider.js`
+
+Additional imports mentioned in the excerpt but not explicitly listed in the source cards include:
+
+- `./page-ownership.js`
+- `./utils/fs.js`
+- `./wiki-patch.js`
+
+These dependencies suggest that `compiler.ts` coordinates context assembly, data modeling, documentation ingestion and validation, language model provider integration, file system utilities, page ownership management, and wiki patching during the compilation process.
 
 ## Related tests
 
-- [test/compiler.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/compiler.test.ts)
+No documentation or source cards indicate the presence of related tests for this module at this time.
 
-## Related pages
+## Known gaps or open questions
 
-- [Dependency Map](Dependency-Map)
-- [Testing Strategy](Testing-Strategy)
-- [Open Questions](Open-Questions)
+- There is no explicit documentation or test coverage information available for this module.
+- The exact behavior and modes controlled by the `LLMWIKI_COMPILER_MODE` environment variable are not detailed.
+- The role of some imported modules (e.g., `page-ownership.js`, `wiki-patch.js`) in the compilation process is not fully described.
+- Further exploration of the `compileWiki` function's implementation would be necessary to understand the compilation workflow and error handling.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

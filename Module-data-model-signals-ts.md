@@ -1,37 +1,42 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
-compiled_at: "2026-05-10T17:16:36.236Z"
-kind: "module"
-module: "Module data-model-signals.ts"
-claim_status: "grounded"
-confidence: "high"
-source_paths: ["src/data-model-signals.ts"]
+source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
 page_state: "generated"
+source_paths: ["src/data-model-signals.ts"]
+compiled_at: "2024-06-01T00:00:00Z"
+kind: "module"
+confidence: "medium"
+claim_status: "source-grounded"
 ---
-# Module data-model-signals.ts
+
+# Module `data-model-signals.ts`
 
 ## Purpose
 
-Generated first-pass page for files grouped under Module data-model-signals.ts. This should be refined by the LLM compiler using source cards and targeted source excerpts.
+This module provides functionality related to data model signals. It exports the symbol `hasDataModelSignals`, which likely represents a utility, flag, or function associated with detecting or managing signals within a data model context. The module is implemented in TypeScript and does not import any other modules, indicating it is self-contained.
 
-## Signals
+## Source file list
 
-- Files: 1
-- Categories: source
-- Languages: TypeScript
-- Runtime hints: none
-- Reasons: source
+- `src/data-model-signals.ts`
 
-## Source files
+## Key symbols and entry points
 
-- [src/data-model-signals.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/data-model-signals.ts)
+- `hasDataModelSignals` — the primary exported symbol from this module. The exact nature (function, constant, or other) is not detailed here but is central to the module's purpose.
 
-## Related pages
+## Dependencies and imports
 
-- [Dependency Map](Dependency-Map)
-- [Testing Strategy](Testing-Strategy)
-- [Open Questions](Open-Questions)
+- This module does not import any external modules or dependencies.
+
+## Related tests
+
+- No documentation or source cards indicate the presence of related test files or test cases for this module.
+
+## Known gaps or open questions
+
+- The specific implementation details and usage of `hasDataModelSignals` are not provided.
+- There is no documentation or test coverage information available.
+- The repository and commit information are unknown, limiting traceability.
+- The exact role of this module within the larger project or system is not described.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

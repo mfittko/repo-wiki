@@ -1,74 +1,113 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
-compiled_at: "2026-05-10T17:16:36.236Z"
-kind: "module"
-module: "Repository Root"
-claim_status: "grounded"
-confidence: "high"
-source_paths: [".env.example",".gitignore",".llmwiki/schema.md",".pi/AGENTS.md",".pi/settings.json",".tsbuildinfo","AGENTS.md","CHANGELOG.md","LICENSE","README.md","bin/repo-wiki.ts","package-lock.json","package.json","prompts/compiler.md","prompts/lint.md","prompts/page-templates.md","scripts/update-changelog.mjs","skills/repo-wiki-cli/SKILL.md","test/cli.test.ts","test/compiler.test.ts"]
+source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
 page_state: "generated"
+source_paths: [".env.example",".gitignore",".llmwiki/schema.md",".pi/AGENTS.md",".pi/settings.json",".tsbuildinfo","AGENTS.md","CHANGELOG.md","LICENSE","README.md","bin/repo-wiki.ts","package-lock.json","package.json","prompts/compiler.md","prompts/lint.md","prompts/page-templates.md","scripts/update-changelog.mjs","skills/repo-wiki-cli/SKILL.md","test/cli.test.ts","test/compiler.test.ts"]
+compiled_at: "2024-06-10T00:00:00Z"
+kind: "module"
+confidence: "medium"
+claim_status: "source-grounded"
 ---
-# Repository Root
+
+# Repository Root Module
 
 ## Purpose
 
-Generated first-pass page for files grouped under Repository Root. This should be refined by the LLM compiler using source cards and targeted source excerpts.
+This module represents the root of the repository and contains foundational configuration, documentation, source code entry points, package manifests, and test suites. It serves as the central hub for:
 
-## Signals
+- **Configuration**: Environment variable examples and settings files (`.env.example`, `.pi/settings.json`).
+- **Documentation**: Core documentation and schema definitions (`README.md`, `CHANGELOG.md`, `AGENTS.md`, `.llmwiki/schema.md`, prompts documentation).
+- **Source Code**: CLI entry point and scripts (`bin/repo-wiki.ts`, `scripts/update-changelog.mjs`).
+- **Package Management**: Package manifests and lock files (`package.json`, `package-lock.json`).
+- **Testing**: Comprehensive test suites covering CLI, compiler, context assembly, linting, dotenv handling, extractors, and more (`test/*.test.ts`).
+- **Build Metadata**: TypeScript build info (`.tsbuildinfo`).
 
-- Files: 38
-- Categories: source, docs, package, test
-- Languages: Text, Markdown, JSON, TypeScript, JavaScript
-- Runtime hints: environment-variable, background-work, http-route, data-model, orm-model
-- Reasons: api-surface, configuration, data-model, docs, orm-model, package, package-manifest, readme, source, test
+This module is critical for the overall operation, configuration, packaging, and validation of the repository.
 
-## Source files
+## Source File List
 
-- [.env.example](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/.env.example)
-- [.gitignore](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/.gitignore)
-- [.llmwiki/schema.md](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/.llmwiki/schema.md)
-- [.pi/AGENTS.md](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/.pi/AGENTS.md)
-- [.pi/settings.json](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/.pi/settings.json)
-- [.tsbuildinfo](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/.tsbuildinfo)
-- [AGENTS.md](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/AGENTS.md)
-- [CHANGELOG.md](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/CHANGELOG.md)
-- [LICENSE](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/LICENSE)
-- [README.md](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/README.md)
-- [bin/repo-wiki.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/bin/repo-wiki.ts)
-- [package-lock.json](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/package-lock.json)
-- [package.json](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/package.json)
-- [prompts/compiler.md](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/prompts/compiler.md)
-- [prompts/lint.md](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/prompts/lint.md)
-- [prompts/page-templates.md](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/prompts/page-templates.md)
-- [scripts/update-changelog.mjs](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/scripts/update-changelog.mjs)
-- [skills/repo-wiki-cli/SKILL.md](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/skills/repo-wiki-cli/SKILL.md)
-- [test/cli.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/cli.test.ts)
-- [test/compiler.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/compiler.test.ts)
-- [test/context-assembler.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/context-assembler.test.ts)
-- [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/docs-linter.test.ts)
-- [test/dotenv.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/dotenv.test.ts)
-- [test/extractors-go.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/extractors-go.test.ts)
-- [test/extractors-rust.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/extractors-rust.test.ts)
-- [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/extractors-utils.test.ts)
-- [test/frontmatter.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/frontmatter.test.ts)
-- [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/init-planner.test.ts)
-- [test/linter.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/linter.test.ts)
-- [test/llm-provider.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/llm-provider.test.ts)
-- [test/page-ownership.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/page-ownership.test.ts)
-- [test/publisher.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/publisher.test.ts)
-- [test/repository-analysis.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/repository-analysis.test.ts)
-- [test/run-compiled-tests.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/run-compiled-tests.ts)
-- [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/scanner.test.ts)
-- [test/update-changelog.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/update-changelog.test.ts)
-- [test/wiki-patch.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/wiki-patch.test.ts)
-- [tsconfig.json](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/tsconfig.json)
+- `.env.example` — Environment variable configuration example.
+- `.gitignore` — Git ignore rules.
+- `.llmwiki/schema.md` — Data model schema documentation.
+- `.pi/AGENTS.md` — Agents documentation.
+- `.pi/settings.json` — JSON configuration settings.
+- `.tsbuildinfo` — TypeScript incremental build metadata.
+- `AGENTS.md` — Agents documentation.
+- `CHANGELOG.md` — Change log for the project.
+- `LICENSE` — License text.
+- `README.md` — Main readme and introductory documentation.
+- `bin/repo-wiki.ts` — CLI entry point script.
+- `package-lock.json` — NPM package lock file.
+- `package.json` — NPM package manifest.
+- `prompts/compiler.md` — Compiler prompt documentation.
+- `prompts/lint.md` — Lint prompt documentation.
+- `prompts/page-templates.md` — Page templates prompt documentation.
+- `scripts/update-changelog.mjs` — Script to update changelog entries.
+- `skills/repo-wiki-cli/SKILL.md` — CLI skill documentation.
+- `test/cli.test.ts` — CLI tests.
+- `test/compiler.test.ts` — Compiler tests.
+- `test/context-assembler.test.ts` — Context assembler tests.
+- `test/docs-linter.test.ts` — Documentation linter tests.
+- `test/dotenv.test.ts` — Environment variable handling tests.
+- `test/extractors-go.test.ts` — Go extractor tests.
+- `test/extractors-rust.test.ts` — Rust extractor tests.
+- `test/extractors-utils.test.ts` — Extractor utilities tests.
+- `test/frontmatter.test.ts` — Frontmatter parsing tests.
+- `test/init-planner.test.ts` — Initialization planner tests.
+- `test/linter.test.ts` — Linter tests.
+- `test/llm-provider.test.ts` — LLM provider tests.
+- `test/page-ownership.test.ts` — Page ownership tests.
+- `test/publisher.test.ts` — Publisher tests.
+- `test/repository-analysis.test.ts` — Repository analysis tests.
+- `test/run-compiled-tests.ts` — Test runner for compiled tests.
+- `test/scanner.test.ts` — Scanner tests.
+- `test/update-changelog.test.ts` — Changelog update tests.
+- `test/wiki-patch.test.ts` — Wiki patch tests.
+- `tsconfig.json` — TypeScript configuration.
 
-## Related pages
+## Key Symbols and Entry Points
 
-- [Dependency Map](Dependency-Map)
-- [Testing Strategy](Testing-Strategy)
-- [Open Questions](Open-Questions)
+- **bin/repo-wiki.ts**: The main CLI entry point importing from `../src/cli.js`.
+- **scripts/update-changelog.mjs**: Exports functions such as `appendEntry`, `classifyPrimaryCategory`, `deriveChangelogEntries`, and `emitOrWriteChangelog` for changelog management.
+- **test/cli.test.ts**: Defines CLI test helpers like `captureCli`, `cliPath`, and `execFileAsync`.
+- **test/compiler.test.ts**: Provides test utilities like `createLLMPlan`, `createPlan`, and `writeFixture`.
+- Various test files export test fixtures and helpers for validating different components of the repository.
+
+## Dependencies and Imports
+
+- `bin/repo-wiki.ts` imports `../src/cli.js`.
+- `scripts/update-changelog.mjs` imports Node.js core modules: `child_process`, `fs/promises`, `path`, and `util`.
+- Test files import various internal modules from `../src/` such as `compiler.js`, `linter.js`, `llm-provider.js`, `page-ownership.js`, `docs-ingestor.js`, `docs-linter.js`, `docs-validation.js`, `scanner.js`, `extractors.js`, and utilities.
+- Test files also import Node.js built-in modules like `assert/strict`, `child_process`, `fs/promises`, `os`, `path`, `test`, and `url`.
+
+## Related Tests
+
+The module includes extensive test coverage across multiple aspects:
+
+- CLI functionality (`test/cli.test.ts`)
+- Compiler and plan creation (`test/compiler.test.ts`)
+- Context assembly (`test/context-assembler.test.ts`)
+- Documentation linting and validation (`test/docs-linter.test.ts`)
+- Environment variable handling (`test/dotenv.test.ts`)
+- Language-specific extractors (`test/extractors-go.test.ts`, `test/extractors-rust.test.ts`, `test/extractors-utils.test.ts`)
+- Frontmatter parsing (`test/frontmatter.test.ts`)
+- Initialization planning (`test/init-planner.test.ts`)
+- Linting (`test/linter.test.ts`)
+- LLM provider integration (`test/llm-provider.test.ts`)
+- Page ownership logic (`test/page-ownership.test.ts`)
+- Publishing workflows (`test/publisher.test.ts`)
+- Repository analysis (`test/repository-analysis.test.ts`)
+- Scanner functionality (`test/scanner.test.ts`)
+- Changelog update logic (`test/update-changelog.test.ts`)
+- Wiki patching (`test/wiki-patch.test.ts`)
+
+## Known Gaps or Open Questions
+
+- The source repository URL and commit SHA are unknown, limiting traceability.
+- Some documentation (e.g., `README.md`) is only partially validated.
+- The exact runtime environment and usage context for some scripts and tests (e.g., environment variables in `.env.example`) require further clarification.
+- The relationship and integration details between the CLI, compiler, and LLM components could be elaborated.
+- The `.tsbuildinfo` file is included but its role in build optimization is not detailed here.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
