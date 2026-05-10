@@ -428,16 +428,18 @@ async function ensurePagesNavInclude(siteRootDir: string, publishDir: string) {
  *
  * Rules:
  * - `[text](PageName)` → `[text](PageName.md)` (bare page-name link)
- * - `[text](./Page.md)` → `[text](Page.md)` (normalise leading `./`)
+ * - `[text](./Page.md)` → `[text](Page.md)` (normalize leading `./`)
  * - External URLs, `mailto:`, anchor-only, and known asset extensions are left unchanged.
+ *
+ * Quantifiers are bounded to prevent polynomial backtracking on adversarial input.
  */
 export function rewriteInternalWikiLinks(content: string): string {
-  return content.replace(/\[([^\]]*)\]\(([^)]+)\)/g, (_match, text, href) => {
-    return `[${text}](${normaliseWikiHref(href)})`;
+  return content.replace(/\[([^\]\n]{0,2048})\]\(([^)\n]{1,2048})\)/g, (_match, text, href) => {
+    return `[${text}](${normalizeWikiHref(href)})`;
   });
 }
 
-function normaliseWikiHref(href: string): string {
+function normalizeWikiHref(href: string): string {
   // Leave external links, mailto, anchor-only, and protocol-relative links unchanged
   if (/^(?:https?:|mailto:|ftp:|\/\/|#)/.test(href)) {
     return href;
@@ -452,15 +454,15 @@ function normaliseWikiHref(href: string): string {
     return href;
   }
 
-  // Normalise leading ./
-  let normalised = pathPart.replace(/^\.\//, '');
+  // Normalize leading ./
+  let normalized = pathPart.replace(/^\.\//, '');
 
   // Add .md if the path has no file extension
-  if (normalised && !/\.[a-z]{1,10}$/i.test(normalised) && !normalised.endsWith('/')) {
-    normalised += '.md';
+  if (normalized && !/\.[a-z]{1,10}$/i.test(normalized) && !normalized.endsWith('/')) {
+    normalized += '.md';
   }
 
-  return normalised + fragment;
+  return normalized + fragment;
 }
 
 /**
@@ -491,7 +493,7 @@ function parseSidebarToNavHtml(content: string): string {
         inList = true;
       }
       const text = escapeHtml(linkItemMatch[1]);
-      const href = escapeHtml(normaliseWikiHref(linkItemMatch[2]));
+      const href = escapeHtml(normalizeWikiHref(linkItemMatch[2]));
       parts.push(`<li><a href="${href}">${text}</a></li>`);
       continue;
     }
