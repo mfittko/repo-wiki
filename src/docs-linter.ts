@@ -2,7 +2,7 @@ import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { readJson } from './utils/fs.js';
 import { loadConfig } from './config.js';
-import { buildRouteSurfaceIndex, cleanDocumentedPathTarget, collectKnownEnvironmentVariables, resolveDocumentedPathOnDisk, validateRouteClaims } from './docs-validation.js';
+import { buildRouteSurfaceIndex, cleanDocumentedPathTarget, collectKnownEnvironmentVariables, dedupeRouteValidationFindings, resolveDocumentedPathOnDisk, validateRouteClaims } from './docs-validation.js';
 import { classifyDocumentedCommands, extractCiCommands, extractRouteClaims, mergePackageScripts } from './docs-ingestor.js';
 
 export async function lintDocs({ scanDir, repoPath = '.' }) {
@@ -67,8 +67,8 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
       }
     }
 
-    const routeClaims = doc.validation?.route_claims || extractRouteClaims(doc.claims || []);
-    const routeResults = validateRouteClaims(routeClaims, routeIndex);
+    const routeClaims = doc.validation?.route_claims || extractRouteClaims((doc.claims || []).map((claim) => claim.text || '').join('\n'));
+    const routeResults = dedupeRouteValidationFindings(validateRouteClaims(routeClaims, routeIndex), doc.path);
     const unvalidatedRouteClaims = routeResults.filter((result) => !result.valid);
     for (const result of unvalidatedRouteClaims) {
       pushIssue(issues, issue(

@@ -3,7 +3,7 @@ import { promises as fs } from 'node:fs';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { assembleAllPageContexts } from './context-assembler.js';
 import { ensureDir, readJson, writeText } from './utils/fs.js';
-import { buildRouteSurfaceIndex, collectKnownEnvironmentVariables, collectManifestDirectories, normalizeRepoPath, resolveDocumentedPathFromManifest, validateRouteClaims } from './docs-validation.js';
+import { buildRouteSurfaceIndex, collectKnownEnvironmentVariables, collectManifestDirectories, dedupeRouteValidationFindings, normalizeRepoPath, resolveDocumentedPathFromManifest, validateRouteClaims } from './docs-validation.js';
 import { classifyDocumentedCommands, extractRouteClaims, mergePackageScripts } from './docs-ingestor.js';
 import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-ownership.js';
 
@@ -216,8 +216,9 @@ function renderDocumentationDebtReport(manifest) {
   const unvalidatedEnvVars = envFindings.filter((finding) => !finding.valid);
   const routeIndex = buildRouteSurfaceIndex(manifest);
   const routeFindings = docs.flatMap((doc) => {
-    const routeClaims = doc.validation?.route_claims || extractRouteClaims(doc.claims || []);
-    return validateRouteClaims(routeClaims, routeIndex).map((finding) => ({ ...finding, doc: doc.path }));
+    const routeClaims = doc.validation?.route_claims || extractRouteClaims((doc.claims || []).map((claim) => claim.text || '').join('\n'));
+    const findings = validateRouteClaims(routeClaims, routeIndex).map((finding) => ({ ...finding, doc: doc.path }));
+    return dedupeRouteValidationFindings(findings, doc.path);
   });
   const validatedRouteClaims = routeFindings.filter((finding) => finding.valid);
   const unvalidatedRouteClaims = routeFindings.filter((finding) => !finding.valid);
@@ -228,7 +229,10 @@ function renderDocumentationDebtReport(manifest) {
     ...missingCmds.map((finding) => `- \`${redactSensitiveText(finding.command)}\` - package script not found.`),
     ...unvalidatedCmds.map((finding) => `- \`${redactSensitiveText(finding.command)}\` - command source unknown.`),
     ...unvalidatedEnvVars.map((finding) => `- \`${finding.doc}\` mentions \`${finding.name}\` without scanner/config validation.`),
-    ...unvalidatedRouteClaims.map((finding) => `- \`${finding.doc}:${finding.claim.line}\` - ${finding.reason}`)
+    ...unvalidatedRouteClaims.map((finding) => {
+      const location = finding.locations?.length ? finding.locations.map((line) => `${finding.doc}:${line}`).join(', ') : `${finding.doc}:${finding.claim.line}`;
+      return `- \`${location}\` - ${finding.reason}`;
+    })
   ];
   const brokenReferenceFindings = brokenFilePaths.map((finding) => `- \`${finding.doc}:${finding.line}\` references \`${finding.reference_path}\` (missing).`);
 
@@ -254,7 +258,11 @@ function renderDocumentationDebtReport(manifest) {
     const badge = finding.valid ? '✅ validated' : '❓ unvalidated';
     const method = finding.claim.method || 'ANY';
     const routePath = finding.claim.path || '(none)';
-    return tableRow([code(`${finding.doc}:${finding.claim.line}`), code(`${method} ${routePath}`), badge, finding.valid ? 'scanner route match' : finding.reason]);
+    const location = finding.locations?.length ? finding.locations.map((line) => `${finding.doc}:${line}`).join(', ') : `${finding.doc}:${finding.claim.line}`;
+    const evidence = finding.valid
+      ? formatRouteEvidence(manifest, finding.evidence || [])
+      : finding.reason;
+    return tableRow([code(location), code(`${method} ${routePath}`), badge, evidence]);
   });
 
   return `${frontmatter(manifest, { kind: 'documentation_debt_report', documentation_authority: manifest.documentation?.authority || 'secondary' })}# Documentation Debt Report
@@ -318,7 +326,7 @@ Route and API claims from documentation prose are validated against scanner-extr
 - Validated: ${validatedRouteClaims.length}
 - Unvalidated: ${unvalidatedRouteClaims.length}
 
-${routeRows.length > 0 ? `| Claim location | Route claim | Status | Reason |\n|---|---|---|---|\n${routeRows.join('\n')}${routeFindings.length > routeRows.length ? `\n\n_Showing first ${routeRows.length} of ${routeFindings.length} route claim findings._` : ''}` : '- No route/API claims extracted from documentation.'}
+${routeRows.length > 0 ? `| Claim location | Route claim | Status | Evidence / reason |\n|---|---|---|---|\n${routeRows.join('\n')}${routeFindings.length > routeRows.length ? `\n\n_Showing first ${routeRows.length} of ${routeFindings.length} route claim findings._` : ''}` : '- No route/API claims extracted from documentation.'}
 
 ## Findings by category
 
@@ -496,6 +504,15 @@ function collectRoutes(files: any[]) {
 
       return left.target.localeCompare(right.target);
     });
+}
+
+function formatRouteEvidence(manifest: any, evidence: any[]) {
+  if (!evidence?.length) return 'scanner route match';
+  return evidence.slice(0, 3).map((item) => {
+    const source = sourcePathLink(manifest, item.source_path);
+    const details = [item.framework, item.method, code(item.path)].filter(Boolean).join(' ');
+    return `${source} (${details})`;
+  }).join('; ');
 }
 
 function formatCodeList(values: Array<string | number>) {

@@ -10,6 +10,14 @@ export type PathResolution = {
 };
 
 export type DocumentedPathSource = 'link' | 'inline_code';
+export type RouteEvidence = {
+  source_path: string;
+  framework: string;
+  target: string;
+  handler: string | null;
+  method: string;
+  path: string;
+};
 
 export function normalizeRepoPath(filePath: string) {
   return String(filePath || '').replaceAll('\\', '/').replace(/^\/+/, '').replace(/\/+$/, '');
@@ -23,38 +31,113 @@ export function normalizeRoutePath(routePath: string | null | undefined) {
 }
 
 export function buildRouteSurfaceIndex(manifest: any) {
-  const byPath = new Map<string, Set<string>>();
-  for (const file of manifest.files || []) {
-    for (const route of file.route_surfaces || []) {
+  const byPath = new Map<string, Map<string, RouteEvidence[]>>();
+  const files = [...(manifest.files || [])].sort((left, right) => String(left.path || '').localeCompare(String(right.path || '')));
+  for (const file of files) {
+    const routes = [...(file.route_surfaces || [])].sort((left, right) => {
+      const leftPath = normalizeRoutePath(left.path);
+      const rightPath = normalizeRoutePath(right.path);
+      if (leftPath !== rightPath) return leftPath.localeCompare(rightPath);
+      return String(left.target || '').localeCompare(String(right.target || ''));
+    });
+    for (const route of routes) {
       const routePath = normalizeRoutePath(route.path);
       if (!routePath) continue;
       const methods = route.methods?.length ? route.methods : ['ANY'];
-      const known = byPath.get(routePath) || new Set<string>();
-      for (const method of methods) known.add(String(method).toUpperCase());
-      byPath.set(routePath, known);
+      const byMethod = byPath.get(routePath) || new Map<string, RouteEvidence[]>();
+      for (const methodValue of methods) {
+        const method = String(methodValue).toUpperCase();
+        const evidence = byMethod.get(method) || [];
+        evidence.push({
+          source_path: String(file.path || ''),
+          framework: String(route.framework || 'unknown'),
+          target: String(route.target || 'unknown'),
+          handler: route.handler || null,
+          method,
+          path: routePath
+        });
+        byMethod.set(method, evidence);
+      }
+      byPath.set(routePath, byMethod);
     }
   }
   return byPath;
 }
 
-export function validateRouteClaims(claims: any[], routeIndex: Map<string, Set<string>>) {
+export function validateRouteClaims(claims: any[], routeIndex: Map<string, Map<string, RouteEvidence[]>>) {
   const hasRouteMetadata = routeIndex.size > 0;
   return (claims || []).map((claim) => {
     if (!hasRouteMetadata) {
-      return { claim, valid: false, reason: 'route claim could not be validated because scanner route metadata is unavailable.' };
+      return { claim, valid: false, reason: 'route claim could not be validated because scanner route metadata is unavailable.', evidence: [] };
     }
     if (!claim.path) {
-      return { claim, valid: false, reason: 'route claim could not be validated because no route path was detected.' };
+      return { claim, valid: false, reason: 'route claim could not be validated because no route path was detected.', evidence: [] };
     }
-    const methods = routeIndex.get(normalizeRoutePath(claim.path));
-    if (!methods) {
-      return { claim, valid: false, reason: `route claim did not match scanner route surfaces for path ${claim.path}.` };
+    const path = normalizeRoutePath(claim.path);
+    const byMethod = routeIndex.get(path);
+    if (!byMethod) {
+      return { claim, valid: false, reason: `route claim did not match scanner route surfaces for path ${claim.path}.`, evidence: [] };
     }
-    if (claim.method && !methods.has(claim.method) && !methods.has('ANY')) {
-      return { claim, valid: false, reason: `route claim method ${claim.method} for ${claim.path} did not match scanner route surfaces.` };
+
+    if (!claim.method) {
+      const evidence = [...new Map([...byMethod.values()].flat().map((item) => [routeEvidenceKey(item), item])).values()];
+      return evidence.length > 0
+        ? { claim, valid: true, reason: null, evidence }
+        : { claim, valid: false, reason: `route claim did not match scanner route surfaces for path ${claim.path}.`, evidence: [] };
     }
-    return { claim, valid: true, reason: null };
+
+    const exact = byMethod.get(claim.method) || [];
+    const wildcard = byMethod.get('ANY') || [];
+    const evidence = [...new Map([...exact, ...wildcard].map((item) => [routeEvidenceKey(item), item])).values()];
+    if (evidence.length === 0) {
+      return { claim, valid: false, reason: `route claim method ${claim.method} for ${claim.path} did not match scanner route surfaces.`, evidence: [] };
+    }
+    return { claim, valid: true, reason: null, evidence };
   });
+}
+
+export function dedupeRouteValidationFindings(findings: any[], docPath?: string) {
+  const deduped = new Map<string, any>();
+  for (const finding of findings || []) {
+    const path = normalizeRoutePath(finding?.claim?.path) || '';
+    const method = String(finding?.claim?.method || 'ANY').toUpperCase();
+    const status = finding?.valid ? 'validated' : 'unvalidated';
+    const reason = String(finding?.reason || '');
+    const scope = String(finding?.doc || docPath || '');
+    const key = [scope, method, path, status, reason].join('\u0000');
+    const line = Number(finding?.claim?.line || 0);
+    if (!deduped.has(key)) {
+      deduped.set(key, {
+        ...finding,
+        doc: scope || finding?.doc,
+        locations: line > 0 ? [line] : []
+      });
+      continue;
+    }
+    const existing = deduped.get(key);
+    if (line > 0 && !existing.locations.includes(line)) {
+      existing.locations.push(line);
+      existing.locations.sort((left: number, right: number) => left - right);
+    }
+  }
+  return [...deduped.values()].sort((left, right) => {
+    const leftDoc = String(left.doc || '');
+    const rightDoc = String(right.doc || '');
+    if (leftDoc !== rightDoc) return leftDoc.localeCompare(rightDoc);
+    const leftPath = normalizeRoutePath(left?.claim?.path);
+    const rightPath = normalizeRoutePath(right?.claim?.path);
+    if (leftPath !== rightPath) return leftPath.localeCompare(rightPath);
+    const leftMethod = String(left?.claim?.method || 'ANY');
+    const rightMethod = String(right?.claim?.method || 'ANY');
+    if (leftMethod !== rightMethod) return leftMethod.localeCompare(rightMethod);
+    const leftLine = Number(left.locations?.[0] || left?.claim?.line || 0);
+    const rightLine = Number(right.locations?.[0] || right?.claim?.line || 0);
+    return leftLine - rightLine;
+  });
+}
+
+function routeEvidenceKey(value: RouteEvidence) {
+  return [value.source_path, value.framework, value.target, value.handler || '', value.method, value.path].join('\u0000');
 }
 
 export function isGeneratedOutputReference(filePath: string) {

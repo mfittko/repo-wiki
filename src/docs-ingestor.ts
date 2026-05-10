@@ -180,7 +180,7 @@ export function validateDocClaims({ claims, content, filePath }) {
   const contradictions = [];
   const commands = [];
   const envVars = [];
-  const routeClaims = extractRouteClaims(claims);
+  const routeClaims = extractRouteClaims(content);
 
   for (const block of extractCodeBlocks(content)) {
     if (/^(bash|sh|shell|zsh|console)?$/i.test(block.language || '')) {
@@ -223,20 +223,58 @@ export function validateDocClaims({ claims, content, filePath }) {
   };
 }
 
-export function extractRouteClaims(claims: Array<{ line: number; text: string }>) {
+export function extractRouteClaims(content: string) {
   const routes = [];
-  for (const claim of claims || []) {
-    if (!/\b(route|api|endpoint)\b/i.test(claim.text)) continue;
-    const pathMatch = /(?:^|[\s"'`(])((?:\/[A-Za-z0-9._~:@!$&'()*+,;=%-]+)+\/?)/.exec(claim.text);
-    const methodMatch = /\b(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\b/i.exec(claim.text);
-    routes.push({
-      line: claim.line,
-      text: claim.text,
-      path: pathMatch ? normalizeRoutePath(pathMatch[1]) : null,
-      method: methodMatch ? methodMatch[1].toUpperCase() : null
+  const seen = new Set<string>();
+  const lines = String(content || '').split('\n');
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const snippet = line.trim();
+    if (!snippet || /^[-|\s:]+$/.test(snippet)) continue;
+    pushRouteMatches(routes, seen, line, index + 1);
+  }
+
+  return routes.slice(0, 100);
+}
+
+function pushRouteMatches(routes: any[], seen: Set<string>, line: string, lineNumber: number) {
+  const snippet = line.trim().slice(0, 280);
+  if (!snippet) return;
+
+  for (const match of line.matchAll(/\b(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|ALL)\b\s+((?:\/[A-Za-z0-9._~:@!$&'()*+,;=%\-[\]{}]+)+\/?)/gi)) {
+    pushRoute(routes, seen, {
+      line: lineNumber,
+      text: snippet,
+      snippet,
+      path: normalizeRoutePath(match[2]),
+      method: match[1].toUpperCase()
     });
   }
-  return routes.slice(0, 50);
+
+  if (line.includes('|')) {
+    const methods = [...line.matchAll(/\b(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|ALL)\b/gi)].map((match) => match[1].toUpperCase());
+    const paths = [...line.matchAll(/(?:^|[\s|`(])((?:\/[A-Za-z0-9._~:@!$&'()*+,;=%\-[\]{}]+)+\/?)(?=$|[\s|`),.;:!?])/g)].map((match) => normalizeRoutePath(match[1]));
+    const pairCount = Math.min(methods.length, paths.length);
+    for (let index = 0; index < pairCount; index += 1) {
+      pushRoute(routes, seen, {
+        line: lineNumber,
+        text: snippet,
+        snippet,
+        path: paths[index],
+        method: methods[index]
+      });
+    }
+  }
+}
+
+function pushRoute(routes: any[], seen: Set<string>, route: any) {
+  if (!route.path || !route.method) return;
+  const key = `${route.line}\u0000${route.method}\u0000${route.path}`;
+  if (!seen.has(key)) {
+    seen.add(key);
+    routes.push(route);
+  }
 }
 
 function isEnvironmentVariableMention(value: string) {
