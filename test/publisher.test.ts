@@ -449,6 +449,21 @@ test('publishWiki rejects unsafe github-pages publish paths', async () => {
     );
 
     await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs\ninjected', dryRun: true }),
+      /contains unsupported control characters/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs\rInjected', dryRun: true }),
+      /contains unsupported control characters/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs\0injected', dryRun: true }),
+      /contains unsupported control characters/
+    );
+
+    await assert.rejects(
       () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '../sibling', dryRun: true }),
       /must not contain "\.\." path segments/
     );

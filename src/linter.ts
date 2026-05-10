@@ -29,7 +29,6 @@ export async function lintWiki({ wikiDir, scanDir }: { wikiDir: string; scanDir:
   const issues = [];
   const files = await listMarkdown(wikiDir);
   const topLevelPages = await listTopLevelMarkdown(wikiDir);
-  const existing = new Set(files.map((file) => path.basename(file)));
   const topLevelExisting = new Set(topLevelPages.map((file) => path.basename(file)));
 
   for (const required of REQUIRED_PAGES) {
@@ -54,7 +53,7 @@ export async function lintWiki({ wikiDir, scanDir }: { wikiDir: string; scanDir:
 
     for (const link of extractWikiLinks(content)) {
       const target = `${link}.md`;
-      if (!existing.has(target) && !existing.has(link)) {
+      if (!topLevelExisting.has(target) && !topLevelExisting.has(link)) {
         issues.push(warning('broken-wiki-link', `${relativePath} links to missing page ${link}.`));
       }
     }

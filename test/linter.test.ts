@@ -107,6 +107,23 @@ test('lintWiki requires source_commit in frontmatter, not just page body text', 
   }
 });
 
+test('lintWiki does not let nested pages satisfy top-level wiki links', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Home.md': generatedPage('Home', '[Nested duplicate only](Duplicate)'),
+    'nested/Duplicate.md': generatedPage('Nested Duplicate')
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const brokenLink = result.issues.find((issue) => issue.code === 'broken-wiki-link' && issue.message.includes('Duplicate'));
+
+    assert.ok(brokenLink);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('lintWiki ignores external, anchor, and path-like markdown links', async () => {
   const { dir, wikiDir, scanDir } = await writeWikiFixture({
     ...requiredPages,

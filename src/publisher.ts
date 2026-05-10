@@ -323,6 +323,10 @@ function assertSafeGitArgument(value: string | undefined, label: string) {
 
 function resolvePublishPath(target: PublishTarget, pagesPath?: string) {
   const rawPath = target === 'github-pages' ? (pagesPath || '.').trim() || '.' : '.';
+  if (/[\u0000\r\n]/.test(rawPath)) {
+    throw new Error('Publish path contains unsupported control characters.');
+  }
+
   const pathForSegments = rawPath.replace(/\\/g, '/');
 
   if (path.isAbsolute(pathForSegments) || path.posix.isAbsolute(pathForSegments)) {
