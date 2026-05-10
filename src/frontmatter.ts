@@ -145,8 +145,8 @@ function renderFrontmatterAsProvenance(content: string): string {
 
   const metadata = parseSupportedFrontmatter(block.yaml);
   if (!metadata) {
-    // Intentional defensive fallback: unrecognised or malformed frontmatter (e.g. source_paths
-    // with an empty scalar value) is left untouched rather than partially rendered.
+    // Intentional defensive fallback: unrecognised or malformed frontmatter is left
+    // untouched rather than partially rendered.
     return content;
   }
 
@@ -272,7 +272,7 @@ function parseSimpleYamlObject(yaml: string): Record<string, unknown> | null {
         index = nextIndex;
         continue;
       }
-      result[key] = '';
+      result[key] = null;
       index++;
       continue;
     }
@@ -444,7 +444,7 @@ function asCodeSpan(value: string): string {
 }
 
 function escapeMarkdownLinkLabel(value: string): string {
-  return value.replace(/\\/g, '\\\\').replace(/([\[\]()])/g, '\\$1');
+  return value.replace(/\\/g, '\\\\').replace(/([\[\]()*_`])/g, '\\$1');
 }
 
 /**

@@ -263,7 +263,7 @@ test('applyFrontmatterPolicy provenance escapes markdown-special characters in l
     'source_repo: "https://github.com/mfittko/repo-wiki.git"',
     'source_commit: "abc1234def5678"',
     'source_paths:',
-    '  - "src/weird[part](draft).ts"',
+    '  - "src/weird[part](draft)_v*`1`.ts"',
     '---',
     '# Page',
     ''
@@ -271,7 +271,7 @@ test('applyFrontmatterPolicy provenance escapes markdown-special characters in l
 
   const result = applyFrontmatterPolicy(input, 'provenance');
 
-  assert.match(result, /\*\*Primary sources:\*\* \[src\/weird\\\[part\\\]\\\(draft\\\)\.ts\]\(https:\/\/github\.com\/mfittko\/repo-wiki\/blob\/abc1234def5678\/src\/weird%5Bpart%5D%28draft%29\.ts\)/);
+  assert.match(result, /\*\*Primary sources:\*\* \[src\/weird\\\[part\\\]\\\(draft\\\)\\_v\\\*\\`1\\`\.ts\]\(https:\/\/github\.com\/mfittko\/repo-wiki\/blob\/abc1234def5678\/src\/weird%5Bpart%5D%28draft%29_v%2A%601%60\.ts\)/);
 });
 
 test('applyFrontmatterPolicy provenance leaves invalid leading frontmatter unchanged', () => {
@@ -280,10 +280,7 @@ test('applyFrontmatterPolicy provenance leaves invalid leading frontmatter uncha
   assert.equal(result, input);
 });
 
-test('applyFrontmatterPolicy provenance returns content unchanged when source_paths has empty scalar value', () => {
-  // source_paths: with no list items (empty scalar '') causes toStringArray to return null,
-  // which makes parseSupportedFrontmatter return null, triggering the defensive fallback in
-  // renderFrontmatterAsProvenance that returns the original content unchanged.
+test('applyFrontmatterPolicy provenance renders frontmatter when source_paths has no list items', () => {
   const input = [
     '---',
     'source_repo: "https://github.com/mfittko/repo-wiki.git"',
@@ -293,10 +290,14 @@ test('applyFrontmatterPolicy provenance returns content unchanged when source_pa
     '# Page',
     ''
   ].join('\n');
+
   const result = applyFrontmatterPolicy(input, 'provenance');
-  // Current defensive behavior: raw frontmatter is returned unchanged rather than
-  // partially rendered with an empty source_paths field.
-  assert.equal(result, input);
+
+  assert.equal(result.startsWith('---\n'), false);
+  assert.match(result, /\*\*Generated from:\*\* `https:\/\/github\.com\/mfittko\/repo-wiki\.git`/);
+  assert.match(result, /\*\*Compiled at:\*\* `2026-05-10T00:00:00\.000Z`/);
+  assert.doesNotMatch(result, /\*\*Primary sources:\*\*/);
+  assert.match(result, /\n\n# Page\n$/);
 });
 
 test('applyFrontmatterPolicy strip is a no-op when content has no frontmatter', () => {
