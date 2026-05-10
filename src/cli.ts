@@ -35,8 +35,9 @@ Options:
             Publish destination (default: github-wiki).
   --pages-path <path>
             Publish path for github-pages target (default: .).
-  --frontmatter-policy <strip|html-comment|preserve>
-            Frontmatter handling when publishing to the selected target.
+  --frontmatter-policy <strip|html-comment|preserve|provenance>
+             Frontmatter handling when publishing to the selected target.
+            github-wiki defaults to provenance; github-pages defaults to preserve.
             html-comment is accepted for forward compatibility and currently behaves like strip.
 
 Examples:

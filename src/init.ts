@@ -58,7 +58,7 @@ const DEFAULT_CONFIG = {
     target: 'github-wiki',
     wiki: {
       branch: 'master',
-      frontmatter: 'strip'
+      frontmatter: 'provenance'
     },
     pages: {
       branch: 'gh-pages',

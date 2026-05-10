@@ -111,7 +111,7 @@ test('CLI warns and falls back for unknown target and frontmatter policy', async
 
     assert.equal(summary.target, 'github-wiki');
     assert.equal(summary.branch, 'master');
-    assert.equal(summary.frontmatterPolicy, 'strip');
+    assert.equal(summary.frontmatterPolicy, 'provenance');
     assert.match(stderr, /unknown --target/);
     assert.match(stderr, /unknown --frontmatter-policy/);
   } finally {
@@ -162,6 +162,30 @@ test('CLI publish accepts html-comment frontmatter policy with warning', async (
 
     assert.equal(summary.frontmatterPolicy, 'html-comment');
     assert.match(stderr, /reserved for future metadata comments/);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('CLI publish accepts provenance frontmatter policy for github-pages', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-cli-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  try {
+    await mkdir(wikiDir, { recursive: true });
+    await writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+
+    const { stdout } = await captureCli([
+      'publish',
+      '--wiki', wikiDir,
+      '--target', 'github-pages',
+      '--frontmatter-policy', 'provenance',
+      '--dry-run'
+    ], tempDir);
+    const summary = JSON.parse(stdout);
+
+    assert.equal(summary.target, 'github-pages');
+    assert.equal(summary.frontmatterPolicy, 'provenance');
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
