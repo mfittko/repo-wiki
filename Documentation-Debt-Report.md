@@ -1,9 +1,12 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "b8cbf96e1f992a8d3818f45b712ece4f64b11535"
-compiled_at: "2026-05-10T16:00:12.220Z"
+source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
+compiled_at: "2026-05-10T17:16:36.233Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
+claim_status: "review-needed"
+confidence: "low"
+source_paths: [".github/agents/coordinator.agent.md",".github/agents/developer.agent.md",".github/agents/docs.agent.md",".github/agents/fixer.agent.md",".github/agents/quality.agent.md",".github/agents/review.agent.md",".github/copilot-review-instructions.md",".github/pull_request_template.md","docs/PLAN.md","docs/plans/agent-integration.md","docs/plans/ci-publishing.md","docs/plans/doc-validation.md","docs/plans/incremental-mode.md","docs/plans/llm-compiler.md","docs/plans/production-scanner.md","docs/plans/wiki-graph.md","docs/WHY.md","README.md"]
 page_state: "generated"
 ---
 # Documentation Debt Report

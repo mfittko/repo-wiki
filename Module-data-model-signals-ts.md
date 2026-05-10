@@ -1,9 +1,11 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "b8cbf96e1f992a8d3818f45b712ece4f64b11535"
-compiled_at: "2026-05-10T16:00:12.223Z"
+source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
+compiled_at: "2026-05-10T17:16:36.236Z"
 kind: "module"
 module: "Module data-model-signals.ts"
+claim_status: "grounded"
+confidence: "high"
 source_paths: ["src/data-model-signals.ts"]
 page_state: "generated"
 ---
@@ -23,7 +25,7 @@ Generated first-pass page for files grouped under Module data-model-signals.ts. 
 
 ## Source files
 
-- [src/data-model-signals.ts](https://github.com/mfittko/repo-wiki/blob/b8cbf96e1f992a8d3818f45b712ece4f64b11535/src/data-model-signals.ts)
+- [src/data-model-signals.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/data-model-signals.ts)
 
 ## Related pages
 

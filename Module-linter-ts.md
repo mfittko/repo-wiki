@@ -1,9 +1,11 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "b8cbf96e1f992a8d3818f45b712ece4f64b11535"
-compiled_at: "2026-05-10T16:00:12.223Z"
+source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
+compiled_at: "2026-05-10T17:16:36.236Z"
 kind: "module"
 module: "Module linter.ts"
+claim_status: "grounded"
+confidence: "high"
 source_paths: ["src/linter.ts"]
 page_state: "generated"
 ---
@@ -23,11 +25,11 @@ Generated first-pass page for files grouped under Module linter.ts. This should 
 
 ## Source files
 
-- [src/linter.ts](https://github.com/mfittko/repo-wiki/blob/b8cbf96e1f992a8d3818f45b712ece4f64b11535/src/linter.ts)
+- [src/linter.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/linter.ts)
 
 ## Related tests
 
-- [test/linter.test.ts](https://github.com/mfittko/repo-wiki/blob/b8cbf96e1f992a8d3818f45b712ece4f64b11535/test/linter.test.ts)
+- [test/linter.test.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/test/linter.test.ts)
 
 ## Related pages
 

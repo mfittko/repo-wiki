@@ -1,9 +1,11 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "b8cbf96e1f992a8d3818f45b712ece4f64b11535"
-compiled_at: "2026-05-10T16:00:12.223Z"
+source_commit: "abdb6f4647291d3179248fa6e7f94856f53ec49c"
+compiled_at: "2026-05-10T17:16:36.236Z"
 kind: "module"
 module: "Module secret-patterns.ts"
+claim_status: "grounded"
+confidence: "high"
 source_paths: ["src/secret-patterns.ts"]
 page_state: "generated"
 ---
@@ -23,7 +25,7 @@ Generated first-pass page for files grouped under Module secret-patterns.ts. Thi
 
 ## Source files
 
-- [src/secret-patterns.ts](https://github.com/mfittko/repo-wiki/blob/b8cbf96e1f992a8d3818f45b712ece4f64b11535/src/secret-patterns.ts)
+- [src/secret-patterns.ts](https://github.com/mfittko/repo-wiki/blob/abdb6f4647291d3179248fa6e7f94856f53ec49c/src/secret-patterns.ts)
 
 ## Related pages
 
