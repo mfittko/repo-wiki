@@ -16,11 +16,16 @@ test('extractPackageMetadata handles non-package files, valid package files, and
     package_scripts: {
       alpha: 'echo a',
       zeta: 'echo z'
-    }
+    },
+    package_script_sources: [
+      { name: 'alpha', line: 1 },
+      { name: 'zeta', line: 1 }
+    ]
   });
   assert.deepEqual(extractPackageMetadata('package.json', '{ invalid json'), {
     package_name: null,
-    package_scripts: {}
+    package_scripts: {},
+    package_script_sources: []
   });
 });
 
@@ -95,7 +100,8 @@ test('buildRepositoryAnalysis resolves imports, deduplicates edges, and maps fil
     {
       path: 'package.json',
       name: 'repo-wiki',
-      scripts: { build: 'tsc', test: 'node --test' }
+      scripts: { build: 'tsc', test: 'node --test' },
+      script_sources: []
     }
   ]);
 

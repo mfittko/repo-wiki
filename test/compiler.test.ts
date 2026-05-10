@@ -291,7 +291,15 @@ test('compileWiki renders source file paths as commit-pinned GitHub links when r
       { path: 'test/file with spaces.test.ts', category: 'test', language: 'TypeScript', imports: ['../src/file [with] spaces.ts'], runtime_hints: [], reasons: ['test'] }
     ],
     analysis: {
-      package_scripts: [{ path: 'package.json', name: 'example', scripts: { test: 'node --test' } }],
+      package_scripts: [{
+        path: 'package.json',
+        name: 'example',
+        scripts: { test: 'node --test' },
+        script_sources: [{ name: 'test', line: 7 }]
+      }],
+      ci_workflow_command_sources: [
+        { path: '.github/workflows/ci.yml', command: 'npm ci', line: 12, end_line: 13 }
+      ],
       dependency_graph: {
         edges: [{ from: 'test/file with spaces.test.ts', to: 'src/file [with] spaces.ts', specifier: '../src/file [with] spaces.ts' }],
         summary: { edges: 1, importers: 1, imported_files: 1 }
@@ -329,7 +337,8 @@ test('compileWiki renders source file paths as commit-pinned GitHub links when r
     const dependencyPage = await fs.readFile(path.join(wikiDir, 'Dependency-Map.md'), 'utf8');
 
     assert.ok(modulePage.includes('[src/file \\[with\\] spaces.ts](https://github.com/owner/example/blob/abc123456789/src/file%20%5Bwith%5D%20spaces.ts)'));
-    assert.match(buildPage, /\[package\.json\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/package\.json\)/);
+    assert.match(buildPage, /\[package\.json\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/package\.json#L7\)/);
+    assert.match(buildPage, /\[\.github\/workflows\/ci\.yml\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/\.github\/workflows\/ci\.yml#L12-L13\)/);
     assert.match(testingPage, /\[test\/file with spaces\.test\.ts\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/test\/file%20with%20spaces\.test\.ts\)/);
     assert.ok(dependencyPage.includes('[src/file \\[with\\] spaces.ts](https://github.com/owner/example/blob/abc123456789/src/file%20%5Bwith%5D%20spaces.ts)'));
   } finally {
@@ -639,4 +648,3 @@ test('compileWiki does not overwrite unmanaged pages by default', async () => {
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
-

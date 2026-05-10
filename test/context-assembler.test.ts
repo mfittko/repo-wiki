@@ -362,3 +362,36 @@ test('assemblePageContext reports source and documentation budget omission reaso
   assert.ok(context.omitted.reasons.includes('max_source_cards_exceeded'));
   assert.ok(context.omitted.reasons.includes('max_documentation_cards_exceeded'));
 });
+
+test('assemblePageContext preserves source ranges for Build-Test-and-Run metadata', () => {
+  const { manifest, plan } = createFixture();
+  const context = assemblePageContext({
+    manifest: {
+      ...manifest,
+      analysis: {
+        ...manifest.analysis,
+        package_scripts: [{
+          path: 'package.json',
+          scripts: { test: 'node --test' },
+          script_sources: [{ name: 'test', line: 8 }]
+        }],
+        ci_workflow_command_sources: [
+          { path: '.github/workflows/ci.yml', command: 'npm ci', line: 12, end_line: 14 }
+        ]
+      }
+    },
+    plan,
+    page: { path: 'Build-Test-and-Run.md', phase: 'foundation' }
+  });
+
+  assert.deepEqual(context.metadata, {
+    package_scripts: [{
+      path: 'package.json',
+      script_count: 1,
+      script_sources: [{ name: 'test', line: 8 }]
+    }],
+    ci_workflow_command_sources: [
+      { path: '.github/workflows/ci.yml', command: 'npm ci', line: 12, end_line: 14 }
+    ]
+  });
+});
