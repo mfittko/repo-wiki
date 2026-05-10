@@ -204,6 +204,22 @@ test('applyFrontmatterPolicy provenance adds a secondary evidence note for docs-
   assert.match(result, /\*\*Evidence note:\*\* This page is derived from markdown documentation/);
 });
 
+test('applyFrontmatterPolicy provenance does not add a secondary evidence note for mixed docs and code source paths', () => {
+  const input = [
+    '---',
+    'source_paths:',
+    '  - "docs/guide.md"',
+    '  - "src/frontmatter.ts"',
+    '---',
+    '# Page',
+    ''
+  ].join('\n');
+
+  const result = applyFrontmatterPolicy(input, 'provenance');
+
+  assert.doesNotMatch(result, /\*\*Evidence note:\*\*/);
+});
+
 test('applyFrontmatterPolicy provenance adds a secondary evidence note for review-oriented claim status without docs-only paths', () => {
   const input = [
     '---',
