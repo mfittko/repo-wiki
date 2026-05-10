@@ -91,7 +91,7 @@ export const DEFAULT_WALK_EXCLUDES = [
   '.cache',
   '.llmwiki/run',
   '.llmwiki/wiki',
-  'tmp'
+  'tmp/**'
 ];
 
 function shouldExclude(relative: string, name: string, exclude: string[]) {

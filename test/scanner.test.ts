@@ -393,15 +393,17 @@ test('scanRepository honors config source excludes when walking files', async ()
   }
 });
 
-test('scanRepository excludes top-level tmp scratch files by default', async () => {
+test('scanRepository excludes top-level tmp scratch files by default without dropping nested tmp paths', async () => {
   const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-default-tmp-exclude-test-'));
 
   try {
     await fs.mkdir(path.join(repo, 'src'), { recursive: true });
     await fs.mkdir(path.join(repo, 'tmp', 'scratch'), { recursive: true });
+    await fs.mkdir(path.join(repo, 'packages', 'worker', 'tmp'), { recursive: true });
     await fs.writeFile(path.join(repo, 'src', 'index.js'), 'export const ok = true;\n', 'utf8');
     await fs.writeFile(path.join(repo, 'tmp', 'scratch', 'notes.md'), '# local review notes\n', 'utf8');
     await fs.writeFile(path.join(repo, 'tmpfile.js'), 'export const sibling = true;\n', 'utf8');
+    await fs.writeFile(path.join(repo, 'packages', 'worker', 'tmp', 'fixture.js'), 'export const fixture = true;\n', 'utf8');
 
     const out = path.join(repo, '.llmwiki', 'run');
     const result = await scanRepository({
@@ -412,8 +414,9 @@ test('scanRepository excludes top-level tmp scratch files by default', async () 
 
     assert.ok(result.manifest.files.some((file) => file.path === 'src/index.js'));
     assert.ok(result.manifest.files.some((file) => file.path === 'tmpfile.js'));
+    assert.ok(result.manifest.files.some((file) => file.path === 'packages/worker/tmp/fixture.js'));
     assert.equal(result.manifest.files.some((file) => file.path === 'tmp/scratch/notes.md'), false);
-    assert.ok(result.manifest.config.source.effective_exclude.includes('tmp'));
+    assert.ok(result.manifest.config.source.effective_exclude.includes('tmp/**'));
   } finally {
     await fs.rm(repo, { recursive: true, force: true });
   }
