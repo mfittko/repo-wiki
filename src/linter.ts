@@ -55,7 +55,9 @@ export async function lintWiki({ wikiDir, scanDir }: { wikiDir: string; scanDir:
     const content = await fs.readFile(file, 'utf8');
     const relativePath = path.relative(wikiDir, file).replaceAll(path.sep, '/');
 
-    if (!hasSourceCommitFrontmatter(content)) {
+    const frontmatter = parseFrontmatter(content);
+
+    if (!hasSourceCommitFrontmatter(frontmatter)) {
       issues.push(warning('missing-source-commit', `${relativePath} does not include source_commit frontmatter.`));
     }
 
@@ -70,7 +72,6 @@ export async function lintWiki({ wikiDir, scanDir }: { wikiDir: string; scanDir:
       }
     }
 
-    const frontmatter = parseFrontmatter(content);
     if (shouldCheckGeneratedProvenance(relativePath, frontmatter, content)) {
       if (!hasProvenanceSignal(content, frontmatter)) {
         issues.push(warning('missing-source-provenance', `${relativePath} includes material claims without source provenance (source_paths, source links/paths, or explicit secondary-documentation labeling).`));
@@ -118,8 +119,8 @@ async function listMarkdown(wikiDir: string): Promise<string[]> {
   return files.flat().sort();
 }
 
-function hasSourceCommitFrontmatter(content: string): boolean {
-  return Object.hasOwn(parseFrontmatter(content), 'source_commit');
+function hasSourceCommitFrontmatter(frontmatter: Record<string, any>): boolean {
+  return Object.hasOwn(frontmatter, 'source_commit');
 }
 
 function extractWikiLinks(content: string): string[] {
