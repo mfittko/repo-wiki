@@ -3,15 +3,15 @@ source_repo: "https://github.com/mfittko/repo-wiki"
 source_commit: "8e450a538b4c7a54090597526dbb48dc26c508a2"
 compiled_at: "2026-05-10T06:16:09.782Z"
 kind: "module"
-module: "Module docs-linter.ts"
-source_paths: ["src/docs-linter.ts"]
+module: "Module wiki-patch.ts"
+source_paths: ["src/wiki-patch.ts"]
 page_state: "generated"
 ---
-# Module docs-linter.ts
+# Module wiki-patch.ts
 
 ## Purpose
 
-Generated first-pass page for files grouped under Module docs-linter.ts. This should be refined by the LLM compiler using source cards and targeted source excerpts.
+Generated first-pass page for files grouped under Module wiki-patch.ts. This should be refined by the LLM compiler using source cards and targeted source excerpts.
 
 ## Signals
 
@@ -23,11 +23,11 @@ Generated first-pass page for files grouped under Module docs-linter.ts. This sh
 
 ## Source files
 
-- [src/docs-linter.ts](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/src/docs-linter.ts)
+- [src/wiki-patch.ts](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/src/wiki-patch.ts)
 
 ## Related tests
 
-- [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/test/docs-linter.test.ts)
+- [test/wiki-patch.test.ts](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/test/wiki-patch.test.ts)
 
 ## Related pages
 

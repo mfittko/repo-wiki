@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "8aa93c6e99a61f3c2d7a6b527fc351443c0d7c1c"
-compiled_at: "2026-05-10T06:11:31.844Z"
+source_commit: "8e450a538b4c7a54090597526dbb48dc26c508a2"
+compiled_at: "2026-05-10T06:16:09.763Z"
 kind: "repository_overview"
 page_state: "generated"
 ---
@@ -11,10 +11,10 @@ page_state: "generated"
 
 | Language | Files |
 |---|---:|
-| TypeScript | 44 |
+| TypeScript | 47 |
 | Markdown | 28 |
 | YAML | 7 |
-| Text | 5 |
+| Text | 4 |
 | JSON | 4 |
 | JavaScript | 1 |
 
@@ -22,9 +22,9 @@ page_state: "generated"
 
 | Category | Files |
 |---|---:|
-| source | 38 |
+| source | 39 |
 | docs | 28 |
-| test | 17 |
+| test | 18 |
 | ci | 4 |
 | package | 2 |
 
@@ -55,3 +55,5 @@ page_state: "generated"
 - [Module publisher.ts](Module-publisher-ts) - 1 files
 - [Module repository-analysis.ts](Module-repository-analysis-ts) - 1 files
 - [Module scanner.ts](Module-scanner-ts) - 1 files
+- [Module secret-patterns.ts](Module-secret-patterns-ts) - 1 files
+- [Module wiki-patch.ts](Module-wiki-patch-ts) - 1 files

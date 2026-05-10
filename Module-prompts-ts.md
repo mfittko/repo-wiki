@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "8aa93c6e99a61f3c2d7a6b527fc351443c0d7c1c"
-compiled_at: "2026-05-10T06:11:31.860Z"
+source_commit: "8e450a538b4c7a54090597526dbb48dc26c508a2"
+compiled_at: "2026-05-10T06:16:09.782Z"
 kind: "module"
 module: "Module prompts.ts"
 source_paths: ["src/prompts.ts"]
@@ -23,7 +23,7 @@ Generated first-pass page for files grouped under Module prompts.ts. This should
 
 ## Source files
 
-- [src/prompts.ts](https://github.com/mfittko/repo-wiki/blob/8aa93c6e99a61f3c2d7a6b527fc351443c0d7c1c/src/prompts.ts)
+- [src/prompts.ts](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/src/prompts.ts)
 
 ## Related pages
 

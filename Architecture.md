@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "8aa93c6e99a61f3c2d7a6b527fc351443c0d7c1c"
-compiled_at: "2026-05-10T06:11:31.844Z"
+source_commit: "8e450a538b4c7a54090597526dbb48dc26c508a2"
+compiled_at: "2026-05-10T06:16:09.763Z"
 kind: "architecture"
 page_state: "generated"
 ---
@@ -13,7 +13,7 @@ This page is a first-pass architecture summary based on repository structure. Th
 
 ```mermaid
 flowchart TD
-  Repo[Repository at 8aa93c6e]
+  Repo[Repository at 8e450a53]
   Repo --> M0[Repository Root]
   Repo --> M1[CI and Automation]
   Repo --> M2[Documentation]
@@ -199,6 +199,20 @@ flowchart TD
 - Important reasons: source
 
 ### Module scanner.ts
+
+- Files: 1
+- Dominant categories: source
+- Dominant languages: TypeScript
+- Important reasons: source
+
+### Module secret-patterns.ts
+
+- Files: 1
+- Dominant categories: source
+- Dominant languages: TypeScript
+- Important reasons: source
+
+### Module wiki-patch.ts
 
 - Files: 1
 - Dominant categories: source

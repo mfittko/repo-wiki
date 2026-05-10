@@ -3,15 +3,15 @@ source_repo: "https://github.com/mfittko/repo-wiki"
 source_commit: "8e450a538b4c7a54090597526dbb48dc26c508a2"
 compiled_at: "2026-05-10T06:16:09.782Z"
 kind: "module"
-module: "Module config.ts"
-source_paths: ["src/config.ts"]
+module: "Module secret-patterns.ts"
+source_paths: ["src/secret-patterns.ts"]
 page_state: "generated"
 ---
-# Module config.ts
+# Module secret-patterns.ts
 
 ## Purpose
 
-Generated first-pass page for files grouped under Module config.ts. This should be refined by the LLM compiler using source cards and targeted source excerpts.
+Generated first-pass page for files grouped under Module secret-patterns.ts. This should be refined by the LLM compiler using source cards and targeted source excerpts.
 
 ## Signals
 
@@ -23,7 +23,7 @@ Generated first-pass page for files grouped under Module config.ts. This should 
 
 ## Source files
 
-- [src/config.ts](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/src/config.ts)
+- [src/secret-patterns.ts](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/src/secret-patterns.ts)
 
 ## Related pages
 
