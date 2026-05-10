@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "0604877d3099270286da69c1cf111e77cb0f81b8"
-compiled_at: "2026-05-10T08:42:10.999Z"
+source_commit: "b8cbf96e1f992a8d3818f45b712ece4f64b11535"
+compiled_at: "2026-05-10T16:00:12.223Z"
 kind: "module"
 module: "Module publisher.ts"
 source_paths: ["src/publisher.ts"]
@@ -23,11 +23,11 @@ Generated first-pass page for files grouped under Module publisher.ts. This shou
 
 ## Source files
 
-- [src/publisher.ts](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/src/publisher.ts)
+- [src/publisher.ts](https://github.com/mfittko/repo-wiki/blob/b8cbf96e1f992a8d3818f45b712ece4f64b11535/src/publisher.ts)
 
 ## Related tests
 
-- [test/publisher.test.ts](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/test/publisher.test.ts)
+- [test/publisher.test.ts](https://github.com/mfittko/repo-wiki/blob/b8cbf96e1f992a8d3818f45b712ece4f64b11535/test/publisher.test.ts)
 
 ## Related pages
 

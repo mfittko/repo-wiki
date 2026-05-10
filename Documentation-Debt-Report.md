@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "0604877d3099270286da69c1cf111e77cb0f81b8"
-compiled_at: "2026-05-10T08:42:10.989Z"
+source_commit: "b8cbf96e1f992a8d3818f45b712ece4f64b11535"
+compiled_at: "2026-05-10T16:00:12.220Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 page_state: "generated"
@@ -31,6 +31,7 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
   "require_code_validation": true,
   "allow_unvalidated_context": true,
   "preserve_original_claims": false,
+  "validation_strictness": "standard",
   "fail_on_stale_docs": false,
   "fail_on_conflicting_docs": true
 }
@@ -159,8 +160,8 @@ Repository file and directory references extracted from markdown links and inlin
 | `docs/WHY.md:42` | `OWNER/REPO.wiki.git` | ❌ missing | not found |
 | `docs/WHY.md:61` | `./PLAN.md` | ✅ valid | `docs/PLAN.md` |
 | `README.md:33` | `scripts/update-changelog.mjs` | ✅ valid | `scripts/update-changelog.mjs` |
-| `README.md:73` | `Documentation-Debt-Report.md` | ❌ missing | not found |
-| `README.md:118` | `pages_path=smoke/pr-N` | ❌ missing | not found |
+| `README.md:74` | `Documentation-Debt-Report.md` | ❌ missing | not found |
+| `README.md:119` | `pages_path=smoke/pr-N` | ❌ missing | not found |
 
 ## Environment variable validation
 
@@ -184,13 +185,78 @@ Environment variable names extracted from documentation are validated against sc
 | `docs/plans/llm-compiler.md` | `LLMWIKI_LLM_MAX_OUTPUT_TOKENS` | ✅ validated |
 | `README.md` | `LLMWIKI_PUBLISH_REMOTE` | ✅ validated |
 
-## Stale documentation candidates
+## Route/API claim validation
+
+Route and API claims from documentation prose are validated against scanner-extracted route surfaces when available.
+
+- Validated: 0
+- Unvalidated: 0
+
+- No route/API claims extracted from documentation.
+
+## Findings by category
+
+### Stale
 
 - `docs/plans/incremental-mode.md` - age 0 days, status stale
 
-## Contradiction-review candidates
+### Contradicted
 
 - None detected.
+
+### Unvalidated
+
+- `docs/plans/wiki-graph.md` - documentation claims have no validation signal.
+- `npx repo-wiki init --repo . --write-agents` - command source unknown.
+- `npx repo-wiki run --mode bootstrap --repo . --wiki .llmwiki/wiki` - command source unknown.
+- `npx repo-wiki publish --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git` - command source unknown.
+- `npx repo-wiki publish --target github-wiki --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git` - command source unknown.
+- `npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --pages-path .` - command source unknown.
+- `npm install` - command source unknown.
+- `npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --remote https://github.com/OWNER/repo-wiki.git --branch gh-pages --pages-path .` - command source unknown.
+- `.github/agents/review.agent.md` mentions `CHANGES_REQUESTED` without scanner/config validation.
+- `docs/PLAN.md` mentions `HUMAN_NOTES` without scanner/config validation.
+
+### Broken-reference
+
+- `docs/PLAN.md:19` references `Index.md` (missing).
+- `docs/PLAN.md:20` references `Log.md` (missing).
+- `docs/PLAN.md:39` references `Index.md` (missing).
+- `docs/PLAN.md:39` references `Log.md` (missing).
+- `docs/PLAN.md:63` references `OWNER/REPO.wiki.git` (missing).
+- `docs/PLAN.md:299` references `Index.md` (missing).
+- `docs/PLAN.md:299` references `Log.md` (missing).
+- `docs/PLAN.md:332` references `Index.md` (missing).
+- `docs/PLAN.md:337` references `Log.md` (missing).
+- `docs/PLAN.md:491` references `Index.md` (missing).
+- `docs/PLAN.md:499` references `Log.md` (missing).
+- `docs/PLAN.md:661` references `Index.md` (missing).
+- `docs/PLAN.md:661` references `Log.md` (missing).
+- `docs/PLAN.md:694` references `Log.md` (missing).
+- `docs/PLAN.md:760` references `Index.md` (missing).
+- `docs/PLAN.md:760` references `Log.md` (missing).
+- `docs/PLAN.md:766` references `Index.md` (missing).
+- `docs/PLAN.md:886` references `docs/plans/karpathy-llm-wiki-alignment.md` (missing).
+- `docs/PLAN.md:887` references `docs/plans/wiki-health.md` (missing).
+- `docs/PLAN.md:888` references `docs/plans/query-and-file-back.md` (missing).
+- `docs/PLAN.md:889` references `docs/plans/search-index.md` (missing).
+- `docs/PLAN.md:890` references `docs/plans/trust-hardening.md` (missing).
+- `docs/PLAN.md:891` references `docs/plans/github-action.md` (missing).
+- `docs/PLAN.md:916` references `Index.md` (missing).
+- `docs/PLAN.md:916` references `Log.md` (missing).
+- `docs/PLAN.md:945` references `Log.md` (missing).
+- `docs/PLAN.md:962` references `AGENTS.repo-wiki.md` (missing).
+- `docs/PLAN.md:963` references `Agent-Context-Pack.md` (missing).
+- `docs/plans/agent-integration.md:62` references `AGENTS.repo-wiki.md` (missing).
+- `docs/plans/agent-integration.md:63` references `Agent-Context-Pack.md` (missing).
+- `docs/plans/wiki-graph.md:81` references `_Sidebar.md` (missing).
+- `docs/plans/wiki-graph.md:108` references `_Sidebar.md` (missing).
+- `docs/plans/wiki-graph.md:108` references `Index.md` (missing).
+- `docs/WHY.md:18` references `Index.md` (missing).
+- `docs/WHY.md:19` references `Log.md` (missing).
+- `docs/WHY.md:42` references `OWNER/REPO.wiki.git` (missing).
+- `README.md:74` references `Documentation-Debt-Report.md` (missing).
+- `README.md:119` references `pages_path=smoke/pr-N` (missing).
 
 ## Compiler policy
 
