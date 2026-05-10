@@ -37,6 +37,9 @@ test('publishWiki redacts credential-bearing remotes in dry-run summaries', asyn
     });
 
     assert.equal(result.summary.status, 'dry-run');
+    assert.equal(result.summary.target, 'github-wiki');
+    assert.equal(result.summary.path, '.');
+    assert.equal(result.summary.frontmatterPolicy, 'strip');
     assert.equal(result.summary.remote, 'https://***:***@github.com/OWNER/REPO.wiki.git');
 
     const tokenOnlyResult = await publishWiki({
@@ -102,6 +105,7 @@ test('publishWiki strips frontmatter from top-level and nested markdown without 
     });
 
     assert.equal(result.summary.status, 'published');
+    assert.equal(result.summary.target, 'github-wiki');
     assert.equal(result.summary.frontmatterPolicy, 'strip');
     assert.equal(result.summary.pages, 3);
 
@@ -192,12 +196,426 @@ test('publishWiki reports no changes when only stripped frontmatter changes', as
     });
 
     assert.equal(secondPublish.summary.status, 'no-changes');
+    assert.equal(secondPublish.summary.target, 'github-wiki');
     assert.equal(secondPublish.summary.frontmatterPolicy, 'strip');
     assert.equal(secondPublish.summary.pages, 1);
 
     await git(['clone', '--branch', 'master', remoteDir, checkoutDir]);
     assert.equal(await fs.readFile(path.join(checkoutDir, 'Home.md'), 'utf8'), '# Home\n');
     assert.equal(await fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8'), '---\nkind: home\nsource_commit: def456\n---\n# Home\n');
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki uses target-specific defaults in dry-run summaries', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '---\nkind: home\n---\n# Home\n', 'utf8');
+
+    const pagesResult = await publishWiki({
+      wikiDir,
+      target: 'github-pages',
+      dryRun: true
+    });
+
+    assert.equal(pagesResult.summary.status, 'dry-run');
+    assert.equal(pagesResult.summary.target, 'github-pages');
+    assert.equal(pagesResult.summary.branch, 'gh-pages');
+    assert.equal(pagesResult.summary.path, '.');
+    assert.equal(pagesResult.summary.frontmatterPolicy, 'preserve');
+
+    const wikiResult = await publishWiki({
+      wikiDir,
+      target: 'github-wiki',
+      dryRun: true
+    });
+
+    assert.equal(wikiResult.summary.status, 'dry-run');
+    assert.equal(wikiResult.summary.target, 'github-wiki');
+    assert.equal(wikiResult.summary.branch, 'master');
+    assert.equal(wikiResult.summary.path, '.');
+    assert.equal(wikiResult.summary.frontmatterPolicy, 'strip');
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki skipped-no-remote guidance mentions supported wiki remote environment variables', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const previousPublishRemote = process.env.LLMWIKI_PUBLISH_REMOTE;
+  const previousWikiRemote = process.env.GITHUB_WIKI_REMOTE;
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    delete process.env.LLMWIKI_PUBLISH_REMOTE;
+    delete process.env.GITHUB_WIKI_REMOTE;
+
+    const result = await publishWiki({
+      wikiDir,
+      target: 'github-wiki'
+    });
+
+    assert.equal(result.summary.status, 'skipped-no-remote');
+    assert.match(result.summary.next_step, /LLMWIKI_PUBLISH_REMOTE/);
+    assert.match(result.summary.next_step, /GITHUB_WIKI_REMOTE/);
+    assert.match(result.summary.next_step, /--remote/);
+  } finally {
+    if (previousPublishRemote === undefined) {
+      delete process.env.LLMWIKI_PUBLISH_REMOTE;
+    } else {
+      process.env.LLMWIKI_PUBLISH_REMOTE = previousPublishRemote;
+    }
+    if (previousWikiRemote === undefined) {
+      delete process.env.GITHUB_WIKI_REMOTE;
+    } else {
+      process.env.GITHUB_WIKI_REMOTE = previousWikiRemote;
+    }
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki resolves target-specific remote environment variables', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const previousPublishRemote = process.env.LLMWIKI_PUBLISH_REMOTE;
+  const previousWikiRemote = process.env.GITHUB_WIKI_REMOTE;
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    delete process.env.LLMWIKI_PUBLISH_REMOTE;
+    process.env.GITHUB_WIKI_REMOTE = 'https://github.com/OWNER/REPO.wiki.git';
+
+    const pagesWithoutPublishRemote = await publishWiki({
+      wikiDir,
+      target: 'github-pages',
+      dryRun: true
+    });
+
+    assert.equal(pagesWithoutPublishRemote.summary.remote, null);
+
+    const wikiResult = await publishWiki({
+      wikiDir,
+      target: 'github-wiki',
+      dryRun: true
+    });
+
+    assert.equal(wikiResult.summary.remote, 'https://github.com/OWNER/REPO.wiki.git');
+
+    process.env.LLMWIKI_PUBLISH_REMOTE = 'https://github.com/OWNER/REPO.git';
+    const pagesWithPublishRemote = await publishWiki({
+      wikiDir,
+      target: 'github-pages',
+      dryRun: true
+    });
+
+    assert.equal(pagesWithPublishRemote.summary.remote, 'https://github.com/OWNER/REPO.git');
+  } finally {
+    if (previousPublishRemote === undefined) {
+      delete process.env.LLMWIKI_PUBLISH_REMOTE;
+    } else {
+      process.env.LLMWIKI_PUBLISH_REMOTE = previousPublishRemote;
+    }
+    if (previousWikiRemote === undefined) {
+      delete process.env.GITHUB_WIKI_REMOTE;
+    } else {
+      process.env.GITHUB_WIKI_REMOTE = previousWikiRemote;
+    }
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki publishes github-pages output into configured path and preserves frontmatter by default', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '---\nkind: home\n---\n# Home\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, '_Sidebar.md'), '---\nkind: sidebar\n---\n# Navigation\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    const publishResult = await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      pagesPath: 'docs',
+      message: 'Publish pages wiki'
+    });
+
+    assert.equal(publishResult.summary.status, 'published');
+    assert.equal(publishResult.summary.target, 'github-pages');
+    assert.equal(publishResult.summary.path, 'docs');
+    assert.equal(publishResult.summary.frontmatterPolicy, 'preserve');
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'Home.md'), 'utf8'), '---\nkind: home\n---\n# Home\n');
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'index.md'), 'utf8'), '---\nkind: home\n---\n# Home\n');
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'Navigation.md'), 'utf8'), '---\nkind: sidebar\n---\n# Navigation\n');
+    const pagesConfig = await fs.readFile(path.join(checkoutDir, '_config.yml'), 'utf8');
+    assert.match(pagesConfig, /layout: "repo-wiki"/);
+    const pagesLayout = await fs.readFile(path.join(checkoutDir, '_layouts', 'repo-wiki.html'), 'utf8');
+    assert.match(pagesLayout, /mermaid@11/);
+    assert.match(pagesLayout, /code\.language-mermaid/);
+    assert.equal(await fileExists(path.join(checkoutDir, 'Home.md')), false);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki rejects unsafe git branch and remote arguments', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+
+    await assert.rejects(
+      () => publishWiki({
+        wikiDir,
+        branch: '--upload-pack=echo pwned',
+        dryRun: true
+      }),
+      /must not start with whitespace or "-"/
+    );
+
+    await assert.rejects(
+      () => publishWiki({
+        wikiDir,
+        remote: '--upload-pack=echo pwned',
+        dryRun: true
+      }),
+      /must not start with whitespace or "-"/
+    );
+
+    await assert.rejects(
+      () => publishWiki({
+        wikiDir,
+        remote: ' https://super-secret-token@github.com/OWNER/REPO.git',
+        dryRun: true
+      }),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        assert.equal(error.message.includes('super-secret-token'), false);
+        assert.match(error.message, /Publish remote must not start with whitespace or "-"\./);
+        return true;
+      }
+    );
+
+    await assert.rejects(
+      () => publishWiki({
+        wikiDir,
+        branch: 'main\ninjected',
+        dryRun: true
+      }),
+      /contains unsupported control characters/
+    );
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki rejects unsafe github-pages publish paths', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '/absolute', dryRun: true }),
+      /Publish path must be relative/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '\\foo', dryRun: true }),
+      /Publish path must be relative/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '\\\\server\\share', dryRun: true }),
+      /Publish path must be relative/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs\ninjected', dryRun: true }),
+      /contains unsupported control characters/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs\rInjected', dryRun: true }),
+      /contains unsupported control characters/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs\0injected', dryRun: true }),
+      /contains unsupported control characters/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '../sibling', dryRun: true }),
+      /must not contain "\.\." path segments/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs/../secret', dryRun: true }),
+      /must not contain "\.\." path segments/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs/..', dryRun: true }),
+      /must not contain "\.\." path segments/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '.git', dryRun: true }),
+      /reserved \.git paths/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs/.git', dryRun: true }),
+      /reserved \.git paths/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: '.GIT', dryRun: true }),
+      /reserved \.git paths/
+    );
+
+    await assert.rejects(
+      () => publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs/.Git', dryRun: true }),
+      /reserved \.git paths/
+    );
+
+    const safeDotSegment = await publishWiki({ wikiDir, target: 'github-pages', pagesPath: 'docs/./site', dryRun: true });
+    assert.equal(safeDotSegment.summary.path, 'docs/site');
+
+    const safeSimilarSegment = await publishWiki({ wikiDir, target: 'github-pages', pagesPath: '.github/pages', dryRun: true });
+    assert.equal(safeSimilarSegment.summary.path, '.github/pages');
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki preserves non-markdown files under github-pages publish path', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const seedDir = path.join(tempDir, 'seed');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# New home\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+    await git(['clone', remoteDir, seedDir]);
+    await git(['config', 'user.name', 'repo-wiki-test'], seedDir);
+    await git(['config', 'user.email', 'repo-wiki-test@example.com'], seedDir);
+    await fs.mkdir(path.join(seedDir, 'docs', 'assets'), { recursive: true });
+    await fs.mkdir(path.join(seedDir, '_layouts'), { recursive: true });
+    await fs.writeFile(path.join(seedDir, 'docs', 'Old.md'), '# Old generated page\n', 'utf8');
+    await fs.writeFile(path.join(seedDir, 'docs', 'index.md'), '# Existing index\n', 'utf8');
+    await fs.writeFile(path.join(seedDir, 'docs', 'Navigation.md'), '# Existing navigation\n', 'utf8');
+    await fs.writeFile(path.join(seedDir, 'docs', 'assets', 'logo.txt'), 'keep asset\n', 'utf8');
+    await fs.writeFile(path.join(seedDir, '_config.yml'), 'title: Existing site\n', 'utf8');
+    await fs.writeFile(path.join(seedDir, '_layouts', 'repo-wiki.html'), '<main>{{ content }}</main>\n', 'utf8');
+    await fs.writeFile(path.join(seedDir, 'docs', 'CNAME'), 'example.com\n', 'utf8');
+    await git(['add', '.'], seedDir);
+    await git(['commit', '-m', 'Seed existing pages site'], seedDir);
+    await git(['push', 'origin', 'HEAD:gh-pages'], seedDir);
+
+    const result = await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      pagesPath: 'docs',
+      message: 'Publish pages without deleting site assets'
+    });
+
+    assert.equal(result.summary.status, 'published');
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'Home.md'), 'utf8'), '# New home\n');
+    assert.equal(await fileExists(path.join(checkoutDir, 'docs', 'Old.md')), false);
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'index.md'), 'utf8'), '# Existing index\n');
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'Navigation.md'), 'utf8'), '# Existing navigation\n');
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'assets', 'logo.txt'), 'utf8'), 'keep asset\n');
+    assert.equal(await fs.readFile(path.join(checkoutDir, '_config.yml'), 'utf8'), 'title: Existing site\n');
+    assert.equal(await fs.readFile(path.join(checkoutDir, '_layouts', 'repo-wiki.html'), 'utf8'), '<main>{{ content }}</main>\n');
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'CNAME'), 'utf8'), 'example.com\n');
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki accepts contained github-pages paths whose names begin with dot-dot', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    const result = await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      pagesPath: '..docs',
+      message: 'Publish pages wiki into dot-dot-prefixed path'
+    });
+
+    assert.equal(result.summary.status, 'published');
+    assert.equal(result.summary.path, '..docs');
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    assert.equal(await fs.readFile(path.join(checkoutDir, '..docs', 'Home.md'), 'utf8'), '# Home\n');
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki keeps existing pages entry and navigation files when already present', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '---\nkind: home\n---\n# Home\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, '_Sidebar.md'), '---\nkind: sidebar\n---\n# Navigation\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, 'index.md'), '# Existing index\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, 'Navigation.md'), '# Existing navigation\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      pagesPath: 'docs',
+      message: 'Publish pages wiki with existing navigation'
+    });
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'index.md'), 'utf8'), '# Existing index\n');
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'Navigation.md'), 'utf8'), '# Existing navigation\n');
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }

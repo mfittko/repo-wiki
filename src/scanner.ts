@@ -1,6 +1,8 @@
-import { promises as fs } from 'node:fs';
+import { createReadStream, promises as fs } from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { Writable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { DEFAULT_WALK_EXCLUDES, ensureDir, walkFiles, writeJson } from './utils/fs.js';
 import { getGitCommit, getGitRemote } from './utils/git.js';
 import { classifyPath, detectLanguage } from './language.js';
@@ -62,30 +64,33 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     const language = detectLanguage(file.relative);
     const kind = classifyPath(file.relative);
 
-    let hash = '';
+    let hash: string;
     let content = '';
+    let contentAvailable = false;
 
     if (stat.size <= MAX_TEXT_BYTES) {
       const buffer = await fs.readFile(file.absolute);
-      hash = crypto.createHash('sha256').update(buffer).digest('hex');
-      const isTextCandidate = isLikelyText(file.relative, buffer);
-      content = isTextCandidate ? buffer.toString('utf8') : '';
+      hash = hashBuffer(buffer);
+      contentAvailable = isLikelyText(file.relative, buffer);
+      content = contentAvailable ? buffer.toString('utf8') : '';
+    } else {
+      hash = await hashFile(file.absolute);
     }
-    const packageMetadata = content ? extractPackageMetadata(file.relative, content) : null;
-    const ciWorkflowCommands = content && kind === 'ci' ? extractCiCommands(content) : [];
-    const goPackage = (language === 'Go' && content) ? extractGoPackage(content, language) : null;
-    const imports = content ? extractImports(content, language) : [];
-    const symbols = content ? extractSymbols(content, language) : [];
-    const exportedSymbols = content ? extractExportedSymbols(content, language) : [];
-    const environmentVariables = content ? mergeEnvironmentVariables(
+    const packageMetadata = contentAvailable ? extractPackageMetadata(file.relative, content) : null;
+    const ciWorkflowCommands = contentAvailable && kind === 'ci' ? extractCiCommands(content) : [];
+    const goPackage = (language === 'Go' && contentAvailable) ? extractGoPackage(content, language) : null;
+    const imports = contentAvailable ? extractImports(content, language) : [];
+    const symbols = contentAvailable ? extractSymbols(content, language) : [];
+    const exportedSymbols = contentAvailable ? extractExportedSymbols(content, language) : [];
+    const environmentVariables = contentAvailable ? mergeEnvironmentVariables(
       extractEnvironmentVariables(content, language),
       extractConfiguredEnvironmentVariables(file.relative, content)
     ) : [];
-    const routeSurfaces = content ? extractRouteSurfaces(file.relative, content, language) : [];
+    const routeSurfaces = contentAvailable ? extractRouteSurfaces(file.relative, content, language) : [];
     const migrationSurfaces = extractMigrationSurfaces(file.relative, language);
-    const modelSurfaces = content ? extractModelSurfaces(file.relative, content, language) : [];
+    const modelSurfaces = contentAvailable ? extractModelSurfaces(file.relative, content, language) : [];
     let runtimeHints: string[] = [];
-    if (content) {
+    if (contentAvailable) {
       runtimeHints = detectRuntimeHints(file.relative, content, {
         language,
         environmentVariables,
@@ -103,7 +108,7 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
       language,
       category: kind,
       bytes: stat.size,
-      lines: content ? countLines(content) : null,
+      lines: contentAvailable ? countLines(content) : null,
       sha256: hash,
       imports,
       symbols,
@@ -116,14 +121,14 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
       ...(packageMetadata || {}),
       ...(ciWorkflowCommands.length ? { ci_workflow_commands: ciWorkflowCommands } : {}),
       ...(goPackage !== null ? { go_package: goPackage } : {}),
-      skipped_content: !content,
+      skipped_content: !contentAvailable,
       reasons: inferReasons(file.relative, kind, content, { environmentVariables, routeSurfaces, migrationSurfaces, modelSurfaces })
     };
 
     cards.push(card);
     await writeJson(path.join(absoluteOut, 'cards', `${safeFileName(file.relative)}.json`), card);
 
-    if (content && isDocumentationFile(file.relative, config)) {
+    if (contentAvailable && isDocumentationFile(file.relative, config)) {
       const documentationCard = await createDocumentationCard({ file, content, config, repoPath: absoluteRepo });
       documentationCards.push(documentationCard);
       await writeJson(path.join(absoluteOut, 'docs', `${safeFileName(file.relative)}.json`), documentationCard);
@@ -259,6 +264,24 @@ function extractConfiguredEnvironmentVariables(filePath: string, content: string
 
 function tokenizeDockerEnvInstruction(value: string) {
   return value.match(/"[^"]*"|'[^']*'|\S+/g)?.map((token) => token.replace(/^['"]|['"]$/g, '')) || [];
+}
+
+function hashBuffer(buffer: Buffer): string {
+  return crypto.createHash('sha256').update(buffer).digest('hex');
+}
+
+async function hashFile(filePath: string): Promise<string> {
+  const hash = crypto.createHash('sha256');
+  await pipeline(
+    createReadStream(filePath),
+    new Writable({
+      write(chunk, encoding, callback) {
+        hash.update(typeof chunk === 'string' ? Buffer.from(chunk, encoding) : chunk);
+        callback();
+      }
+    })
+  );
+  return hash.digest('hex');
 }
 
 function safeFileName(filePath: string) {
