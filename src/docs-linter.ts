@@ -2,7 +2,7 @@ import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { readJson } from './utils/fs.js';
 import { loadConfig } from './config.js';
-import { cleanDocumentedPathTarget, collectKnownEnvironmentVariables, resolveDocumentedPathOnDisk } from './docs-validation.js';
+import { buildRouteSurfaceIndex, cleanDocumentedPathTarget, collectKnownEnvironmentVariables, resolveDocumentedPathOnDisk, validateRouteClaims } from './docs-validation.js';
 import { classifyDocumentedCommands, extractCiCommands, extractRouteClaims, mergePackageScripts } from './docs-ingestor.js';
 
 export async function lintDocs({ scanDir, repoPath = '.' }) {
@@ -167,46 +167,4 @@ function resolveIssueLevel(configuredLevel: string | undefined, strictness: 'str
 
 function getDocumentationValidationStrictness(value: string | undefined): 'strict' | 'standard' | 'lenient' | 'off' {
   return value === 'strict' || value === 'lenient' || value === 'off' ? value : 'standard';
-}
-
-function buildRouteSurfaceIndex(manifest) {
-  const byPath = new Map<string, Set<string>>();
-  for (const file of manifest.files || []) {
-    for (const route of file.route_surfaces || []) {
-      const routePath = normalizeRoutePath(route.path);
-      if (!routePath) continue;
-      const methods = route.methods?.length ? route.methods : ['ANY'];
-      const known = byPath.get(routePath) || new Set<string>();
-      for (const method of methods) known.add(String(method).toUpperCase());
-      byPath.set(routePath, known);
-    }
-  }
-  return byPath;
-}
-
-function validateRouteClaims(claims, routeIndex: Map<string, Set<string>>) {
-  const hasRouteMetadata = routeIndex.size > 0;
-  return (claims || []).map((claim) => {
-    if (!hasRouteMetadata) {
-      return { claim, valid: false, reason: 'route claim could not be validated because scanner route metadata is unavailable.' };
-    }
-    if (!claim.path) {
-      return { claim, valid: false, reason: 'route claim could not be validated because no route path was detected.' };
-    }
-    const methods = routeIndex.get(normalizeRoutePath(claim.path));
-    if (!methods) {
-      return { claim, valid: false, reason: `route claim did not match scanner route surfaces for path ${claim.path}.` };
-    }
-    if (claim.method && !methods.has(claim.method) && !methods.has('ANY')) {
-      return { claim, valid: false, reason: `route claim method ${claim.method} for ${claim.path} did not match scanner route surfaces.` };
-    }
-    return { claim, valid: true, reason: null };
-  });
-}
-
-function normalizeRoutePath(routePath: string | null | undefined) {
-  const cleaned = String(routePath || '').trim();
-  if (!cleaned) return '';
-  if (cleaned === '/') return '/';
-  return cleaned.replace(/\/+$/, '');
 }

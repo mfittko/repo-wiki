@@ -444,6 +444,9 @@ test('lintDocs applies documentation validation strictness levels predictably', 
       }
     }), 'utf8');
 
+    // Baseline findings in this fixture:
+    // stale-documentation, contradicted-documentation, unvalidated-documentation-claims,
+    // unvalidated-route-claim, and broken-documentation-link.
     for (const [strictness, expected] of [
       ['standard', { errors: 1, warnings: 4 }],
       ['lenient', { errors: 0, warnings: 5 }],

@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { cleanDocumentedPathTarget, hasParentDirectorySegment, isGeneratedOutputReference } from './docs-validation.js';
+import { cleanDocumentedPathTarget, hasParentDirectorySegment, isGeneratedOutputReference, normalizeRoutePath } from './docs-validation.js';
 
 const DOC_EXTENSIONS = ['.md', '.mdx', '.markdown'];
 
@@ -237,12 +237,6 @@ export function extractRouteClaims(claims: Array<{ line: number; text: string }>
     });
   }
   return routes.slice(0, 50);
-}
-
-function normalizeRoutePath(routePath: string) {
-  const cleaned = String(routePath || '').trim();
-  if (!cleaned || cleaned === '/') return '/';
-  return cleaned.replace(/\/+$/, '');
 }
 
 function isEnvironmentVariableMention(value: string) {
