@@ -11,6 +11,26 @@ export type PageArchetype = 'foundation' | 'module' | 'cross-cutting';
 
 // ── Context shapes ─────────────────────────────────────────────────────────
 
+export type RouteContext = {
+  kind?: string | null;
+  framework?: string | null;
+  methods?: string[];
+  path?: string | null;
+  handler?: string | null;
+};
+
+export type MigrationContext = {
+  kind?: string | null;
+  id?: string | null;
+  name?: string | null;
+};
+
+export type ModelContext = {
+  name?: string | null;
+  kind?: string | null;
+  framework?: string | null;
+};
+
 export interface SourceCardContext {
   path: string;
   category: string;
@@ -18,12 +38,19 @@ export interface SourceCardContext {
   symbols?: string[];
   imports?: string[];
   reasons?: string[];
+  runtime_hints?: string[];
+  environment_variables?: string[];
+  routes?: RouteContext[];
+  migrations?: MigrationContext[];
+  models?: ModelContext[];
+  excerpt?: string;
 }
 
 export interface DocCardContext {
   path: string;
   status: string;
   claims?: string[];
+  excerpt?: string;
 }
 
 export interface ModuleInfo {
@@ -44,6 +71,8 @@ export interface PromptContext {
   repoCommit?: string;
   sourceCards: SourceCardContext[];
   docCards?: DocCardContext[];
+  /** True when a module's evidence paths are all markdown/documentation files. */
+  docsOnlyModule?: boolean;
   /** Current wiki page text, if one already exists. */
   existingContent?: string;
   /** Only set for module archetype. */
@@ -69,8 +98,13 @@ Authority rules:
 - Do not copy secrets, tokens, private keys, or environment variable values.
 
 Output contract:
+- Output only the complete markdown page.
+- The first line of the response must be exactly \`---\`.
+- Do not include preamble, explanation, commentary, a markdown fence, or any code block wrapper around the page.
 - Produce valid GitHub-flavored Markdown.
-- Include a YAML frontmatter block with at minimum: source_commit, compiled_at, kind, source_paths.
+- Include a YAML frontmatter block with required keys: source_repo, source_commit, compiled_at, kind, page_state, source_paths.
+- Include conservative confidence metadata and claim status where appropriate (for example confidence and claim_status frontmatter fields).
+- source_paths must be non-empty for generated content and must cite evidence paths used by the page.
 - Use headings, tables, and code blocks where appropriate.
 - End module pages with a human notes block:
   <!-- HUMAN_NOTES_START -->
@@ -109,9 +143,45 @@ function formatSourceCards(cards: SourceCardContext[]): string {
       if (card.reasons?.length) {
         parts.push(`  reasons: ${card.reasons.join(', ')}`);
       }
+      if (card.runtime_hints?.length) {
+        parts.push(`  runtime hints: ${card.runtime_hints.join(', ')}`);
+      }
+      if (card.environment_variables?.length) {
+        parts.push(`  env vars: ${card.environment_variables.join(', ')}`);
+      }
+      if (card.routes?.length) {
+        parts.push(`  routes: ${card.routes.slice(0, 5).map(formatRoute).join('; ')}`);
+      }
+      if (card.models?.length) {
+        parts.push(`  models: ${card.models.slice(0, 5).map(formatModel).join('; ')}`);
+      }
+      if (card.migrations?.length) {
+        parts.push(`  migrations: ${card.migrations.slice(0, 5).map(formatMigration).join('; ')}`);
+      }
+      if (card.excerpt) {
+        parts.push(`  excerpt: ${card.excerpt}`);
+      }
       return parts.join('\n');
     })
     .join('\n');
+}
+
+function formatRoute(route: RouteContext): string {
+  const methodPrefix = route.methods?.length ? `${route.methods.join('|')} ` : '';
+  const pathPart = route.path || '(unknown path)';
+  const details = [route.framework, route.kind, route.handler ? `handler=${route.handler}` : ''].filter(Boolean).join(', ');
+  return details ? `${methodPrefix}${pathPart} (${details})` : `${methodPrefix}${pathPart}`;
+}
+
+function formatModel(model: ModelContext): string {
+  const name = model.name || '(unknown model)';
+  const details = [model.kind, model.framework].filter(Boolean).join(', ');
+  return details ? `${name} (${details})` : name;
+}
+
+function formatMigration(migration: MigrationContext): string {
+  const label = [migration.id, migration.name].filter(Boolean).join(' ') || '(unknown migration)';
+  return migration.kind ? `${label} (${migration.kind})` : label;
 }
 
 function formatDocCards(cards: DocCardContext[]): string {
@@ -122,6 +192,9 @@ function formatDocCards(cards: DocCardContext[]): string {
       const parts: string[] = [`- ${card.path} [${card.status}]`];
       if (card.claims?.length) {
         parts.push(`  claims: ${card.claims.slice(0, 3).join('; ')}`);
+      }
+      if (card.excerpt) {
+        parts.push(`  excerpt: ${card.excerpt}`);
       }
       return parts.join('\n');
     })
@@ -181,6 +254,14 @@ Generate a complete "${context.pageTitle}" wiki page that:
  */
 export function buildModulePrompt(context: PromptContext): BuiltPrompt {
   const mod = context.moduleInfo;
+  const docsOnlyInstructions = context.docsOnlyModule ? `
+
+Docs-only evidence constraint:
+- Every module source path is markdown/documentation, so these paths are secondary documentation evidence, not authoritative source evidence.
+- The page body must explicitly state that markdown documentation is secondary evidence and that operational/current-behavior claims must be validated against source code, tests, CI workflows, runtime configuration, or schemas.
+- Use conservative metadata: claim_status: "review-needed" and confidence: "low" (or at most "medium" if the page is purely descriptive of documentation contents).
+- Do not use claim_status: "source-grounded" or confidence: "high" for a docs-only module.
+- Prefer describing what the documentation says, plus validation gaps, over asserting current runtime behavior.` : '';
   return {
     system: BASE_SYSTEM_PROMPT,
     user: `Generate a module wiki page for: ${mod?.name ?? context.pageTitle}
@@ -202,14 +283,34 @@ ${formatDocCards(context.docCards ?? [])}
 
 ${existingContentBlock(context.existingContent)}
 
-Generate a complete module wiki page with the following sections:
-- Purpose (grounded in source cards, not speculation)
-- Source file list
-- Key symbols and entry points
-- Dependencies and imports
-- Related tests
-- Known gaps or open questions
-- Human notes block (<!-- HUMAN_NOTES_START --> … <!-- HUMAN_NOTES_END -->)`,
+Generate a complete module wiki page with the following constraints:
+- Output only the raw markdown page; do not wrap it in a markdown fence or code block.
+- The first line must be exactly \`---\`.
+- The YAML frontmatter must include: source_repo, source_commit, compiled_at, kind: "module", page_state, source_paths, confidence, and claim_status.
+- source_paths must be a non-empty array drawn only from the Source files in this module and Source cards listed above.
+- Minimal frontmatter skeleton:
+  ---
+  source_repo: "<repository remote or unknown>"
+  source_commit: "<commit sha>"
+  compiled_at: "<ISO-8601 timestamp>"
+  kind: "module"
+  page_state: "generated"
+  source_paths:
+    - "<module source path>"
+  confidence: "medium"
+  claim_status: "source-grounded"
+  ---
+- Use conservative confidence and claim status metadata that matches the evidence provided.${docsOnlyInstructions}
+- Include the following sections:
+  - Purpose (grounded in source cards, not speculation)
+  - Source file list
+  - Key symbols and entry points
+  - Dependencies and imports
+  - Related tests
+  - Known gaps or open questions
+- End with this exact human notes block:
+  <!-- HUMAN_NOTES_START -->
+  <!-- HUMAN_NOTES_END -->`,
   };
 }
 

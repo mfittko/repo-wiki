@@ -30,7 +30,8 @@ export const DEFAULT_CONFIG = {
       temperature: LLM_DEFAULTS.temperature,
       max_output_tokens: LLM_DEFAULTS.maxOutputTokens,
       timeout_ms: LLM_DEFAULTS.timeoutMs,
-      retries: LLM_DEFAULTS.retries
+      retries: LLM_DEFAULTS.retries,
+      validation_retries: LLM_DEFAULTS.validationRetries
     }
   },
   wiki: {

@@ -121,10 +121,13 @@ export async function runCli(argv: string[]) {
     }
 
     case 'compile': {
+      const compileRepoPath = getStringOption(options, 'repo') || '.';
+      const compileConfig = await loadConfig(compileRepoPath);
       const result = await compileWiki({
         scanDir: getStringOption(options, 'scan') || '.llmwiki/run',
         planFile: getStringOption(options, 'plan') || '.llmwiki/bootstrap-plan.json',
-        wikiDir: getStringOption(options, 'wiki') || '.llmwiki/wiki'
+        wikiDir: getStringOption(options, 'wiki') || '.llmwiki/wiki',
+        config: compileConfig
       });
       console.log(JSON.stringify(result.summary, null, 2));
       return;
@@ -187,7 +190,7 @@ export async function runCli(argv: string[]) {
 
 function getDotEnvBaseDir(command: string | undefined, options: ParsedArgs) {
   const repoPath = getStringOption(options, 'repo');
-  if (repoPath && ['init', 'scan', 'lint-docs', 'run'].includes(command || '')) {
+  if (repoPath && ['init', 'scan', 'compile', 'lint-docs', 'run'].includes(command || '')) {
     return repoPath;
   }
   return process.cwd();
@@ -222,7 +225,8 @@ async function runPipeline(options: ParsedArgs) {
   const compile = await compileWiki({
     scanDir,
     planFile,
-    wikiDir
+    wikiDir,
+    config
   });
 
   const lint = await lintWiki({

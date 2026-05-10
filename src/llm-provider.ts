@@ -26,7 +26,8 @@ export const LLM_DEFAULTS = {
   temperature: 0.1,
   maxOutputTokens: 4000,
   timeoutMs: 60000,
-  retries: 2
+  retries: 2,
+  validationRetries: 1
 } as const;
 
 export type { PageArchetype };
@@ -46,6 +47,12 @@ export interface LLMRequest {
   systemPrompt: string;
   /** Page-specific user prompt including source cards and context. */
   userPrompt: string;
+  /** Source commit for generated-page provenance. */
+  sourceCommit?: string;
+  /** Source repository remote for generated-page provenance. */
+  sourceRepo?: string;
+  /** Source paths cited by the assembled prompt context. */
+  sourcePaths?: string[];
   /** Optional token budget for the completion. */
   maxTokens?: number;
   /** Optional sampling temperature. */
@@ -246,8 +253,10 @@ function buildMockContent(request: LLMRequest): string {
     `kind: ${JSON.stringify(request.archetype)}`,
     `page_name: ${JSON.stringify(request.pageName)}`,
     `compiled_at: "mock"`,
-    `source_commit: "mock"`,
-    `source_paths: []`,
+    `source_repo: ${JSON.stringify(request.sourceRepo ?? 'mock')}`,
+    `source_commit: ${JSON.stringify(request.sourceCommit ?? 'mock')}`,
+    `page_state: "generated"`,
+    `source_paths: ${JSON.stringify((request.sourcePaths?.length ? request.sourcePaths : ['mock-source']).slice(0, 20))}`,
     '---',
     '',
     `# ${request.pageTitle}`,
@@ -309,6 +318,10 @@ export interface LLMProviderConfig {
   timeout_ms?: number;
   /** Number of retries for retryable hosted provider failures. */
   retries?: number;
+  /** Number of corrective retries after wiki patch validation failures. */
+  validationRetries?: number;
+  /** JSON config alias for `validationRetries`. */
+  validation_retries?: number;
   /** Compiler mode alias used when callers pass the whole compiler config. */
   mode?: string;
   /** Nested LLM settings used when callers pass the whole compiler config. */
@@ -325,6 +338,7 @@ export interface ResolvedLLMProviderConfig extends LLMProviderConfig {
   maxOutputTokens: number;
   timeoutMs: number;
   retries: number;
+  validationRetries: number;
 }
 
 // ── Factory ────────────────────────────────────────────────────────────────
@@ -332,8 +346,9 @@ export interface ResolvedLLMProviderConfig extends LLMProviderConfig {
 /**
  * Create an `LLMProvider` from configuration resolved with environment overrides.
  *
- * - Omitting `config` (or setting `provider: "mock"`) returns the mock provider unless
- *   `LLMWIKI_LLM_PROVIDER` or `LLMWIKI_COMPILER_MODE` selects a hosted provider.
+ * - Omitting `config` returns the mock provider unless `LLMWIKI_LLM_PROVIDER`
+ *   or `LLMWIKI_COMPILER_MODE` selects a hosted provider.
+ * - Explicit `provider: "mock"` remains mock unless `LLMWIKI_LLM_PROVIDER` overrides it.
  * - Specifying an OpenAI-compatible provider without an API key throws
  *   `LLMProviderError` with `code: "MISSING_API_KEY"`.
  * - Specifying an unknown provider name throws
@@ -389,7 +404,7 @@ export function resolveProviderConfig(
 
   return {
     ...llmConfig,
-    provider: optionalEnv(env, 'LLMWIKI_LLM_PROVIDER') ?? providerForMode(mode) ?? nonBlank(llmConfig.provider) ?? LLM_DEFAULTS.provider,
+    provider: optionalEnv(env, 'LLMWIKI_LLM_PROVIDER') ?? nonBlank(llmConfig.provider) ?? providerForMode(mode) ?? LLM_DEFAULTS.provider,
     apiKey: optionalEnv(env, apiKeyEnv) ?? nonBlank(llmConfig.apiKey),
     apiKeyEnv,
     model: optionalEnv(env, 'LLMWIKI_LLM_MODEL') ?? nonBlank(llmConfig.model) ?? LLM_DEFAULTS.model,
@@ -399,7 +414,8 @@ export function resolveProviderConfig(
     temperature: parseNumber(optionalEnv(env, 'LLMWIKI_LLM_TEMPERATURE'), llmConfig.temperature ?? LLM_DEFAULTS.temperature, 'temperature'),
     maxOutputTokens: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_MAX_OUTPUT_TOKENS'), llmConfig.maxOutputTokens ?? llmConfig.max_output_tokens ?? LLM_DEFAULTS.maxOutputTokens, 'maxOutputTokens'),
     timeoutMs: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_TIMEOUT_MS'), llmConfig.timeoutMs ?? llmConfig.timeout_ms ?? LLM_DEFAULTS.timeoutMs, 'timeoutMs'),
-    retries: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_RETRIES'), llmConfig.retries ?? LLM_DEFAULTS.retries, 'retries')
+    retries: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_RETRIES'), llmConfig.retries ?? LLM_DEFAULTS.retries, 'retries'),
+    validationRetries: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_VALIDATION_RETRIES'), llmConfig.validationRetries ?? llmConfig.validation_retries ?? LLM_DEFAULTS.validationRetries, 'validationRetries')
   };
 }
 
@@ -446,6 +462,9 @@ export function buildRequest(
     pageTitle: context.pageTitle,
     systemPrompt: options.systemPrompt ?? prompt.system,
     userPrompt: prompt.user,
+    sourceCommit: context.repoCommit,
+    sourceRepo: context.repoRemote,
+    sourcePaths: context.sourceCards.map((card) => card.path).filter((value) => typeof value === 'string' && value.trim()),
     maxTokens: options.maxTokens ?? options.maxOutputTokens,
     temperature: options.temperature,
   };

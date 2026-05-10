@@ -199,8 +199,10 @@ test('resolveProviderConfig applies env overrides and resolves api key', () => {
       max_output_tokens: 1000,
       timeout_ms: 10000,
       retries: 1,
+      validation_retries: 3,
     },
     {
+      LLMWIKI_LLM_PROVIDER: 'openai-compatible',
       LLMWIKI_COMPILER_MODE: 'llm',
       LLMWIKI_LLM_BASE_URL: 'https://env.example/v1',
       LLMWIKI_LLM_MODEL: 'env-model',
@@ -208,6 +210,8 @@ test('resolveProviderConfig applies env overrides and resolves api key', () => {
       LLMWIKI_LLM_SYSTEM_PROMPT: 'env prompt',
       LLMWIKI_LLM_TEMPERATURE: '0.3',
       LLMWIKI_LLM_MAX_OUTPUT_TOKENS: '2000',
+      LLMWIKI_LLM_RETRIES: '4',
+      LLMWIKI_LLM_VALIDATION_RETRIES: '2',
     },
   );
 
@@ -220,34 +224,70 @@ test('resolveProviderConfig applies env overrides and resolves api key', () => {
   assert.equal(resolved.temperature, 0.3);
   assert.equal(resolved.maxOutputTokens, 2000);
   assert.equal(resolved.timeoutMs, 10000);
-  assert.equal(resolved.retries, 1);
+  assert.equal(resolved.retries, 4);
+  assert.equal(resolved.validationRetries, 2);
 });
 
-test('resolveProviderConfig lets deterministic mode override hosted provider config', () => {
+test('resolveProviderConfig honors explicit hosted provider config before deterministic mode default', () => {
   const resolved = resolveProviderConfig(
     { provider: 'openai-compatible', apiKey: 'secret-key' },
     { LLMWIKI_COMPILER_MODE: 'deterministic' },
   );
 
+  assert.equal(resolved.provider, 'openai-compatible');
+});
+
+test('resolveProviderConfig honors explicit mock provider config before llm mode default', () => {
+  const resolved = resolveProviderConfig(
+    { provider: 'mock' },
+    { LLMWIKI_COMPILER_MODE: 'llm' },
+  );
+
   assert.equal(resolved.provider, 'mock');
 });
 
-test('resolveProviderConfig uses OpenAI-compatible provider for llm mode', () => {
+test('resolveProviderConfig uses OpenAI-compatible provider for llm mode without explicit provider', () => {
   const resolved = resolveProviderConfig(
-    { provider: 'mock' },
+    {},
     { LLMWIKI_COMPILER_MODE: 'llm' },
   );
 
   assert.equal(resolved.provider, 'openai-compatible');
 });
 
-test('resolveProviderConfig honors compiler config mode before nested llm provider default', () => {
+test('createProvider requires API key for llm mode without explicit provider', () => {
+  assert.throws(
+    () => createProvider({ mode: 'llm' }),
+    (err: unknown) => {
+      assert.ok(err instanceof LLMProviderError);
+      assert.equal(err.code, 'MISSING_API_KEY');
+      assert.equal(err.provider, 'openai-compatible');
+      return true;
+    },
+  );
+});
+
+test('resolveProviderConfig honors nested explicit mock provider before llm mode default', () => {
+  const resolved = resolveProviderConfig({
+    mode: 'llm',
+    llm: { provider: 'mock' },
+  });
+
+  assert.equal(resolved.provider, 'mock');
+});
+
+test('createProvider honors nested explicit mock provider in llm mode without API key', () => {
+  const provider = createProvider({ mode: 'llm', llm: { provider: 'mock' } });
+  assert.equal(provider.name, 'mock');
+});
+
+test('resolveProviderConfig honors compiler config mode only as a default after nested llm provider', () => {
   const resolved = resolveProviderConfig({
     mode: 'deterministic',
     llm: { provider: 'openai-compatible', apiKey: 'secret-key' },
   });
 
-  assert.equal(resolved.provider, 'mock');
+  assert.equal(resolved.provider, 'openai-compatible');
 });
 
 test('resolveProviderConfig treats blank environment variables as unset', () => {
@@ -295,6 +335,8 @@ test('resolveProviderConfig rejects negative integer config', () => {
     { maxOutputTokens: -1 },
     { timeoutMs: -1 },
     { retries: -1 },
+    { validationRetries: -1 },
+    { validation_retries: -1 },
   ]) {
     assert.throws(
       () => resolveProviderConfig(config, {}),
@@ -481,6 +523,31 @@ test('buildPrompt module includes module name and source files', () => {
   assert.match(prompt.user, /HUMAN_NOTES/);
 });
 
+test('buildPrompt module includes strict hosted LLM output instructions', () => {
+  const ctx = makeContext({
+    moduleInfo: {
+      name: 'Auth',
+      slug: 'Module-Auth',
+      files: ['src/auth/index.ts', 'src/auth/tokens.ts'],
+      categories: { source: 2 },
+      languages: { TypeScript: 2 },
+      important_reasons: ['auth'],
+    },
+  });
+  const prompt = buildPrompt('module', ctx);
+
+  assert.match(prompt.system, /Output only the complete markdown page/);
+  assert.match(prompt.system, /first line of the response must be exactly `---`/);
+  assert.match(prompt.system, /Do not include preamble, explanation, commentary, a markdown fence, or any code block wrapper/);
+  assert.match(prompt.system, /source_repo, source_commit, compiled_at, kind, page_state, source_paths/);
+  assert.match(prompt.system, /confidence metadata and claim status/);
+  assert.match(prompt.user, /Output only the raw markdown page/);
+  assert.match(prompt.user, /first line must be exactly `---`/);
+  assert.match(prompt.user, /kind: "module"/);
+  assert.match(prompt.user, /source_paths must be a non-empty array drawn only from the Source files in this module and Source cards listed above/);
+  assert.match(prompt.user, /End with this exact human notes block/);
+});
+
 test('buildPrompt cross-cutting references the page title', () => {
   const ctx = makeContext({ pageName: 'Dependency-Map', pageTitle: 'Dependency Map' });
   const prompt = buildPrompt('cross-cutting', ctx);
@@ -548,6 +615,28 @@ test('buildCrossCuttingPrompt includes source card count', () => {
   const ctx = makeContext({ pageName: 'Security-and-Secrets', pageTitle: 'Security and Secrets' });
   const prompt = buildCrossCuttingPrompt(ctx);
   assert.match(prompt.user, /Source cards \(1 files\)/);
+});
+
+test('buildPrompt formats structured source card surfaces without object stringification', () => {
+  const ctx = makeContext({
+    sourceCards: [
+      {
+        path: 'src/api/users.ts',
+        category: 'source',
+        language: 'TypeScript',
+        symbols: ['listUsers'],
+        routes: [{ kind: 'http-route', framework: 'express', methods: ['GET'], path: '/users', handler: 'listUsers' }],
+        models: [{ name: 'User', kind: 'model', framework: 'prisma' }],
+        migrations: [{ kind: 'migration-file', id: '001', name: 'create-users' }],
+      },
+    ],
+  });
+
+  const prompt = buildPrompt('module', ctx);
+  assert.doesNotMatch(prompt.user, /\[object Object\]/);
+  assert.match(prompt.user, /routes: GET \/users \(express, http-route, handler=listUsers\)/);
+  assert.match(prompt.user, /models: User \(model, prisma\)/);
+  assert.match(prompt.user, /migrations: 001 create-users \(migration-file\)/);
 });
 
 test('buildPrompt doc cards are included in user prompt', () => {

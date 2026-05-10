@@ -223,6 +223,20 @@ test('assemblePageContext tracks documentation omissions from character budget a
   assert.ok(context.omitted.reasons.includes('max_chars_exceeded'));
 });
 
+test('assemblePageContext serializes exported symbol objects as symbol names', () => {
+  const { manifest, plan } = createFixture();
+  const context = assemblePageContext({
+    manifest,
+    plan,
+    page: { path: 'Module-Core.md', phase: 'modules', moduleName: 'Core' }
+  });
+
+  const sourceInputsText = JSON.stringify(context.source_inputs);
+  assert.doesNotMatch(sourceInputsText, /\[object Object\]/);
+  assert.deepEqual(context.source_inputs.find((input: any) => input.path === 'src/a.ts')?.symbols, ['helper']);
+  assert.deepEqual(context.source_inputs.find((input: any) => input.path === 'src/b.ts')?.symbols, ['run']);
+});
+
 test('assemblePageContext deduplicates duplicate source paths deterministically', () => {
   const { manifest, plan } = createFixture();
   const context = assemblePageContext({
