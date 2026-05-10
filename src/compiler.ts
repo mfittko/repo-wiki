@@ -666,7 +666,7 @@ function buildDocumentationReviewQueue(docs: any[]) {
     const reasons = new Set<string>();
     const contradictionCount = doc.validation?.contradictions?.length || 0;
     if (doc.stale) reasons.add(`stale (${doc.age_days} days old)`);
-    if (contradictionCount > 0) reasons.add(`contradicted (${contradictionCount} ${pluralize(contradictionCount, 'signal', 'signals')})`);
+    if (contradictionCount > 0) reasons.add(formatContradictionReason(contradictionCount));
     if (doc.status === 'unvalidated') reasons.add('unvalidated status');
     if ((doc.claims?.length || 0) > 0 && !['validated', 'unvalidated'].includes(doc.status)) reasons.add('claims need validation');
 
@@ -683,8 +683,12 @@ function buildDocumentationReviewQueue(docs: any[]) {
     .sort((left, right) => left.path.localeCompare(right.path));
 }
 
-function pluralize(count: number, singular: string, plural: string) {
-  return count === 1 ? singular : plural;
+function formatContradictionReason(count: number) {
+  return `contradicted (${count} ${pluralize(count, 'signal', 'signals')})`;
+}
+
+function pluralize(count: number, singularForm: string, pluralForm: string) {
+  return count === 1 ? singularForm : pluralForm;
 }
 
 function code(value: string | number) {
