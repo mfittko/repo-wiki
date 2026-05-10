@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "8e450a538b4c7a54090597526dbb48dc26c508a2"
-compiled_at: "2026-05-10T06:16:09.782Z"
+source_commit: "0604877d3099270286da69c1cf111e77cb0f81b8"
+compiled_at: "2026-05-10T08:42:10.999Z"
 kind: "module"
 module: "Module frontmatter.ts"
 source_paths: ["src/frontmatter.ts"]
@@ -23,11 +23,11 @@ Generated first-pass page for files grouped under Module frontmatter.ts. This sh
 
 ## Source files
 
-- [src/frontmatter.ts](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/src/frontmatter.ts)
+- [src/frontmatter.ts](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/src/frontmatter.ts)
 
 ## Related tests
 
-- [test/frontmatter.test.ts](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/test/frontmatter.test.ts)
+- [test/frontmatter.test.ts](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/test/frontmatter.test.ts)
 
 ## Related pages
 

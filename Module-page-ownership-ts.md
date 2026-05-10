@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "8e450a538b4c7a54090597526dbb48dc26c508a2"
-compiled_at: "2026-05-10T06:16:09.782Z"
+source_commit: "0604877d3099270286da69c1cf111e77cb0f81b8"
+compiled_at: "2026-05-10T08:42:10.999Z"
 kind: "module"
 module: "Module page-ownership.ts"
 source_paths: ["src/page-ownership.ts"]
@@ -23,11 +23,11 @@ Generated first-pass page for files grouped under Module page-ownership.ts. This
 
 ## Source files
 
-- [src/page-ownership.ts](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/src/page-ownership.ts)
+- [src/page-ownership.ts](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/src/page-ownership.ts)
 
 ## Related tests
 
-- [test/page-ownership.test.ts](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/test/page-ownership.test.ts)
+- [test/page-ownership.test.ts](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/test/page-ownership.test.ts)
 
 ## Related pages
 

@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "8e450a538b4c7a54090597526dbb48dc26c508a2"
-compiled_at: "2026-05-10T06:16:09.782Z"
+source_commit: "0604877d3099270286da69c1cf111e77cb0f81b8"
+compiled_at: "2026-05-10T08:42:10.999Z"
 kind: "module"
 module: "Documentation"
 source_paths: ["docs/PLAN.md","docs/WHY.md","docs/plans/agent-integration.md","docs/plans/ci-publishing.md","docs/plans/doc-validation.md","docs/plans/incremental-mode.md","docs/plans/llm-compiler.md","docs/plans/production-scanner.md","docs/plans/wiki-graph.md"]
@@ -23,15 +23,15 @@ Generated first-pass page for files grouped under Documentation. This should be 
 
 ## Source files
 
-- [docs/PLAN.md](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/docs/PLAN.md)
-- [docs/WHY.md](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/docs/WHY.md)
-- [docs/plans/agent-integration.md](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/docs/plans/agent-integration.md)
-- [docs/plans/ci-publishing.md](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/docs/plans/ci-publishing.md)
-- [docs/plans/doc-validation.md](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/docs/plans/doc-validation.md)
-- [docs/plans/incremental-mode.md](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/docs/plans/incremental-mode.md)
-- [docs/plans/llm-compiler.md](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/docs/plans/llm-compiler.md)
-- [docs/plans/production-scanner.md](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/docs/plans/production-scanner.md)
-- [docs/plans/wiki-graph.md](https://github.com/mfittko/repo-wiki/blob/8e450a538b4c7a54090597526dbb48dc26c508a2/docs/plans/wiki-graph.md)
+- [docs/PLAN.md](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/docs/PLAN.md)
+- [docs/WHY.md](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/docs/WHY.md)
+- [docs/plans/agent-integration.md](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/docs/plans/agent-integration.md)
+- [docs/plans/ci-publishing.md](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/docs/plans/ci-publishing.md)
+- [docs/plans/doc-validation.md](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/docs/plans/doc-validation.md)
+- [docs/plans/incremental-mode.md](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/docs/plans/incremental-mode.md)
+- [docs/plans/llm-compiler.md](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/docs/plans/llm-compiler.md)
+- [docs/plans/production-scanner.md](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/docs/plans/production-scanner.md)
+- [docs/plans/wiki-graph.md](https://github.com/mfittko/repo-wiki/blob/0604877d3099270286da69c1cf111e77cb0f81b8/docs/plans/wiki-graph.md)
 
 ## Related pages
 
