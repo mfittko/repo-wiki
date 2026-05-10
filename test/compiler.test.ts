@@ -874,6 +874,54 @@ test('compileWiki in LLM mode synthesizes module pages through the mock provider
   }
 });
 
+test('compileWiki normalizes LLM block-list source_paths without leaving sequence entries', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  const config = { compiler: { mode: 'llm' } };
+  const blockListProvider: LLMProvider = {
+    name: 'block-list-mock',
+    async complete(_request: LLMRequest): Promise<LLMResponse> {
+      return {
+        provider: 'block-list-mock',
+        content: [
+          '---',
+          'kind: "module"',
+          'compiled_at: "2026-05-10T00:00:00.000Z"',
+          'source_repo: "provider-origin"',
+          'source_commit: "provider-commit"',
+          'source_paths:',
+          '  - "src/provider-a.ts"',
+          '  - "src/provider-b.ts"',
+          'page_state: "generated"',
+          'custom_field: "keep-me"',
+          '---',
+          '',
+          '# Auth',
+          '',
+          'Provider generated body.',
+          ''
+        ].join('\n')
+      };
+    }
+  };
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir, config, _provider: blockListProvider });
+
+    const modulePage = await fs.readFile(path.join(wikiDir, 'Module-Auth.md'), 'utf8');
+    const frontmatterBlock = modulePage.slice(0, modulePage.indexOf('\n---', 4));
+
+    assert.match(modulePage, /source_repo: "origin"/);
+    assert.match(modulePage, /source_commit: "llm-test-commit"/);
+    assert.match(modulePage, /page_state: "generated"/);
+    assert.match(modulePage, /source_paths: \["src\/auth\.ts"\]/);
+    assert.match(modulePage, /custom_field: "keep-me"/);
+    assert.doesNotMatch(frontmatterBlock, /^\s+- "src\/provider-[ab]\.ts"/m);
+    assert.match(modulePage, /Provider generated body/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('compileWiki in LLM mode does not overwrite existing page when provider output is invalid', async () => {
   const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
   const config = { compiler: { mode: 'llm' } };

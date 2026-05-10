@@ -78,7 +78,8 @@ export async function compileWiki({
     // Foundation and cross-cutting pages continue to use deterministic renderers
     // (phased archetype rollout – module pages first).
     const llmCfg = config?.compiler ?? {};
-    const retries: number = Number(llmCfg.llm?.retries ?? llmCfg.retries ?? 0);
+    const resolvedLLMCfg = resolveProviderConfig(llmCfg);
+    const retries: number = resolvedLLMCfg.retries;
     const llmCandidates: Array<{ module: any; modulePage: string; existingForPrompt?: string }> = [];
 
     for (const module of plan.modules || []) {
@@ -107,7 +108,7 @@ export async function compileWiki({
       llmCandidates.push({ module, modulePage, existingForPrompt });
     }
 
-    const llmProvider: LLMProvider | null = llmCandidates.length > 0 ? (_provider ?? createProvider(llmCfg)) : null;
+    const llmProvider: LLMProvider | null = llmCandidates.length > 0 ? (_provider ?? createProvider(resolvedLLMCfg)) : null;
 
     for (const { module, modulePage, existingForPrompt } of llmCandidates) {
       // Assemble the page context using the standard context assembler.
@@ -117,9 +118,9 @@ export async function compileWiki({
 
       // Build LLM request from the assembled context and provider settings.
       const request = buildRequest('module', promptCtx, {
-        maxOutputTokens: llmCfg.llm?.max_output_tokens ?? llmCfg.maxOutputTokens,
-        systemPrompt: llmCfg.llm?.system_prompt ?? llmCfg.systemPrompt,
-        temperature: llmCfg.llm?.temperature ?? llmCfg.temperature,
+        maxOutputTokens: resolvedLLMCfg.maxOutputTokens,
+        systemPrompt: resolvedLLMCfg.systemPrompt,
+        temperature: resolvedLLMCfg.temperature,
       });
 
       // Synthesize with validation. On success, add to the pages Map so the
@@ -291,8 +292,8 @@ function normalizeLLMGeneratedContent(content: string, manifest: any, module: an
 
   const frontmatterRaw = content.slice(4, closing);
   const body = content.slice(closing);
-  const lines = frontmatterRaw.split('\n').filter((line) => line.trim().length > 0);
-  const withoutNormalized = lines.filter((line) => !/^(source_repo|source_commit|page_state|source_paths):/m.test(line));
+  const lines = removeNormalizedFrontmatterFields(frontmatterRaw.split('\n'));
+  const withoutNormalized = lines.filter((line) => line.trim().length > 0);
   const sourcePaths = Array.isArray(module?.files) && module.files.length > 0 ? module.files.slice(0, 20) : collectPrimarySourcePaths(manifest).slice(0, 20);
   const normalizedLines = [
     `source_repo: ${JSON.stringify(manifest.remote)}`,
@@ -303,6 +304,28 @@ function normalizeLLMGeneratedContent(content: string, manifest: any, module: an
   ];
 
   return `---\n${normalizedLines.join('\n')}${body}`;
+}
+
+function removeNormalizedFrontmatterFields(lines: string[]): string[] {
+  const normalizedFields = new Set(['source_repo', 'source_commit', 'page_state', 'source_paths']);
+  const result: string[] = [];
+
+  for (let index = 0; index < lines.length;) {
+    const line = lines[index];
+    const match = /^([A-Za-z0-9_-]+):(?:\s|$)/.exec(line);
+    if (match && normalizedFields.has(match[1])) {
+      index++;
+      while (index < lines.length && (/^\s+\S/.test(lines[index]) || lines[index].trim().length === 0)) {
+        index++;
+      }
+      continue;
+    }
+
+    result.push(line);
+    index++;
+  }
+
+  return result;
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
