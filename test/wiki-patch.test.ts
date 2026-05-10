@@ -15,6 +15,7 @@ import type { LLMProvider, LLMRequest, LLMResponse } from '../src/llm-provider.j
 function validPatch(overrides: {
   source_commit?: string;
   kind?: string;
+  compiled_at?: string;
   source_paths?: string;
   body?: string;
 } = {}): string {
@@ -22,6 +23,7 @@ function validPatch(overrides: {
     '---',
     `source_commit: ${JSON.stringify(overrides.source_commit ?? 'abc123')}`,
     `kind: ${JSON.stringify(overrides.kind ?? 'module')}`,
+    `compiled_at: ${JSON.stringify(overrides.compiled_at ?? '2026-01-01T00:00:00.000Z')}`,
     `source_paths: ${overrides.source_paths ?? '["src/example.ts"]'}`,
     '---',
   ].join('\n');
@@ -107,23 +109,60 @@ test('validateWikiPatch rejects malformed closing frontmatter delimiter', () => 
 });
 
 test('validateWikiPatch returns error when source_commit is missing', () => {
-  const content = '---\nkind: "module"\nsource_paths: []\n---\n\n# Body\n';
+  const content = '---\nkind: "module"\ncompiled_at: "2026-01-01T00:00:00.000Z"\nsource_paths: []\n---\n\n# Body\n';
   const issues = validateWikiPatch(content, 'Module-Auth');
   assert.ok(codes(issues).includes('missing-source-commit'));
   assert.equal(issues.find((i) => i.code === 'missing-source-commit')?.level, 'error');
 });
 
 test('validateWikiPatch returns error when source_commit is blank', () => {
-  const content = '---\nsource_commit: ""\nkind: "module"\nsource_paths: []\n---\n\n# Body\n';
+  const content = '---\nsource_commit: ""\nkind: "module"\ncompiled_at: "2026-01-01T00:00:00.000Z"\nsource_paths: []\n---\n\n# Body\n';
   const issues = validateWikiPatch(content, 'Module-Auth');
   assert.ok(codes(issues).includes('missing-source-commit'));
 });
 
+test('validateWikiPatch rejects non-string YAML source_commit scalars', () => {
+  for (const value of ['123', 'true', 'null']) {
+    const content = `---\nsource_commit: ${value}\nkind: "module"\ncompiled_at: "2026-01-01T00:00:00.000Z"\nsource_paths: []\n---\n\n# Body\n`;
+    const issues = validateWikiPatch(content, 'Module-Auth');
+    assert.ok(codes(issues).includes('missing-source-commit'), `should reject source_commit: ${value}`);
+  }
+});
+
 test('validateWikiPatch returns error when kind is missing', () => {
-  const content = '---\nsource_commit: "abc123"\nsource_paths: []\n---\n\n# Body\n';
+  const content = '---\nsource_commit: "abc123"\ncompiled_at: "2026-01-01T00:00:00.000Z"\nsource_paths: []\n---\n\n# Body\n';
   const issues = validateWikiPatch(content, 'Module-Auth');
   assert.ok(codes(issues).includes('missing-kind'));
   assert.equal(issues.find((i) => i.code === 'missing-kind')?.level, 'error');
+});
+
+test('validateWikiPatch rejects non-string YAML kind scalars', () => {
+  for (const value of ['123', 'true', 'null']) {
+    const content = `---\nsource_commit: "abc123"\nkind: ${value}\ncompiled_at: "2026-01-01T00:00:00.000Z"\nsource_paths: []\n---\n\n# Body\n`;
+    const issues = validateWikiPatch(content, 'Module-Auth');
+    assert.ok(codes(issues).includes('missing-kind'), `should reject kind: ${value}`);
+  }
+});
+
+test('validateWikiPatch returns error when compiled_at is missing', () => {
+  const content = '---\nsource_commit: "abc123"\nkind: "module"\nsource_paths: []\n---\n\n# Body\n';
+  const issues = validateWikiPatch(content, 'Module-Auth');
+  assert.ok(codes(issues).includes('missing-compiled-at'));
+  assert.equal(issues.find((i) => i.code === 'missing-compiled-at')?.level, 'error');
+});
+
+test('validateWikiPatch returns error when compiled_at is blank', () => {
+  const content = '---\nsource_commit: "abc123"\nkind: "module"\ncompiled_at: ""\nsource_paths: []\n---\n\n# Body\n';
+  const issues = validateWikiPatch(content, 'Module-Auth');
+  assert.ok(codes(issues).includes('missing-compiled-at'));
+});
+
+test('validateWikiPatch rejects non-string YAML compiled_at scalars', () => {
+  for (const value of ['123', 'true', 'null']) {
+    const content = `---\nsource_commit: "abc123"\nkind: "module"\ncompiled_at: ${value}\nsource_paths: []\n---\n\n# Body\n`;
+    const issues = validateWikiPatch(content, 'Module-Auth');
+    assert.ok(codes(issues).includes('missing-compiled-at'), `should reject compiled_at: ${value}`);
+  }
 });
 
 test('validateWikiPatch returns error when body is empty after frontmatter', () => {
@@ -198,7 +237,7 @@ test('validateWikiPatch includes pageName in issue messages', () => {
 });
 
 test('validateWikiPatch handles bare (non-JSON-quoted) scalar values', () => {
-  const content = '---\nsource_commit: abc123\nkind: module\nsource_paths: []\n---\n\n# Body\n';
+  const content = '---\nsource_commit: abc123\nkind: module\ncompiled_at: 2026-01-01T00:00:00.000Z\nsource_paths: []\n---\n\n# Body\n';
   const issues = validateWikiPatch(content, 'Module-Auth');
   assert.deepEqual(issues, []);
 });
@@ -208,7 +247,8 @@ test('validateWikiPatch handles YAML block sequences for source_paths', () => {
     '---',
     'source_commit: "abc123"',
     'kind: "module"',
-    'source_paths:',
+    'compiled_at: "2026-01-01T00:00:00.000Z"',
+    'source_paths:'},{
     '  - "src/a.ts"',
     '  - "src/b.ts"',
     '---',
@@ -220,6 +260,25 @@ test('validateWikiPatch handles YAML block sequences for source_paths', () => {
   ].join('\n');
   const issues = validateWikiPatch(content, 'Module-Auth');
   assert.deepEqual(issues, []);
+});
+
+test('validateWikiPatch rejects non-string YAML block sequence source_paths entries', () => {
+  for (const value of ['123', 'true', 'null']) {
+    const content = [
+      '---',
+      'source_commit: "abc123"',
+      'kind: "module"',
+      'source_paths:',
+      '  - "src/a.ts"',
+      `  - ${value}`,
+      '---',
+      '',
+      '# Body',
+      '',
+    ].join('\n');
+    const issues = validateWikiPatch(content, 'Module-Auth');
+    assert.ok(codes(issues).includes('invalid-source-paths'), `should reject source_paths entry: ${value}`);
+  }
 });
 
 test('validateWikiPatch handles BOM-prefixed content', () => {

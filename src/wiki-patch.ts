@@ -43,8 +43,8 @@ export interface WikiPatchFrontmatter {
   kind: string;
   /** Repository source paths cited by this page. */
   source_paths: string[];
-  /** ISO-8601 timestamp of compilation (optional). */
-  compiled_at?: string;
+  /** ISO-8601 timestamp of compilation. */
+  compiled_at: string;
   /** Page ownership state emitted by the compiler. */
   page_state?: string;
   /** Remote URL or shorthand of the source repository. */
@@ -183,7 +183,7 @@ function parseFrontmatterFields(raw: string): Record<string, unknown> {
 
     if (rawValue === '') {
       // Possible block sequence: collect lines that start with "  -"
-      const items: string[] = [];
+      const items: unknown[] = [];
       i++;
       while (i < lines.length && /^\s+-/.test(lines[i])) {
         const item = lines[i].replace(/^\s*-\s*/, '').trim();
@@ -220,14 +220,13 @@ function parseFrontmatterFields(raw: string): Record<string, unknown> {
  *
  * Handles JSON-quoted strings, booleans, null, numbers, and bare YAML strings.
  */
-function parseScalar(value: string): string {
+function parseScalar(value: string): unknown {
   if (!value) return '';
 
   // Try JSON.parse for quoted strings, numbers, booleans, null
   try {
     const parsed = JSON.parse(value);
-    if (typeof parsed === 'string') return parsed;
-    if (typeof parsed === 'number' || typeof parsed === 'boolean' || parsed === null) return String(parsed);
+    if (typeof parsed === 'string' || typeof parsed === 'number' || typeof parsed === 'boolean' || parsed === null) return parsed;
   } catch {
     // Fall through
   }
@@ -249,12 +248,13 @@ function parseScalar(value: string): string {
  *   2. `missing-frontmatter` – Content does not begin with a `---` YAML block.
  *   3. `missing-source-commit` – Frontmatter lacks a `source_commit` field.
  *   4. `missing-kind`        – Frontmatter lacks a `kind` field.
- *   5. `empty-body`          – No markdown content after the frontmatter block.
- *   6. `secret-like-content` – Content matches a known credential pattern.
- *   7. `invalid-source-paths` – `source_paths` contains non-string or blank entries.
+ *   5. `missing-compiled-at` – Frontmatter lacks a `compiled_at` field.
+ *   6. `empty-body`          – No markdown content after the frontmatter block.
+ *   7. `secret-like-content` – Content matches a known credential pattern.
+ *   8. `invalid-source-paths` – `source_paths` contains non-string or blank entries.
  *
  * Lint gates applied (warning-level):
- *   8. `missing-source-paths` – Frontmatter lacks a `source_paths` array.
+ *   9. `missing-source-paths` – Frontmatter lacks a `source_paths` array.
  */
 export function validateWikiPatch(rawContent: string, pageName: string): WikiPatchIssue[] {
   const issues: WikiPatchIssue[] = [];
@@ -301,7 +301,17 @@ export function validateWikiPatch(rawContent: string, pageName: string): WikiPat
       });
     }
 
-    // 5. Body must not be empty
+    // 5. Required field: compiled_at
+    const compiledAt = fields['compiled_at'];
+    if (!compiledAt || typeof compiledAt !== 'string' || !compiledAt.trim()) {
+      issues.push({
+        level: 'error',
+        code: 'missing-compiled-at',
+        message: `${pageName}: frontmatter is missing required field "compiled_at".`,
+      });
+    }
+
+    // 6. Body must not be empty
     if (!body || !body.trim()) {
       issues.push({
         level: 'error',
@@ -310,7 +320,7 @@ export function validateWikiPatch(rawContent: string, pageName: string): WikiPat
       });
     }
 
-    // 7. Warning: source_paths should be a list
+    // 8. Warning: source_paths should be a list
     const sourcePaths = fields['source_paths'];
     if (!Array.isArray(sourcePaths)) {
       issues.push({
@@ -379,8 +389,9 @@ export function parseWikiPatch(rawContent: string, pageName: string): WikiPatch 
     source_paths: Array.isArray(fields['source_paths'])
       ? fields['source_paths'].filter(isNonEmptyString)
       : [],
+    compiled_at: String(fields['compiled_at'] ?? ''),
     ...Object.fromEntries(
-      Object.entries(fields).filter(([k]) => !['source_commit', 'kind', 'source_paths'].includes(k)),
+      Object.entries(fields).filter(([k]) => !['source_commit', 'kind', 'source_paths', 'compiled_at'].includes(k)),
     ),
   };
 
