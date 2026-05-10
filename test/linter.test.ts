@@ -302,7 +302,7 @@ test('lintWiki warns for generated module pages with material claims but missing
   }
 });
 
-test('lintWiki exempts hub pages from provenance warnings', async () => {
+test('lintWiki exempts top-level hub pages from provenance warnings', async () => {
   const { dir, wikiDir, scanDir } = await writeWikiFixture({
     ...requiredPages,
     'Home.md': generatedPage('Home', 'This generated home page summarizes repository behavior without source citations yet.', ['kind: "home"']),
@@ -315,6 +315,22 @@ test('lintWiki exempts hub pages from provenance warnings', async () => {
     const provenanceWarnings = result.issues.filter((issue) => issue.code === 'missing-source-provenance');
 
     assert.equal(provenanceWarnings.length, 0);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintWiki checks nested pages with hub filenames for provenance warnings', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'nested/Home.md': generatedPage('Nested Home', 'This nested page makes repository behavior claims without source provenance.', ['kind: "home"'])
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const nestedProvenanceWarning = result.issues.find((issue) => issue.code === 'missing-source-provenance' && issue.message.includes('nested/Home.md'));
+
+    assert.ok(nestedProvenanceWarning);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

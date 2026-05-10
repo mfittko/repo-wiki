@@ -230,7 +230,7 @@ function shouldCheckGeneratedProvenance(relativePath: string, frontmatter: Recor
     return false;
   }
 
-  if (PROVENANCE_EXEMPT_PAGES.has(path.basename(relativePath))) {
+  if (PROVENANCE_EXEMPT_PAGES.has(relativePath)) {
     return false;
   }
 
