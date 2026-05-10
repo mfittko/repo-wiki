@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add deterministic Rust scanner extraction for imports, re-exports, and top-level items.
 - Add deterministic Ruby source extraction with robust scope/heredoc handling.
 - Add provenance-safe line-anchored GitHub citations for package scripts and CI commands with safe multiline backslash handling and command redaction.
+- Add docs-debt strictness and markdown route/API validation with wildcard method matching, source evidence, and conservative path normalization.
 
 ### Changed
 - Node.js engine requirement raised to `>=24`; removed unsafe incremental cache from scanner
