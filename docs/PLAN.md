@@ -835,7 +835,7 @@ Acceptance criteria:
 - GitHub Wiki publishing does not expose generated YAML metadata as visible tables.
 - Local `.llmwiki/wiki` files can retain frontmatter for tooling, search, Obsidian/Dataview, and incremental maintenance.
 - The publish transform strips only valid leading YAML frontmatter and leaves thematic breaks or later `---` blocks intact.
-- A future config can choose `strip`, `html-comment`, `provenance`, or `preserve`, with GitHub Wiki defaulting to `provenance`.
+- Accepted policies are `strip`, `html-comment`, `provenance`, and `preserve`, with `github-wiki` defaulting to `provenance`.
 
 #### Self-wiki flagship demo
 
