@@ -26,7 +26,8 @@ export const LLM_DEFAULTS = {
   temperature: 0.1,
   maxOutputTokens: 4000,
   timeoutMs: 60000,
-  retries: 2
+  retries: 2,
+  validationRetries: 1
 } as const;
 
 export type { PageArchetype };
@@ -317,6 +318,10 @@ export interface LLMProviderConfig {
   timeout_ms?: number;
   /** Number of retries for retryable hosted provider failures. */
   retries?: number;
+  /** Number of corrective retries after wiki patch validation failures. */
+  validationRetries?: number;
+  /** JSON config alias for `validationRetries`. */
+  validation_retries?: number;
   /** Compiler mode alias used when callers pass the whole compiler config. */
   mode?: string;
   /** Nested LLM settings used when callers pass the whole compiler config. */
@@ -333,6 +338,7 @@ export interface ResolvedLLMProviderConfig extends LLMProviderConfig {
   maxOutputTokens: number;
   timeoutMs: number;
   retries: number;
+  validationRetries: number;
 }
 
 // ── Factory ────────────────────────────────────────────────────────────────
@@ -408,7 +414,8 @@ export function resolveProviderConfig(
     temperature: parseNumber(optionalEnv(env, 'LLMWIKI_LLM_TEMPERATURE'), llmConfig.temperature ?? LLM_DEFAULTS.temperature, 'temperature'),
     maxOutputTokens: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_MAX_OUTPUT_TOKENS'), llmConfig.maxOutputTokens ?? llmConfig.max_output_tokens ?? LLM_DEFAULTS.maxOutputTokens, 'maxOutputTokens'),
     timeoutMs: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_TIMEOUT_MS'), llmConfig.timeoutMs ?? llmConfig.timeout_ms ?? LLM_DEFAULTS.timeoutMs, 'timeoutMs'),
-    retries: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_RETRIES'), llmConfig.retries ?? LLM_DEFAULTS.retries, 'retries')
+    retries: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_RETRIES'), llmConfig.retries ?? LLM_DEFAULTS.retries, 'retries'),
+    validationRetries: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_VALIDATION_RETRIES'), llmConfig.validationRetries ?? llmConfig.validation_retries ?? LLM_DEFAULTS.validationRetries, 'validationRetries')
   };
 }
 

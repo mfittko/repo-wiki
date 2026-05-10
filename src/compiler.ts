@@ -81,7 +81,7 @@ export async function compileWiki({
     // (phased archetype rollout – module pages first).
     const llmCfg = config?.compiler ?? {};
     const resolvedLLMCfg = resolveProviderConfig(llmCfg);
-    const retries: number = resolvedLLMCfg.retries;
+    const validationRetries: number = resolvedLLMCfg.validationRetries;
     const llmCandidates: Array<{ module: any; modulePage: string; existingForPrompt?: string }> = [];
 
     for (const module of plan.modules || []) {
@@ -130,7 +130,7 @@ export async function compileWiki({
       // On failure, record the error. LLM mode fails fast before the write loop
       // below, so invalid LLM output cannot trigger partial wiki writes.
       try {
-        const patch = await synthesizeWikiPage(llmProvider!, request, { maxRetries: retries });
+        const patch = await synthesizeWikiPage(llmProvider!, request, { maxRetries: validationRetries });
         const normalized = normalizeLLMGeneratedContent(patch.content, manifest, module);
         pages.set(modulePage, normalized);
         llmGeneratedPages.add(modulePage);

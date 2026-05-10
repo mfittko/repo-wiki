@@ -199,6 +199,7 @@ test('resolveProviderConfig applies env overrides and resolves api key', () => {
       max_output_tokens: 1000,
       timeout_ms: 10000,
       retries: 1,
+      validation_retries: 3,
     },
     {
       LLMWIKI_LLM_PROVIDER: 'openai-compatible',
@@ -209,6 +210,8 @@ test('resolveProviderConfig applies env overrides and resolves api key', () => {
       LLMWIKI_LLM_SYSTEM_PROMPT: 'env prompt',
       LLMWIKI_LLM_TEMPERATURE: '0.3',
       LLMWIKI_LLM_MAX_OUTPUT_TOKENS: '2000',
+      LLMWIKI_LLM_RETRIES: '4',
+      LLMWIKI_LLM_VALIDATION_RETRIES: '2',
     },
   );
 
@@ -221,7 +224,8 @@ test('resolveProviderConfig applies env overrides and resolves api key', () => {
   assert.equal(resolved.temperature, 0.3);
   assert.equal(resolved.maxOutputTokens, 2000);
   assert.equal(resolved.timeoutMs, 10000);
-  assert.equal(resolved.retries, 1);
+  assert.equal(resolved.retries, 4);
+  assert.equal(resolved.validationRetries, 2);
 });
 
 test('resolveProviderConfig honors explicit hosted provider config before deterministic mode default', () => {
@@ -331,6 +335,8 @@ test('resolveProviderConfig rejects negative integer config', () => {
     { maxOutputTokens: -1 },
     { timeoutMs: -1 },
     { retries: -1 },
+    { validationRetries: -1 },
+    { validation_retries: -1 },
   ]) {
     assert.throws(
       () => resolveProviderConfig(config, {}),

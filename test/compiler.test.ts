@@ -1064,6 +1064,82 @@ test('compileWiki in LLM mode does not overwrite existing page when provider out
   }
 });
 
+test('compileWiki uses validation retries independently from provider transport retries', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  let calls = 0;
+  const provider: LLMProvider = {
+    name: 'validation-retry-mock',
+    async complete(_request: LLMRequest): Promise<LLMResponse> {
+      calls += 1;
+      if (calls === 1) {
+        return { content: '# Invalid - no frontmatter', provider: 'validation-retry-mock' };
+      }
+      return {
+        provider: 'validation-retry-mock',
+        content: [
+          '---',
+          'kind: "module"',
+          'compiled_at: "2026-05-10T00:00:00.000Z"',
+          'source_repo: "provider-origin"',
+          'source_commit: "provider-commit"',
+          'source_paths: ["src/auth.ts"]',
+          'page_state: "generated"',
+          '---',
+          '',
+          '# Auth',
+          '',
+          'Valid retry output.',
+          ''
+        ].join('\n')
+      };
+    }
+  };
+
+  try {
+    await compileWiki({
+      scanDir,
+      planFile,
+      wikiDir,
+      config: { compiler: { mode: 'llm', llm: { provider: 'mock', retries: 0, validation_retries: 1 } } },
+      _provider: provider
+    });
+
+    const modulePage = await fs.readFile(path.join(wikiDir, 'Module-Auth.md'), 'utf8');
+    assert.equal(calls, 2);
+    assert.match(modulePage, /Valid retry output/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki does not use provider transport retries for validation correction', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  let calls = 0;
+  const provider: LLMProvider = {
+    name: 'invalid-once-mock',
+    async complete(_request: LLMRequest): Promise<LLMResponse> {
+      calls += 1;
+      return { content: '# Invalid - no frontmatter', provider: 'invalid-once-mock' };
+    }
+  };
+
+  try {
+    await assert.rejects(
+      () => compileWiki({
+        scanDir,
+        planFile,
+        wikiDir,
+        config: { compiler: { mode: 'llm', llm: { provider: 'mock', retries: 5, validation_retries: 0 } } },
+        _provider: provider
+      }),
+      /LLM compilation failed.*Module-Auth\.md/s
+    );
+    assert.equal(calls, 1);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('compileWiki in LLM mode preserves human notes on successful synthesis', async () => {
   const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
   const config = { compiler: { mode: 'llm' } };
