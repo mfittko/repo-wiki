@@ -712,14 +712,25 @@ These items make the wiki stay current at low cost.
 
 These items increase repository coverage and confidence.
 
-- Add TypeScript/JavaScript AST extraction for exports, imports, route handlers, config, and framework surfaces.
-- Detect Express, Fastify, NestJS, Next.js, Hono, Koa, tRPC, GraphQL, and OpenAPI surfaces.
-- Add Python support for Django, FastAPI, Flask, pytest, pyproject, and common config conventions.
-- Add Go support for modules, HTTP routes, packages, tests, and common framework patterns.
-- Add Rust support for Cargo, Axum, Actix, Rocket, tests, and feature flags.
+The following baseline implementations are already shipped (regex/AST scaffold, closed issues #7–#17):
+
+- TypeScript/JavaScript AST-backed metadata extraction for symbols, imports, exports, and framework surfaces (`src/extractors.ts`).
+- Framework route detection: Express, Fastify, Next.js, Hono, tRPC, GraphQL, and OpenAPI surfaces.
+- Python, Go, Rust, and Ruby import and symbol extraction (regex baseline).
+- Test-to-source mapping (regex baseline).
+- Database migration and ORM model detection: Prisma, TypeORM, and Sequelize (path/regex baseline).
+
+Remaining production hardening and coverage gaps:
+
+- Deepen Python framework support: Django views/URLs, FastAPI route decorators, Flask blueprints, pytest fixtures, and pyproject metadata.
+- Deepen Go framework support: HTTP handler patterns, gorilla/mux, Gin, Echo, and common config conventions.
+- Deepen Rust framework support: Axum, Actix-web, Rocket route macros, Cargo feature flags.
 - Add Ruby/Rails and PHP/Laravel extraction where useful.
-- Improve test-to-source mapping across languages.
-- Extract database migrations and ORM models across Prisma, TypeORM, Sequelize, Rails, Django, SQLAlchemy, and raw SQL.
+- Expand ORM/migration coverage: SQLAlchemy, Active Record, Django ORM, and raw SQL patterns.
+- Add NestJS and Koa route detection.
+- Add `repo-wiki init --profile` templates for Node, Python, Go, Rust, Rails, and monorepos.
+- Harden test-to-source mapping accuracy across all supported languages.
+- Add AST-level source range metadata (`line`, `end_line`) to extracted constructs for commit-pinned citations.
 
 ### P6: Adoption, CI, and developer experience
 
@@ -880,9 +891,6 @@ Existing plans:
 - `docs/plans/incremental-mode.md`
 - `docs/plans/ci-publishing.md`
 - `docs/plans/agent-integration.md`
-
-Recommended new plans:
-
 - `docs/plans/karpathy-llm-wiki-alignment.md` - product vision, operating model, and repo-specific interpretation of the LLM Wiki pattern.
 - `docs/plans/wiki-health.md` - graph linting, orphan detection, stale-page detection, cross-reference repair, and page split suggestions.
 - `docs/plans/query-and-file-back.md` - source-cited queries, durable answer filing, investigation pages, and query logs.
