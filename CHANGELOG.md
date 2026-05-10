@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Complete deterministic scanner coverage for NestJS, Koa, tRPC, GraphQL, and OpenAPI API surfaces (including GraphQL field-config resolver mapping).
 - Fix Ruby quoted heredocs and inline end counting.
+- Add explicit GitHub Pages publish target with destination-specific frontmatter defaults and remote-error redaction hardening.
 
 ### Security
 - Fix Ruby extractor heredoc and end-token edge cases.

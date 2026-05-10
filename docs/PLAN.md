@@ -134,11 +134,11 @@ npx repo-wiki run --mode bootstrap --repo . --wiki .llmwiki/wiki
 npx repo-wiki publish --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git
 ```
 
-Planned richer publication should make the target explicit, including a GitHub Wiki target and a GitHub Pages target:
+Publication supports explicit targets, including a GitHub Wiki target and a GitHub Pages target:
 
 ```bash
 npx repo-wiki publish --target github-wiki --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git
-npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --path .
+npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --pages-path .
 ```
 
 Publish targets should own destination-specific rendering policy. GitHub Wiki should strip or transform leading YAML frontmatter by default because hosted wiki pages render it visibly. GitHub Pages/Jekyll should preserve frontmatter by default because Jekyll consumes it as page metadata.
@@ -515,7 +515,7 @@ repo-wiki plan      Produce bootstrap or incremental page plan.
 repo-wiki lint-docs Validate ingested markdown before compilation.
 repo-wiki compile   Generate local wiki markdown.
 repo-wiki lint      Validate generated wiki markdown.
-repo-wiki publish   Publish local wiki markdown to a configured Git remote, normally a GitHub Wiki repository.
+repo-wiki publish   Publish local wiki markdown to a configured Git remote, targeting GitHub Wiki or GitHub Pages.
 repo-wiki run       Orchestrate scan -> plan -> lint-docs -> compile -> lint -> optional publish.
 ```
 
@@ -546,12 +546,13 @@ Publishing this repository's own wiki:
 
 ```bash
 LLMWIKI_PUBLISH_REMOTE=https://github.com/OWNER/repo-wiki.wiki.git npm run kb:publish
+npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --remote https://github.com/OWNER/repo-wiki.git --branch gh-pages --pages-path .
 ```
 
-A future GitHub Pages target should support richer static-site publication while preserving YAML frontmatter for Jekyll:
+The GitHub Pages target supports richer static-site publication while preserving YAML frontmatter for Jekyll:
 
 ```bash
-repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --path .
+repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --pages-path .
 ```
 
 The public repo should use its own generated GitHub Wiki as the flagship demo. The README should link to the published wiki when available and explain which pages are generated, mixed, human-owned, and source authoritative.
@@ -648,9 +649,7 @@ These items make the current scaffold match its stated policy.
 - Redact secret-like strings before writing manifests, documentation cards, page contexts, logs, or generated pages.
 - Sanitize all remotes and URLs before displaying or writing them.
 - Delete stale generated wiki pages during publish while preserving unmanaged and human-owned pages.
-- Add explicit publish-target selection, starting with `github-wiki` and `github-pages`.
-- Add a target-aware GitHub Wiki publish transform that strips or converts leading YAML frontmatter so generated metadata does not render as noisy tables on hosted wiki pages.
-- Preserve YAML frontmatter by default for GitHub Pages/Jekyll publication.
+- Continue hardening publish safety around target-specific remotes, paths, and rendering policies.
 - Add JSON schema validation for `.llmwiki/config.json`.
 - Make lint severity fully config-driven.
 - Add golden end-to-end tests for `init -> scan -> plan -> lint-docs -> compile -> lint -> publish --dry-run`.
