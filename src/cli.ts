@@ -67,20 +67,29 @@ function getPublishTargetOption(options: ParsedArgs, configuredTarget?: string):
 }
 
 function getFrontmatterPolicyOption(options: ParsedArgs, target: PublishTarget, configuredPolicy?: string): FrontmatterPolicy {
-  const explicitValue = getStringOption(options, 'frontmatter-policy') || getStringOption(options, 'frontmatter');
+  const explicitOptionName = getFrontmatterOptionName(options);
+  const explicitValue = explicitOptionName ? getStringOption(options, explicitOptionName.slice(2)) : undefined;
   const value = explicitValue || configuredPolicy;
   const defaultPolicy = defaultFrontmatterPolicyForTarget(target);
   const policy = value === undefined ? defaultPolicy : isFrontmatterPolicy(value) ? parseFrontmatterPolicy(value) : defaultPolicy;
 
   if (explicitValue !== undefined && !isFrontmatterPolicy(explicitValue)) {
-    const optionName = getStringOption(options, 'frontmatter-policy') !== undefined ? '--frontmatter-policy' : '--frontmatter';
-    console.error(`Warning: unknown ${optionName} "${explicitValue}"; falling back to "${defaultPolicy}".`);
+    console.error(`Warning: unknown ${explicitOptionName} "${explicitValue}"; falling back to "${defaultPolicy}".`);
   } else if (policy === 'html-comment') {
-    const optionName = getStringOption(options, 'frontmatter-policy') !== undefined ? '--frontmatter-policy' : getStringOption(options, 'frontmatter') !== undefined ? '--frontmatter' : '--frontmatter-policy';
-    console.error(`Warning: ${optionName} html-comment is reserved for future metadata comments and currently behaves like strip.`);
+    console.error(`Warning: ${explicitOptionName || '--frontmatter-policy'} html-comment is reserved for future metadata comments and currently behaves like strip.`);
   }
 
   return policy;
+}
+
+function getFrontmatterOptionName(options: ParsedArgs): '--frontmatter-policy' | '--frontmatter' | null {
+  if (getStringOption(options, 'frontmatter-policy') !== undefined) {
+    return '--frontmatter-policy';
+  }
+  if (getStringOption(options, 'frontmatter') !== undefined) {
+    return '--frontmatter';
+  }
+  return null;
 }
 
 export async function runCli(argv: string[]) {

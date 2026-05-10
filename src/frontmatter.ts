@@ -437,6 +437,11 @@ function escapeMarkdownLinkLabel(value: string): string {
   return value.replace(/\\/g, '\\\\').replace(/([\[\]()])/g, '\\$1');
 }
 
+/**
+ * GitHub blob URLs tolerate the characters escaped by encodeURIComponent but
+ * markdown link destinations are more robust when we additionally percent-encode
+ * RFC 3986 reserved punctuation such as parentheses and apostrophes.
+ */
 function encodeGitHubPathSegment(segment: string): string {
   return encodeURIComponent(segment).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
 }

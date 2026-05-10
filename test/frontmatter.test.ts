@@ -188,7 +188,7 @@ test('applyFrontmatterPolicy provenance truncates source paths after ten entries
   assert.doesNotMatch(result, /src\/file-11\.ts/);
 });
 
-test('applyFrontmatterPolicy provenance adds a secondary evidence note for docs-only source paths', () => {
+test('applyFrontmatterPolicy provenance adds a secondary evidence note when all source paths are documentation files', () => {
   const input = [
     '---',
     'source_paths:',
@@ -220,7 +220,7 @@ test('applyFrontmatterPolicy provenance does not add a secondary evidence note f
   assert.doesNotMatch(result, /\*\*Evidence note:\*\*/);
 });
 
-test('applyFrontmatterPolicy provenance adds a secondary evidence note for review-oriented claim status without docs-only paths', () => {
+test('applyFrontmatterPolicy provenance adds a secondary evidence note for review-oriented claim status', () => {
   const input = [
     '---',
     'claim_status: "review-needed"',
