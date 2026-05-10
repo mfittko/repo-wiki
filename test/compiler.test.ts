@@ -826,7 +826,7 @@ function createLLMPlan() {
   };
 }
 
-const llmManifest = {
+const defaultLLMManifest = {
   remote: 'origin',
   commit: 'llm-test-commit',
   mode: 'bootstrap',
@@ -849,7 +849,7 @@ const llmManifest = {
 };
 
 test('compileWiki in LLM mode synthesizes module pages through the mock provider', async () => {
-  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: llmManifest, plan: createLLMPlan() });
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
   const config = { compiler: { mode: 'llm' } };
 
   try {
@@ -873,7 +873,7 @@ test('compileWiki in LLM mode synthesizes module pages through the mock provider
 });
 
 test('compileWiki in LLM mode does not overwrite existing page when provider output is invalid', async () => {
-  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: llmManifest, plan: createLLMPlan() });
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
   const config = { compiler: { mode: 'llm' } };
 
   // Create a pre-existing "generated" module page that should be preserved on failure.
@@ -920,7 +920,7 @@ test('compileWiki in LLM mode does not overwrite existing page when provider out
 });
 
 test('compileWiki in LLM mode preserves human notes on successful synthesis', async () => {
-  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: llmManifest, plan: createLLMPlan() });
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
   const config = { compiler: { mode: 'llm' } };
 
   try {
@@ -955,7 +955,7 @@ test('compileWiki in LLM mode preserves human notes on successful synthesis', as
 });
 
 test('compileWiki in LLM mode does not overwrite human-owned module pages', async () => {
-  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: llmManifest, plan: createLLMPlan() });
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
   const config = { compiler: { mode: 'llm' } };
 
   // Create a human-owned module page.

@@ -30,7 +30,12 @@ export async function compileWiki({
   const pageContexts = assembleAllPageContexts({ manifest, plan });
   await ensureDir(wikiDir);
 
-  const compilerMode: string = config?.compiler?.mode ?? 'deterministic';
+  const KNOWN_MODES = ['deterministic', 'llm'];
+  const rawMode: string = config?.compiler?.mode ?? 'deterministic';
+  const compilerMode: string = KNOWN_MODES.includes(rawMode) ? rawMode : 'deterministic';
+  if (!KNOWN_MODES.includes(rawMode)) {
+    console.warn(`compileWiki: unknown compiler.mode "${rawMode}"; falling back to "deterministic".`);
+  }
   const isLLMMode = compilerMode === 'llm';
   const llmErrors: Array<{ file: string; error: string; issues?: any[] }> = [];
 
@@ -242,7 +247,9 @@ function setPageStateMixed(content: string): string {
     return content;
   }
   // No page_state field – inject it as the first field in the frontmatter block.
-  return content.replace(/---\n/, '---\npage_state: "mixed"\n');
+  // The pattern anchors to the absolute start of the document to avoid matching
+  // any `---\n` sequences that may appear in the content body.
+  return content.replace(/^---\n/, '---\npage_state: "mixed"\n');
 }
 
 function frontmatter(manifest, extra: any = {}) {
