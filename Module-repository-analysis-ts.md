@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "ea1e8dd9452865235cc07cb3c68da8017c735bab"
-compiled_at: "2026-05-10T00:06:23.581Z"
+source_commit: "528199e7807b6ebf4f26ca37b222056e8b4e4c9f"
+compiled_at: "2026-05-10T00:16:37.813Z"
 kind: "module"
 module: "Module repository-analysis.ts"
 source_paths: ["src/repository-analysis.ts"]
@@ -23,11 +23,11 @@ Generated first-pass page for files grouped under Module repository-analysis.ts.
 
 ## Source files
 
-- [src/repository-analysis.ts](https://github.com/mfittko/repo-wiki/blob/ea1e8dd9452865235cc07cb3c68da8017c735bab/src/repository-analysis.ts)
+- [src/repository-analysis.ts](https://github.com/mfittko/repo-wiki/blob/528199e7807b6ebf4f26ca37b222056e8b4e4c9f/src/repository-analysis.ts)
 
 ## Related tests
 
-- [test/repository-analysis.test.ts](https://github.com/mfittko/repo-wiki/blob/ea1e8dd9452865235cc07cb3c68da8017c735bab/test/repository-analysis.test.ts)
+- [test/repository-analysis.test.ts](https://github.com/mfittko/repo-wiki/blob/528199e7807b6ebf4f26ca37b222056e8b4e4c9f/test/repository-analysis.test.ts)
 
 ## Related pages
 

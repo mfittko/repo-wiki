@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "ea1e8dd9452865235cc07cb3c68da8017c735bab"
-compiled_at: "2026-05-10T00:06:23.571Z"
+source_commit: "528199e7807b6ebf4f26ca37b222056e8b4e4c9f"
+compiled_at: "2026-05-10T00:16:37.803Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 page_state: "generated"
@@ -114,39 +114,39 @@ Repository file and directory references extracted from markdown links and inlin
 | `docs/PLAN.md:39` | `Log.md` | ❌ missing | not found |
 | `docs/PLAN.md:63` | `OWNER/REPO.wiki.git` | ❌ missing | not found |
 | `docs/PLAN.md:227` | `package.json` | ✅ valid | `package.json` |
-| `docs/PLAN.md:298` | `Index.md` | ❌ missing | not found |
-| `docs/PLAN.md:298` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:329` | `Index.md` | ❌ missing | not found |
-| `docs/PLAN.md:334` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:488` | `Index.md` | ❌ missing | not found |
-| `docs/PLAN.md:496` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:606` | `docs/plans/` | ✅ valid | `docs/plans` |
-| `docs/PLAN.md:658` | `Index.md` | ❌ missing | not found |
-| `docs/PLAN.md:658` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:691` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:754` | `Index.md` | ❌ missing | not found |
-| `docs/PLAN.md:754` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:299` | `Index.md` | ❌ missing | not found |
+| `docs/PLAN.md:299` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:332` | `Index.md` | ❌ missing | not found |
+| `docs/PLAN.md:337` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:491` | `Index.md` | ❌ missing | not found |
+| `docs/PLAN.md:499` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:609` | `docs/plans/` | ✅ valid | `docs/plans` |
+| `docs/PLAN.md:661` | `Index.md` | ❌ missing | not found |
+| `docs/PLAN.md:661` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:694` | `Log.md` | ❌ missing | not found |
 | `docs/PLAN.md:760` | `Index.md` | ❌ missing | not found |
-| `docs/PLAN.md:866` | `docs/plans/` | ✅ valid | `docs/plans` |
-| `docs/PLAN.md:870` | `docs/plans/production-scanner.md` | ✅ valid | `docs/plans/production-scanner.md` |
-| `docs/PLAN.md:871` | `docs/plans/doc-validation.md` | ✅ valid | `docs/plans/doc-validation.md` |
-| `docs/PLAN.md:872` | `docs/plans/wiki-graph.md` | ✅ valid | `docs/plans/wiki-graph.md` |
-| `docs/PLAN.md:873` | `docs/plans/llm-compiler.md` | ✅ valid | `docs/plans/llm-compiler.md` |
-| `docs/PLAN.md:874` | `docs/plans/incremental-mode.md` | ✅ valid | `docs/plans/incremental-mode.md` |
-| `docs/PLAN.md:875` | `docs/plans/ci-publishing.md` | ✅ valid | `docs/plans/ci-publishing.md` |
-| `docs/PLAN.md:876` | `docs/plans/agent-integration.md` | ✅ valid | `docs/plans/agent-integration.md` |
-| `docs/PLAN.md:880` | `docs/plans/karpathy-llm-wiki-alignment.md` | ❌ missing | not found |
-| `docs/PLAN.md:881` | `docs/plans/wiki-health.md` | ❌ missing | not found |
-| `docs/PLAN.md:882` | `docs/plans/query-and-file-back.md` | ❌ missing | not found |
-| `docs/PLAN.md:883` | `docs/plans/search-index.md` | ❌ missing | not found |
-| `docs/PLAN.md:884` | `docs/plans/trust-hardening.md` | ❌ missing | not found |
-| `docs/PLAN.md:885` | `docs/plans/github-action.md` | ❌ missing | not found |
-| `docs/PLAN.md:910` | `Index.md` | ❌ missing | not found |
-| `docs/PLAN.md:910` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:939` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:953` | `AGENTS.md` | ✅ valid | `AGENTS.md` |
-| `docs/PLAN.md:953` | `AGENTS.repo-wiki.md` | ❌ missing | not found |
-| `docs/PLAN.md:954` | `Agent-Context-Pack.md` | ❌ missing | not found |
+| `docs/PLAN.md:760` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:766` | `Index.md` | ❌ missing | not found |
+| `docs/PLAN.md:872` | `docs/plans/` | ✅ valid | `docs/plans` |
+| `docs/PLAN.md:876` | `docs/plans/production-scanner.md` | ✅ valid | `docs/plans/production-scanner.md` |
+| `docs/PLAN.md:877` | `docs/plans/doc-validation.md` | ✅ valid | `docs/plans/doc-validation.md` |
+| `docs/PLAN.md:878` | `docs/plans/wiki-graph.md` | ✅ valid | `docs/plans/wiki-graph.md` |
+| `docs/PLAN.md:879` | `docs/plans/llm-compiler.md` | ✅ valid | `docs/plans/llm-compiler.md` |
+| `docs/PLAN.md:880` | `docs/plans/incremental-mode.md` | ✅ valid | `docs/plans/incremental-mode.md` |
+| `docs/PLAN.md:881` | `docs/plans/ci-publishing.md` | ✅ valid | `docs/plans/ci-publishing.md` |
+| `docs/PLAN.md:882` | `docs/plans/agent-integration.md` | ✅ valid | `docs/plans/agent-integration.md` |
+| `docs/PLAN.md:886` | `docs/plans/karpathy-llm-wiki-alignment.md` | ❌ missing | not found |
+| `docs/PLAN.md:887` | `docs/plans/wiki-health.md` | ❌ missing | not found |
+| `docs/PLAN.md:888` | `docs/plans/query-and-file-back.md` | ❌ missing | not found |
+| `docs/PLAN.md:889` | `docs/plans/search-index.md` | ❌ missing | not found |
+| `docs/PLAN.md:890` | `docs/plans/trust-hardening.md` | ❌ missing | not found |
+| `docs/PLAN.md:891` | `docs/plans/github-action.md` | ❌ missing | not found |
+| `docs/PLAN.md:916` | `Index.md` | ❌ missing | not found |
+| `docs/PLAN.md:916` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:945` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:962` | `AGENTS.md` | ✅ valid | `AGENTS.md` |
+| `docs/PLAN.md:962` | `AGENTS.repo-wiki.md` | ❌ missing | not found |
+| `docs/PLAN.md:963` | `Agent-Context-Pack.md` | ❌ missing | not found |
 | `docs/plans/agent-integration.md:62` | `AGENTS.md` | ✅ valid | `AGENTS.md` |
 | `docs/plans/agent-integration.md:62` | `AGENTS.repo-wiki.md` | ❌ missing | not found |
 | `docs/plans/agent-integration.md:63` | `Agent-Context-Pack.md` | ❌ missing | not found |

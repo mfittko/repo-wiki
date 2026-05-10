@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "ea1e8dd9452865235cc07cb3c68da8017c735bab"
-compiled_at: "2026-05-10T00:06:23.581Z"
+source_commit: "528199e7807b6ebf4f26ca37b222056e8b4e4c9f"
+compiled_at: "2026-05-10T00:16:37.813Z"
 kind: "module"
 module: "Module scanner.ts"
 source_paths: ["src/scanner.ts"]
@@ -23,11 +23,11 @@ Generated first-pass page for files grouped under Module scanner.ts. This should
 
 ## Source files
 
-- [src/scanner.ts](https://github.com/mfittko/repo-wiki/blob/ea1e8dd9452865235cc07cb3c68da8017c735bab/src/scanner.ts)
+- [src/scanner.ts](https://github.com/mfittko/repo-wiki/blob/528199e7807b6ebf4f26ca37b222056e8b4e4c9f/src/scanner.ts)
 
 ## Related tests
 
-- [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/ea1e8dd9452865235cc07cb3c68da8017c735bab/test/scanner.test.ts)
+- [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/528199e7807b6ebf4f26ca37b222056e8b4e4c9f/test/scanner.test.ts)
 
 ## Related pages
 
