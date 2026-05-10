@@ -68,6 +68,7 @@ sequenceDiagram
 ## Key Deliverables
 
 - LLM synthesis pipeline for each wiki page type (foundation, module, cross-cutting)
+- Incremental LLM enrichment that runs only for affected wiki pages selected by diff, bounded hierarchy propagation, and semantic propagation rules
 - Source card and code excerpt context assembly (token-budget aware)
 - Existing wiki page ingestion before regeneration
 - Page classification: generated, human-owned, mixed, unmanaged
@@ -139,6 +140,7 @@ Tests must use a deterministic mock provider and must not require network access
 - Existing mixed pages can be regenerated without losing preserved regions
 - Generated pages carry enough metadata to support future reconciliation and safe deletion
 - LLM output passes lint gates before acceptance
+- Untouched enriched pages remain byte-stable during incremental builds and do not incur model calls
 - Token budget stays within model context limits per page
 
 ## Dependencies
@@ -153,5 +155,6 @@ Tests must use a deterministic mock provider and must not require network access
 - Should compilation be parallelized across pages?
 - How to handle hallucination detection beyond lint gates?
 - Cost/latency budget for full bootstrap vs incremental compile?
+- What exact propagation thresholds should trigger re-enrichment of parent aggregate pages versus preserving existing content?
 - What is the minimum preservation contract for mixed human/generated pages?
 - Which page sections should be preserved structurally versus semantically merged?
