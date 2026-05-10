@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
-compiled_at: "2026-05-10T21:41:07.754Z"
+source_commit: "2ce19fbe28dc7fd82aa053ba642325b8a9e91f02"
+compiled_at: "2026-05-10T22:25:53.492Z"
 kind: "index"
 confidence: "medium"
 page_state: "generated"
@@ -67,7 +67,7 @@ page_state: "generated"
 {
   "languages": {
     "Text": 4,
-    "Markdown": 28,
+    "Markdown": 34,
     "YAML": 7,
     "JSON": 4,
     "TypeScript": 47,
@@ -75,7 +75,7 @@ page_state: "generated"
   },
   "categories": {
     "source": 39,
-    "docs": 28,
+    "docs": 34,
     "ci": 4,
     "package": 2,
     "test": 18
@@ -88,17 +88,17 @@ page_state: "generated"
     "orm-model": 2
   },
   "documentation": {
-    "files": 18,
+    "files": 24,
     "statuses": {
-      "unvalidated": 12,
-      "partially_validated": 5,
+      "unvalidated": 16,
+      "partially_validated": 7,
       "stale": 1
     },
     "stale": 1,
-    "claims": 24,
+    "claims": 28,
     "commands": 22,
-    "env_vars": 12,
-    "file_paths": 56
+    "env_vars": 11,
+    "file_paths": 62
   }
 }
 ```

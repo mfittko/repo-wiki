@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
+source_commit: "2ce19fbe28dc7fd82aa053ba642325b8a9e91f02"
 page_state: "generated"
 source_paths: ["src/page-ownership.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -21,10 +21,10 @@ This module provides functionality related to managing and preserving human-gene
 
 ## Key symbols and entry points
 
-- **detectPageState**: Function to determine the current state of a page, likely analyzing its content or metadata.
+- **detectPageState**: Function to determine the current state of a page, likely analyzing content or metadata.
 - **extractHumanNotes**: Function to extract notes or annotations made by humans from the page content.
 - **injectHumanNotes**: Function to insert or re-insert human notes into the page content.
-- **preserveHumanNotes**: Function to maintain human notes intact during page transformations or updates.
+- **preserveHumanNotes**: Function to maintain human notes intact during page updates or transformations.
 - **PageState**: A type or interface representing the state of a page, used in conjunction with the above functions.
 
 ## Dependencies and imports
@@ -38,7 +38,7 @@ This module provides functionality related to managing and preserving human-gene
 ## Known gaps or open questions
 
 - There is no explicit documentation or test coverage information available.
-- The exact implementation details and usage scenarios of the key functions and types are not described.
+- The exact implementation details and usage scenarios of the exported functions and types are not described.
 - The module's integration context within a larger system is not specified.
 
 <!-- HUMAN_NOTES_START -->

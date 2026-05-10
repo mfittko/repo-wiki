@@ -1,12 +1,12 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
-compiled_at: "2026-05-10T21:41:07.765Z"
+source_commit: "2ce19fbe28dc7fd82aa053ba642325b8a9e91f02"
+compiled_at: "2026-05-10T22:25:53.507Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 claim_status: "review-needed"
 confidence: "low"
-source_paths: [".github/agents/coordinator.agent.md",".github/agents/developer.agent.md",".github/agents/docs.agent.md",".github/agents/fixer.agent.md",".github/agents/quality.agent.md",".github/agents/review.agent.md",".github/copilot-review-instructions.md",".github/pull_request_template.md","docs/PLAN.md","docs/plans/agent-integration.md","docs/plans/ci-publishing.md","docs/plans/doc-validation.md","docs/plans/incremental-mode.md","docs/plans/llm-compiler.md","docs/plans/production-scanner.md","docs/plans/wiki-graph.md","docs/WHY.md","README.md"]
+source_paths: [".github/agents/coordinator.agent.md",".github/agents/developer.agent.md",".github/agents/docs.agent.md",".github/agents/fixer.agent.md",".github/agents/quality.agent.md",".github/agents/review.agent.md",".github/copilot-review-instructions.md",".github/pull_request_template.md","docs/PLAN.md","docs/plans/agent-integration.md","docs/plans/ci-publishing.md","docs/plans/doc-validation.md","docs/plans/github-action.md","docs/plans/incremental-mode.md","docs/plans/karpathy-llm-wiki-alignment.md","docs/plans/llm-compiler.md","docs/plans/production-scanner.md","docs/plans/query-and-file-back.md","docs/plans/search-index.md","docs/plans/trust-hardening.md","docs/plans/wiki-graph.md","docs/plans/wiki-health.md","docs/WHY.md","README.md"]
 page_state: "generated"
 ---
 # Documentation Debt Report
@@ -43,12 +43,12 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
 ## Summary
 
 - Documentation ingestion enabled: true
-- Documentation files scanned: 18
-- Claims extracted: 24
+- Documentation files scanned: 24
+- Claims extracted: 28
 - Stale documents: 1
 - Commands found in docs: 22
-- Environment variable mentions: 12
-- File path references: 56
+- Environment variable mentions: 11
+- File path references: 62
 
 ## Documentation status table
 
@@ -59,17 +59,23 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
 | `.github/agents/docs.agent.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `.github/agents/fixer.agent.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `.github/agents/quality.agent.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
-| `.github/agents/review.agent.md` | unvalidated | secondary | 0 | 0 | 0 | 1 |
+| `.github/agents/review.agent.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `.github/copilot-review-instructions.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `.github/pull_request_template.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
-| `docs/PLAN.md` | partially_validated | secondary | 0 | 9 | 11 | 2 |
+| `docs/PLAN.md` | partially_validated | secondary | 0 | 10 | 11 | 1 |
 | `docs/plans/agent-integration.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `docs/plans/ci-publishing.md` | partially_validated | secondary | 0 | 1 | 0 | 0 |
 | `docs/plans/doc-validation.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
+| `docs/plans/github-action.md` | partially_validated | secondary | 0 | 2 | 0 | 1 |
 | `docs/plans/incremental-mode.md` | stale | secondary | 0 | 1 | 0 | 0 |
+| `docs/plans/karpathy-llm-wiki-alignment.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `docs/plans/llm-compiler.md` | partially_validated | secondary | 0 | 2 | 0 | 8 |
 | `docs/plans/production-scanner.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
+| `docs/plans/query-and-file-back.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
+| `docs/plans/search-index.md` | partially_validated | secondary | 0 | 1 | 0 | 0 |
+| `docs/plans/trust-hardening.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `docs/plans/wiki-graph.md` | unvalidated | secondary | 0 | 1 | 0 | 0 |
+| `docs/plans/wiki-health.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `docs/WHY.md` | partially_validated | secondary | 0 | 5 | 0 | 0 |
 | `README.md` | partially_validated | secondary | 0 | 5 | 11 | 1 |
 
@@ -104,8 +110,8 @@ Commands extracted from documentation code blocks, validated against `package.js
 
 Repository file and directory references extracted from markdown links and inline code spans. Generated-output roots such as `dist/`, `coverage/`, and `.llmwiki/` are excluded from extraction.
 
-- Valid: 18
-- Missing: 38
+- Valid: 26
+- Missing: 36
 
 | Documentation location | Reference | Status | Resolved path |
 |---|---|---|---|
@@ -116,7 +122,6 @@ Repository file and directory references extracted from markdown links and inlin
 | `docs/PLAN.md:20` | `Log.md` | ❌ missing | not found |
 | `docs/PLAN.md:39` | `Index.md` | ❌ missing | not found |
 | `docs/PLAN.md:39` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:63` | `OWNER/REPO.wiki.git` | ❌ missing | not found |
 | `docs/PLAN.md:227` | `package.json` | ✅ valid | `package.json` |
 | `docs/PLAN.md:299` | `Index.md` | ❌ missing | not found |
 | `docs/PLAN.md:299` | `Log.md` | ❌ missing | not found |
@@ -128,56 +133,62 @@ Repository file and directory references extracted from markdown links and inlin
 | `docs/PLAN.md:661` | `Index.md` | ❌ missing | not found |
 | `docs/PLAN.md:661` | `Log.md` | ❌ missing | not found |
 | `docs/PLAN.md:694` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:760` | `Index.md` | ❌ missing | not found |
-| `docs/PLAN.md:760` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:766` | `Index.md` | ❌ missing | not found |
-| `docs/PLAN.md:872` | `docs/plans/` | ✅ valid | `docs/plans` |
-| `docs/PLAN.md:876` | `docs/plans/production-scanner.md` | ✅ valid | `docs/plans/production-scanner.md` |
-| `docs/PLAN.md:877` | `docs/plans/doc-validation.md` | ✅ valid | `docs/plans/doc-validation.md` |
-| `docs/PLAN.md:878` | `docs/plans/wiki-graph.md` | ✅ valid | `docs/plans/wiki-graph.md` |
-| `docs/PLAN.md:879` | `docs/plans/llm-compiler.md` | ✅ valid | `docs/plans/llm-compiler.md` |
-| `docs/PLAN.md:880` | `docs/plans/incremental-mode.md` | ✅ valid | `docs/plans/incremental-mode.md` |
-| `docs/PLAN.md:881` | `docs/plans/ci-publishing.md` | ✅ valid | `docs/plans/ci-publishing.md` |
-| `docs/PLAN.md:882` | `docs/plans/agent-integration.md` | ✅ valid | `docs/plans/agent-integration.md` |
-| `docs/PLAN.md:886` | `docs/plans/karpathy-llm-wiki-alignment.md` | ❌ missing | not found |
-| `docs/PLAN.md:887` | `docs/plans/wiki-health.md` | ❌ missing | not found |
-| `docs/PLAN.md:888` | `docs/plans/query-and-file-back.md` | ❌ missing | not found |
-| `docs/PLAN.md:889` | `docs/plans/search-index.md` | ❌ missing | not found |
-| `docs/PLAN.md:890` | `docs/plans/trust-hardening.md` | ❌ missing | not found |
-| `docs/PLAN.md:891` | `docs/plans/github-action.md` | ❌ missing | not found |
-| `docs/PLAN.md:916` | `Index.md` | ❌ missing | not found |
-| `docs/PLAN.md:916` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:945` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:962` | `AGENTS.md` | ✅ valid | `AGENTS.md` |
-| `docs/PLAN.md:962` | `AGENTS.repo-wiki.md` | ❌ missing | not found |
-| `docs/PLAN.md:963` | `Agent-Context-Pack.md` | ❌ missing | not found |
+| `docs/PLAN.md:717` | `src/extractors.ts` | ✅ valid | `src/extractors.ts` |
+| `docs/PLAN.md:771` | `Index.md` | ❌ missing | not found |
+| `docs/PLAN.md:771` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:777` | `Index.md` | ❌ missing | not found |
+| `docs/PLAN.md:883` | `docs/plans/` | ✅ valid | `docs/plans` |
+| `docs/PLAN.md:887` | `docs/plans/production-scanner.md` | ✅ valid | `docs/plans/production-scanner.md` |
+| `docs/PLAN.md:888` | `docs/plans/doc-validation.md` | ✅ valid | `docs/plans/doc-validation.md` |
+| `docs/PLAN.md:889` | `docs/plans/wiki-graph.md` | ✅ valid | `docs/plans/wiki-graph.md` |
+| `docs/PLAN.md:890` | `docs/plans/llm-compiler.md` | ✅ valid | `docs/plans/llm-compiler.md` |
+| `docs/PLAN.md:891` | `docs/plans/incremental-mode.md` | ✅ valid | `docs/plans/incremental-mode.md` |
+| `docs/PLAN.md:892` | `docs/plans/ci-publishing.md` | ✅ valid | `docs/plans/ci-publishing.md` |
+| `docs/PLAN.md:893` | `docs/plans/agent-integration.md` | ✅ valid | `docs/plans/agent-integration.md` |
+| `docs/PLAN.md:894` | `docs/plans/karpathy-llm-wiki-alignment.md` | ✅ valid | `docs/plans/karpathy-llm-wiki-alignment.md` |
+| `docs/PLAN.md:895` | `docs/plans/wiki-health.md` | ✅ valid | `docs/plans/wiki-health.md` |
+| `docs/PLAN.md:896` | `docs/plans/query-and-file-back.md` | ✅ valid | `docs/plans/query-and-file-back.md` |
+| `docs/PLAN.md:897` | `docs/plans/search-index.md` | ✅ valid | `docs/plans/search-index.md` |
+| `docs/PLAN.md:898` | `docs/plans/trust-hardening.md` | ✅ valid | `docs/plans/trust-hardening.md` |
+| `docs/PLAN.md:899` | `docs/plans/github-action.md` | ✅ valid | `docs/plans/github-action.md` |
+| `docs/PLAN.md:924` | `Index.md` | ❌ missing | not found |
+| `docs/PLAN.md:924` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:953` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:970` | `AGENTS.md` | ✅ valid | `AGENTS.md` |
+| `docs/PLAN.md:970` | `AGENTS.repo-wiki.md` | ❌ missing | not found |
+| `docs/PLAN.md:971` | `Agent-Context-Pack.md` | ❌ missing | not found |
 | `docs/plans/agent-integration.md:62` | `AGENTS.md` | ✅ valid | `AGENTS.md` |
 | `docs/plans/agent-integration.md:62` | `AGENTS.repo-wiki.md` | ❌ missing | not found |
 | `docs/plans/agent-integration.md:63` | `Agent-Context-Pack.md` | ❌ missing | not found |
 | `docs/plans/doc-validation.md:65` | `package.json` | ✅ valid | `package.json` |
+| `docs/plans/karpathy-llm-wiki-alignment.md:51` | `Index.md` | ❌ missing | not found |
+| `docs/plans/karpathy-llm-wiki-alignment.md:51` | `Log.md` | ❌ missing | not found |
+| `docs/plans/karpathy-llm-wiki-alignment.md:52` | `Log.md` | ❌ missing | not found |
+| `docs/plans/karpathy-llm-wiki-alignment.md:69` | `Index.md` | ❌ missing | not found |
+| `docs/plans/query-and-file-back.md:51` | `Log.md` | ❌ missing | not found |
+| `docs/plans/query-and-file-back.md:61` | `Log.md` | ❌ missing | not found |
+| `docs/plans/trust-hardening.md:31` | `page-ownership.ts` | ❌ missing | not found |
+| `docs/plans/trust-hardening.md:72` | `src/secret-patterns.ts` | ✅ valid | `src/secret-patterns.ts` |
 | `docs/plans/wiki-graph.md:81` | `_Sidebar.md` | ❌ missing | not found |
 | `docs/plans/wiki-graph.md:108` | `_Sidebar.md` | ❌ missing | not found |
 | `docs/plans/wiki-graph.md:108` | `Index.md` | ❌ missing | not found |
 | `docs/WHY.md:18` | `Index.md` | ❌ missing | not found |
 | `docs/WHY.md:19` | `Log.md` | ❌ missing | not found |
-| `docs/WHY.md:42` | `OWNER/REPO.wiki.git` | ❌ missing | not found |
 | `docs/WHY.md:61` | `./PLAN.md` | ✅ valid | `docs/PLAN.md` |
 | `README.md:33` | `scripts/update-changelog.mjs` | ✅ valid | `scripts/update-changelog.mjs` |
-| `README.md:74` | `Documentation-Debt-Report.md` | ❌ missing | not found |
-| `README.md:119` | `pages_path=smoke/pr-N` | ❌ missing | not found |
+| `README.md:119` | `smoke/pr-N` | ❌ missing | not found |
 
 ## Environment variable validation
 
 Environment variable names extracted from documentation are validated against scanner-detected source usage and configured environment-variable names. Values are never copied into generated markdown.
 
-- Validated: 10
-- Unvalidated: 2
+- Validated: 11
+- Unvalidated: 0
 
 | Documentation file | Variable | Status |
 |---|---|---|
-| `.github/agents/review.agent.md` | `CHANGES_REQUESTED` | ❓ unvalidated |
-| `docs/PLAN.md` | `HUMAN_NOTES` | ❓ unvalidated |
 | `docs/PLAN.md` | `LLMWIKI_PUBLISH_REMOTE` | ✅ validated |
+| `docs/plans/github-action.md` | `GITHUB_TOKEN` | ✅ validated |
 | `docs/plans/llm-compiler.md` | `LLMWIKI_LLM_API_KEY` | ✅ validated |
 | `docs/plans/llm-compiler.md` | `LLMWIKI_COMPILER_MODE` | ✅ validated |
 | `docs/plans/llm-compiler.md` | `LLMWIKI_LLM_BASE_URL` | ✅ validated |
@@ -217,8 +228,6 @@ Route and API claims from documentation prose are validated against scanner-extr
 - `npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --pages-path .` - command source unknown.
 - `npm install` - command source unknown.
 - `npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --remote https://github.com/OWNER/repo-wiki.git --branch gh-pages --pages-path .` - command source unknown.
-- `.github/agents/review.agent.md` mentions `CHANGES_REQUESTED` without scanner/config validation.
-- `docs/PLAN.md` mentions `HUMAN_NOTES` without scanner/config validation.
 
 ### Broken-reference
 
@@ -226,7 +235,6 @@ Route and API claims from documentation prose are validated against scanner-extr
 - `docs/PLAN.md:20` references `Log.md` (missing).
 - `docs/PLAN.md:39` references `Index.md` (missing).
 - `docs/PLAN.md:39` references `Log.md` (missing).
-- `docs/PLAN.md:63` references `OWNER/REPO.wiki.git` (missing).
 - `docs/PLAN.md:299` references `Index.md` (missing).
 - `docs/PLAN.md:299` references `Log.md` (missing).
 - `docs/PLAN.md:332` references `Index.md` (missing).
@@ -236,30 +244,29 @@ Route and API claims from documentation prose are validated against scanner-extr
 - `docs/PLAN.md:661` references `Index.md` (missing).
 - `docs/PLAN.md:661` references `Log.md` (missing).
 - `docs/PLAN.md:694` references `Log.md` (missing).
-- `docs/PLAN.md:760` references `Index.md` (missing).
-- `docs/PLAN.md:760` references `Log.md` (missing).
-- `docs/PLAN.md:766` references `Index.md` (missing).
-- `docs/PLAN.md:886` references `docs/plans/karpathy-llm-wiki-alignment.md` (missing).
-- `docs/PLAN.md:887` references `docs/plans/wiki-health.md` (missing).
-- `docs/PLAN.md:888` references `docs/plans/query-and-file-back.md` (missing).
-- `docs/PLAN.md:889` references `docs/plans/search-index.md` (missing).
-- `docs/PLAN.md:890` references `docs/plans/trust-hardening.md` (missing).
-- `docs/PLAN.md:891` references `docs/plans/github-action.md` (missing).
-- `docs/PLAN.md:916` references `Index.md` (missing).
-- `docs/PLAN.md:916` references `Log.md` (missing).
-- `docs/PLAN.md:945` references `Log.md` (missing).
-- `docs/PLAN.md:962` references `AGENTS.repo-wiki.md` (missing).
-- `docs/PLAN.md:963` references `Agent-Context-Pack.md` (missing).
+- `docs/PLAN.md:771` references `Index.md` (missing).
+- `docs/PLAN.md:771` references `Log.md` (missing).
+- `docs/PLAN.md:777` references `Index.md` (missing).
+- `docs/PLAN.md:924` references `Index.md` (missing).
+- `docs/PLAN.md:924` references `Log.md` (missing).
+- `docs/PLAN.md:953` references `Log.md` (missing).
+- `docs/PLAN.md:970` references `AGENTS.repo-wiki.md` (missing).
+- `docs/PLAN.md:971` references `Agent-Context-Pack.md` (missing).
 - `docs/plans/agent-integration.md:62` references `AGENTS.repo-wiki.md` (missing).
 - `docs/plans/agent-integration.md:63` references `Agent-Context-Pack.md` (missing).
+- `docs/plans/karpathy-llm-wiki-alignment.md:51` references `Index.md` (missing).
+- `docs/plans/karpathy-llm-wiki-alignment.md:51` references `Log.md` (missing).
+- `docs/plans/karpathy-llm-wiki-alignment.md:52` references `Log.md` (missing).
+- `docs/plans/karpathy-llm-wiki-alignment.md:69` references `Index.md` (missing).
+- `docs/plans/query-and-file-back.md:51` references `Log.md` (missing).
+- `docs/plans/query-and-file-back.md:61` references `Log.md` (missing).
+- `docs/plans/trust-hardening.md:31` references `page-ownership.ts` (missing).
 - `docs/plans/wiki-graph.md:81` references `_Sidebar.md` (missing).
 - `docs/plans/wiki-graph.md:108` references `_Sidebar.md` (missing).
 - `docs/plans/wiki-graph.md:108` references `Index.md` (missing).
 - `docs/WHY.md:18` references `Index.md` (missing).
 - `docs/WHY.md:19` references `Log.md` (missing).
-- `docs/WHY.md:42` references `OWNER/REPO.wiki.git` (missing).
-- `README.md:74` references `Documentation-Debt-Report.md` (missing).
-- `README.md:119` references `pages_path=smoke/pr-N` (missing).
+- `README.md:119` references `smoke/pr-N` (missing).
 
 ## Compiler policy
 

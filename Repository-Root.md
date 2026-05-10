@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
+source_commit: "2ce19fbe28dc7fd82aa053ba642325b8a9e91f02"
 page_state: "generated"
 source_paths: [".env.example",".gitignore",".llmwiki/schema.md",".pi/AGENTS.md",".pi/settings.json",".tsbuildinfo","AGENTS.md","CHANGELOG.md","LICENSE","README.md","bin/repo-wiki.ts","package-lock.json","package.json","prompts/compiler.md","prompts/lint.md","prompts/page-templates.md","scripts/update-changelog.mjs","skills/repo-wiki-cli/SKILL.md","test/cli.test.ts","test/compiler.test.ts"]
-compiled_at: "2024-06-10T00:00:00Z"
+compiled_at: "<ISO-8601 timestamp>"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,65 +13,65 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module represents the root of the repository and contains foundational configuration, documentation, source code entry points, package manifests, and test suites. It serves as the central hub for:
+This module represents the root of the repository and contains the foundational files and configurations essential for the project. It includes source code entry points, configuration files, documentation, package manifests, and test suites. The files serve multiple roles such as defining the API surface, configuring environment and build settings, modeling data and ORM schemas, providing documentation and readme content, and supporting testing and packaging workflows.
 
-- **Configuration**: Environment variable examples and settings files (`.env.example`, `.pi/settings.json`).
-- **Documentation**: Core documentation and schema definitions (`README.md`, `CHANGELOG.md`, `AGENTS.md`, `.llmwiki/schema.md`, prompts documentation).
-- **Source Code**: CLI entry point and scripts (`bin/repo-wiki.ts`, `scripts/update-changelog.mjs`).
-- **Package Management**: Package manifests and lock files (`package.json`, `package-lock.json`).
-- **Testing**: Comprehensive test suites covering CLI, compiler, context assembly, linting, dotenv handling, extractors, and more (`test/*.test.ts`).
-- **Build Metadata**: TypeScript build info (`.tsbuildinfo`).
+Key purposes include:
 
-This module is critical for the overall operation, configuration, packaging, and validation of the repository.
+- **Configuration**: Environment variables and settings are defined in `.env.example` and `.pi/settings.json`.
+- **Source Code Entry**: The CLI entry point is implemented in `bin/repo-wiki.ts`.
+- **Documentation**: Various markdown files provide schema definitions, agent descriptions, changelogs, prompts, and skill documentation.
+- **Package Management**: `package.json` and `package-lock.json` manage dependencies and package metadata.
+- **Testing**: A comprehensive suite of TypeScript test files under `test/` validate different components and features.
+- **Build and Compilation**: Files like `.tsbuildinfo` and `tsconfig.json` support TypeScript compilation and incremental builds.
+- **Scripts**: Utility scripts such as `scripts/update-changelog.mjs` automate changelog maintenance.
 
 ## Source File List
 
-- `.env.example` — Environment variable configuration example.
-- `.gitignore` — Git ignore rules.
-- `.llmwiki/schema.md` — Data model schema documentation.
-- `.pi/AGENTS.md` — Agents documentation.
-- `.pi/settings.json` — JSON configuration settings.
-- `.tsbuildinfo` — TypeScript incremental build metadata.
-- `AGENTS.md` — Agents documentation.
-- `CHANGELOG.md` — Change log for the project.
-- `LICENSE` — License text.
-- `README.md` — Main readme and introductory documentation.
-- `bin/repo-wiki.ts` — CLI entry point script.
-- `package-lock.json` — NPM package lock file.
-- `package.json` — NPM package manifest.
-- `prompts/compiler.md` — Compiler prompt documentation.
-- `prompts/lint.md` — Lint prompt documentation.
-- `prompts/page-templates.md` — Page templates prompt documentation.
-- `scripts/update-changelog.mjs` — Script to update changelog entries.
-- `skills/repo-wiki-cli/SKILL.md` — CLI skill documentation.
-- `test/cli.test.ts` — CLI tests.
-- `test/compiler.test.ts` — Compiler tests.
-- `test/context-assembler.test.ts` — Context assembler tests.
-- `test/docs-linter.test.ts` — Documentation linter tests.
-- `test/dotenv.test.ts` — Environment variable handling tests.
-- `test/extractors-go.test.ts` — Go extractor tests.
-- `test/extractors-rust.test.ts` — Rust extractor tests.
-- `test/extractors-utils.test.ts` — Extractor utilities tests.
-- `test/frontmatter.test.ts` — Frontmatter parsing tests.
-- `test/init-planner.test.ts` — Initialization planner tests.
-- `test/linter.test.ts` — Linter tests.
-- `test/llm-provider.test.ts` — LLM provider tests.
-- `test/page-ownership.test.ts` — Page ownership tests.
-- `test/publisher.test.ts` — Publisher tests.
-- `test/repository-analysis.test.ts` — Repository analysis tests.
-- `test/run-compiled-tests.ts` — Test runner for compiled tests.
-- `test/scanner.test.ts` — Scanner tests.
-- `test/update-changelog.test.ts` — Changelog update tests.
-- `test/wiki-patch.test.ts` — Wiki patch tests.
-- `tsconfig.json` — TypeScript configuration.
+- `.env.example` (Text, configuration)
+- `.gitignore` (Text)
+- `.llmwiki/schema.md` (Markdown, data model documentation)
+- `.pi/AGENTS.md` (Markdown, documentation)
+- `.pi/settings.json` (JSON, configuration)
+- `.tsbuildinfo` (Text, build info)
+- `AGENTS.md` (Markdown, documentation)
+- `CHANGELOG.md` (Markdown, documentation)
+- `LICENSE` (Text, license)
+- `README.md` (Markdown, documentation and readme)
+- `bin/repo-wiki.ts` (TypeScript, CLI entry point)
+- `package-lock.json` (JSON, package lock)
+- `package.json` (JSON, package manifest)
+- `prompts/compiler.md` (Markdown, documentation)
+- `prompts/lint.md` (Markdown, documentation)
+- `prompts/page-templates.md` (Markdown, documentation)
+- `scripts/update-changelog.mjs` (JavaScript, changelog update script)
+- `skills/repo-wiki-cli/SKILL.md` (Markdown, skill documentation)
+- `test/cli.test.ts` (TypeScript, CLI tests)
+- `test/compiler.test.ts` (TypeScript, compiler tests)
+- `test/context-assembler.test.ts` (TypeScript, context assembler tests)
+- `test/docs-linter.test.ts` (TypeScript, docs linter tests)
+- `test/dotenv.test.ts` (TypeScript, dotenv tests)
+- `test/extractors-go.test.ts` (TypeScript, Go extractor tests)
+- `test/extractors-rust.test.ts` (TypeScript, Rust extractor tests)
+- `test/extractors-utils.test.ts` (TypeScript, extractor utilities tests)
+- `test/frontmatter.test.ts` (TypeScript, frontmatter tests)
+- `test/init-planner.test.ts` (TypeScript, init planner tests)
+- `test/linter.test.ts` (TypeScript, linter tests)
+- `test/llm-provider.test.ts` (TypeScript, LLM provider tests)
+- `test/page-ownership.test.ts` (TypeScript, page ownership tests)
+- `test/publisher.test.ts` (TypeScript, publisher tests)
+- `test/repository-analysis.test.ts` (TypeScript, repository analysis tests)
+- `test/run-compiled-tests.ts` (TypeScript, test runner)
+- `test/scanner.test.ts` (TypeScript, scanner tests)
+- `test/update-changelog.test.ts` (TypeScript, changelog update tests)
+- `test/wiki-patch.test.ts` (TypeScript, wiki patch tests)
+- `tsconfig.json` (JSON, TypeScript configuration)
 
 ## Key Symbols and Entry Points
 
-- **bin/repo-wiki.ts**: The main CLI entry point importing from `../src/cli.js`.
-- **scripts/update-changelog.mjs**: Exports functions such as `appendEntry`, `classifyPrimaryCategory`, `deriveChangelogEntries`, and `emitOrWriteChangelog` for changelog management.
-- **test/cli.test.ts**: Defines CLI test helpers like `captureCli`, `cliPath`, and `execFileAsync`.
-- **test/compiler.test.ts**: Provides test utilities like `createLLMPlan`, `createPlan`, and `writeFixture`.
-- Various test files export test fixtures and helpers for validating different components of the repository.
+- **CLI Entry**: `bin/repo-wiki.ts` imports `../src/cli.js` and serves as the command-line interface entry point.
+- **Changelog Script**: `scripts/update-changelog.mjs` exports multiple functions such as `appendEntry`, `classifyPrimaryCategory`, and `deriveChangelogEntries` to automate changelog updates.
+- **Test Utilities and Suites**: Various test files export test helpers and suites, e.g., `test/compiler.test.ts` exports `createLLMPlan`, `createPlan`, and `writeFixture`.
+- **Environment Variables**: `.env.example` defines key environment variables like `GITHUB_REPOSITORY`, `GITHUB_TOKEN`, `LLMWIKI_COMPILER_MODE`, and `LLMWIKI_LLM_API_KEY` used across the system.
 
 ## Dependencies and Imports
 
@@ -82,32 +82,35 @@ This module is critical for the overall operation, configuration, packaging, and
 
 ## Related Tests
 
-The module includes extensive test coverage across multiple aspects:
+The module includes a comprehensive test suite covering:
 
 - CLI functionality (`test/cli.test.ts`)
 - Compiler and plan creation (`test/compiler.test.ts`)
 - Context assembly (`test/context-assembler.test.ts`)
 - Documentation linting and validation (`test/docs-linter.test.ts`)
 - Environment variable handling (`test/dotenv.test.ts`)
-- Language-specific extractors (`test/extractors-go.test.ts`, `test/extractors-rust.test.ts`, `test/extractors-utils.test.ts`)
-- Frontmatter parsing (`test/frontmatter.test.ts`)
-- Initialization planning (`test/init-planner.test.ts`)
-- Linting (`test/linter.test.ts`)
-- LLM provider integration (`test/llm-provider.test.ts`)
-- Page ownership logic (`test/page-ownership.test.ts`)
-- Publishing workflows (`test/publisher.test.ts`)
-- Repository analysis (`test/repository-analysis.test.ts`)
-- Scanner functionality (`test/scanner.test.ts`)
-- Changelog update logic (`test/update-changelog.test.ts`)
-- Wiki patching (`test/wiki-patch.test.ts`)
+- Language-specific extractors (Go, Rust, utilities)
+- Frontmatter parsing
+- Initialization planning
+- Linter behavior
+- LLM provider integration
+- Page ownership logic
+- Publishing workflows
+- Repository analysis
+- Scanner functionality
+- Changelog update automation
+- Wiki patching
+
+These tests ensure the robustness of the repository root's source code, configuration, and documentation handling.
 
 ## Known Gaps or Open Questions
 
-- The source repository URL and commit SHA are unknown, limiting traceability.
-- Some documentation (e.g., `README.md`) is only partially validated.
-- The exact runtime environment and usage context for some scripts and tests (e.g., environment variables in `.env.example`) require further clarification.
-- The relationship and integration details between the CLI, compiler, and LLM components could be elaborated.
-- The `.tsbuildinfo` file is included but its role in build optimization is not detailed here.
+- The exact internal structure and exports of `../src/cli.js` and other `../src/` modules are not detailed here.
+- The runtime behavior and integration of environment variables require further runtime context.
+- Some documentation files are marked as partially validated, indicating potential areas for further verification.
+- The role and usage of `.tsbuildinfo` in build optimization is implied but not explicitly documented.
+- The relationship between the `.pi` directory files and the main source or configuration is not fully explained.
+- The test coverage and effectiveness of some test files could be further analyzed for completeness.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

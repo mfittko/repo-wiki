@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
+source_commit: "2ce19fbe28dc7fd82aa053ba642325b8a9e91f02"
 page_state: "generated"
 source_paths: ["src/extractors.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides a collection of functions designed to analyze and extract various elements from source code and runtime environments. It focuses on identifying runtime hints, environment variables, exported symbols, Go package information, imports, and different types of surfaces such as migration, model, and route surfaces. The module serves as a foundational source component for processing and interpreting code structure and metadata.
+This module provides a collection of functions designed to analyze and extract various elements from source code and runtime environments. It focuses on identifying runtime hints, environment variables, exported symbols, Go package information, imports, and different types of surfaces such as migration, model, and route surfaces. The module serves as a foundational source component for code analysis and extraction tasks.
 
 ## Source file list
 
@@ -38,14 +38,13 @@ This module provides a collection of functions designed to analyze and extract v
 
 ## Related tests
 
-No explicit test files or test documentation are referenced in the source cards for this module. Further investigation may be required to locate or create tests validating the functionality of the extractors.
+No explicit test files or test documentation cards are associated with this module in the current source data.
 
 ## Known gaps or open questions
 
 - There is no documentation or test coverage information available for this module.
-- The exact runtime environments or frameworks targeted by `detectRuntimeHints` and other extractors are not specified.
-- The relationship and usage context of the various "surface" extractors (migration, model, route) could benefit from further elaboration.
-- The module appears to be a core source component but lacks explicit usage examples or integration details.
+- The exact implementation details and usage contexts of the extraction functions are not described.
+- The relationship between the different "surface" extraction functions and their intended consumers is not clarified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

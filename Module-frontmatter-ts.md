@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
+source_commit: "2ce19fbe28dc7fd82aa053ba642325b8a9e91f02"
 page_state: "generated"
 source_paths: ["src/frontmatter.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides utilities and types for handling frontmatter in source files. It includes functionality to extract, parse, apply policies to, and strip frontmatter blocks. The module defines policies and types related to frontmatter processing, enabling consistent and configurable handling of frontmatter content.
+This module provides utilities and types for handling frontmatter in source files. It includes functionality to extract, parse, and apply policies to frontmatter blocks, as well as to strip frontmatter from content. The module is designed to support structured metadata embedded at the beginning of text files, commonly used in markdown and other markup languages.
 
 ## Source file list
 
@@ -22,13 +22,13 @@ This module provides utilities and types for handling frontmatter in source file
 ## Key symbols and entry points
 
 - **applyFrontmatterPolicy**: Applies a specified frontmatter policy to a frontmatter block.
-- **extractFrontmatterBlock**: Extracts the frontmatter block from a source string.
+- **extractFrontmatterBlock**: Extracts the frontmatter block from a given text input.
 - **FRONTMATTER_POLICIES**: A collection of predefined frontmatter policies.
 - **FrontmatterBlock**: Type representing a frontmatter block.
 - **FrontmatterPolicy**: Type defining the structure of a frontmatter policy.
 - **isFrontmatterPolicy**: Type guard to check if a value is a frontmatter policy.
-- **parseFrontmatterPolicy**: Parses a frontmatter policy from a given input.
-- **stripFrontmatter**: Removes the frontmatter block from a source string.
+- **parseFrontmatterPolicy**: Parses a frontmatter policy from input.
+- **stripFrontmatter**: Removes the frontmatter block from a text input.
 
 ## Dependencies and imports
 
@@ -36,14 +36,13 @@ This module provides utilities and types for handling frontmatter in source file
 
 ## Related tests
 
-- No documentation or test files are explicitly linked to this module in the provided source cards.
+- No documentation or test files are explicitly associated with this module in the provided source cards.
 
 ## Known gaps or open questions
 
 - There is no explicit documentation or test coverage referenced for this module.
-- The source repository and commit information are not provided.
-- The exact behavior and structure of frontmatter policies and blocks would require consulting the source code for detailed understanding.
-- Integration with other modules or usage contexts is not described.
+- The exact nature and structure of the frontmatter policies and their usage contexts are not detailed.
+- The repository and commit information are unknown, limiting traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

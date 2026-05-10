@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
+source_commit: "2ce19fbe28dc7fd82aa053ba642325b8a9e91f02"
 page_state: "generated"
 source_paths: ["src/prompts.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -33,7 +33,7 @@ This module provides a collection of functions and types related to constructing
   - `MigrationContext` — Context related to migration processes.
   - `ModelContext` — Context for model-related operations.
   - `ModuleInfo` — Metadata describing a module.
-  - `PageArchetype` — Defines archetypes for pages, possibly for documentation or UI.
+  - `PageArchetype` — Defines archetypes for pages, possibly influencing prompt structure.
 
 ## Dependencies and imports
 
@@ -48,7 +48,7 @@ This module provides a collection of functions and types related to constructing
 - There is no explicit documentation or comments describing the detailed behavior or usage scenarios of the prompt-building functions.
 - The relationships and intended usage patterns between the various context types (`DocCardContext`, `MigrationContext`, `ModelContext`) are not detailed.
 - No information is available about how these prompts integrate with other parts of the system or how they are consumed.
-- Absence of related tests or examples limits understanding of practical application and robustness.
+- Absence of related tests or examples leaves the module's practical application unclear.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

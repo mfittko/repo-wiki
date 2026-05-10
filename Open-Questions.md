@@ -1,11 +1,11 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "253792a37296e0d106c4c2c79c48e57e4e30e395"
-compiled_at: "2026-05-10T21:41:07.762Z"
+source_commit: "2ce19fbe28dc7fd82aa053ba642325b8a9e91f02"
+compiled_at: "2026-05-10T22:25:53.502Z"
 kind: "open_questions"
 claim_status: "review-needed"
 confidence: "low"
-source_paths: [".github/agents/coordinator.agent.md",".github/agents/developer.agent.md",".github/agents/docs.agent.md",".github/agents/fixer.agent.md",".github/agents/quality.agent.md",".github/agents/review.agent.md",".github/copilot-review-instructions.md",".github/pull_request_template.md","docs/PLAN.md","docs/plans/agent-integration.md","docs/plans/ci-publishing.md","docs/plans/doc-validation.md","docs/plans/incremental-mode.md","docs/plans/llm-compiler.md","docs/plans/production-scanner.md","docs/plans/wiki-graph.md","docs/WHY.md","README.md"]
+source_paths: [".github/agents/coordinator.agent.md",".github/agents/developer.agent.md",".github/agents/docs.agent.md",".github/agents/fixer.agent.md",".github/agents/quality.agent.md",".github/agents/review.agent.md",".github/copilot-review-instructions.md",".github/pull_request_template.md","docs/PLAN.md","docs/plans/agent-integration.md","docs/plans/ci-publishing.md","docs/plans/doc-validation.md","docs/plans/github-action.md","docs/plans/incremental-mode.md","docs/plans/karpathy-llm-wiki-alignment.md","docs/plans/llm-compiler.md","docs/plans/production-scanner.md","docs/plans/query-and-file-back.md","docs/plans/search-index.md","docs/plans/trust-hardening.md","docs/plans/wiki-graph.md","docs/plans/wiki-health.md","docs/WHY.md","README.md"]
 page_state: "generated"
 ---
 # Open Questions
@@ -33,10 +33,16 @@ Documentation cards listed below are secondary evidence and require review. Do n
 - `docs/plans/agent-integration.md` - unvalidated status.
 - `docs/plans/ci-publishing.md` - claims need validation.
 - `docs/plans/doc-validation.md` - unvalidated status.
+- `docs/plans/github-action.md` - claims need validation.
 - `docs/plans/incremental-mode.md` - claims need validation, stale (0 days old).
+- `docs/plans/karpathy-llm-wiki-alignment.md` - unvalidated status.
 - `docs/plans/llm-compiler.md` - claims need validation.
 - `docs/plans/production-scanner.md` - unvalidated status.
+- `docs/plans/query-and-file-back.md` - unvalidated status.
+- `docs/plans/search-index.md` - claims need validation.
+- `docs/plans/trust-hardening.md` - unvalidated status.
 - `docs/plans/wiki-graph.md` - unvalidated status.
+- `docs/plans/wiki-health.md` - unvalidated status.
 - `docs/WHY.md` - claims need validation.
 - `README.md` - claims need validation.
 
