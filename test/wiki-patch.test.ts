@@ -76,6 +76,16 @@ test('validateWikiPatch returns no issues for a valid patch', () => {
   assert.deepEqual(issues, []);
 });
 
+test('validateWikiPatch strips only a surrounding markdown fence when inner content starts with frontmatter', () => {
+  const issues = validateWikiPatch(`\`\`\`markdown\n${validPatch()}\n\`\`\``, 'Module-Auth');
+  assert.deepEqual(issues, []);
+});
+
+test('validateWikiPatch still rejects fenced content when inner content lacks frontmatter', () => {
+  const issues = validateWikiPatch('```markdown\n# No frontmatter\n```', 'Module-Auth');
+  assert.ok(codes(issues).includes('missing-frontmatter'));
+});
+
 test('validateWikiPatch returns error for empty content', () => {
   const issues = validateWikiPatch('', 'Module-Auth');
   assert.ok(codes(issues).includes('empty-content'), 'should report empty-content');

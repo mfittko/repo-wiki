@@ -96,8 +96,13 @@ Authority rules:
 - Do not copy secrets, tokens, private keys, or environment variable values.
 
 Output contract:
+- Output only the complete markdown page.
+- The first line of the response must be exactly \`---\`.
+- Do not include preamble, explanation, commentary, a markdown fence, or any code block wrapper around the page.
 - Produce valid GitHub-flavored Markdown.
-- Include a YAML frontmatter block with at minimum: source_commit, compiled_at, kind, source_paths.
+- Include a YAML frontmatter block with required keys: source_repo, source_commit, compiled_at, kind, page_state, source_paths.
+- Include conservative confidence metadata and claim status where appropriate (for example confidence and claim_status frontmatter fields).
+- source_paths must be non-empty for generated content and must cite evidence paths used by the page.
 - Use headings, tables, and code blocks where appropriate.
 - End module pages with a human notes block:
   <!-- HUMAN_NOTES_START -->
@@ -268,14 +273,22 @@ ${formatDocCards(context.docCards ?? [])}
 
 ${existingContentBlock(context.existingContent)}
 
-Generate a complete module wiki page with the following sections:
-- Purpose (grounded in source cards, not speculation)
-- Source file list
-- Key symbols and entry points
-- Dependencies and imports
-- Related tests
-- Known gaps or open questions
-- Human notes block (<!-- HUMAN_NOTES_START --> … <!-- HUMAN_NOTES_END -->)`,
+Generate a complete module wiki page with the following constraints:
+- Output only the raw markdown page; do not wrap it in a markdown fence or code block.
+- The first line must be exactly \`---\`.
+- The YAML frontmatter must include: source_repo, source_commit, compiled_at, kind: "module", page_state, source_paths, confidence, and claim_status.
+- source_paths must be a non-empty array drawn only from the Source files in this module and Source cards listed above.
+- Use conservative confidence and claim status metadata that matches the evidence provided.
+- Include the following sections:
+  - Purpose (grounded in source cards, not speculation)
+  - Source file list
+  - Key symbols and entry points
+  - Dependencies and imports
+  - Related tests
+  - Known gaps or open questions
+- End with this exact human notes block:
+  <!-- HUMAN_NOTES_START -->
+  <!-- HUMAN_NOTES_END -->`,
   };
 }
 

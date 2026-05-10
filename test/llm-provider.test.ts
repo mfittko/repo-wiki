@@ -481,6 +481,31 @@ test('buildPrompt module includes module name and source files', () => {
   assert.match(prompt.user, /HUMAN_NOTES/);
 });
 
+test('buildPrompt module includes strict hosted LLM output instructions', () => {
+  const ctx = makeContext({
+    moduleInfo: {
+      name: 'Auth',
+      slug: 'Module-Auth',
+      files: ['src/auth/index.ts', 'src/auth/tokens.ts'],
+      categories: { source: 2 },
+      languages: { TypeScript: 2 },
+      important_reasons: ['auth'],
+    },
+  });
+  const prompt = buildPrompt('module', ctx);
+
+  assert.match(prompt.system, /Output only the complete markdown page/);
+  assert.match(prompt.system, /first line of the response must be exactly `---`/);
+  assert.match(prompt.system, /Do not include preamble, explanation, commentary, a markdown fence, or any code block wrapper/);
+  assert.match(prompt.system, /source_repo, source_commit, compiled_at, kind, page_state, source_paths/);
+  assert.match(prompt.system, /confidence metadata and claim status/);
+  assert.match(prompt.user, /Output only the raw markdown page/);
+  assert.match(prompt.user, /first line must be exactly `---`/);
+  assert.match(prompt.user, /kind: "module"/);
+  assert.match(prompt.user, /source_paths must be a non-empty array drawn only from the Source files in this module and Source cards listed above/);
+  assert.match(prompt.user, /End with this exact human notes block/);
+});
+
 test('buildPrompt cross-cutting references the page title', () => {
   const ctx = makeContext({ pageName: 'Dependency-Map', pageTitle: 'Dependency Map' });
   const prompt = buildPrompt('cross-cutting', ctx);

@@ -123,8 +123,24 @@ export interface SynthesizeOptions {
  * Returns `{ frontmatterRaw: null, body: content }` when the document does
  * not begin with a valid `---`-delimited YAML block.
  */
-function splitFrontmatterAndBody(content: string): { frontmatterRaw: string | null; body: string } {
+function stripSurroundingMarkdownFence(content: string): string {
   const normalized = content.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+  const trimmed = normalized.trim();
+  const fence = /^```[A-Za-z0-9_-]*[ \t]*\n([\s\S]*)\n```[ \t]*$/.exec(trimmed);
+  if (!fence) {
+    return normalized;
+  }
+
+  const inner = fence[1].replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+  return inner.startsWith('---\n') ? inner : normalized;
+}
+
+function normalizeLLMOutput(content: string): string {
+  return stripSurroundingMarkdownFence(content).replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+}
+
+function splitFrontmatterAndBody(content: string): { frontmatterRaw: string | null; body: string } {
+  const normalized = normalizeLLMOutput(content);
   const opening = normalized.match(/^---[ \t]*\n/);
 
   if (!opening) {
@@ -270,7 +286,8 @@ export function validateWikiPatch(rawContent: string, pageName: string): WikiPat
   }
 
   // 2. Valid frontmatter block
-  const { frontmatterRaw, body } = splitFrontmatterAndBody(rawContent);
+  const normalizedContent = normalizeLLMOutput(rawContent);
+  const { frontmatterRaw, body } = splitFrontmatterAndBody(normalizedContent);
 
   if (frontmatterRaw === null) {
     issues.push({
@@ -344,7 +361,7 @@ export function validateWikiPatch(rawContent: string, pageName: string): WikiPat
   }
 
   // 7. Secret-like content check (run over the full content)
-  if (containsSecretLikeContent(rawContent)) {
+  if (containsSecretLikeContent(normalizedContent)) {
     issues.push({
       level: 'error',
       code: 'secret-like-content',
@@ -383,7 +400,7 @@ export function parseWikiPatch(rawContent: string, pageName: string): WikiPatch 
     );
   }
 
-  const normalized = rawContent.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+  const normalized = normalizeLLMOutput(rawContent);
   const { frontmatterRaw, body } = splitFrontmatterAndBody(normalized);
 
   // frontmatterRaw is guaranteed non-null here (missing-frontmatter would have been an error)
