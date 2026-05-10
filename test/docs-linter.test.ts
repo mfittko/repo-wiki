@@ -543,6 +543,59 @@ test('lintDocs validates route claims with clear reasons and suppresses duplicat
   }
 });
 
+test('lintDocs treats ANY/ALL/USE route methods as wildcard matches', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-route-wildcards-'));
+  const scanDir = path.join(dir, '.llmwiki', 'run');
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      files: [
+        {
+          path: 'src/server.ts',
+          route_surfaces: [
+            { path: '/health', methods: ['ALL'] },
+            { path: '/middleware', methods: ['USE'] },
+            { path: '/mixed', methods: ['GET', 'POST'] }
+          ],
+          environment_variables: []
+        }
+      ],
+      documentation: {
+        files: [
+          {
+            path: 'README.md',
+            stale: false,
+            age_days: 1,
+            status: 'partially_validated',
+            claims: [],
+            validation: {
+              contradictions: [],
+              commands: [],
+              env_vars: [],
+              route_claims: [
+                { line: 3, text: 'Use GET /health API endpoint.', path: '/health', method: 'GET' },
+                { line: 4, text: 'Use POST /middleware API endpoint.', path: '/middleware', method: 'POST' },
+                { line: 5, text: 'Use ALL /mixed API endpoint.', path: '/mixed', method: 'ALL' },
+                { line: 6, text: 'Use GET /missing API endpoint.', path: '/missing', method: 'GET' }
+              ]
+            },
+            file_paths: [],
+            links: []
+          }
+        ]
+      }
+    }), 'utf8');
+
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    const routeIssues = lint.issues.filter((item) => item.code === 'unvalidated-route-claim');
+    assert.equal(routeIssues.length, 1);
+    assert.ok(routeIssues[0].message.includes('did not match scanner route surfaces for path /missing'));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('lintDocs does not report missing-package-script for validated scripts', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-valid-'));
   try {

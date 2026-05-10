@@ -3,6 +3,7 @@ import { promises as fs } from 'node:fs';
 
 const GENERATED_OUTPUT_ROOTS = new Set(['.llmwiki', 'coverage', 'dist', 'build', 'node_modules']);
 const COMMON_ENV_VAR_NAMES = new Set(['CI', 'HOME', 'PATH', 'PORT', 'SHELL', 'TERM', 'USER']);
+const WILDCARD_ROUTE_METHODS = new Set(['ANY', 'ALL', 'USE']);
 
 export type PathResolution = {
   valid: boolean;
@@ -79,20 +80,28 @@ export function validateRouteClaims(claims: any[], routeIndex: Map<string, Map<s
       return { claim, valid: false, reason: `route claim did not match scanner route surfaces for path ${claim.path}.`, evidence: [] };
     }
 
-    if (!claim.method) {
-      const evidence = [...new Map([...byMethod.values()].flat().map((item) => [routeEvidenceKey(item), item])).values()];
+    const claimMethod = String(claim.method || '').toUpperCase();
+    if (!claimMethod) {
+      const evidence = flattenRouteEvidence(byMethod);
       return evidence.length > 0
         ? { claim, valid: true, reason: null, evidence }
         : { claim, valid: false, reason: `route claim did not match scanner route surfaces for path ${claim.path}.`, evidence: [] };
     }
 
-    const exact = byMethod.get(claim.method) || [];
-    const wildcard = byMethod.get('ANY') || [];
+    if (WILDCARD_ROUTE_METHODS.has(claimMethod)) {
+      const evidence = flattenRouteEvidence(byMethod);
+      return evidence.length > 0
+        ? { claim: { ...claim, method: claimMethod }, valid: true, reason: null, evidence }
+        : { claim: { ...claim, method: claimMethod }, valid: false, reason: `route claim did not match scanner route surfaces for path ${claim.path}.`, evidence: [] };
+    }
+
+    const exact = byMethod.get(claimMethod) || [];
+    const wildcard = [...WILDCARD_ROUTE_METHODS].flatMap((method) => byMethod.get(method) || []);
     const evidence = [...new Map([...exact, ...wildcard].map((item) => [routeEvidenceKey(item), item])).values()];
     if (evidence.length === 0) {
-      return { claim, valid: false, reason: `route claim method ${claim.method} for ${claim.path} did not match scanner route surfaces.`, evidence: [] };
+      return { claim: { ...claim, method: claimMethod }, valid: false, reason: `route claim method ${claimMethod} for ${claim.path} did not match scanner route surfaces.`, evidence: [] };
     }
-    return { claim, valid: true, reason: null, evidence };
+    return { claim: { ...claim, method: claimMethod }, valid: true, reason: null, evidence };
   });
 }
 
@@ -138,6 +147,10 @@ export function dedupeRouteValidationFindings(findings: any[], docPath?: string)
 
 function routeEvidenceKey(value: RouteEvidence) {
   return [value.source_path, value.framework, value.target, value.handler || '', value.method, value.path].join('\u0000');
+}
+
+function flattenRouteEvidence(byMethod: Map<string, RouteEvidence[]>) {
+  return [...new Map([...byMethod.values()].flat().map((item) => [routeEvidenceKey(item), item])).values()];
 }
 
 export function isGeneratedOutputReference(filePath: string) {
