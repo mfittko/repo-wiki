@@ -305,7 +305,7 @@ function coalesceMultilineWorkflowCommands(lines: Array<{ line: string; lineNumb
   for (const entry of lines) {
     lastLineNumber = entry.lineNumber;
     const line = entry.line;
-    const continues = /\\\s*$/.test(line);
+    const continues = hasLineContinuation(line);
     const normalized = line.replace(/\\\s*$/, '').trim();
     if (!normalized) {
       if (!continues) {
@@ -334,6 +334,14 @@ function coalesceMultilineWorkflowCommands(lines: Array<{ line: string; lineNumb
   }
 
   return commands;
+}
+
+function hasLineContinuation(line: string) {
+  const match = /(\\+)\s*$/.exec(line);
+  if (!match) {
+    return false;
+  }
+  return (match[1].length % 2) === 1;
 }
 
 function parseNpmRunScript(command: string): string | undefined {

@@ -111,8 +111,8 @@ function extractPackageScriptSources(content: string, scripts: Record<string, st
   const endLine = lineNumberAtIndex(content, scriptsRange.valueEndIndex);
   const rangeLines = lines.slice(startLine - 1, endLine);
   for (const name of Object.keys(scripts || {})) {
-    const escapedName = escapeRegExp(name);
-    const pattern = new RegExp(`(?:^|[,{])\\s*"${escapedName}"\\s*:`);
+    const escapedName = escapeRegExp(JSON.stringify(name));
+    const pattern = new RegExp(`(?:^|[,{])\\s*${escapedName}\\s*:`);
     const lineIndex = rangeLines.findIndex((line) => pattern.test(line));
     sources.push(lineIndex === -1 ? { name } : { name, line: startLine + lineIndex });
   }
@@ -176,7 +176,10 @@ function locateTopLevelObjectPropertyRange(content: string, propertyName: string
     }
 
     if (char === '}') {
-      depth = Math.max(0, depth - 1);
+      depth -= 1;
+      if (depth < 0) {
+        return null;
+      }
     }
   }
 
