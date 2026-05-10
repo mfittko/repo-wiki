@@ -390,7 +390,7 @@ function normalizeLLMArchitectureContent(content: string, manifest: any): string
   const frontmatterRaw = content.slice(4, closing);
   const body = content.slice(closing);
   const sourcePaths = collectPrimarySourcePaths(manifest).slice(0, 20);
-  const lines = removeNormalizedFrontmatterFields(frontmatterRaw.split('\n'), false);
+  const lines = removeNormalizedFrontmatterFields(frontmatterRaw.split('\n'), /* removeConservativeEvidenceFields= */ false);
   const withoutNormalized = lines.filter((line) => line.trim().length > 0);
   const normalizedLines = [
     `source_repo: ${JSON.stringify(manifest.remote)}`,
