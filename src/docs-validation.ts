@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs';
 const GENERATED_OUTPUT_ROOTS = new Set(['.llmwiki', 'coverage', 'dist', 'build', 'node_modules']);
 const COMMON_ENV_VAR_NAMES = new Set(['CI', 'HOME', 'PATH', 'PORT', 'SHELL', 'TERM', 'USER']);
 const WILDCARD_ROUTE_METHODS = new Set(['ANY', 'ALL', 'USE']);
+const WILDCARD_ROUTE_METHOD_LIST = [...WILDCARD_ROUTE_METHODS];
 
 export type PathResolution = {
   valid: boolean;
@@ -96,7 +97,7 @@ export function validateRouteClaims(claims: any[], routeIndex: Map<string, Map<s
     }
 
     const exact = byMethod.get(claimMethod) || [];
-    const wildcard = [...WILDCARD_ROUTE_METHODS].flatMap((method) => byMethod.get(method) || []);
+    const wildcard = WILDCARD_ROUTE_METHOD_LIST.flatMap((method) => byMethod.get(method) || []);
     const evidence = [...new Map([...exact, ...wildcard].map((item) => [routeEvidenceKey(item), item])).values()];
     if (evidence.length === 0) {
       return { claim: { ...claim, method: claimMethod }, valid: false, reason: `route claim method ${claimMethod} for ${claim.path} did not match scanner route surfaces.`, evidence: [] };

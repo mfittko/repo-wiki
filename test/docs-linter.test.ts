@@ -591,6 +591,9 @@ test('lintDocs treats ANY/ALL/USE route methods as wildcard matches', async () =
     const routeIssues = lint.issues.filter((item) => item.code === 'unvalidated-route-claim');
     assert.equal(routeIssues.length, 1);
     assert.ok(routeIssues[0].message.includes('did not match scanner route surfaces for path /missing'));
+    assert.ok(!routeIssues.some((item) => item.message.includes('/health')));
+    assert.ok(!routeIssues.some((item) => item.message.includes('/middleware')));
+    assert.ok(!routeIssues.some((item) => item.message.includes('/mixed')));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
