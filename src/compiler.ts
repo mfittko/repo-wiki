@@ -4,7 +4,7 @@ import { hasDataModelSignals } from './data-model-signals.js';
 import { assembleAllPageContexts } from './context-assembler.js';
 import { ensureDir, readJson, writeText } from './utils/fs.js';
 import { collectKnownEnvironmentVariables, collectManifestDirectories, normalizeRepoPath, resolveDocumentedPathFromManifest } from './docs-validation.js';
-import { classifyDocumentedCommands, mergePackageScripts } from './docs-ingestor.js';
+import { classifyDocumentedCommands, extractRouteClaims, mergePackageScripts } from './docs-ingestor.js';
 import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-ownership.js';
 
 export async function compileWiki({ scanDir, planFile, wikiDir }) {
@@ -182,8 +182,6 @@ function renderDocumentationDebtReport(manifest) {
   const docs = manifest.documentation?.files || [];
   const summary = manifest.documentation?.summary || {};
   const rows = docs.slice(0, 100).map((doc) => `| \`${doc.path}\` | ${doc.status} | ${doc.authority} | ${doc.age_days} | ${doc.claims?.length || 0} | ${doc.validation?.commands?.length || 0} | ${doc.validation?.env_vars?.length || 0} |`);
-  const staleDocs = docs.filter((doc) => doc.stale).map((doc) => `- \`${doc.path}\` - age ${doc.age_days} days, status ${doc.status}`);
-  const contradicted = docs.filter((doc) => doc.validation?.contradictions?.length).map((doc) => `- \`${doc.path}\` - ${doc.validation.contradictions.length} contradiction-review signals`);
 
   // Build merged package scripts from manifest analysis for command validation
   const allPackageScripts = mergePackageScripts(manifest);
@@ -216,6 +214,23 @@ function renderDocumentationDebtReport(manifest) {
   const envFindings = docs.flatMap((doc) => (doc.validation?.env_vars || []).map((name) => ({ doc: doc.path, name, valid: knownEnvVars.has(name) })));
   const validatedEnvVars = envFindings.filter((finding) => finding.valid);
   const unvalidatedEnvVars = envFindings.filter((finding) => !finding.valid);
+  const routeIndex = buildRouteSurfaceIndex(manifest);
+  const routeFindings = docs.flatMap((doc) => {
+    const routeClaims = doc.validation?.route_claims || extractRouteClaims(doc.claims || []);
+    return validateRouteClaims(routeClaims, routeIndex).map((finding) => ({ ...finding, doc: doc.path }));
+  });
+  const validatedRouteClaims = routeFindings.filter((finding) => finding.valid);
+  const unvalidatedRouteClaims = routeFindings.filter((finding) => !finding.valid);
+  const staleFindings = docs.filter((doc) => doc.stale).map((doc) => `- \`${doc.path}\` - age ${doc.age_days} days, status ${doc.status}`);
+  const contradictedFindings = docs.filter((doc) => doc.validation?.contradictions?.length).map((doc) => `- \`${doc.path}\` - ${doc.validation.contradictions.length} contradiction-review signals`);
+  const unvalidatedFindings = [
+    ...docs.filter((doc) => doc.claims?.length && doc.status === 'unvalidated').map((doc) => `- \`${doc.path}\` - documentation claims have no validation signal.`),
+    ...missingCmds.map((finding) => `- \`${redactSensitiveText(finding.command)}\` - package script not found.`),
+    ...unvalidatedCmds.map((finding) => `- \`${redactSensitiveText(finding.command)}\` - command source unknown.`),
+    ...unvalidatedEnvVars.map((finding) => `- \`${finding.doc}\` mentions \`${finding.name}\` without scanner/config validation.`),
+    ...unvalidatedRouteClaims.map((finding) => `- \`${finding.doc}:${finding.claim.line}\` - ${finding.reason}`)
+  ];
+  const brokenReferenceFindings = brokenFilePaths.map((finding) => `- \`${finding.doc}:${finding.line}\` references \`${finding.reference_path}\` (missing).`);
 
   const commandRows = classified.map((c) => {
     const badge = c.status === 'validated' ? '✅ validated' : c.status === 'missing' ? '❌ missing' : '❓ unvalidated';
@@ -234,6 +249,12 @@ function renderDocumentationDebtReport(manifest) {
   const envRows = envFindings.slice(0, 200).map((finding) => {
     const badge = finding.valid ? '✅ validated' : '❓ unvalidated';
     return tableRow([code(finding.doc), code(finding.name), badge]);
+  });
+  const routeRows = routeFindings.slice(0, 200).map((finding) => {
+    const badge = finding.valid ? '✅ validated' : '❓ unvalidated';
+    const method = finding.claim.method || 'ANY';
+    const routePath = finding.claim.path || '(none)';
+    return tableRow([code(`${finding.doc}:${finding.claim.line}`), code(`${method} ${routePath}`), badge, finding.valid ? 'scanner route match' : finding.reason]);
   });
 
   return `${frontmatter(manifest, { kind: 'documentation_debt_report', documentation_authority: manifest.documentation?.authority || 'secondary' })}# Documentation Debt Report
@@ -290,13 +311,32 @@ Environment variable names extracted from documentation are validated against sc
 
 ${envRows.length > 0 ? `| Documentation file | Variable | Status |\n|---|---|---|\n${envRows.join('\n')}${envFindings.length > envRows.length ? `\n\n_Showing first ${envRows.length} of ${envFindings.length} environment variable findings._` : ''}` : '- No environment variable mentions extracted from documentation.'}
 
-## Stale documentation candidates
+## Route/API claim validation
 
-${staleDocs.join('\n') || '- None detected.'}
+Route and API claims from documentation prose are validated against scanner-extracted route surfaces when available.
 
-## Contradiction-review candidates
+- Validated: ${validatedRouteClaims.length}
+- Unvalidated: ${unvalidatedRouteClaims.length}
 
-${contradicted.join('\n') || '- None detected.'}
+${routeRows.length > 0 ? `| Claim location | Route claim | Status | Reason |\n|---|---|---|---|\n${routeRows.join('\n')}${routeFindings.length > routeRows.length ? `\n\n_Showing first ${routeRows.length} of ${routeFindings.length} route claim findings._` : ''}` : '- No route/API claims extracted from documentation.'}
+
+## Findings by category
+
+### Stale
+
+${staleFindings.join('\n') || '- None detected.'}
+
+### Contradicted
+
+${contradictedFindings.join('\n') || '- None detected.'}
+
+### Unvalidated
+
+${unvalidatedFindings.join('\n') || '- None detected.'}
+
+### Broken-reference
+
+${brokenReferenceFindings.join('\n') || '- None detected.'}
 
 ## Compiler policy
 
@@ -456,6 +496,48 @@ function collectRoutes(files: any[]) {
 
       return left.target.localeCompare(right.target);
     });
+}
+
+function buildRouteSurfaceIndex(manifest: any) {
+  const byPath = new Map<string, Set<string>>();
+  for (const file of manifest.files || []) {
+    for (const route of file.route_surfaces || []) {
+      const routePath = normalizeRoutePath(route.path);
+      if (!routePath) continue;
+      const methods = route.methods?.length ? route.methods : ['ANY'];
+      const known = byPath.get(routePath) || new Set<string>();
+      for (const method of methods) known.add(String(method).toUpperCase());
+      byPath.set(routePath, known);
+    }
+  }
+  return byPath;
+}
+
+function validateRouteClaims(claims: any[], routeIndex: Map<string, Set<string>>) {
+  const hasRouteMetadata = routeIndex.size > 0;
+  return (claims || []).map((claim) => {
+    if (!hasRouteMetadata) {
+      return { claim, valid: false, reason: 'route claim could not be validated because scanner route metadata is unavailable.' };
+    }
+    if (!claim.path) {
+      return { claim, valid: false, reason: 'route claim could not be validated because no route path was detected.' };
+    }
+    const methods = routeIndex.get(normalizeRoutePath(claim.path));
+    if (!methods) {
+      return { claim, valid: false, reason: `route claim did not match scanner route surfaces for path ${claim.path}.` };
+    }
+    if (claim.method && !methods.has(claim.method) && !methods.has('ANY')) {
+      return { claim, valid: false, reason: `route claim method ${claim.method} for ${claim.path} did not match scanner route surfaces.` };
+    }
+    return { claim, valid: true, reason: null };
+  });
+}
+
+function normalizeRoutePath(routePath: string | null | undefined) {
+  const cleaned = String(routePath || '').trim();
+  if (!cleaned) return '';
+  if (cleaned === '/') return '/';
+  return cleaned.replace(/\/+$/, '');
 }
 
 function formatCodeList(values: Array<string | number>) {

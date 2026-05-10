@@ -384,8 +384,8 @@ test('Documentation Debt Report includes file path and environment variable vali
         stale_after_days: 9999
       }
     }), 'utf8');
-    await writeFile(path.join(dir, 'src', 'app.js'), 'export const mode = process.env.APP_MODE;\n', 'utf8');
-    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee `src/app.js` and `docs/missing.md`. Configure APP_MODE and MISSING_TOKEN.\n', 'utf8');
+    await writeFile(path.join(dir, 'src', 'app.js'), "const app = express();\napp.get('/health', handler);\nexport const mode = process.env.APP_MODE;\n", 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee `src/app.js` and `docs/missing.md`. Configure APP_MODE and MISSING_TOKEN.\nUse GET /health API endpoint.\nUse POST /missing API endpoint.\n', 'utf8');
 
     const scanDir = path.join(dir, '.llmwiki', 'run');
     await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
@@ -401,6 +401,116 @@ test('Documentation Debt Report includes file path and environment variable vali
     assert.match(report, /## Environment variable validation/);
     assert.match(report, /\| `README\.md` \| `APP_MODE` \| ✅ validated \|/);
     assert.match(report, /\| `README\.md` \| `MISSING_TOKEN` \| ❓ unvalidated \|/);
+    assert.match(report, /## Route\/API claim validation/);
+    assert.match(report, /\| `README\.md:4` \| `GET \/health` \| ✅ validated \| scanner route match \|/);
+    assert.match(report, /\| `README\.md:5` \| `POST \/missing` \| ❓ unvalidated \| route claim did not match scanner route surfaces for path \/missing\./);
+    assert.match(report, /## Findings by category/);
+    assert.match(report, /### Stale/);
+    assert.match(report, /### Contradicted/);
+    assert.match(report, /### Unvalidated/);
+    assert.match(report, /### Broken-reference/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintDocs applies documentation validation strictness levels predictably', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-doc-strictness-'));
+  const scanDir = path.join(dir, '.llmwiki', 'run');
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await writeFile(path.join(dir, 'README.md'), '# Existing\n', 'utf8');
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      files: [],
+      documentation: {
+        files: [
+          {
+            path: 'docs/problem.md',
+            stale: true,
+            age_days: 365,
+            status: 'unvalidated',
+            claims: [{ line: 3, text: 'Use GET /missing API endpoint.' }],
+            validation: {
+              contradictions: [{ text: 'deprecated' }],
+              commands: [],
+              env_vars: [],
+              route_claims: [{ line: 3, text: 'Use GET /missing API endpoint.', path: '/missing', method: 'GET' }]
+            },
+            file_paths: [],
+            links: ['missing.md']
+          }
+        ]
+      }
+    }), 'utf8');
+
+    for (const [strictness, expected] of [
+      ['standard', { errors: 1, warnings: 4 }],
+      ['lenient', { errors: 0, warnings: 5 }],
+      ['strict', { errors: 5, warnings: 0 }],
+      ['off', { errors: 0, warnings: 0 }]
+    ] as const) {
+      await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+        documentation: {
+          validation_strictness: strictness
+        }
+      }), 'utf8');
+      const lint = await lintDocs({ scanDir, repoPath: dir });
+      assert.equal(lint.summary.strictness, strictness);
+      assert.equal(lint.summary.errors, expected.errors);
+      assert.equal(lint.summary.warnings, expected.warnings);
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintDocs validates route claims against scanner route metadata with clear reasons', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-route-claims-'));
+  const scanDir = path.join(dir, '.llmwiki', 'run');
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      files: [
+        {
+          path: 'src/server.ts',
+          route_surfaces: [
+            { path: '/health', methods: ['GET'] }
+          ],
+          environment_variables: []
+        }
+      ],
+      documentation: {
+        files: [
+          {
+            path: 'README.md',
+            stale: false,
+            age_days: 1,
+            status: 'partially_validated',
+            claims: [{ line: 3, text: 'Use GET /health API endpoint.' }],
+            validation: {
+              contradictions: [],
+              commands: [],
+              env_vars: [],
+              route_claims: [
+                { line: 3, text: 'Use GET /health API endpoint.', path: '/health', method: 'GET' },
+                { line: 4, text: 'Use POST /health API endpoint.', path: '/health', method: 'POST' },
+                { line: 5, text: 'Use GET /missing API endpoint.', path: '/missing', method: 'GET' }
+              ]
+            },
+            file_paths: [],
+            links: []
+          }
+        ]
+      }
+    }), 'utf8');
+
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    const routeIssues = lint.issues.filter((item) => item.code === 'unvalidated-route-claim');
+    assert.equal(routeIssues.length, 2);
+    assert.ok(routeIssues.some((issue) => issue.message.includes('method POST for /health did not match')));
+    assert.ok(routeIssues.some((issue) => issue.message.includes('did not match scanner route surfaces for path /missing')));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

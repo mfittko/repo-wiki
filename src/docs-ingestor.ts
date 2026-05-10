@@ -180,6 +180,7 @@ export function validateDocClaims({ claims, content, filePath }) {
   const contradictions = [];
   const commands = [];
   const envVars = [];
+  const routeClaims = extractRouteClaims(claims);
 
   for (const block of extractCodeBlocks(content)) {
     if (/^(bash|sh|shell|zsh|console)?$/i.test(block.language || '')) {
@@ -207,17 +208,41 @@ export function validateDocClaims({ claims, content, filePath }) {
   return {
     validated,
     contradictions,
+    route_claims: routeClaims,
     commands: [...new Set(commands)].slice(0, 50),
     env_vars: [...new Set(envVars)].slice(0, 50),
     summary: {
       claims: claims.length,
       needs_code_validation: validated.length,
       contradictions: contradictions.length,
+      route_claims: routeClaims.length,
       commands: commands.length,
       env_vars: envVars.length,
       file: filePath
     }
   };
+}
+
+export function extractRouteClaims(claims: Array<{ line: number; text: string }>) {
+  const routes = [];
+  for (const claim of claims || []) {
+    if (!/\b(route|api|endpoint)\b/i.test(claim.text)) continue;
+    const pathMatch = /(?:^|[\s"'`(])((?:\/[A-Za-z0-9._~:@!$&'()*+,;=%-]+)+\/?)/.exec(claim.text);
+    const methodMatch = /\b(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD)\b/i.exec(claim.text);
+    routes.push({
+      line: claim.line,
+      text: claim.text,
+      path: pathMatch ? normalizeRoutePath(pathMatch[1]) : null,
+      method: methodMatch ? methodMatch[1].toUpperCase() : null
+    });
+  }
+  return routes.slice(0, 50);
+}
+
+function normalizeRoutePath(routePath: string) {
+  const cleaned = String(routePath || '').trim();
+  if (!cleaned || cleaned === '/') return '/';
+  return cleaned.replace(/\/+$/, '');
 }
 
 function isEnvironmentVariableMention(value: string) {
