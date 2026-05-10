@@ -6,7 +6,7 @@ import { ensureDir, readJson, writeText } from './utils/fs.js';
 import { buildRouteSurfaceIndex, collectKnownEnvironmentVariables, collectManifestDirectories, dedupeRouteValidationFindings, normalizeRepoPath, resolveDocumentedPathFromManifest, validateRouteClaims } from './docs-validation.js';
 import { classifyDocumentedCommands, extractRouteClaims, mergePackageScripts } from './docs-ingestor.js';
 import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-ownership.js';
-import { buildRequest, createProvider, LLMProviderError } from './llm-provider.js';
+import { buildRequest, createProvider, LLMProviderError, resolveProviderConfig } from './llm-provider.js';
 import type { LLMProvider } from './llm-provider.js';
 import { synthesizeWikiPage, WikiPatchError } from './wiki-patch.js';
 
@@ -31,7 +31,7 @@ export async function compileWiki({
   await ensureDir(wikiDir);
 
   const KNOWN_MODES = ['deterministic', 'llm'];
-  const rawMode: string = config?.compiler?.mode ?? 'deterministic';
+  const rawMode = resolveCompilerMode(config?.compiler);
   const compilerMode: string = KNOWN_MODES.includes(rawMode) ? rawMode : 'deterministic';
   if (!KNOWN_MODES.includes(rawMode)) {
     console.warn(`compileWiki: unknown compiler.mode "${rawMode}"; falling back to "deterministic".`);
@@ -70,28 +70,46 @@ export async function compileWiki({
   // Track which module pages are owned by the LLM synthesis path (success or failure).
   // These are excluded from the deterministic fallback below.
   const llmHandledModules = new Set<string>();
+  let skipped = 0;
+  const skippedByState: Record<string, number> = {};
 
   if (isLLMMode) {
     // In LLM mode, synthesize module pages through the provider boundary.
     // Foundation and cross-cutting pages continue to use deterministic renderers
     // (phased archetype rollout – module pages first).
-    const llmProvider: LLMProvider = _provider ?? createProvider(config?.compiler ?? {});
     const llmCfg = config?.compiler ?? {};
     const retries: number = Number(llmCfg.llm?.retries ?? llmCfg.retries ?? 0);
+    const llmCandidates: Array<{ module: any; modulePage: string; existingForPrompt?: string }> = [];
 
     for (const module of plan.modules || []) {
       const modulePage = `${module.slug}.md`;
       llmHandledModules.add(modulePage);
 
-      // Read existing content so the prompt can include it as context.
       const filePath = path.join(wikiDir, modulePage);
       let existingForPrompt: string | undefined;
       try {
         existingForPrompt = await fs.readFile(filePath, 'utf8');
-      } catch {
-        // New page – no existing content.
+      } catch (error) {
+        if (!isNodeError(error) || error.code !== 'ENOENT') {
+          throw error;
+        }
       }
 
+      if (existingForPrompt !== undefined) {
+        const state = detectPageState(existingForPrompt);
+        if (state === 'human-owned' || state === 'unmanaged') {
+          skipped++;
+          skippedByState[state] = (skippedByState[state] || 0) + 1;
+          continue;
+        }
+      }
+
+      llmCandidates.push({ module, modulePage, existingForPrompt });
+    }
+
+    const llmProvider: LLMProvider | null = llmCandidates.length > 0 ? (_provider ?? createProvider(llmCfg)) : null;
+
+    for (const { module, modulePage, existingForPrompt } of llmCandidates) {
       // Assemble the page context using the standard context assembler.
       const syntheticPage = { path: modulePage, phase: 'modules', moduleName: module.name };
       const pageCtx = assemblePageContext({ manifest, plan, page: syntheticPage });
@@ -108,8 +126,8 @@ export async function compileWiki({
       // shared write loop handles human-notes preservation and page-state checks.
       // On failure, record the error and leave the existing file untouched.
       try {
-        const patch = await synthesizeWikiPage(llmProvider, request, { maxRetries: retries });
-        pages.set(modulePage, patch.content);
+        const patch = await synthesizeWikiPage(llmProvider!, request, { maxRetries: retries });
+        pages.set(modulePage, normalizeLLMGeneratedContent(patch.content, manifest, module));
       } catch (err) {
         if (err instanceof WikiPatchError) {
           llmErrors.push({ file: modulePage, error: err.message, issues: err.issues });
@@ -132,8 +150,9 @@ export async function compileWiki({
     }
   }
 
-  let skipped = 0;
-  const skippedByState: Record<string, number> = {};
+  if (llmErrors.length > 0) {
+    throw new Error(`LLM compilation failed for ${llmErrors.length} page(s): ${llmErrors.map(formatLLMError).join('; ')}`);
+  }
 
   for (const [file, newContent] of pages) {
     const filePath = path.join(wikiDir, file);
@@ -210,11 +229,21 @@ function buildModulePromptContext(
       path: si.path,
       category: si.category,
       language: si.language,
+      symbols: si.symbols,
+      imports: si.imports,
       reasons: si.reasons,
+      runtime_hints: si.runtime_hints,
+      environment_variables: si.environment_variables,
+      routes: si.routes,
+      migrations: si.migrations,
+      models: si.models,
+      excerpt: si.excerpt,
     })),
     docCards: (pageCtx.documentation_inputs as any[]).map((di) => ({
       path: di.path,
       status: di.status,
+      claims: di.claims,
+      excerpt: di.excerpt,
     })),
     existingContent,
     moduleInfo: {
@@ -226,6 +255,54 @@ function buildModulePromptContext(
       important_reasons: module.important_reasons,
     },
   };
+}
+
+function formatLLMError(entry: { file: string; error: string; issues?: any[] }): string {
+  const issueSummary = Array.isArray(entry.issues) && entry.issues.length > 0
+    ? ` (${entry.issues.map((issue) => `${issue.code}: ${issue.message}`).join(', ')})`
+    : '';
+  return `${entry.file}: ${entry.error}${issueSummary}`;
+}
+
+function resolveCompilerMode(compilerConfig: any): string {
+  const envMode = typeof process.env.LLMWIKI_COMPILER_MODE === 'string' && process.env.LLMWIKI_COMPILER_MODE.trim()
+    ? process.env.LLMWIKI_COMPILER_MODE.trim()
+    : undefined;
+  if (envMode) {
+    return envMode;
+  }
+
+  try {
+    return resolveProviderConfig(compilerConfig ?? {}).mode || 'deterministic';
+  } catch {
+    return typeof compilerConfig?.mode === 'string' ? compilerConfig.mode : 'deterministic';
+  }
+}
+
+function normalizeLLMGeneratedContent(content: string, manifest: any, module: any): string {
+  if (!content.startsWith('---\n')) {
+    return content;
+  }
+
+  const closing = content.indexOf('\n---', 4);
+  if (closing === -1) {
+    return content;
+  }
+
+  const frontmatterRaw = content.slice(4, closing);
+  const body = content.slice(closing);
+  const lines = frontmatterRaw.split('\n').filter((line) => line.trim().length > 0);
+  const withoutNormalized = lines.filter((line) => !/^(source_repo|source_commit|page_state|source_paths):/m.test(line));
+  const sourcePaths = Array.isArray(module?.files) && module.files.length > 0 ? module.files.slice(0, 20) : collectPrimarySourcePaths(manifest).slice(0, 20);
+  const normalizedLines = [
+    `source_repo: ${JSON.stringify(manifest.remote)}`,
+    `source_commit: ${JSON.stringify(manifest.commit)}`,
+    'page_state: "generated"',
+    `source_paths: ${JSON.stringify(sourcePaths)}`,
+    ...withoutNormalized
+  ];
+
+  return `---\n${normalizedLines.join('\n')}${body}`;
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {

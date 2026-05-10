@@ -18,12 +18,19 @@ export interface SourceCardContext {
   symbols?: string[];
   imports?: string[];
   reasons?: string[];
+  runtime_hints?: string[];
+  environment_variables?: string[];
+  routes?: string[];
+  migrations?: string[];
+  models?: string[];
+  excerpt?: string;
 }
 
 export interface DocCardContext {
   path: string;
   status: string;
   claims?: string[];
+  excerpt?: string;
 }
 
 export interface ModuleInfo {
@@ -109,6 +116,24 @@ function formatSourceCards(cards: SourceCardContext[]): string {
       if (card.reasons?.length) {
         parts.push(`  reasons: ${card.reasons.join(', ')}`);
       }
+      if (card.runtime_hints?.length) {
+        parts.push(`  runtime hints: ${card.runtime_hints.join(', ')}`);
+      }
+      if (card.environment_variables?.length) {
+        parts.push(`  env vars: ${card.environment_variables.join(', ')}`);
+      }
+      if (card.routes?.length) {
+        parts.push(`  routes: ${card.routes.slice(0, 5).join('; ')}`);
+      }
+      if (card.models?.length) {
+        parts.push(`  models: ${card.models.slice(0, 5).join('; ')}`);
+      }
+      if (card.migrations?.length) {
+        parts.push(`  migrations: ${card.migrations.slice(0, 5).join('; ')}`);
+      }
+      if (card.excerpt) {
+        parts.push(`  excerpt: ${card.excerpt}`);
+      }
       return parts.join('\n');
     })
     .join('\n');
@@ -122,6 +147,9 @@ function formatDocCards(cards: DocCardContext[]): string {
       const parts: string[] = [`- ${card.path} [${card.status}]`];
       if (card.claims?.length) {
         parts.push(`  claims: ${card.claims.slice(0, 3).join('; ')}`);
+      }
+      if (card.excerpt) {
+        parts.push(`  excerpt: ${card.excerpt}`);
       }
       return parts.join('\n');
     })

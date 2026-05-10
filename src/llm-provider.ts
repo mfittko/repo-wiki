@@ -46,6 +46,12 @@ export interface LLMRequest {
   systemPrompt: string;
   /** Page-specific user prompt including source cards and context. */
   userPrompt: string;
+  /** Source commit for generated-page provenance. */
+  sourceCommit?: string;
+  /** Source repository remote for generated-page provenance. */
+  sourceRepo?: string;
+  /** Source paths cited by the assembled prompt context. */
+  sourcePaths?: string[];
   /** Optional token budget for the completion. */
   maxTokens?: number;
   /** Optional sampling temperature. */
@@ -246,8 +252,10 @@ function buildMockContent(request: LLMRequest): string {
     `kind: ${JSON.stringify(request.archetype)}`,
     `page_name: ${JSON.stringify(request.pageName)}`,
     `compiled_at: "mock"`,
-    `source_commit: "mock"`,
-    `source_paths: []`,
+    `source_repo: ${JSON.stringify(request.sourceRepo ?? 'mock')}`,
+    `source_commit: ${JSON.stringify(request.sourceCommit ?? 'mock')}`,
+    `page_state: "generated"`,
+    `source_paths: ${JSON.stringify((request.sourcePaths?.length ? request.sourcePaths : ['mock-source']).slice(0, 20))}`,
     '---',
     '',
     `# ${request.pageTitle}`,
@@ -446,6 +454,9 @@ export function buildRequest(
     pageTitle: context.pageTitle,
     systemPrompt: options.systemPrompt ?? prompt.system,
     userPrompt: prompt.user,
+    sourceCommit: context.repoCommit,
+    sourceRepo: context.repoRemote,
+    sourcePaths: context.sourceCards.map((card) => card.path).filter((value) => typeof value === 'string' && value.trim()),
     maxTokens: options.maxTokens ?? options.maxOutputTokens,
     temperature: options.temperature,
   };

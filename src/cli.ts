@@ -190,7 +190,7 @@ export async function runCli(argv: string[]) {
 
 function getDotEnvBaseDir(command: string | undefined, options: ParsedArgs) {
   const repoPath = getStringOption(options, 'repo');
-  if (repoPath && ['init', 'scan', 'lint-docs', 'run'].includes(command || '')) {
+  if (repoPath && ['init', 'scan', 'compile', 'lint-docs', 'run'].includes(command || '')) {
     return repoPath;
   }
   return process.cwd();
