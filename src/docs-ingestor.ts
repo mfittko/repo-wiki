@@ -242,7 +242,7 @@ function pushRouteMatches(routes: any[], seen: Set<string>, line: string, lineNu
   const snippet = line.trim().slice(0, 280);
   if (!snippet) return;
 
-  for (const match of line.matchAll(/\b(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|ALL)\b\s+((?:\/[A-Za-z0-9._~:@!$&'()*+,;=%\-[\]{}]+|\/)+\/?)/gi)) {
+  for (const match of line.matchAll(/\b(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|ALL)\b\s+((?:\/(?:[A-Za-z0-9._~:@!$&'()*+,;=%\-[\]{}]+(?:\/+[A-Za-z0-9._~:@!$&'()*+,;=%\-[\]{}]+)*)?\/?))/gi)) {
     pushRoute(routes, seen, {
       line: lineNumber,
       text: snippet,
@@ -254,7 +254,7 @@ function pushRouteMatches(routes: any[], seen: Set<string>, line: string, lineNu
 
   if (line.includes('|')) {
     const methods = [...line.matchAll(/\b(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|ALL)\b/gi)].map((match) => match[1].toUpperCase());
-    const paths = [...line.matchAll(/(?:^|[\s|`(])((?:\/[A-Za-z0-9._~:@!$&'()*+,;=%\-[\]{}]+|\/)+\/?)(?=$|[\s|`),.;:!?])/g)].map((match) => normalizeRoutePath(match[1]));
+    const paths = [...line.matchAll(/(?:^|[\s|`(])((?:\/(?:[A-Za-z0-9._~:@!$&'()*+,;=%\-[\]{}]+(?:\/+[A-Za-z0-9._~:@!$&'()*+,;=%\-[\]{}]+)*)?\/?))(?=$|[\s|`),.;:!?])/g)].map((match) => normalizeRoutePath(match[1]));
     const pairCount = Math.min(methods.length, paths.length);
     for (let index = 0; index < pairCount; index += 1) {
       pushRoute(routes, seen, {
