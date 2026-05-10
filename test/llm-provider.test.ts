@@ -550,6 +550,28 @@ test('buildCrossCuttingPrompt includes source card count', () => {
   assert.match(prompt.user, /Source cards \(1 files\)/);
 });
 
+test('buildPrompt formats structured source card surfaces without object stringification', () => {
+  const ctx = makeContext({
+    sourceCards: [
+      {
+        path: 'src/api/users.ts',
+        category: 'source',
+        language: 'TypeScript',
+        symbols: ['listUsers'],
+        routes: [{ kind: 'http-route', framework: 'express', methods: ['GET'], path: '/users', handler: 'listUsers' }],
+        models: [{ name: 'User', kind: 'model', framework: 'prisma' }],
+        migrations: [{ kind: 'migration-file', id: '001', name: 'create-users' }],
+      },
+    ],
+  });
+
+  const prompt = buildPrompt('module', ctx);
+  assert.doesNotMatch(prompt.user, /\[object Object\]/);
+  assert.match(prompt.user, /routes: GET \/users \(express, http-route, handler=listUsers\)/);
+  assert.match(prompt.user, /models: User \(model, prisma\)/);
+  assert.match(prompt.user, /migrations: 001 create-users \(migration-file\)/);
+});
+
 test('buildPrompt doc cards are included in user prompt', () => {
   const ctx = makeContext({
     docCards: [{ path: 'docs/security.md', status: 'stale', claims: ['Uses bcrypt'] }],

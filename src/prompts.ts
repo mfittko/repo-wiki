@@ -11,6 +11,26 @@ export type PageArchetype = 'foundation' | 'module' | 'cross-cutting';
 
 // ── Context shapes ─────────────────────────────────────────────────────────
 
+export type RouteContext = {
+  kind?: string | null;
+  framework?: string | null;
+  methods?: string[];
+  path?: string | null;
+  handler?: string | null;
+};
+
+export type MigrationContext = {
+  kind?: string | null;
+  id?: string | null;
+  name?: string | null;
+};
+
+export type ModelContext = {
+  name?: string | null;
+  kind?: string | null;
+  framework?: string | null;
+};
+
 export interface SourceCardContext {
   path: string;
   category: string;
@@ -20,9 +40,9 @@ export interface SourceCardContext {
   reasons?: string[];
   runtime_hints?: string[];
   environment_variables?: string[];
-  routes?: string[];
-  migrations?: string[];
-  models?: string[];
+  routes?: RouteContext[];
+  migrations?: MigrationContext[];
+  models?: ModelContext[];
   excerpt?: string;
 }
 
@@ -123,13 +143,13 @@ function formatSourceCards(cards: SourceCardContext[]): string {
         parts.push(`  env vars: ${card.environment_variables.join(', ')}`);
       }
       if (card.routes?.length) {
-        parts.push(`  routes: ${card.routes.slice(0, 5).join('; ')}`);
+        parts.push(`  routes: ${card.routes.slice(0, 5).map(formatRoute).join('; ')}`);
       }
       if (card.models?.length) {
-        parts.push(`  models: ${card.models.slice(0, 5).join('; ')}`);
+        parts.push(`  models: ${card.models.slice(0, 5).map(formatModel).join('; ')}`);
       }
       if (card.migrations?.length) {
-        parts.push(`  migrations: ${card.migrations.slice(0, 5).join('; ')}`);
+        parts.push(`  migrations: ${card.migrations.slice(0, 5).map(formatMigration).join('; ')}`);
       }
       if (card.excerpt) {
         parts.push(`  excerpt: ${card.excerpt}`);
@@ -137,6 +157,24 @@ function formatSourceCards(cards: SourceCardContext[]): string {
       return parts.join('\n');
     })
     .join('\n');
+}
+
+function formatRoute(route: RouteContext): string {
+  const methodPrefix = route.methods?.length ? `${route.methods.join('|')} ` : '';
+  const pathPart = route.path || '(unknown path)';
+  const details = [route.framework, route.kind, route.handler ? `handler=${route.handler}` : ''].filter(Boolean).join(', ');
+  return details ? `${methodPrefix}${pathPart} (${details})` : `${methodPrefix}${pathPart}`;
+}
+
+function formatModel(model: ModelContext): string {
+  const name = model.name || '(unknown model)';
+  const details = [model.kind, model.framework].filter(Boolean).join(', ');
+  return details ? `${name} (${details})` : name;
+}
+
+function formatMigration(migration: MigrationContext): string {
+  const label = [migration.id, migration.name].filter(Boolean).join(' ') || '(unknown migration)';
+  return migration.kind ? `${label} (${migration.kind})` : label;
 }
 
 function formatDocCards(cards: DocCardContext[]): string {

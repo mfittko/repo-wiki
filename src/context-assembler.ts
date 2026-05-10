@@ -79,7 +79,7 @@ export function assemblePageContext({ manifest, plan, page, budget }: AssemblePa
       category: card.category,
       language: card.language,
       reasons: uniqueSorted(card.reasons || []),
-      symbols: boundedStrings(card.symbols || card.exported_symbols, SOURCE_EXCERPT_LIMITS.symbols),
+      symbols: boundedStrings(sourceSymbolNames(card), SOURCE_EXCERPT_LIMITS.symbols),
       imports: boundedStrings(card.imports, SOURCE_EXCERPT_LIMITS.imports),
       runtime_hints: uniqueSorted(card.runtime_hints || []),
       environment_variables: boundedStrings(card.environment_variables, SOURCE_EXCERPT_LIMITS.envVars),
@@ -324,6 +324,10 @@ function sortByPath(items: any[]) {
 
 function sourceSymbols(card: any) {
   return nonEmptyArray(card.exported_symbols) ? card.exported_symbols : (card.symbols || []);
+}
+
+function sourceSymbolNames(card: any) {
+  return sourceSymbols(card).map((symbol: any) => symbol?.name || symbol).filter(Boolean);
 }
 
 function nonEmptyArray(value: unknown): value is any[] {

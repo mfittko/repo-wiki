@@ -205,8 +205,7 @@ export async function compileWiki({
       skipped,
       skipped_by_state: skippedByState,
       commit: manifest.commit,
-      contexts: pageContexts.length,
-      ...(llmErrors.length > 0 ? { llm_errors: llmErrors } : {})
+      contexts: pageContexts.length
     }
   };
 }
