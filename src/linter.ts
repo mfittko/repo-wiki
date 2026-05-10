@@ -157,19 +157,47 @@ function parseFrontmatter(content: string) {
   }
 
   const result: Record<string, any> = {};
-  for (const line of normalized.slice(4, end).split('\n')) {
+  const lines = normalized.slice(4, end).split('\n');
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index];
     const separator = line.indexOf(':');
-    if (separator <= 0) continue;
+    if (separator <= 0) {
+      index++;
+      continue;
+    }
+
     const key = line.slice(0, separator).trim();
     const raw = line.slice(separator + 1).trim();
-    if (!key) continue;
-    try {
-      result[key] = JSON.parse(raw);
-    } catch {
-      result[key] = raw.replace(/^['"]|['"]$/g, '');
+    if (!key) {
+      index++;
+      continue;
     }
+
+    if (raw === '') {
+      const values: any[] = [];
+      index++;
+      while (index < lines.length && /^\s+-/.test(lines[index])) {
+        values.push(parseFrontmatterScalar(lines[index].replace(/^\s*-\s*/, '').trim()));
+        index++;
+      }
+      result[key] = values;
+      continue;
+    }
+
+    result[key] = parseFrontmatterScalar(raw);
+    index++;
   }
   return result;
+}
+
+function parseFrontmatterScalar(raw: string) {
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return raw.replace(/^['"]|['"]$/g, '');
+  }
 }
 
 function isGeneratedOrMixed(frontmatter: Record<string, any>) {
@@ -178,6 +206,23 @@ function isGeneratedOrMixed(frontmatter: Record<string, any>) {
 
 function hasNonEmptySourcePaths(frontmatter: Record<string, any>) {
   return Array.isArray(frontmatter.source_paths) && frontmatter.source_paths.some((entry) => typeof entry === 'string' && entry.trim().length > 0);
+}
+
+function hasAuthoritativeSourcePaths(frontmatter: Record<string, any>) {
+  return Array.isArray(frontmatter.source_paths) && frontmatter.source_paths.some((entry) => typeof entry === 'string' && entry.trim().length > 0 && !isDocumentationPath(entry));
+}
+
+function hasExplicitSecondaryDocumentationProvenance(content: string, frontmatter: Record<string, any>) {
+  if (!Array.isArray(frontmatter.source_paths) || !frontmatter.source_paths.some((entry) => typeof entry === 'string' && isDocumentationPath(entry))) {
+    return false;
+  }
+
+  return /(secondary evidence|secondary documentation|unvalidated documentation|documentation debt|documentation cards? listed below are secondary evidence|markdown documentation is ingested as secondary evidence)/i.test(stripFrontmatter(content));
+}
+
+function isDocumentationPath(entry: string) {
+  const normalized = entry.trim().replace(/\\/g, '/').toLowerCase();
+  return normalized.endsWith('.md') || normalized.startsWith('docs/') || normalized === 'readme.md' || normalized === 'changelog.md' || normalized.includes('/docs/');
 }
 
 function shouldCheckGeneratedProvenance(relativePath: string, frontmatter: Record<string, any>, content: string) {
@@ -222,7 +267,11 @@ function hasMaterialClaimLikeText(content: string) {
 }
 
 function hasProvenanceSignal(content: string, frontmatter: Record<string, any>) {
-  if (hasNonEmptySourcePaths(frontmatter)) {
+  if (hasAuthoritativeSourcePaths(frontmatter)) {
+    return true;
+  }
+
+  if (hasExplicitSecondaryDocumentationProvenance(content, frontmatter)) {
     return true;
   }
 
@@ -233,7 +282,7 @@ function hasProvenanceSignal(content: string, frontmatter: Record<string, any>) 
   if (/`[^`\n]*\/[^`\n]*\.[A-Za-z0-9]+`/.test(body)) {
     return true;
   }
-  if (/`[^`\n]+\.(?:ya?ml|json|toml|md)`/.test(body)) {
+  if (/`[^`\n]+\.(?:ya?ml|json|toml)`/.test(body)) {
     return true;
   }
   if (/(secondary evidence|secondary documentation|unvalidated documentation|documentation debt)/i.test(body) && /`[^`\n]+\.md`/.test(body)) {

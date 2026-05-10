@@ -167,6 +167,67 @@ test('lintWiki accepts generated module pages with source_paths provenance metad
   }
 });
 
+test('lintWiki accepts schema-valid YAML block-list source_paths provenance metadata', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Module-Core.md': generatedPage(
+      'Core',
+      'This module documents runtime behavior using scanner-derived source files.',
+      ['kind: "module"', 'source_paths:', '  - "src/core.ts"', '  - "test/core.test.ts"', 'confidence: "high"']
+    )
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    assert.equal(result.issues.find((issue) => issue.code === 'missing-source-provenance'), undefined);
+    assert.equal(result.issues.find((issue) => issue.code === 'missing-source-paths'), undefined);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintWiki applies provenance checks to generated mixed pages', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Module-Mixed.md': ['---', 'source_commit: "abc123"', 'page_state: "mixed"', 'kind: "module"', '---', '', '# Mixed', '', 'This mixed page claims runtime behavior without any source provenance.'].join('\n')
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const missingProvenance = result.issues.find((issue) => issue.code === 'missing-source-provenance' && issue.message.includes('Module-Mixed.md'));
+    assert.ok(missingProvenance);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintWiki does not treat documentation paths as authoritative provenance unless labeled secondary', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Module-Docs.md': generatedPage(
+      'Docs',
+      'This page claims current runtime behavior based only on documentation paths.',
+      ['kind: "module"', 'source_paths: ["docs/usage.md", "README.md"]']
+    ),
+    'Documentation-Debt-Report.md': generatedPage(
+      'Documentation Debt Report',
+      'Markdown documentation is ingested as secondary evidence. Review `docs/usage.md` before promoting documentation-derived claims.',
+      ['kind: "documentation_debt_report"', 'source_paths: ["docs/usage.md"]', 'claim_status: "review-needed"']
+    )
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const docsOnlyWarning = result.issues.find((issue) => issue.code === 'missing-source-provenance' && issue.message.includes('Module-Docs.md'));
+    const labeledDocsWarning = result.issues.find((issue) => issue.code === 'missing-source-provenance' && issue.message.includes('Documentation-Debt-Report.md'));
+
+    assert.ok(docsOnlyWarning);
+    assert.equal(labeledDocsWarning, undefined);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('lintWiki warns for generated module pages with material claims but missing provenance metadata', async () => {
   const { dir, wikiDir, scanDir } = await writeWikiFixture({
     ...requiredPages,

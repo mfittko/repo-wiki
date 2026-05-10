@@ -153,15 +153,27 @@ function renderLog(manifest, plan) {
 function renderAgentContextPack(manifest, plan) {
   const topModules = (plan.modules || []).slice(0, 10);
   const compiledAt = new Date().toISOString();
-  return `${frontmatter(manifest, { kind: 'agent_context_pack' })}# Agent Context Pack\n\nThis page is the compact entry point for coding agents and developers.\n\n## Repository snapshot\n\n- Source: \`${manifest.remote}\`\n- Commit: \`${manifest.commit}\`\n- Last compiled: \`${compiledAt}\`\n- Files scanned: ${manifest.files.length}\n\n## Read first\n\n1. ${wikiLink('Architecture.md')}\n2. ${wikiLink('Build-Test-and-Run.md')}\n3. ${wikiLink('Index.md')}\n4. Relevant module page from the routing table below\n\n## Task routing\n\n| Task | Read these pages first |\n|---|---|\n${topModules.map((module) => `| Work in ${module.name} | [${module.name}](${module.slug}), ${wikiLink('Testing-Strategy.md')}, ${wikiLink('Dependency-Map.md')} |`).join('\n') || '| General change | Architecture, Build Test and Run, Index |'}\n\n## Verification policy\n\nRun the repository's own test, lint, and type-check commands when available. If commands are not detected, inspect package manifests and CI workflows before changing behavior.\n\n## Confidence rule\n\nThe wiki is generated from source cards and documentation cards. Treat code, tests, CI, and config as authoritative when there is disagreement. Treat markdown documentation as useful but potentially stale unless marked validated.\n`;
+  return `${frontmatter(manifest, {
+    kind: 'agent_context_pack',
+    claim_status: 'grounded',
+    source_paths: collectPrimarySourcePaths(manifest).slice(0, 50)
+  })}# Agent Context Pack\n\nThis page is the compact entry point for coding agents and developers.\n\n## Repository snapshot\n\n- Source: \`${manifest.remote}\`\n- Commit: \`${manifest.commit}\`\n- Last compiled: \`${compiledAt}\`\n- Files scanned: ${manifest.files.length}\n\n## Read first\n\n1. ${wikiLink('Architecture.md')}\n2. ${wikiLink('Build-Test-and-Run.md')}\n3. ${wikiLink('Index.md')}\n4. Relevant module page from the routing table below\n\n## Task routing\n\n| Task | Read these pages first |\n|---|---|\n${topModules.map((module) => `| Work in ${module.name} | [${module.name}](${module.slug}), ${wikiLink('Testing-Strategy.md')}, ${wikiLink('Dependency-Map.md')} |`).join('\n') || '| General change | Architecture, Build Test and Run, Index |'}\n\n## Verification policy\n\nRun the repository's own test, lint, and type-check commands when available. If commands are not detected, inspect package manifests and CI workflows before changing behavior.\n\n## Confidence rule\n\nThe wiki is generated from source cards and documentation cards. Treat code, tests, CI, and config as authoritative when there is disagreement. Treat markdown documentation as useful but potentially stale unless marked validated.\n`;
 }
 
 function renderRepositoryOverview(manifest, plan) {
-  return `${frontmatter(manifest, { kind: 'repository_overview' })}# Repository Overview\n\n## Languages\n\n${tableFromObject(manifest.totals.languages, ['Language', 'Files'])}\n\n## File categories\n\n${tableFromObject(manifest.totals.categories, ['Category', 'Files'])}\n\n## Main knowledge units\n\n${(plan.modules || []).map((module) => `- [${module.name}](${module.slug}) - ${module.files.length} files`).join('\n')}\n`;
+  return `${frontmatter(manifest, {
+    kind: 'repository_overview',
+    claim_status: 'grounded',
+    source_paths: collectPrimarySourcePaths(manifest).slice(0, 50)
+  })}# Repository Overview\n\n## Languages\n\n${tableFromObject(manifest.totals.languages, ['Language', 'Files'])}\n\n## File categories\n\n${tableFromObject(manifest.totals.categories, ['Category', 'Files'])}\n\n## Main knowledge units\n\n${(plan.modules || []).map((module) => `- [${module.name}](${module.slug}) - ${module.files.length} files`).join('\n')}\n`;
 }
 
 function renderArchitecture(manifest, plan) {
-  return `${frontmatter(manifest, { kind: 'architecture' })}# Architecture\n\nThis page is a first-pass architecture summary based on repository structure. The production compiler should replace this with an LLM-reviewed synthesis that uses source cards and targeted code excerpts.\n\n## Structural map\n\n\`\`\`mermaid\nflowchart TD\n  Repo[Repository at ${shortCommit(manifest.commit)}]\n${(plan.modules || []).slice(0, 12).map((module, index) => `  Repo --> M${index}[${escapeMermaid(module.name)}]`).join('\n')}\n\`\`\`\n\n## Module groups\n\n${(plan.modules || []).map((module) => `### ${module.name}\n\n- Files: ${module.files.length}\n- Dominant categories: ${Object.keys(module.categories).join(', ') || 'unknown'}\n- Dominant languages: ${Object.keys(module.languages).join(', ') || 'unknown'}\n- Important reasons: ${module.important_reasons.join(', ') || 'none detected'}\n`).join('\n')}\n`;
+  return `${frontmatter(manifest, {
+    kind: 'architecture',
+    claim_status: 'grounded',
+    source_paths: collectPrimarySourcePaths(manifest).slice(0, 50)
+  })}# Architecture\n\nThis page is a first-pass architecture summary based on repository structure. The production compiler should replace this with an LLM-reviewed synthesis that uses source cards and targeted code excerpts.\n\n## Structural map\n\n\`\`\`mermaid\nflowchart TD\n  Repo[Repository at ${shortCommit(manifest.commit)}]\n${(plan.modules || []).slice(0, 12).map((module, index) => `  Repo --> M${index}[${escapeMermaid(module.name)}]`).join('\n')}\n\`\`\`\n\n## Module groups\n\n${(plan.modules || []).map((module) => `### ${module.name}\n\n- Files: ${module.files.length}\n- Dominant categories: ${Object.keys(module.categories).join(', ') || 'unknown'}\n- Dominant languages: ${Object.keys(module.languages).join(', ') || 'unknown'}\n- Important reasons: ${module.important_reasons.join(', ') || 'none detected'}\n`).join('\n')}\n`;
 }
 
 function renderBuildTestAndRun(manifest) {
@@ -184,7 +196,11 @@ function renderBuildTestAndRun(manifest) {
       ? `## CI workflow commands\n\n- Commands detected: ${manifest.analysis.ci_workflow_commands.length}\n\n${manifest.analysis.ci_workflow_commands.map((command) => `- ${code(redactSensitiveText(command))}`).join('\n')}\n`
       : `## CI workflow commands\n\nNo workflow commands were extracted from CI analysis.\n`;
 
-  return `${frontmatter(manifest, { kind: 'build_test_run' })}# Build, Test, and Run\n\n## Detected package manifests\n\n${packageFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No package manifests detected.'}\n\n## Detected CI files\n\n${ciFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No CI files detected.'}\n\n${scriptsSection}\n${ciCommandsSection}\n## Manual verification guidance\n\nTreat extracted scripts as a starting point. Verify the canonical build, test, and run paths against CI workflows, container entrypoints, and deployment configs when they exist.\n`;
+  return `${frontmatter(manifest, {
+    kind: 'build_test_run',
+    claim_status: 'grounded',
+    source_paths: uniqueSorted([...packageFiles.map((file) => file.path), ...ciFiles.map((file) => file.path)]).slice(0, 50)
+  })}# Build, Test, and Run\n\n## Detected package manifests\n\n${packageFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No package manifests detected.'}\n\n## Detected CI files\n\n${ciFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No CI files detected.'}\n\n${scriptsSection}\n${ciCommandsSection}\n## Manual verification guidance\n\nTreat extracted scripts as a starting point. Verify the canonical build, test, and run paths against CI workflows, container entrypoints, and deployment configs when they exist.\n`;
 }
 
 function renderOpenQuestions(manifest, plan) {
@@ -390,7 +406,11 @@ function renderDependencyMap(manifest) {
     const rows = dependencyEdges.slice(0, 200).map((edge) => [sourcePathLink(manifest, edge.from), sourcePathLink(manifest, edge.to), code(edge.specifier)]);
     const summary = manifest.analysis?.dependency_graph?.summary || {};
 
-    return `${frontmatter(manifest, { kind: 'dependency_map' })}# Dependency Map\n\n## Resolved internal dependency edges\n\n- Edges detected: ${summary.edges ?? dependencyEdges.length}\n- Importing files: ${summary.importers ?? uniqueCount(dependencyEdges.map((edge) => edge.from))}\n- Imported files: ${summary.imported_files ?? uniqueCount(dependencyEdges.map((edge) => edge.to))}\n\n${markdownTable(['From', 'To', 'Specifier'], rows)}\n`;
+    return `${frontmatter(manifest, {
+      kind: 'dependency_map',
+      claim_status: 'grounded',
+      source_paths: uniqueSorted(dependencyEdges.flatMap((edge) => [edge.from, edge.to]).filter((value) => !String(value).startsWith('package:'))).slice(0, 50)
+    })}# Dependency Map\n\n## Resolved internal dependency edges\n\n- Edges detected: ${summary.edges ?? dependencyEdges.length}\n- Importing files: ${summary.importers ?? uniqueCount(dependencyEdges.map((edge) => edge.from))}\n- Imported files: ${summary.imported_files ?? uniqueCount(dependencyEdges.map((edge) => edge.to))}\n\n${markdownTable(['From', 'To', 'Specifier'], rows)}\n`;
   }
 
   const importRows = manifest.files
@@ -398,7 +418,11 @@ function renderDependencyMap(manifest) {
     .slice(0, 100)
     .map((file) => `| ${sourcePathLink(manifest, file.path)} | ${file.imports.map((imp) => `\`${imp}\``).join(', ')} |`);
 
-  return `${frontmatter(manifest, { kind: 'dependency_map' })}# Dependency Map\n\n| Source file | Imports |\n|---|---|\n${importRows.join('\n') || '| None detected | |'}\n`;
+  return `${frontmatter(manifest, {
+    kind: 'dependency_map',
+    claim_status: 'grounded',
+    source_paths: uniqueSorted(manifest.files.filter((file) => file.imports?.length).map((file) => file.path)).slice(0, 50)
+  })}# Dependency Map\n\n| Source file | Imports |\n|---|---|\n${importRows.join('\n') || '| None detected | |'}\n`;
 }
 
 function renderTestingStrategy(manifest) {
@@ -408,7 +432,11 @@ function renderTestingStrategy(manifest) {
     ? `## Test-to-source mappings\n\n- Mapped tests: ${manifest.analysis?.test_to_source?.summary?.mapped_tests ?? mappings.length}\n- Source files covered: ${manifest.analysis?.test_to_source?.summary?.source_files ?? uniqueCount(mappings.flatMap((mapping) => mapping.sources))}\n\n${markdownTable(['Test', 'Source files', 'Heuristics'], mappings.map((mapping) => [sourcePathLink(manifest, mapping.test), formatSourcePathList(manifest, mapping.sources), mapping.heuristics.join(', ') || 'unknown']))}\n`
     : `## Next refinement\n\nThe compiler will add direct test-to-source mappings when manifest analysis includes them.\n`;
 
-  return `${frontmatter(manifest, { kind: 'testing_strategy' })}# Testing Strategy\n\n## Detected test files\n\n${tests.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No tests detected by the sketch scanner.'}\n\n${mappingSection}`;
+  return `${frontmatter(manifest, {
+    kind: 'testing_strategy',
+    claim_status: 'grounded',
+    source_paths: uniqueSorted([...tests.map((file) => file.path), ...mappings.flatMap((mapping) => [mapping.test, ...mapping.sources])]).slice(0, 50)
+  })}# Testing Strategy\n\n## Detected test files\n\n${tests.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No tests detected by the sketch scanner.'}\n\n${mappingSection}`;
 }
 
 function renderConfiguration(manifest) {
@@ -419,17 +447,29 @@ function renderConfiguration(manifest) {
     ? `## Explicit environment variables\n\n- Unique variable names detected: ${envNames.length}\n- Variable names: ${formatCodeList(envNames)}\n\n${markdownTable(['Source file', 'Variables'], envRows.map((row) => [sourcePathLink(manifest, row.path), formatCodeList(row.variables)]))}\n`
     : `## Explicit environment variables\n\nNo explicit environment variable names were extracted from source cards.\n`;
 
-  return `${frontmatter(manifest, { kind: 'configuration' })}# Configuration and Environment\n\n## Detected configuration-related files\n\n${configFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No configuration surfaces detected by the sketch scanner.'}\n\n${envSection}\n## Secret handling\n\nGenerated wiki pages must describe variable names and configuration concepts, not copy secret values.\n`;
+  return `${frontmatter(manifest, {
+    kind: 'configuration',
+    claim_status: 'grounded',
+    source_paths: sourcePathsOrPrimary(manifest, uniqueSorted([...configFiles.map((file) => file.path), ...envRows.map((row) => row.path)])).slice(0, 50)
+  })}# Configuration and Environment\n\n## Detected configuration-related files\n\n${configFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No configuration surfaces detected by the sketch scanner.'}\n\n${envSection}\n## Secret handling\n\nGenerated wiki pages must describe variable names and configuration concepts, not copy secret values.\n`;
 }
 
 function renderSecurity(manifest) {
   const securityFiles = manifest.files.filter((file) => file.reasons?.some((reason) => ['auth', 'billing-or-payment', 'configuration'].includes(reason)));
-  return `${frontmatter(manifest, { kind: 'security' })}# Security and Secrets\n\n## Security-sensitive source areas\n\n${securityFiles.map((file) => `- ${sourcePathLink(manifest, file.path)} - ${file.reasons.join(', ')}`).join('\n') || '- No obvious security-sensitive areas detected by the sketch scanner.'}\n\n## Policy\n\n- Do not copy secrets or private tokens into wiki pages.\n- Cite source paths instead of embedding sensitive source content.\n- Require human review before publishing changes to authentication, authorization, billing, or deployment documentation.\n`;
+  return `${frontmatter(manifest, {
+    kind: 'security',
+    claim_status: 'grounded',
+    source_paths: sourcePathsOrPrimary(manifest, uniqueSorted(securityFiles.map((file) => file.path))).slice(0, 50)
+  })}# Security and Secrets\n\n## Security-sensitive source areas\n\n${securityFiles.map((file) => `- ${sourcePathLink(manifest, file.path)} - ${file.reasons.join(', ')}`).join('\n') || '- No obvious security-sensitive areas detected by the sketch scanner.'}\n\n## Policy\n\n- Do not copy secrets or private tokens into wiki pages.\n- Cite source paths instead of embedding sensitive source content.\n- Require human review before publishing changes to authentication, authorization, billing, or deployment documentation.\n`;
 }
 
 function renderRunbook(manifest) {
   const infra = manifest.files.filter((file) => file.category === 'infra' || file.runtime_hints?.includes('deployment'));
-  return `${frontmatter(manifest, { kind: 'runbook' })}# Operational Runbook\n\n## Deployment and operations files\n\n${infra.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No deployment or operations files detected by the sketch scanner.'}\n\n## Next refinement\n\nThe production compiler should extract deployment commands, rollback notes, service dependencies, queue names, cron jobs, and operational dashboards when those are represented in source.\n`;
+  return `${frontmatter(manifest, {
+    kind: 'runbook',
+    claim_status: 'grounded',
+    source_paths: sourcePathsOrPrimary(manifest, uniqueSorted(infra.map((file) => file.path))).slice(0, 50)
+  })}# Operational Runbook\n\n## Deployment and operations files\n\n${infra.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No deployment or operations files detected by the sketch scanner.'}\n\n## Next refinement\n\nThe production compiler should extract deployment commands, rollback notes, service dependencies, queue names, cron jobs, and operational dashboards when those are represented in source.\n`;
 }
 
 function renderHttpRoutes(manifest) {
@@ -439,12 +479,20 @@ function renderHttpRoutes(manifest) {
     ? `## Detected routes\n\n- Route surfaces detected: ${routes.length}\n\n${markdownTable(['Source file', 'Framework', 'Target', 'Methods', 'Path', 'Handler'], routes.map((route) => [sourcePathLink(manifest, route.file), route.framework, code(route.target), route.methods.join(', ') || 'ANY', code(route.path), code(route.handler)]))}\n`
     : `## Detected route-related files\n\n${routeFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No HTTP routes detected.'}\n`;
 
-  return `${frontmatter(manifest, { kind: 'api_http_routes' })}# API: HTTP Routes\n\n${routeSection}\n## Next refinement\n\nAdd framework-specific extractors for Express, Fastify, NestJS, Next.js route handlers, Hono, Koa, tRPC, OpenAPI, and GraphQL.\n`;
+  return `${frontmatter(manifest, {
+    kind: 'api_http_routes',
+    claim_status: 'grounded',
+    source_paths: uniqueSorted([...routeFiles.map((file) => file.path), ...routes.map((route) => route.file)]).slice(0, 50)
+  })}# API: HTTP Routes\n\n${routeSection}\n## Next refinement\n\nAdd framework-specific extractors for Express, Fastify, NestJS, Next.js route handlers, Hono, Koa, tRPC, OpenAPI, and GraphQL.\n`;
 }
 
 function renderDataModel(manifest) {
   const dataFiles = manifest.files.filter((file) => file.category === 'data' || file.reasons?.includes('data-model'));
-  return `${frontmatter(manifest, { kind: 'data_model' })}# Data Model and Migrations\n\n## Detected data-related files\n\n${dataFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No data files detected.'}\n`;
+  return `${frontmatter(manifest, {
+    kind: 'data_model',
+    claim_status: 'grounded',
+    source_paths: uniqueSorted(dataFiles.map((file) => file.path)).slice(0, 50)
+  })}# Data Model and Migrations\n\n## Detected data-related files\n\n${dataFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No data files detected.'}\n`;
 }
 
 function renderModulePage(manifest, module, sourceToTestsIndex: Map<string, Set<string>>) {
@@ -634,6 +682,16 @@ function findNamedSourceRange(
 
 function uniqueSorted(values: Array<string | number>) {
   return [...new Set(values || [])].sort((left, right) => String(left).localeCompare(String(right)));
+}
+
+function collectPrimarySourcePaths(manifest: any) {
+  return uniqueSorted((manifest.files || [])
+    .filter((file) => file?.path && file.category !== 'docs')
+    .map((file) => file.path));
+}
+
+function sourcePathsOrPrimary(manifest: any, paths: Array<string | number>) {
+  return paths.length > 0 ? paths : collectPrimarySourcePaths(manifest);
 }
 
 function uniqueCount(values: Array<string | number>) {

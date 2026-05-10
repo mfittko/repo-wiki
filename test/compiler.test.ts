@@ -148,14 +148,19 @@ test('compileWiki renders richer scanner analysis into wiki pages', async () => 
     const routesPage = await fs.readFile(path.join(wikiDir, 'API-HTTP-Routes.md'), 'utf8');
     const testingPage = await fs.readFile(path.join(wikiDir, 'Testing-Strategy.md'), 'utf8');
 
+    assert.match(buildPage, /source_paths: \["package\.json"\]/);
     assert.match(buildPage, /Package scripts/);
     assert.match(buildPage, /node --test/);
+    assert.match(dependencyPage, /source_paths: \["src\/index\.js","src\/utils\.js","test\/index\.test\.js"\]/);
     assert.match(dependencyPage, /Resolved internal dependency edges/);
     assert.match(dependencyPage, /src\/utils\.js/);
+    assert.match(configPage, /source_paths: \["src\/index\.js"\]/);
     assert.match(configPage, /APP_MODE/);
     assert.match(configPage, /PORT/);
+    assert.match(routesPage, /source_paths: \["src\/index\.js"\]/);
     assert.match(routesPage, /\/health/);
     assert.match(routesPage, /healthCheck/);
+    assert.match(testingPage, /source_paths: \["src\/index\.js","test\/index\.test\.js"\]/);
     assert.match(testingPage, /Test-to-source mappings/);
     assert.match(testingPage, /test\/index\.test\.js/);
     assert.match(testingPage, /src\/index\.js/);
