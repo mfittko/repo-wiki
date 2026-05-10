@@ -144,6 +144,11 @@ test('applyFrontmatterPolicy provenance renders a visible provenance block with 
   assert.equal(result.startsWith('---\n'), false);
   assert.match(result, /^> \*\*Generated from:\*\* `https:\/\/github\.com\/mfittko\/repo-wiki\.git`/);
   assert.match(result, /\*\*Source commit:\*\* \[`abc1234`\]\(https:\/\/github\.com\/mfittko\/repo-wiki\/tree\/abc1234def5678\)/);
+  assert.match(result, /\*\*Compiled at:\*\* `2026-05-10T00:00:00\.000Z`/);
+  assert.match(result, /\*\*Page kind:\*\* `module`/);
+  assert.match(result, /\*\*Page state:\*\* `generated`/);
+  assert.match(result, /\*\*Confidence:\*\* `medium`/);
+  assert.match(result, /\*\*Claim status:\*\* `source-grounded`/);
   assert.match(result, /\*\*Primary sources:\*\* \[src\/docs-validation\.ts\]\(https:\/\/github\.com\/mfittko\/repo-wiki\/blob\/abc1234def5678\/src\/docs-validation\.ts\)/);
   assert.match(result, /\n\n# Page\n\nBody\.$/);
 });
@@ -183,12 +188,28 @@ test('applyFrontmatterPolicy provenance truncates source paths after ten entries
   assert.doesNotMatch(result, /src\/file-11\.ts/);
 });
 
-test('applyFrontmatterPolicy provenance adds a secondary evidence note for documentation-derived pages', () => {
+test('applyFrontmatterPolicy provenance adds a secondary evidence note for docs-only source paths', () => {
   const input = [
     '---',
-    'claim_status: "documentation-derived"',
     'source_paths:',
     '  - "docs/guide.md"',
+    '  - "README.md"',
+    '---',
+    '# Page',
+    ''
+  ].join('\n');
+
+  const result = applyFrontmatterPolicy(input, 'provenance');
+
+  assert.match(result, /\*\*Evidence note:\*\* This page is derived from markdown documentation/);
+});
+
+test('applyFrontmatterPolicy provenance adds a secondary evidence note for review-oriented claim status without docs-only paths', () => {
+  const input = [
+    '---',
+    'claim_status: "review-needed"',
+    'source_paths:',
+    '  - "src/frontmatter.ts"',
     '---',
     '# Page',
     ''
@@ -219,8 +240,25 @@ test('applyFrontmatterPolicy provenance omits secret-like metadata values', () =
   assert.doesNotMatch(result, /docs\/token=supersecret12345\.md/);
 });
 
+test('applyFrontmatterPolicy provenance escapes markdown-special characters in linked source path labels', () => {
+  const input = [
+    '---',
+    'source_repo: "https://github.com/mfittko/repo-wiki.git"',
+    'source_commit: "abc1234def5678"',
+    'source_paths:',
+    '  - "src/weird[part](draft).ts"',
+    '---',
+    '# Page',
+    ''
+  ].join('\n');
+
+  const result = applyFrontmatterPolicy(input, 'provenance');
+
+  assert.match(result, /\*\*Primary sources:\*\* \[src\/weird\\\[part\\\]\\\(draft\\\)\.ts\]\(https:\/\/github\.com\/mfittko\/repo-wiki\/blob\/abc1234def5678\/src\/weird%5Bpart%5D%28draft%29\.ts\)/);
+});
+
 test('applyFrontmatterPolicy provenance leaves invalid leading frontmatter unchanged', () => {
-  const input = '---\nsource_repo: "https://github.com/mfittko/repo-wiki.git\n---\n# Page\n';
+  const input = '---\nsource_paths: ["src/frontmatter.ts",\n---\n# Page\n';
   const result = applyFrontmatterPolicy(input, 'provenance');
   assert.equal(result, input);
 });

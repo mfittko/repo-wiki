@@ -191,6 +191,29 @@ test('CLI publish accepts provenance frontmatter policy for github-pages', async
   }
 });
 
+test('CLI publish accepts --frontmatter as an alias for --frontmatter-policy', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-cli-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  try {
+    await mkdir(wikiDir, { recursive: true });
+    await writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+
+    const { stdout } = await captureCli([
+      'publish',
+      '--wiki', wikiDir,
+      '--frontmatter', 'strip',
+      '--dry-run'
+    ], tempDir);
+    const summary = JSON.parse(stdout);
+
+    assert.equal(summary.target, 'github-wiki');
+    assert.equal(summary.frontmatterPolicy, 'strip');
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('CLI compile --repo loads that repository .env for LLM mode', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-cli-test-'));
   const repoDir = path.join(tempDir, 'repo');

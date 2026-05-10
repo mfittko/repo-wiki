@@ -93,9 +93,10 @@ export function stripFrontmatter(content: string): string {
  * Apply a frontmatter policy to page content.
  *
  * Policies:
- *   - `strip`        – Remove the frontmatter block entirely (default for GitHub Wiki).
+ *   - `strip`        – Remove the frontmatter block entirely.
  *   - `html-comment` – Same as `strip` for now; reserved for future wrapping in HTML comments.
  *   - `preserve`     – Return the content unchanged.
+ *   - `provenance`   – Replace leading frontmatter with a visible provenance block.
  */
 export function applyFrontmatterPolicy(content: string, policy: FrontmatterPolicy): string {
   switch (policy) {
@@ -408,8 +409,8 @@ function formatSourcePath(sourcePath: string, githubRepoBase: string | null, sou
   if (!githubRepoBase || !sourceCommit) {
     return asCodeSpan(sourcePath);
   }
-  const encodedPath = sourcePath.split('/').map((segment) => encodeURIComponent(segment)).join('/');
-  return `[${sourcePath}](${githubRepoBase}/blob/${encodeURIComponent(sourceCommit)}/${encodedPath})`;
+  const encodedPath = sourcePath.split('/').map((segment) => encodeGitHubPathSegment(segment)).join('/');
+  return `[${escapeMarkdownLinkLabel(sourcePath)}](${githubRepoBase}/blob/${encodeURIComponent(sourceCommit)}/${encodedPath})`;
 }
 
 function shouldAddSecondaryEvidenceNote(sourcePaths: string[], claimStatus: string | undefined): boolean {
@@ -430,4 +431,12 @@ function asCodeSpan(value: string): string {
   const needsPadding = value.startsWith('`') || value.endsWith('`') || /^\s|\s$/.test(value);
   const body = needsPadding ? ` ${value} ` : value;
   return `${fence}${body}${fence}`;
+}
+
+function escapeMarkdownLinkLabel(value: string): string {
+  return value.replace(/\\/g, '\\\\').replace(/([\[\]()])/g, '\\$1');
+}
+
+function encodeGitHubPathSegment(segment: string): string {
+  return encodeURIComponent(segment).replace(/[!'()*]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`);
 }

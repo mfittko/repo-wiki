@@ -163,6 +163,11 @@ test('publishWiki renders a provenance block for github-wiki by default', async 
     const published = await fs.readFile(path.join(checkoutDir, 'Home.md'), 'utf8');
     assert.match(published, /\*\*Generated from:\*\* `https:\/\/github\.com\/mfittko\/repo-wiki\.git`/);
     assert.match(published, /\*\*Source commit:\*\* \[`abc1234`\]\(https:\/\/github\.com\/mfittko\/repo-wiki\/tree\/abc1234def5678\)/);
+    assert.match(published, /\*\*Compiled at:\*\* `2026-05-10T00:00:00\.000Z`/);
+    assert.match(published, /\*\*Page kind:\*\* `home`/);
+    assert.match(published, /\*\*Page state:\*\* `generated`/);
+    assert.match(published, /\*\*Confidence:\*\* `medium`/);
+    assert.match(published, /\*\*Claim status:\*\* `source-grounded`/);
     assert.match(published, /\*\*Primary sources:\*\* \[src\/publisher\.ts\]\(https:\/\/github\.com\/mfittko\/repo-wiki\/blob\/abc1234def5678\/src\/publisher\.ts\)/);
     assert.equal((await fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8')).startsWith('---\n'), true);
   } finally {

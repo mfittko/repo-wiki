@@ -36,7 +36,8 @@ Options:
   --pages-path <path>
             Publish path for github-pages target (default: .).
   --frontmatter-policy <strip|html-comment|preserve|provenance>
-             Frontmatter handling when publishing to the selected target.
+  --frontmatter <strip|html-comment|preserve|provenance>
+            Frontmatter handling when publishing to the selected target.
             github-wiki defaults to provenance; github-pages defaults to preserve.
             html-comment is accepted for forward compatibility and currently behaves like strip.
 
@@ -66,14 +67,17 @@ function getPublishTargetOption(options: ParsedArgs, configuredTarget?: string):
 }
 
 function getFrontmatterPolicyOption(options: ParsedArgs, target: PublishTarget, configuredPolicy?: string): FrontmatterPolicy {
-  const value = getStringOption(options, 'frontmatter-policy') || configuredPolicy;
+  const explicitValue = getStringOption(options, 'frontmatter-policy') || getStringOption(options, 'frontmatter');
+  const value = explicitValue || configuredPolicy;
   const defaultPolicy = defaultFrontmatterPolicyForTarget(target);
   const policy = value === undefined ? defaultPolicy : isFrontmatterPolicy(value) ? parseFrontmatterPolicy(value) : defaultPolicy;
 
-  if (value !== undefined && !isFrontmatterPolicy(value)) {
-    console.error(`Warning: unknown --frontmatter-policy "${value}"; falling back to "${defaultPolicy}".`);
+  if (explicitValue !== undefined && !isFrontmatterPolicy(explicitValue)) {
+    const optionName = getStringOption(options, 'frontmatter-policy') !== undefined ? '--frontmatter-policy' : '--frontmatter';
+    console.error(`Warning: unknown ${optionName} "${explicitValue}"; falling back to "${defaultPolicy}".`);
   } else if (policy === 'html-comment') {
-    console.error('Warning: --frontmatter-policy html-comment is reserved for future metadata comments and currently behaves like strip.');
+    const optionName = getStringOption(options, 'frontmatter-policy') !== undefined ? '--frontmatter-policy' : getStringOption(options, 'frontmatter') !== undefined ? '--frontmatter' : '--frontmatter-policy';
+    console.error(`Warning: ${optionName} html-comment is reserved for future metadata comments and currently behaves like strip.`);
   }
 
   return policy;
