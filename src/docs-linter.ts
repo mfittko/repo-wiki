@@ -76,7 +76,7 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
         strictness,
         'standard',
         'unvalidated-route-claim',
-        `${doc.path}:${result.claim.line} ${result.reason}`
+        `${formatRouteClaimLocation(doc.path, result)} ${result.reason}`
       ));
     }
 
@@ -134,6 +134,14 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
       issues
     }
   };
+}
+
+function formatRouteClaimLocation(docPath: string, result: any) {
+  const locations = Array.isArray(result.locations) ? result.locations.filter((line) => Number(line) > 0) : [];
+  if (locations.length > 0) {
+    return `${docPath}:${locations.join(',')}`;
+  }
+  return `${docPath}:${result.claim.line}`;
 }
 
 function issue(

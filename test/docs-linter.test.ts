@@ -620,7 +620,7 @@ test('lintDocs validates route claims with clear reasons and suppresses duplicat
                 { line: 3, text: 'Use GET /health API endpoint.', path: '/health', method: 'GET' },
                 { line: 4, text: 'Use POST /health API endpoint.', path: '/health', method: 'POST' },
                 { line: 6, text: 'Use POST /health API endpoint.', path: '/health', method: 'POST' },
-                { line: 5, text: 'Use GET /missing API endpoint.', path: '/missing', method: 'GET' }
+                { line: 5, text: 'Use GET /missing?debug=true. API endpoint.', path: '/missing?debug=true.', method: 'GET' }
               ]
             },
             file_paths: [],
@@ -633,8 +633,8 @@ test('lintDocs validates route claims with clear reasons and suppresses duplicat
     const lint = await lintDocs({ scanDir, repoPath: dir });
     const routeIssues = lint.issues.filter((item) => item.code === 'unvalidated-route-claim');
     assert.equal(routeIssues.length, 2);
-    assert.ok(routeIssues.some((issue) => issue.message.includes('method POST for /health did not match')));
-    assert.ok(routeIssues.some((issue) => issue.message.includes('did not match scanner route surfaces for path /missing')));
+    assert.ok(routeIssues.some((issue) => issue.message.includes('README.md:4,6 route claim method POST for /health did not match')));
+    assert.ok(routeIssues.some((issue) => issue.message.includes('did not match scanner route surfaces for path /missing (normalized from /missing?debug=true.)')));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

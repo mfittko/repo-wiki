@@ -84,9 +84,10 @@ export function validateRouteClaims(claims: any[], routeIndex: Map<string, Map<s
       return { claim, valid: false, reason: 'route claim could not be validated because no route path was detected.', evidence: [] };
     }
     const path = normalizeRoutePath(claim.path);
+    const reasonPath = formatRoutePathForReason(claim.path, path);
     const byMethod = routeIndex.get(path);
     if (!byMethod) {
-      return { claim, valid: false, reason: `route claim did not match scanner route surfaces for path ${claim.path}.`, evidence: [] };
+      return { claim, valid: false, reason: `route claim did not match scanner route surfaces for path ${reasonPath}.`, evidence: [] };
     }
 
     const claimMethod = String(claim.method || '').toUpperCase();
@@ -94,21 +95,21 @@ export function validateRouteClaims(claims: any[], routeIndex: Map<string, Map<s
       const evidence = flattenRouteEvidence(byMethod);
       return evidence.length > 0
         ? { claim, valid: true, reason: null, evidence }
-        : { claim, valid: false, reason: `route claim did not match scanner route surfaces for path ${claim.path}.`, evidence: [] };
+        : { claim, valid: false, reason: `route claim did not match scanner route surfaces for path ${reasonPath}.`, evidence: [] };
     }
 
     if (WILDCARD_ROUTE_METHODS.has(claimMethod)) {
       const evidence = flattenRouteEvidence(byMethod);
       return evidence.length > 0
         ? { claim: { ...claim, method: claimMethod }, valid: true, reason: null, evidence }
-        : { claim: { ...claim, method: claimMethod }, valid: false, reason: `route claim did not match scanner route surfaces for path ${claim.path}.`, evidence: [] };
+        : { claim: { ...claim, method: claimMethod }, valid: false, reason: `route claim did not match scanner route surfaces for path ${reasonPath}.`, evidence: [] };
     }
 
     const exact = byMethod.get(claimMethod) || [];
     const wildcard = WILDCARD_ROUTE_METHOD_LIST.flatMap((method) => byMethod.get(method) || []);
     const evidence = [...new Map([...exact, ...wildcard].map((item) => [routeEvidenceKey(item), item])).values()];
     if (evidence.length === 0) {
-      return { claim: { ...claim, method: claimMethod }, valid: false, reason: `route claim method ${claimMethod} for ${claim.path} did not match scanner route surfaces.`, evidence: [] };
+      return { claim: { ...claim, method: claimMethod }, valid: false, reason: `route claim method ${claimMethod} for ${reasonPath} did not match scanner route surfaces.`, evidence: [] };
     }
     return { claim: { ...claim, method: claimMethod }, valid: true, reason: null, evidence };
   });
@@ -152,6 +153,14 @@ export function dedupeRouteValidationFindings(findings: any[], docPath?: string)
     const rightLine = Number(right.locations?.[0] || right?.claim?.line || 0);
     return leftLine - rightLine;
   });
+}
+
+function formatRoutePathForReason(originalPath: string, normalizedPath: string) {
+  const original = String(originalPath || '');
+  if (!normalizedPath || original === normalizedPath) {
+    return normalizedPath || original;
+  }
+  return `${normalizedPath} (normalized from ${original})`;
 }
 
 function routeEvidenceKey(value: RouteEvidence) {
