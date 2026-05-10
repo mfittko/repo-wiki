@@ -252,7 +252,7 @@ function pushRouteMatches(routes: any[], seen: Set<string>, line: string, lineNu
       line: lineNumber,
       text: snippet,
       snippet,
-      path: normalizeRoutePath(match[2]),
+      path: normalizeRouteClaimPath(match[2]),
       method: match[1].toUpperCase()
     });
   }
@@ -260,7 +260,7 @@ function pushRouteMatches(routes: any[], seen: Set<string>, line: string, lineNu
   if (line.includes('|')) {
     const methods = [...line.matchAll(/\b(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|ALL)\b/gi)].map((match) => match[1].toUpperCase());
     ROUTE_TABLE_PATH_PATTERN.lastIndex = 0;
-    const paths = [...line.matchAll(ROUTE_TABLE_PATH_PATTERN)].map((match) => normalizeRoutePath(match[1]));
+    const paths = [...line.matchAll(ROUTE_TABLE_PATH_PATTERN)].map((match) => normalizeRouteClaimPath(match[1]));
     const pairCount = Math.min(methods.length, paths.length);
     for (let index = 0; index < pairCount; index += 1) {
       pushRoute(routes, seen, {
@@ -272,6 +272,20 @@ function pushRouteMatches(routes: any[], seen: Set<string>, line: string, lineNu
       });
     }
   }
+}
+
+function normalizeRouteClaimPath(routePath: string) {
+  const normalized = normalizeRoutePath(routePath);
+  if (!normalized) return '';
+  if (normalized !== '/') return normalized;
+
+  const cleaned = String(routePath || '')
+    .trim()
+    .replace(/^[`'"\[({<]+/, '')
+    .replace(/[`'"\]\)}>.,;:!?]+$/, '')
+    .trim()
+    .replace(/[?#].*$/, '');
+  return /^\/{2,}$/.test(cleaned) ? '' : normalized;
 }
 
 function pushRoute(routes: any[], seen: Set<string>, route: any) {

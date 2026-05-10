@@ -129,6 +129,20 @@ test('extractRouteClaims normalizes punctuation, query/fragment suffixes, and du
   ]);
 });
 
+test('extractRouteClaims rejects degenerate slash-only route claims', () => {
+  const claims = extractRouteClaims([
+    'Use GET /, GET //, POST ////, and GET /health.',
+    '| Method | Path |',
+    '| --- | --- |',
+    '| GET | // |'
+  ].join('\n'));
+
+  assert.deepEqual(claims, [
+    { line: 1, text: 'Use GET /, GET //, POST ////, and GET /health.', snippet: 'Use GET /, GET //, POST ////, and GET /health.', path: '/', method: 'GET' },
+    { line: 1, text: 'Use GET /, GET //, POST ////, and GET /health.', snippet: 'Use GET /, GET //, POST ////, and GET /health.', path: '/health', method: 'GET' }
+  ]);
+});
+
 test('normalizeRoutePath aligns scanner and documented route path variants', () => {
   assert.equal(normalizeRoutePath('`/api/users`.'), '/api/users');
   assert.equal(normalizeRoutePath('/api/users?active=true'), '/api/users');
