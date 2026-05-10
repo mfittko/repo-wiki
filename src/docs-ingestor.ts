@@ -306,7 +306,7 @@ function coalesceMultilineWorkflowCommands(lines: Array<{ line: string; lineNumb
     lastLineNumber = entry.lineNumber;
     const line = entry.line;
     const continues = hasLineContinuation(line);
-    const normalized = line.replace(/\\\s*$/, '').trim();
+    const normalized = (continues ? stripContinuationBackslash(line) : line).trim();
     if (!normalized) {
       if (!continues) {
         pending = '';
@@ -338,6 +338,10 @@ function coalesceMultilineWorkflowCommands(lines: Array<{ line: string; lineNumb
 
 function hasLineContinuation(line: string) {
   return ((/(\\+)\s*$/.exec(line)?.[1].length ?? 0) % 2) === 1;
+}
+
+function stripContinuationBackslash(line: string) {
+  return line.replace(/(\\+)\s*$/, (_, slashes: string) => `${slashes.slice(0, -1)}`);
 }
 
 function parseNpmRunScript(command: string): string | undefined {

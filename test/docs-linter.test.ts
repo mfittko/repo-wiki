@@ -246,6 +246,21 @@ jobs:
   ]);
 });
 
+test('extractCiCommandSources preserves literal trailing backslashes on non-continuation lines', () => {
+  const yaml = `
+jobs:
+  test:
+    steps:
+      - run: |-
+          printf path\\\\
+`;
+
+  const sources = extractCiCommandSources(yaml);
+  assert.deepEqual(sources, [
+    { command: 'printf path\\\\', line: 6 }
+  ]);
+});
+
 test('lintDocs reports missing-package-script for commands not in package.json', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-cmd-'));
   try {
