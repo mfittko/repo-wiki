@@ -278,6 +278,18 @@ Generate a complete module wiki page with the following constraints:
 - The first line must be exactly \`---\`.
 - The YAML frontmatter must include: source_repo, source_commit, compiled_at, kind: "module", page_state, source_paths, confidence, and claim_status.
 - source_paths must be a non-empty array drawn only from the Source files in this module and Source cards listed above.
+- Minimal frontmatter skeleton:
+  ---
+  source_repo: "<repository remote or unknown>"
+  source_commit: "<commit sha>"
+  compiled_at: "<ISO-8601 timestamp>"
+  kind: "module"
+  page_state: "generated"
+  source_paths:
+    - "<module source path>"
+  confidence: "medium"
+  claim_status: "source-grounded"
+  ---
 - Use conservative confidence and claim status metadata that matches the evidence provided.
 - Include the following sections:
   - Purpose (grounded in source cards, not speculation)

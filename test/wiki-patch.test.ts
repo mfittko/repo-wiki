@@ -495,6 +495,51 @@ test('synthesizeWikiPage succeeds on second attempt with maxRetries=1', async ()
   assert.equal(patch.frontmatter.kind, 'module');
 });
 
+test('synthesizeWikiPage appends corrective validation feedback on retry without mutating original request', async () => {
+  const seenPrompts: string[] = [];
+  const request = makeRequest({ userPrompt: 'Original module prompt.' });
+  const provider: LLMProvider = {
+    name: 'feedback-aware-mock',
+    async complete(nextRequest: LLMRequest): Promise<LLMResponse> {
+      seenPrompts.push(nextRequest.userPrompt);
+      if (nextRequest.userPrompt.includes('Previous response was rejected') && nextRequest.userPrompt.includes('missing-frontmatter')) {
+        return { content: validPatch(), provider: 'feedback-aware-mock' };
+      }
+      return { content: 'I can write that page.\n\n# Missing frontmatter', provider: 'feedback-aware-mock' };
+    },
+  };
+
+  const patch = await synthesizeWikiPage(provider, request, { maxRetries: 1 });
+
+  assert.equal(patch.frontmatter.kind, 'module');
+  assert.equal(request.userPrompt, 'Original module prompt.');
+  assert.equal(seenPrompts.length, 2);
+  assert.equal(seenPrompts[0], 'Original module prompt.');
+  assert.match(seenPrompts[1], /Previous response was rejected by repo-wiki structured patch validation/);
+  assert.match(seenPrompts[1], /error missing-frontmatter:/);
+  assert.match(seenPrompts[1], /Output only raw markdown/);
+  assert.match(seenPrompts[1], /first line must be exactly `---`/);
+  assert.match(seenPrompts[1], /Do not include any preamble, commentary, or fenced code block wrapper/);
+  assert.match(seenPrompts[1], /source_paths must be a non-empty array/);
+});
+
+test('synthesizeWikiPage throws after exhausting all corrective retries when output remains invalid', async () => {
+  let callCount = 0;
+  const provider: LLMProvider = {
+    name: 'always-invalid-feedback-mock',
+    async complete(_request: LLMRequest): Promise<LLMResponse> {
+      callCount++;
+      return { content: 'Prose without frontmatter despite feedback.', provider: 'always-invalid-feedback-mock' };
+    },
+  };
+
+  await assert.rejects(
+    () => synthesizeWikiPage(provider, makeRequest(), { maxRetries: 1 }),
+    (err) => err instanceof WikiPatchError && codes(err.issues).includes('missing-frontmatter'),
+  );
+  assert.equal(callCount, 2);
+});
+
 test('synthesizeWikiPage throws after exhausting all retries', async () => {
   const provider = fixedProvider('# No frontmatter ever');
 

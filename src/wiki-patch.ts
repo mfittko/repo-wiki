@@ -448,21 +448,50 @@ export async function synthesizeWikiPage(
 ): Promise<WikiPatch> {
   const maxRetries = normalizeMaxRetries(options.maxRetries);
   let lastError: WikiPatchError | undefined;
+  let nextRequest = request;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    const response = await provider.complete(request);
+    const response = await provider.complete(nextRequest);
 
     try {
       return parseWikiPatch(response.content, request.pageName);
     } catch (err) {
       if (!(err instanceof WikiPatchError)) throw err;
       lastError = err;
-      // Continue to next attempt (if any remain)
+      if (attempt < maxRetries) {
+        nextRequest = withValidationFeedback(request, err);
+      }
     }
   }
 
   // All attempts exhausted — re-throw the last validation error
   throw lastError!;
+}
+
+function withValidationFeedback(request: LLMRequest, error: WikiPatchError): LLMRequest {
+  return {
+    ...request,
+    userPrompt: `${request.userPrompt}\n\n${formatValidationFeedback(error)}`,
+  };
+}
+
+function formatValidationFeedback(error: WikiPatchError): string {
+  const issueLines = error.issues
+    .map((issue) => `- ${issue.level} ${issue.code}: ${issue.message}`)
+    .join('\n');
+
+  return [
+    'Previous response was rejected by repo-wiki structured patch validation.',
+    'Validation issues:',
+    issueLines || '- error unknown: Validation failed.',
+    '',
+    'Retry output contract:',
+    '- Output only raw markdown for the page.',
+    '- The first line must be exactly `---`.',
+    '- Do not include any preamble, commentary, or fenced code block wrapper.',
+    '- Include required YAML frontmatter: source_repo, source_commit, compiled_at, kind, page_state, and source_paths.',
+    '- source_paths must be a non-empty array of repository source paths grounded in the prompt context.',
+  ].join('\n');
 }
 
 function isNonEmptyString(value: unknown): value is string {
