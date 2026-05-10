@@ -220,7 +220,7 @@ test('applyFrontmatterPolicy provenance does not add a secondary evidence note f
   assert.doesNotMatch(result, /\*\*Evidence note:\*\*/);
 });
 
-test('applyFrontmatterPolicy provenance adds a secondary evidence note for review-oriented claim status', () => {
+test('applyFrontmatterPolicy provenance adds a review note for review-oriented claim status with code sources', () => {
   const input = [
     '---',
     'claim_status: "review-needed"',
@@ -233,7 +233,8 @@ test('applyFrontmatterPolicy provenance adds a secondary evidence note for revie
 
   const result = applyFrontmatterPolicy(input, 'provenance');
 
-  assert.match(result, /\*\*Evidence note:\*\* This page is derived from markdown documentation/);
+  assert.match(result, /\*\*Evidence note:\*\* This page has a review-oriented claim status/);
+  assert.doesNotMatch(result, /This page is derived from markdown documentation/);
 });
 
 test('applyFrontmatterPolicy provenance omits secret-like metadata values', () => {

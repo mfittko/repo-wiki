@@ -127,8 +127,12 @@ type SupportedFrontmatter = {
 };
 
 const MAX_VISIBLE_SOURCE_PATHS = 10;
-const SECONDARY_EVIDENCE_NOTE = [
+const DOCUMENTATION_EVIDENCE_NOTE = [
   'This page is derived from markdown documentation, which is secondary evidence.',
+  'Validate operational/current-behavior claims against source, tests, CI, config, or schemas.'
+].join(' ');
+const REVIEW_REQUIRED_EVIDENCE_NOTE = [
+  'This page has a review-oriented claim status and may contain unvalidated or secondary-evidence claims.',
   'Validate operational/current-behavior claims against source, tests, CI, config, or schemas.'
 ].join(' ');
 const REVIEW_ORIENTED_CLAIM_STATUS = /\b(?:review[-_ ]?needed|documentation[-_ ]?derived|docs[-_ ]?derived|documentation[-_ ]?review|docs[-_ ]?review)\b/i;
@@ -190,8 +194,9 @@ function buildProvenanceBlock(metadata: SupportedFrontmatter): string {
   if (sourcePaths.length > 0) {
     lines.push(`> **Primary sources:** ${formatSourcePaths(sourcePaths, githubRepoBase, sourceCommit)}`);
   }
-  if (shouldAddSecondaryEvidenceNote(sourcePaths, claimStatus)) {
-    lines.push(`> **Evidence note:** ${SECONDARY_EVIDENCE_NOTE}`);
+  const evidenceNote = getEvidenceNote(sourcePaths, claimStatus);
+  if (evidenceNote) {
+    lines.push(`> **Evidence note:** ${evidenceNote}`);
   }
 
   return lines.join('  \n');
@@ -413,11 +418,14 @@ function formatSourcePath(sourcePath: string, githubRepoBase: string | null, sou
   return `[${escapeMarkdownLinkLabel(sourcePath)}](${githubRepoBase}/blob/${encodeURIComponent(sourceCommit)}/${encodedPath})`;
 }
 
-function shouldAddSecondaryEvidenceNote(sourcePaths: string[], claimStatus: string | undefined): boolean {
-  if (claimStatus && REVIEW_ORIENTED_CLAIM_STATUS.test(claimStatus)) {
-    return true;
+function getEvidenceNote(sourcePaths: string[], claimStatus: string | undefined): string | null {
+  if (sourcePaths.length > 0 && sourcePaths.every((entry) => isDocumentationPath(entry))) {
+    return DOCUMENTATION_EVIDENCE_NOTE;
   }
-  return sourcePaths.length > 0 && sourcePaths.every((entry) => isDocumentationPath(entry));
+  if (claimStatus && REVIEW_ORIENTED_CLAIM_STATUS.test(claimStatus)) {
+    return REVIEW_REQUIRED_EVIDENCE_NOTE;
+  }
+  return null;
 }
 
 function isDocumentationPath(filePath: string): boolean {
