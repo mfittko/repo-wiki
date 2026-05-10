@@ -5,9 +5,9 @@ import path from 'node:path';
 import os from 'node:os';
 import { scanRepository } from '../src/scanner.js';
 import { lintDocs } from '../src/docs-linter.js';
-import { classifyDocumentedCommands, extractCiCommandSources, extractCiCommands, extractDocumentedFilePaths } from '../src/docs-ingestor.js';
+import { classifyDocumentedCommands, extractCiCommandSources, extractCiCommands, extractDocumentedFilePaths, extractRouteClaims } from '../src/docs-ingestor.js';
 import { compileWiki } from '../src/compiler.js';
-import { candidateRepoPaths } from '../src/docs-validation.js';
+import { candidateRepoPaths, normalizeRoutePath } from '../src/docs-validation.js';
 
 test('documentation ingestion produces documentation cards and lint issues', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-docs-'));
@@ -85,6 +85,70 @@ test('markdown links with parentheses are ingested without truncated fallback li
 
 test('candidateRepoPaths normalizes Windows separators before resolving relative paths', () => {
   assert.deepEqual(candidateRepoPaths('..\\README.md', 'docs/guides/intro.md'), ['../README.md', 'docs/README.md']);
+});
+
+test('extractRouteClaims captures prose, lists, tables, and fenced route mentions including ALL', () => {
+  const claims = extractRouteClaims([
+    '# Routes',
+    '',
+    'The API serves GET /health and POST /users endpoints.',
+    '- ALL /maintenance',
+    '| Method | Path |',
+    '| --- | --- |',
+    '| GET | /table-health |',
+    '```http',
+    'POST /from-fence',
+    '```'
+  ].join('\n'));
+
+  assert.deepEqual(claims, [
+    { line: 3, text: 'The API serves GET /health and POST /users endpoints.', snippet: 'The API serves GET /health and POST /users endpoints.', path: '/health', method: 'GET' },
+    { line: 3, text: 'The API serves GET /health and POST /users endpoints.', snippet: 'The API serves GET /health and POST /users endpoints.', path: '/users', method: 'POST' },
+    { line: 4, text: '- ALL /maintenance', snippet: '- ALL /maintenance', path: '/maintenance', method: 'ALL' },
+    { line: 7, text: '| GET | /table-health |', snippet: '| GET | /table-health |', path: '/table-health', method: 'GET' },
+    { line: 9, text: 'POST /from-fence', snippet: 'POST /from-fence', path: '/from-fence', method: 'POST' }
+  ]);
+});
+
+test('extractRouteClaims normalizes punctuation, query/fragment suffixes, and duplicate slashes', () => {
+  const claims = extractRouteClaims([
+    'Use GET /health.',
+    'Use GET /api/users?active=true',
+    'Use GET /api/users#list',
+    'Use GET /api//users',
+    'Use GET /api/users, POST /api/items.'
+  ].join('\n'));
+
+  assert.deepEqual(claims, [
+    { line: 1, text: 'Use GET /health.', snippet: 'Use GET /health.', path: '/health', method: 'GET' },
+    { line: 2, text: 'Use GET /api/users?active=true', snippet: 'Use GET /api/users?active=true', path: '/api/users', method: 'GET' },
+    { line: 3, text: 'Use GET /api/users#list', snippet: 'Use GET /api/users#list', path: '/api/users', method: 'GET' },
+    { line: 4, text: 'Use GET /api//users', snippet: 'Use GET /api//users', path: '/api/users', method: 'GET' },
+    { line: 5, text: 'Use GET /api/users, POST /api/items.', snippet: 'Use GET /api/users, POST /api/items.', path: '/api/users', method: 'GET' },
+    { line: 5, text: 'Use GET /api/users, POST /api/items.', snippet: 'Use GET /api/users, POST /api/items.', path: '/api/items', method: 'POST' }
+  ]);
+});
+
+test('extractRouteClaims rejects degenerate slash-only route claims', () => {
+  const claims = extractRouteClaims([
+    'Use GET /, GET //, POST ////, and GET /health.',
+    '| Method | Path |',
+    '| --- | --- |',
+    '| GET | // |'
+  ].join('\n'));
+
+  assert.deepEqual(claims, [
+    { line: 1, text: 'Use GET /, GET //, POST ////, and GET /health.', snippet: 'Use GET /, GET //, POST ////, and GET /health.', path: '/', method: 'GET' },
+    { line: 1, text: 'Use GET /, GET //, POST ////, and GET /health.', snippet: 'Use GET /, GET //, POST ////, and GET /health.', path: '/health', method: 'GET' }
+  ]);
+});
+
+test('normalizeRoutePath aligns scanner and documented route path variants', () => {
+  assert.equal(normalizeRoutePath('`/api/users`.'), '/api/users');
+  assert.equal(normalizeRoutePath('/api/users?active=true'), '/api/users');
+  assert.equal(normalizeRoutePath('/api/users#list'), '/api/users');
+  assert.equal(normalizeRoutePath('/api//users'), '/api/users');
+  assert.equal(normalizeRoutePath('/api/users/'), '/api/users');
 });
 
 test('classifyDocumentedCommands validates known package scripts, flags missing scripts, and marks unknowns', () => {
@@ -427,7 +491,7 @@ test('lintDocs only treats config strings as env vars under env-specific keys', 
   }
 });
 
-test('Documentation Debt Report includes file path and environment variable validation', async () => {
+test('Documentation Debt Report includes route source evidence and deduplicated route findings', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-debt-path-env-'));
   try {
     await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
@@ -440,8 +504,8 @@ test('Documentation Debt Report includes file path and environment variable vali
         stale_after_days: 9999
       }
     }), 'utf8');
-    await writeFile(path.join(dir, 'src', 'app.js'), 'export const mode = process.env.APP_MODE;\n', 'utf8');
-    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee `src/app.js` and `docs/missing.md`. Configure APP_MODE and MISSING_TOKEN.\n', 'utf8');
+    await writeFile(path.join(dir, 'src', 'app.js'), "const app = express();\napp.get('/health', handler);\nexport const mode = process.env.APP_MODE;\n", 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\nSee `src/app.js` and `docs/missing.md`. Configure APP_MODE and MISSING_TOKEN.\nUse GET /health API endpoint.\nUse GET /health API endpoint.\nUse POST /missing API endpoint.\n', 'utf8');
 
     const scanDir = path.join(dir, '.llmwiki', 'run');
     await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
@@ -457,6 +521,176 @@ test('Documentation Debt Report includes file path and environment variable vali
     assert.match(report, /## Environment variable validation/);
     assert.match(report, /\| `README\.md` \| `APP_MODE` \| ✅ validated \|/);
     assert.match(report, /\| `README\.md` \| `MISSING_TOKEN` \| ❓ unvalidated \|/);
+    assert.match(report, /## Route\/API claim validation/);
+    assert.match(report, /\| `README\.md:4, README\.md:5` \| `GET \/health` \| ✅ validated \| .*`src\/app\.js`.*express GET `\/health`/);
+    assert.match(report, /\| `README\.md:6` \| `POST \/missing` \| ❓ unvalidated \| route claim did not match scanner route surfaces for path \/missing\./);
+    assert.match(report, /## Findings by category/);
+    assert.match(report, /### Stale/);
+    assert.match(report, /### Contradicted/);
+    assert.match(report, /### Unvalidated/);
+    assert.match(report, /### Broken-reference/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintDocs applies documentation validation strictness levels predictably', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-doc-strictness-'));
+  const scanDir = path.join(dir, '.llmwiki', 'run');
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await writeFile(path.join(dir, 'README.md'), '# Existing\n', 'utf8');
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      files: [],
+      documentation: {
+        files: [
+          {
+            path: 'docs/problem.md',
+            stale: true,
+            age_days: 365,
+            status: 'unvalidated',
+            claims: [{ line: 3, text: 'Use GET /missing API endpoint.' }],
+            validation: {
+              contradictions: [{ text: 'deprecated' }],
+              commands: [],
+              env_vars: [],
+              route_claims: [{ line: 3, text: 'Use GET /missing API endpoint.', path: '/missing', method: 'GET' }]
+            },
+            file_paths: [],
+            links: ['missing.md']
+          }
+        ]
+      }
+    }), 'utf8');
+
+    // Baseline findings in this fixture:
+    // stale-documentation, contradicted-documentation, unvalidated-documentation-claims,
+    // unvalidated-route-claim, and broken-documentation-link.
+    for (const [strictness, expected] of [
+      ['standard', { errors: 1, warnings: 4 }],
+      ['lenient', { errors: 0, warnings: 5 }],
+      ['strict', { errors: 5, warnings: 0 }],
+      ['off', { errors: 0, warnings: 0 }]
+    ] as const) {
+      await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+        documentation: {
+          validation_strictness: strictness
+        }
+      }), 'utf8');
+      const lint = await lintDocs({ scanDir, repoPath: dir });
+      assert.equal(lint.summary.strictness, strictness);
+      assert.equal(lint.summary.errors, expected.errors);
+      assert.equal(lint.summary.warnings, expected.warnings);
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintDocs validates route claims with clear reasons and suppresses duplicate route issues', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-route-claims-'));
+  const scanDir = path.join(dir, '.llmwiki', 'run');
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      files: [
+        {
+          path: 'src/server.ts',
+          route_surfaces: [
+            { path: '/health', methods: ['GET'] }
+          ],
+          environment_variables: []
+        }
+      ],
+      documentation: {
+        files: [
+          {
+            path: 'README.md',
+            stale: false,
+            age_days: 1,
+            status: 'partially_validated',
+            claims: [{ line: 3, text: 'Use GET /health API endpoint.' }],
+            validation: {
+              contradictions: [],
+              commands: [],
+              env_vars: [],
+              route_claims: [
+                { line: 3, text: 'Use GET /health API endpoint.', path: '/health', method: 'GET' },
+                { line: 4, text: 'Use POST /health API endpoint.', path: '/health', method: 'POST' },
+                { line: 6, text: 'Use POST /health API endpoint.', path: '/health', method: 'POST' },
+                { line: 5, text: 'Use GET /missing?debug=true. API endpoint.', path: '/missing?debug=true.', method: 'GET' }
+              ]
+            },
+            file_paths: [],
+            links: []
+          }
+        ]
+      }
+    }), 'utf8');
+
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    const routeIssues = lint.issues.filter((item) => item.code === 'unvalidated-route-claim');
+    assert.equal(routeIssues.length, 2);
+    assert.ok(routeIssues.some((issue) => issue.message.includes('README.md:4,6 route claim method POST for /health did not match')));
+    assert.ok(routeIssues.some((issue) => issue.message.includes('did not match scanner route surfaces for path /missing (normalized from /missing?debug=true.)')));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintDocs treats ANY/ALL/USE route methods as wildcard matches', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-route-wildcards-'));
+  const scanDir = path.join(dir, '.llmwiki', 'run');
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      files: [
+        {
+          path: 'src/server.ts',
+          route_surfaces: [
+            { path: '/health', methods: ['ALL'] },
+            { path: '/middleware', methods: ['USE'] },
+            { path: '/mixed', methods: ['GET', 'POST'] }
+          ],
+          environment_variables: []
+        }
+      ],
+      documentation: {
+        files: [
+          {
+            path: 'README.md',
+            stale: false,
+            age_days: 1,
+            status: 'partially_validated',
+            claims: [],
+            validation: {
+              contradictions: [],
+              commands: [],
+              env_vars: [],
+              route_claims: [
+                { line: 3, text: 'Use GET /health API endpoint.', path: '/health', method: 'GET' },
+                { line: 4, text: 'Use POST /middleware API endpoint.', path: '/middleware', method: 'POST' },
+                { line: 5, text: 'Use ALL /mixed API endpoint.', path: '/mixed', method: 'ALL' },
+                { line: 6, text: 'Use GET /missing API endpoint.', path: '/missing', method: 'GET' }
+              ]
+            },
+            file_paths: [],
+            links: []
+          }
+        ]
+      }
+    }), 'utf8');
+
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    const routeIssues = lint.issues.filter((item) => item.code === 'unvalidated-route-claim');
+    assert.equal(routeIssues.length, 1);
+    assert.ok(routeIssues[0].message.includes('did not match scanner route surfaces for path /missing'));
+    assert.ok(!routeIssues.some((item) => item.message.includes('/health')));
+    assert.ok(!routeIssues.some((item) => item.message.includes('/middleware')));
+    assert.ok(!routeIssues.some((item) => item.message.includes('/mixed')));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

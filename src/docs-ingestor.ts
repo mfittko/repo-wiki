@@ -1,8 +1,12 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { cleanDocumentedPathTarget, hasParentDirectorySegment, isGeneratedOutputReference } from './docs-validation.js';
+import { cleanDocumentedPathTarget, hasParentDirectorySegment, isGeneratedOutputReference, normalizeRoutePath } from './docs-validation.js';
 
 const DOC_EXTENSIONS = ['.md', '.mdx', '.markdown'];
+const ROUTE_PATH_PART_PATTERN = "[A-Za-z0-9._~:@!$&'()*+,;=%\\-[\\]{}]+";
+const ROUTE_PATH_PATTERN = `(?:\\/(?:${ROUTE_PATH_PART_PATTERN}(?:\\/+${ROUTE_PATH_PART_PATTERN})*)?\\/?)`;
+const ROUTE_CLAIM_PATTERN = new RegExp(`\\b(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|ALL)\\b\\s+(${ROUTE_PATH_PATTERN})`, 'gi');
+const ROUTE_TABLE_PATH_PATTERN = new RegExp(`(?:^|[\\s|\`(])(${ROUTE_PATH_PATTERN})(?=$|[\\s|\`),.;:!?])`, 'g');
 
 // Npm lifecycle commands that map directly to package.json scripts
 const NPM_LIFECYCLE_SCRIPTS = new Set(['test', 'start', 'stop', 'restart']);
@@ -200,6 +204,7 @@ export function validateDocClaims({ claims, content, filePath }) {
   const contradictions = [];
   const commands = [];
   const envVars = [];
+  const routeClaims = extractRouteClaims(content);
 
   for (const block of extractCodeBlocks(content)) {
     if (/^(bash|sh|shell|zsh|console)?$/i.test(block.language || '')) {
@@ -227,17 +232,89 @@ export function validateDocClaims({ claims, content, filePath }) {
   return {
     validated,
     contradictions,
+    route_claims: routeClaims,
     commands: [...new Set(commands)].slice(0, 50),
     env_vars: [...new Set(envVars)].slice(0, 50),
     summary: {
       claims: claims.length,
       needs_code_validation: validated.length,
       contradictions: contradictions.length,
+      route_claims: routeClaims.length,
       commands: commands.length,
       env_vars: envVars.length,
       file: filePath
     }
   };
+}
+
+export function extractRouteClaims(content: string) {
+  const routes = [];
+  const seen = new Set<string>();
+  const lines = String(content || '').split('\n');
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const snippet = line.trim();
+    if (!snippet || /^[-|\s:]+$/.test(snippet)) continue;
+    pushRouteMatches(routes, seen, line, index + 1);
+  }
+
+  return routes.slice(0, 100);
+}
+
+function pushRouteMatches(routes: any[], seen: Set<string>, line: string, lineNumber: number) {
+  const snippet = line.trim().slice(0, 280);
+  if (!snippet) return;
+
+  ROUTE_CLAIM_PATTERN.lastIndex = 0;
+  for (const match of line.matchAll(ROUTE_CLAIM_PATTERN)) {
+    pushRoute(routes, seen, {
+      line: lineNumber,
+      text: snippet,
+      snippet,
+      path: normalizeRouteClaimPath(match[2]),
+      method: match[1].toUpperCase()
+    });
+  }
+
+  if (line.includes('|')) {
+    const methods = [...line.matchAll(/\b(GET|POST|PUT|PATCH|DELETE|OPTIONS|HEAD|ALL)\b/gi)].map((match) => match[1].toUpperCase());
+    ROUTE_TABLE_PATH_PATTERN.lastIndex = 0;
+    const paths = [...line.matchAll(ROUTE_TABLE_PATH_PATTERN)].map((match) => normalizeRouteClaimPath(match[1]));
+    const pairCount = Math.min(methods.length, paths.length);
+    for (let index = 0; index < pairCount; index += 1) {
+      pushRoute(routes, seen, {
+        line: lineNumber,
+        text: snippet,
+        snippet,
+        path: paths[index],
+        method: methods[index]
+      });
+    }
+  }
+}
+
+function normalizeRouteClaimPath(routePath: string) {
+  const normalized = normalizeRoutePath(routePath);
+  if (!normalized) return '';
+  if (normalized !== '/') return normalized;
+
+  const cleaned = String(routePath || '')
+    .trim()
+    .replace(/^[`'"\[({<]+/, '')
+    .replace(/[`'"\]\)}>.,;:!?]+$/, '')
+    .trim()
+    .replace(/[?#].*$/, '');
+  return /^\/{2,}$/.test(cleaned) ? '' : normalized;
+}
+
+function pushRoute(routes: any[], seen: Set<string>, route: any) {
+  if (!route.path || !route.method) return;
+  const key = `${route.line}\u0000${route.method}\u0000${route.path}`;
+  if (!seen.has(key)) {
+    seen.add(key);
+    routes.push(route);
+  }
 }
 
 function isEnvironmentVariableMention(value: string) {

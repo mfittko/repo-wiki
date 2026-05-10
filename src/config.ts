@@ -15,6 +15,7 @@ export const DEFAULT_CONFIG = {
     require_code_validation: true,
     allow_unvalidated_context: true,
     preserve_original_claims: false,
+    validation_strictness: 'standard',
     fail_on_stale_docs: false,
     fail_on_conflicting_docs: true
   },
@@ -54,6 +55,7 @@ export const DEFAULT_CONFIG = {
     stale_docs: 'warning',
     contradicted_docs: 'error',
     unvalidated_doc_claims: 'warning',
+    unvalidated_route_claims: 'warning',
     broken_file_references: 'warning',
     unvalidated_env_vars: 'warning'
   }

@@ -61,6 +61,7 @@ Configuration:
     "include": ["README.md", "docs/**/*.md", "ADR/**/*.md", ".github/**/*.md"],
     "exclude": ["CHANGELOG.md", "docs/archive/**", "docs/old/**"],
     "stale_after_days": 180,
+    "validation_strictness": "standard",
     "require_code_validation": true,
     "allow_unvalidated_context": true,
     "preserve_original_claims": false,
@@ -70,7 +71,7 @@ Configuration:
 }
 ```
 
-Generated wikis include `Documentation-Debt-Report.md`, which summarizes stale docs, unvalidated claims, commands mentioned in markdown, environment variables mentioned in markdown, and contradiction-review candidates.
+Generated wikis include `Documentation-Debt-Report.md`, which summarizes stale docs, contradicted docs, unvalidated claims (including route/API claims), and broken references with deterministic validation tables.
 
 ## Publish to GitHub Wiki
 
