@@ -108,13 +108,13 @@ Configuration example:
     },
     "wiki": {
       "branch": "master",
-      "frontmatter": "strip"
+      "frontmatter": "provenance"
     }
   }
 }
 ```
 
-GitHub Wiki target defaults to frontmatter stripping; GitHub Pages defaults to preserving frontmatter. You can override with `--frontmatter-policy`.
+GitHub Wiki target defaults to rendering frontmatter as a visible provenance block; GitHub Pages defaults to preserving frontmatter. You can override with `--frontmatter-policy` or `--frontmatter`.
 
 The repository wiki workflow publishes GitHub Wiki output on `main` and can publish GitHub Pages output to the `gh-pages` branch. Use the workflow dispatch inputs to smoke-test Pages publishing manually before merge (set `publish_pages=true` and `pages_path` to a smoke path such as `smoke/pr-N`); automatic `main` publishes can use the production path such as `docs`.
 

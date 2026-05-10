@@ -418,8 +418,7 @@ function wikiLink(page) {
 }
 
 function renderHome(manifest, plan) {
-  const compiledAt = new Date().toISOString();
-  return `${frontmatter(manifest, { kind: 'home' })}# Repository Knowledge Base\n\nGenerated from \`${manifest.remote}\` at commit \`${manifest.commit}\`. Last compiled: \`${compiledAt}\`.\n\n## Start here\n\n- ${wikiLink('Agent-Context-Pack.md')}\n- ${wikiLink('Repository-Overview.md')}\n- ${wikiLink('Architecture.md')}\n- ${wikiLink('Build-Test-and-Run.md')}\n- ${wikiLink('Index.md')}\n\n## Important rule\n\nSource code at the pinned commit is authoritative. Tests, CI, and generated schemas are high-authority evidence. Markdown documentation is ingested as configurable secondary evidence and must be validated before it changes generated claims.\n\n## Generated module pages\n\n${(plan.modules || []).slice(0, 20).map((module) => `- [${module.name}](${module.slug})`).join('\n') || '- No module pages generated.'}\n`;
+  return `${frontmatter(manifest, { kind: 'home' })}# Repository Knowledge Base\n\n## Start here\n\n- ${wikiLink('Agent-Context-Pack.md')}\n- ${wikiLink('Repository-Overview.md')}\n- ${wikiLink('Architecture.md')}\n- ${wikiLink('Build-Test-and-Run.md')}\n- ${wikiLink('Index.md')}\n\n## Important rule\n\nSource code at the pinned commit is authoritative. Tests, CI, and generated schemas are high-authority evidence. Markdown documentation is ingested as configurable secondary evidence and must be validated before it changes generated claims.\n\n## Generated module pages\n\n${(plan.modules || []).slice(0, 20).map((module) => `- [${module.name}](${module.slug})`).join('\n') || '- No module pages generated.'}\n`;
 }
 
 function renderSidebar(manifest, plan) {

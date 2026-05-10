@@ -35,8 +35,10 @@ Options:
             Publish destination (default: github-wiki).
   --pages-path <path>
             Publish path for github-pages target (default: .).
-  --frontmatter-policy <strip|html-comment|preserve>
+  --frontmatter-policy <strip|html-comment|preserve|provenance>
+  --frontmatter <strip|html-comment|preserve|provenance>
             Frontmatter handling when publishing to the selected target.
+            github-wiki defaults to provenance; github-pages defaults to preserve.
             html-comment is accepted for forward compatibility and currently behaves like strip.
 
 Examples:
@@ -65,17 +67,29 @@ function getPublishTargetOption(options: ParsedArgs, configuredTarget?: string):
 }
 
 function getFrontmatterPolicyOption(options: ParsedArgs, target: PublishTarget, configuredPolicy?: string): FrontmatterPolicy {
-  const value = getStringOption(options, 'frontmatter-policy') || configuredPolicy;
+  const explicitOptionName = getFrontmatterOptionName(options);
+  const explicitValue = explicitOptionName ? getStringOption(options, explicitOptionName.slice(2)) : undefined;
+  const value = explicitValue || configuredPolicy;
   const defaultPolicy = defaultFrontmatterPolicyForTarget(target);
   const policy = value === undefined ? defaultPolicy : isFrontmatterPolicy(value) ? parseFrontmatterPolicy(value) : defaultPolicy;
 
-  if (value !== undefined && !isFrontmatterPolicy(value)) {
-    console.error(`Warning: unknown --frontmatter-policy "${value}"; falling back to "${defaultPolicy}".`);
+  if (explicitValue !== undefined && !isFrontmatterPolicy(explicitValue)) {
+    console.error(`Warning: unknown ${explicitOptionName} "${explicitValue}"; falling back to "${defaultPolicy}".`);
   } else if (policy === 'html-comment') {
-    console.error('Warning: --frontmatter-policy html-comment is reserved for future metadata comments and currently behaves like strip.');
+    console.error(`Warning: ${explicitOptionName || '--frontmatter-policy'} html-comment is reserved for future metadata comments and currently behaves like strip.`);
   }
 
   return policy;
+}
+
+function getFrontmatterOptionName(options: ParsedArgs): '--frontmatter-policy' | '--frontmatter' | null {
+  if (getStringOption(options, 'frontmatter-policy') !== undefined) {
+    return '--frontmatter-policy';
+  }
+  if (getStringOption(options, 'frontmatter') !== undefined) {
+    return '--frontmatter';
+  }
+  return null;
 }
 
 export async function runCli(argv: string[]) {

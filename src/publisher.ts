@@ -250,7 +250,7 @@ function isPreservedPagesMarkdown(name: string) {
   return name === 'index.md' || name === 'Navigation.md';
 }
 
-async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatterPolicy: FrontmatterPolicy = 'strip') {
+async function copyGeneratedWiki(sourceDir: string, targetDir: string, frontmatterPolicy: FrontmatterPolicy) {
   await fs.mkdir(targetDir, { recursive: true });
   const entries = await fs.readdir(sourceDir, { withFileTypes: true });
 
@@ -306,7 +306,7 @@ function defaultBranchForTarget(target: PublishTarget) {
 }
 
 export function defaultFrontmatterPolicyForTarget(target: PublishTarget): FrontmatterPolicy {
-  return target === 'github-wiki' ? 'strip' : 'preserve';
+  return target === 'github-wiki' ? 'provenance' : 'preserve';
 }
 
 function assertSafeGitArgument(value: string | undefined, label: string) {
@@ -437,4 +437,3 @@ const PAGES_LAYOUT = `<!doctype html>
 </body>
 </html>
 `;
-

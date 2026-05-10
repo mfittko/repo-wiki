@@ -39,7 +39,7 @@ test('publishWiki redacts credential-bearing remotes in dry-run summaries', asyn
     assert.equal(result.summary.status, 'dry-run');
     assert.equal(result.summary.target, 'github-wiki');
     assert.equal(result.summary.path, '.');
-    assert.equal(result.summary.frontmatterPolicy, 'strip');
+    assert.equal(result.summary.frontmatterPolicy, 'provenance');
     assert.equal(result.summary.remote, 'https://***:***@github.com/OWNER/REPO.wiki.git');
 
     const tokenOnlyResult = await publishWiki({
@@ -119,6 +119,57 @@ test('publishWiki strips frontmatter from top-level and nested markdown without 
 
     assert.equal(await fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8'), '---\nkind: home\n---\n# Home\n');
     assert.equal(await fs.readFile(path.join(nestedDir, 'Page.md'), 'utf8'), '---\nkind: nested\n---\n# Nested\n');
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki renders a provenance block for github-wiki by default', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), [
+      '---',
+      'source_repo: "https://github.com/mfittko/repo-wiki.git"',
+      'source_commit: "abc1234def5678"',
+      'compiled_at: "2026-05-10T00:00:00.000Z"',
+      'kind: "home"',
+      'page_state: "generated"',
+      'confidence: "medium"',
+      'claim_status: "source-grounded"',
+      'source_paths:',
+      '  - "src/publisher.ts"',
+      '---',
+      '# Home',
+      ''
+    ].join('\n'), 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    const result = await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      branch: 'master',
+      message: 'Publish provenance wiki'
+    });
+
+    assert.equal(result.summary.status, 'published');
+    assert.equal(result.summary.frontmatterPolicy, 'provenance');
+
+    await git(['clone', '--branch', 'master', remoteDir, checkoutDir]);
+    const published = await fs.readFile(path.join(checkoutDir, 'Home.md'), 'utf8');
+    assert.match(published, /\*\*Generated from:\*\* `https:\/\/github\.com\/mfittko\/repo-wiki\.git`/);
+    assert.match(published, /\*\*Source commit:\*\* \[`abc1234`\]\(https:\/\/github\.com\/mfittko\/repo-wiki\/tree\/abc1234def5678\)/);
+    assert.match(published, /\*\*Compiled at:\*\* `2026-05-10T00:00:00\.000Z`/);
+    assert.match(published, /\*\*Page kind:\*\* `home`/);
+    assert.match(published, /\*\*Page state:\*\* `generated`/);
+    assert.match(published, /\*\*Confidence:\*\* `medium`/);
+    assert.match(published, /\*\*Claim status:\*\* `source-grounded`/);
+    assert.match(published, /\*\*Primary sources:\*\* \[src\/publisher\.ts\]\(https:\/\/github\.com\/mfittko\/repo-wiki\/blob\/abc1234def5678\/src\/publisher\.ts\)/);
+    assert.equal((await fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8')).startsWith('---\n'), true);
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
@@ -238,7 +289,7 @@ test('publishWiki uses target-specific defaults in dry-run summaries', async () 
     assert.equal(wikiResult.summary.target, 'github-wiki');
     assert.equal(wikiResult.summary.branch, 'master');
     assert.equal(wikiResult.summary.path, '.');
-    assert.equal(wikiResult.summary.frontmatterPolicy, 'strip');
+    assert.equal(wikiResult.summary.frontmatterPolicy, 'provenance');
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
@@ -367,6 +418,76 @@ test('publishWiki publishes github-pages output into configured path and preserv
     assert.match(pagesLayout, /mermaid@11/);
     assert.match(pagesLayout, /code\.language-mermaid/);
     assert.equal(await fileExists(path.join(checkoutDir, 'Home.md')), false);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki preserves frontmatter for github-wiki when explicitly requested', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '---\nkind: home\nsource_commit: abc123\n---\n# Home\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    const result = await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      branch: 'master',
+      message: 'Publish preserved wiki',
+      frontmatterPolicy: 'preserve'
+    });
+
+    assert.equal(result.summary.status, 'published');
+    assert.equal(result.summary.frontmatterPolicy, 'preserve');
+
+    await git(['clone', '--branch', 'master', remoteDir, checkoutDir]);
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'Home.md'), 'utf8'), '---\nkind: home\nsource_commit: abc123\n---\n# Home\n');
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki can render provenance blocks for github-pages when explicitly requested', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), [
+      '---',
+      'source_repo: "https://github.com/mfittko/repo-wiki.git"',
+      'source_commit: "abc1234def5678"',
+      'source_paths: ["src/publisher.ts"]',
+      '---',
+      '# Home',
+      ''
+    ].join('\n'), 'utf8');
+    await git(['init', '--bare', remoteDir]);
+
+    const publishResult = await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      pagesPath: 'docs',
+      message: 'Publish pages provenance wiki',
+      frontmatterPolicy: 'provenance'
+    });
+
+    assert.equal(publishResult.summary.status, 'published');
+    assert.equal(publishResult.summary.frontmatterPolicy, 'provenance');
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    const published = await fs.readFile(path.join(checkoutDir, 'docs', 'Home.md'), 'utf8');
+    assert.match(published, /\*\*Generated from:\*\* `https:\/\/github\.com\/mfittko\/repo-wiki\.git`/);
+    assert.match(published, /\*\*Primary sources:\*\* \[src\/publisher\.ts\]\(https:\/\/github\.com\/mfittko\/repo-wiki\/blob\/abc1234def5678\/src\/publisher\.ts\)/);
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
