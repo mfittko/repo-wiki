@@ -259,11 +259,9 @@ function skipWhitespace(content: string, startIndex: number) {
 }
 
 function lineNumberAtIndex(content: string, index: number) {
-  if (index <= 0) {
-    return 1;
-  }
   let line = 1;
-  for (let cursor = 0; cursor < Math.min(index, content.length); cursor += 1) {
+  const boundedIndex = Math.max(0, Math.min(index, content.length));
+  for (let cursor = 0; cursor < boundedIndex; cursor += 1) {
     if (content[cursor] === '\n') {
       line += 1;
     }
