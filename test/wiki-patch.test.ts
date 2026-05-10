@@ -193,6 +193,14 @@ test('validateWikiPatch accepts empty source_paths array', () => {
   assert.ok(!codes(issues).includes('missing-source-commit'));
 });
 
+test('validateWikiPatch returns error when source_paths is present but not an array', () => {
+  const content = validPatch({ source_paths: '"src/a.ts"' });
+  const issues = validateWikiPatch(content, 'Module-Auth');
+  assert.ok(codes(issues).includes('invalid-source-paths'));
+  assert.equal(issues.find((i) => i.code === 'invalid-source-paths')?.level, 'error');
+  assert.ok(!codes(issues).includes('missing-source-paths'));
+});
+
 test('validateWikiPatch returns error when source_paths contains non-strings', () => {
   const content = '---\nsource_commit: "abc123"\nkind: "module"\nsource_paths: ["src/a.ts", 123, true]\n---\n\n# Body\n';
   const issues = validateWikiPatch(content, 'Module-Auth');

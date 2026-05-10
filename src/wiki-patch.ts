@@ -322,11 +322,17 @@ export function validateWikiPatch(rawContent: string, pageName: string): WikiPat
 
     // 8/9. source_paths must be an array when present; a missing array is a warning.
     const sourcePaths = fields['source_paths'];
-    if (!Array.isArray(sourcePaths)) {
+    if (sourcePaths === undefined) {
       issues.push({
         level: 'warning',
         code: 'missing-source-paths',
         message: `${pageName}: frontmatter is missing a "source_paths" array.`,
+      });
+    } else if (!Array.isArray(sourcePaths)) {
+      issues.push({
+        level: 'error',
+        code: 'invalid-source-paths',
+        message: `${pageName}: frontmatter field "source_paths" must be an array when present.`,
       });
     } else if (!sourcePaths.every(isNonEmptyString)) {
       issues.push({
