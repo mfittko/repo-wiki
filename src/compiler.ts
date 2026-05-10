@@ -6,7 +6,7 @@ import { ensureDir, readJson, writeText } from './utils/fs.js';
 import { buildRouteSurfaceIndex, collectKnownEnvironmentVariables, collectManifestDirectories, dedupeRouteValidationFindings, normalizeRepoPath, resolveDocumentedPathFromManifest, validateRouteClaims } from './docs-validation.js';
 import { classifyDocumentedCommands, extractRouteClaims, mergePackageScripts } from './docs-ingestor.js';
 import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-ownership.js';
-import { buildRequest, createProvider, LLMProviderError, resolveProviderConfig } from './llm-provider.js';
+import { buildRequest, createProvider, LLMProviderError, resolveArchitectureOverrides, resolveProviderConfig } from './llm-provider.js';
 import type { LLMProvider } from './llm-provider.js';
 import { synthesizeWikiPage, WikiPatchError } from './wiki-patch.js';
 
@@ -148,6 +148,74 @@ export async function compileWiki({
     }
   }
 
+  if (isLLMMode) {
+    // Synthesize Architecture.md through the LLM provider boundary.
+    // The deterministic renderArchitecture() output already in the pages map
+    // is replaced on success; on failure the error is recorded and compilation
+    // throws before any page is written, leaving the existing wiki intact.
+    const llmCfg = config?.compiler ?? {};
+    const resolvedLLMCfg = resolveProviderConfig(llmCfg);
+    const archOverrides = resolveArchitectureOverrides(llmCfg);
+    const validationRetries: number = resolvedLLMCfg.validationRetries;
+
+    const archFilePath = path.join(wikiDir, 'Architecture.md');
+    let existingArchContent: string | undefined;
+    try {
+      existingArchContent = await fs.readFile(archFilePath, 'utf8');
+    } catch (error) {
+      if (!isNodeError(error) || error.code !== 'ENOENT') {
+        throw error;
+      }
+    }
+
+    const archPageState = existingArchContent !== undefined ? detectPageState(existingArchContent) : null;
+    if (archPageState === 'human-owned' || archPageState === 'unmanaged') {
+      // Remove from the pages map so the write loop does not process this page
+      // at all (consistent with how LLM-handled module pages work). The existing
+      // file is left intact; the write loop never sees it.
+      pages.delete('Architecture.md');
+      skipped++;
+      skippedByState[archPageState] = (skippedByState[archPageState] || 0) + 1;
+    } else {
+      // Resolve the architecture provider. If the architecture model override
+      // specifies a different model from the global resolved config, create a
+      // dedicated provider for the architecture page.
+      let archProvider: LLMProvider;
+      if (_provider !== null) {
+        archProvider = _provider;
+      } else if (archOverrides.model && archOverrides.model !== resolvedLLMCfg.model) {
+        archProvider = createProvider({ ...resolvedLLMCfg, model: archOverrides.model });
+      } else {
+        archProvider = createProvider(resolvedLLMCfg);
+      }
+
+      const syntheticArchPage = { path: 'Architecture.md', phase: 'foundation' };
+      const archPageCtx = assemblePageContext({ manifest, plan, page: syntheticArchPage });
+      const archPromptCtx = buildArchitecturePromptContext(archPageCtx, manifest, existingArchContent);
+
+      const archRequest = buildRequest('architecture', archPromptCtx, {
+        maxOutputTokens: archOverrides.maxOutputTokens ?? resolvedLLMCfg.maxOutputTokens,
+        systemPrompt: resolvedLLMCfg.systemPrompt,
+        temperature: resolvedLLMCfg.temperature,
+      });
+
+      try {
+        const patch = await synthesizeWikiPage(archProvider, archRequest, { maxRetries: validationRetries });
+        const normalized = normalizeLLMArchitectureContent(patch.content, manifest);
+        pages.set('Architecture.md', normalized);
+        llmGeneratedPages.add('Architecture.md');
+      } catch (err) {
+        if (err instanceof WikiPatchError) {
+          llmErrors.push({ file: 'Architecture.md', error: err.message, issues: err.issues });
+        } else if (err instanceof LLMProviderError) {
+          llmErrors.push({ file: 'Architecture.md', error: err.message });
+        } else {
+          throw err;
+        }
+      }
+    }
+  }
+
   // Deterministic module pages for modules not handled (or not eligible) for LLM synthesis.
   for (const module of plan.modules || []) {
     const modulePage = `${module.slug}.md`;
@@ -264,6 +332,75 @@ function buildModulePromptContext(
       important_reasons: module.important_reasons,
     },
   };
+}
+
+/**
+ * Build a PromptContext for the Architecture page from an assembled PageContext.
+ * Maps the context-assembler output format to the prompt-template input format.
+ */
+function buildArchitecturePromptContext(
+  pageCtx: ReturnType<typeof assemblePageContext>,
+  manifest: any,
+  existingContent?: string,
+) {
+  return {
+    pageName: 'Architecture',
+    pageTitle: 'Architecture',
+    repoRemote: manifest.remote,
+    repoCommit: manifest.commit,
+    sourceCards: (pageCtx.source_inputs as any[]).map((si) => ({
+      path: si.path,
+      category: si.category,
+      language: si.language,
+      symbols: si.symbols,
+      imports: si.imports,
+      reasons: si.reasons,
+      runtime_hints: si.runtime_hints,
+      environment_variables: si.environment_variables,
+      routes: si.routes,
+      migrations: si.migrations,
+      models: si.models,
+      excerpt: si.excerpt,
+    })),
+    docCards: (pageCtx.documentation_inputs as any[]).map((di) => ({
+      path: di.path,
+      status: di.status,
+      claims: di.claims,
+      excerpt: di.excerpt,
+    })),
+    existingContent,
+  };
+}
+
+/**
+ * Normalize LLM-generated Architecture page content by enforcing canonical
+ * provenance frontmatter fields (source_repo, source_commit, page_state,
+ * source_paths) regardless of what the provider returned.
+ */
+function normalizeLLMArchitectureContent(content: string, manifest: any): string {
+  if (!content.startsWith('---\n')) {
+    return content;
+  }
+
+  const closing = content.indexOf('\n---', 4);
+  if (closing === -1) {
+    return content;
+  }
+
+  const frontmatterRaw = content.slice(4, closing);
+  const body = content.slice(closing);
+  const sourcePaths = collectPrimarySourcePaths(manifest).slice(0, 20);
+  const lines = removeNormalizedFrontmatterFields(frontmatterRaw.split('\n'), false);
+  const withoutNormalized = lines.filter((line) => line.trim().length > 0);
+  const normalizedLines = [
+    `source_repo: ${JSON.stringify(manifest.remote)}`,
+    `source_commit: ${JSON.stringify(manifest.commit)}`,
+    'page_state: "generated"',
+    `source_paths: ${JSON.stringify(sourcePaths)}`,
+    ...withoutNormalized
+  ];
+
+  return `---\n${normalizedLines.join('\n')}${body}`;
 }
 
 function isDocsOnlyModule(module: any) {

@@ -267,7 +267,7 @@ function buildMockContent(request: LLMRequest): string {
     '',
   ];
 
-  if (request.archetype === 'module') {
+  if (request.archetype === 'module' || request.archetype === 'architecture') {
     lines.push('<!-- HUMAN_NOTES_START -->');
     lines.push('<!-- HUMAN_NOTES_END -->');
     lines.push('');
@@ -277,6 +277,20 @@ function buildMockContent(request: LLMRequest): string {
 }
 
 // ── Provider configuration ─────────────────────────────────────────────────
+
+/** Per-archetype LLM overrides. */
+export interface ArchitecturePageBudget {
+  /** Model override for architecture synthesis. */
+  model?: string;
+  /** Output-token budget override for architecture synthesis. */
+  max_output_tokens?: number;
+}
+
+/** Per-archetype LLM override configuration. */
+export interface PageBudgets {
+  /** Overrides applied when synthesizing the Architecture page. */
+  architecture?: ArchitecturePageBudget;
+}
 
 /** Configuration passed to `createProvider`. */
 export interface LLMProviderConfig {
@@ -326,6 +340,8 @@ export interface LLMProviderConfig {
   mode?: string;
   /** Nested LLM settings used when callers pass the whole compiler config. */
   llm?: LLMProviderConfig;
+  /** Per-archetype LLM overrides (model and output budget). */
+  page_budgets?: PageBudgets;
 }
 
 export interface ResolvedLLMProviderConfig extends LLMProviderConfig {
@@ -474,6 +490,48 @@ function providerForMode(mode?: string): string | undefined {
   if (mode === 'llm') return LLM_DEFAULTS.hostedProvider;
   if (mode === 'deterministic') return LLM_DEFAULTS.provider;
   return undefined;
+}
+
+/**
+ * Resolved per-architecture overrides for model and output token budget.
+ * These supplement (not replace) the global provider config.
+ */
+export interface ResolvedArchitectureOverrides {
+  /** Architecture-specific model override, or undefined if not set. */
+  model: string | undefined;
+  /** Architecture-specific max output tokens override, or undefined if not set. */
+  maxOutputTokens: number | undefined;
+}
+
+/**
+ * Resolve architecture-specific model and output-token overrides.
+ *
+ * Precedence (highest to lowest):
+ * 1. `LLMWIKI_LLM_ARCHITECTURE_MODEL` / `LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS` env vars
+ * 2. `LLMWIKI_LLM_MODEL` / `LLMWIKI_LLM_MAX_OUTPUT_TOKENS` global env vars (already applied by resolveProviderConfig)
+ * 3. `.llmwiki/config.json` `compiler.llm.page_budgets.architecture` overrides
+ * 4. Global config defaults (already applied by resolveProviderConfig)
+ * 5. Built-in defaults
+ *
+ * Returns only the fields that are explicitly overridden; callers fall back to
+ * the global resolved config for fields that are not set.
+ */
+export function resolveArchitectureOverrides(
+  config: LLMProviderConfig = {},
+  env: NodeJS.ProcessEnv = process.env,
+): ResolvedArchitectureOverrides {
+  const llmConfig = config.llm ? config.llm : config;
+  const pageBudgets = llmConfig.page_budgets?.architecture ?? {};
+
+  const envModel = optionalEnv(env, 'LLMWIKI_LLM_ARCHITECTURE_MODEL');
+  const envMaxOutputTokens = optionalEnv(env, 'LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS');
+
+  const model = envModel ?? nonBlank(pageBudgets.model);
+  const maxOutputTokens = envMaxOutputTokens !== undefined
+    ? parseNonNegativeInteger(envMaxOutputTokens, 0, 'architecture maxOutputTokens')
+    : (pageBudgets.max_output_tokens !== undefined ? pageBudgets.max_output_tokens : undefined);
+
+  return { model, maxOutputTokens };
 }
 
 function parseNumber(value: string | undefined, fallback: number, field: string): number {

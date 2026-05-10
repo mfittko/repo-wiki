@@ -660,3 +660,141 @@ test('pipeline: buildRequest + MockLLMProvider produces valid content', async ()
   assert.match(resp.content, /# Auth/m);
   assert.match(resp.content, /HUMAN_NOTES_START/);
 });
+
+// ── Architecture prompt ───────────────────────────────────────────────────
+
+import { buildArchitecturePrompt } from '../src/prompts.js';
+import { resolveArchitectureOverrides } from '../src/llm-provider.js';
+
+test('buildArchitecturePrompt returns system + user prompts', () => {
+  const ctx = makeContext({ pageName: 'Architecture', pageTitle: 'Architecture' });
+  const prompt = buildArchitecturePrompt(ctx);
+  assert.ok(prompt.system.length > 0);
+  assert.ok(prompt.user.length > 0);
+});
+
+test('buildArchitecturePrompt system prompt includes architecture Mermaid diagram rules', () => {
+  const ctx = makeContext({ pageName: 'Architecture', pageTitle: 'Architecture' });
+  const prompt = buildArchitecturePrompt(ctx);
+  assert.match(prompt.system, /Mermaid/);
+  assert.match(prompt.system, /flowchart/);
+  assert.match(prompt.system, /Do not invent unsupported relationships/);
+});
+
+test('buildArchitecturePrompt user prompt includes required section headings', () => {
+  const ctx = makeContext({ pageName: 'Architecture', pageTitle: 'Architecture' });
+  const prompt = buildArchitecturePrompt(ctx);
+  assert.match(prompt.user, /Executive Architecture Summary/);
+  assert.match(prompt.user, /System and Repository Context/);
+  assert.match(prompt.user, /Major Modules and Responsibilities/);
+  assert.match(prompt.user, /Runtime, Data, and Control-Flow Relationships/);
+  assert.match(prompt.user, /Build, Test, Deployment, and Operational Surfaces/);
+  assert.match(prompt.user, /Cross-Cutting Concerns/);
+  assert.match(prompt.user, /Caveats and Open Questions/);
+});
+
+test('buildArchitecturePrompt user prompt requires architecture kind in frontmatter', () => {
+  const ctx = makeContext({ pageName: 'Architecture', pageTitle: 'Architecture' });
+  const prompt = buildArchitecturePrompt(ctx);
+  assert.match(prompt.user, /kind: "architecture"/);
+});
+
+test('buildArchitecturePrompt user prompt requires HUMAN_NOTES block', () => {
+  const ctx = makeContext({ pageName: 'Architecture', pageTitle: 'Architecture' });
+  const prompt = buildArchitecturePrompt(ctx);
+  assert.match(prompt.user, /HUMAN_NOTES_START/);
+  assert.match(prompt.user, /HUMAN_NOTES_END/);
+});
+
+test('buildArchitecturePrompt user prompt includes diagram guardrails', () => {
+  const ctx = makeContext({ pageName: 'Architecture', pageTitle: 'Architecture' });
+  const prompt = buildArchitecturePrompt(ctx);
+  assert.match(prompt.user, /caveats/i);
+  assert.match(prompt.user, /evidence/i);
+});
+
+test('buildPrompt routes architecture archetype to architecture prompt', () => {
+  const ctx = makeContext({ pageName: 'Architecture', pageTitle: 'Architecture' });
+  const archPrompt = buildPrompt('architecture', ctx);
+  const archDirectPrompt = buildArchitecturePrompt(ctx);
+  assert.equal(archPrompt.system, archDirectPrompt.system);
+  assert.equal(archPrompt.user, archDirectPrompt.user);
+});
+
+test('MockLLMProvider includes HUMAN_NOTES block for architecture archetype', async () => {
+  const provider = new MockLLMProvider();
+  const response = await provider.complete(makeRequest({ archetype: 'architecture' }));
+  assert.match(response.content, /kind: "architecture"/);
+  assert.match(response.content, /HUMAN_NOTES_START/);
+  assert.match(response.content, /HUMAN_NOTES_END/);
+});
+
+// ── resolveArchitectureOverrides ──────────────────────────────────────────
+
+test('resolveArchitectureOverrides returns undefined when no overrides are set', () => {
+  const overrides = resolveArchitectureOverrides({}, {});
+  assert.equal(overrides.model, undefined);
+  assert.equal(overrides.maxOutputTokens, undefined);
+});
+
+test('resolveArchitectureOverrides reads model from config page_budgets', () => {
+  const overrides = resolveArchitectureOverrides({
+    page_budgets: { architecture: { model: 'gpt-4.1' } }
+  }, {});
+  assert.equal(overrides.model, 'gpt-4.1');
+});
+
+test('resolveArchitectureOverrides reads max_output_tokens from config page_budgets', () => {
+  const overrides = resolveArchitectureOverrides({
+    page_budgets: { architecture: { max_output_tokens: 12000 } }
+  }, {});
+  assert.equal(overrides.maxOutputTokens, 12000);
+});
+
+test('resolveArchitectureOverrides reads model from LLMWIKI_LLM_ARCHITECTURE_MODEL env var', () => {
+  const overrides = resolveArchitectureOverrides({}, { LLMWIKI_LLM_ARCHITECTURE_MODEL: 'gpt-4.1' });
+  assert.equal(overrides.model, 'gpt-4.1');
+});
+
+test('resolveArchitectureOverrides reads max tokens from LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS env var', () => {
+  const overrides = resolveArchitectureOverrides({}, { LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS: '12000' });
+  assert.equal(overrides.maxOutputTokens, 12000);
+});
+
+test('resolveArchitectureOverrides env var overrides config page_budgets', () => {
+  const overrides = resolveArchitectureOverrides(
+    { page_budgets: { architecture: { model: 'gpt-4.1-mini', max_output_tokens: 4000 } } },
+    { LLMWIKI_LLM_ARCHITECTURE_MODEL: 'gpt-4.1', LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS: '12000' }
+  );
+  assert.equal(overrides.model, 'gpt-4.1');
+  assert.equal(overrides.maxOutputTokens, 12000);
+});
+
+test('resolveArchitectureOverrides reads page_budgets from nested llm config', () => {
+  const overrides = resolveArchitectureOverrides({
+    mode: 'llm',
+    llm: { page_budgets: { architecture: { model: 'gpt-4.1', max_output_tokens: 12000 } } }
+  }, {});
+  assert.equal(overrides.model, 'gpt-4.1');
+  assert.equal(overrides.maxOutputTokens, 12000);
+});
+
+test('resolveArchitectureOverrides treats blank env var as unset', () => {
+  const overrides = resolveArchitectureOverrides(
+    { page_budgets: { architecture: { model: 'gpt-4.1' } } },
+    { LLMWIKI_LLM_ARCHITECTURE_MODEL: '   ' }
+  );
+  // Blank env var is treated as unset, so config value is used.
+  assert.equal(overrides.model, 'gpt-4.1');
+});
+
+test('resolveArchitectureOverrides rejects invalid max output tokens env var', () => {
+  assert.throws(
+    () => resolveArchitectureOverrides({}, { LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS: 'not-a-number' }),
+    (err: unknown) => {
+      assert.ok(err instanceof LLMProviderError);
+      assert.equal(err.code, 'INVALID_CONFIG');
+      return true;
+    }
+  );
+});

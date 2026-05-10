@@ -7,7 +7,7 @@
  *   - cross-cutting: shared-concern pages (Dependency-Map, Testing-Strategy, …)
  */
 
-export type PageArchetype = 'foundation' | 'module' | 'cross-cutting';
+export type PageArchetype = 'foundation' | 'module' | 'cross-cutting' | 'architecture';
 
 // ── Context shapes ─────────────────────────────────────────────────────────
 
@@ -219,7 +219,76 @@ function assertUnreachable(value: never): never {
 // ── Archetype template builders ────────────────────────────────────────────
 
 /**
- * Foundation pages: Home, Architecture, Build-Test-and-Run, Agent-Context-Pack, etc.
+ * Architecture page: dedicated archetype for `Architecture.md`.
+ * Uses a richer system prompt and an outline with Mermaid diagram guidance.
+ */
+export function buildArchitecturePrompt(context: PromptContext): BuiltPrompt {
+  const ARCHITECTURE_SYSTEM_PROMPT = `${BASE_SYSTEM_PROMPT}
+
+Architecture synthesis rules:
+- Include Mermaid diagrams only when source cards, CI/config evidence, or verified repository structure directly support the relationship shown.
+- If a diagram is inferred from structure rather than directly verified source evidence, label that limitation explicitly.
+- Do not invent unsupported relationships or architectural layers just to fill a diagram.
+- Prefer fewer accurate diagrams over many speculative ones.
+- Put uncertain or missing evidence into the Caveats and Open Questions section.
+- Suggested Mermaid diagram types (use only when evidence supports them):
+  - flowchart: system/context diagram for repository boundaries and external surfaces
+  - flowchart or graph: component/module diagram for major internal modules and relationships
+  - flowchart: build/test/deploy flow diagram when package scripts, CI workflows, or deployment config exist
+  - sequenceDiagram: only when source evidence supports a concrete interaction sequence`;
+
+  return {
+    system: ARCHITECTURE_SYSTEM_PROMPT,
+    user: `Generate the Architecture wiki page for this repository.
+
+Repository:
+- Remote: ${context.repoRemote ?? 'unknown'}
+- Commit: ${context.repoCommit ?? 'unknown'}
+- Page name: ${context.pageName}
+
+Source cards (${context.sourceCards.length} files):
+${formatSourceCards(context.sourceCards)}
+
+Documentation cards:
+${formatDocCards(context.docCards ?? [])}
+
+${existingContentBlock(context.existingContent)}
+
+Generate a complete Architecture wiki page with the following output contract:
+- Output only the raw markdown page; do not wrap it in a markdown fence or code block.
+- The first line must be exactly \`---\`.
+- The YAML frontmatter must include: source_repo, source_commit, compiled_at, kind: "architecture", page_state, source_paths, confidence, and claim_status.
+- source_paths must be a non-empty array drawn only from the Source cards listed above.
+- Use conservative confidence and claim status metadata that matches the evidence provided.
+- End with this exact human notes block:
+  <!-- HUMAN_NOTES_START -->
+  <!-- HUMAN_NOTES_END -->
+
+Required sections (use these headings exactly):
+1. ## Executive Architecture Summary
+   - A concise overview of the repository's purpose, major subsystems, and key design decisions grounded in source evidence.
+2. ## System and Repository Context
+   - Repository structure, external surfaces, and repository boundaries (e.g. entry points, public APIs, external dependencies).
+   - Include a \`flowchart\` context diagram when source evidence supports repository boundaries and external surfaces.
+3. ## Major Modules and Responsibilities
+   - One subsection per logical module/grouping derived from source cards and plan modules.
+   - Include a component/module diagram (\`flowchart\` or \`graph\`) when source structure supports module relationships.
+4. ## Runtime, Data, and Control-Flow Relationships
+   - How modules interact at runtime: data flow, dependency chains, control paths.
+   - Include dependency or control-flow diagrams only when scanner/import/runtime evidence supports the relationship.
+5. ## Build, Test, Deployment, and Operational Surfaces
+   - Package scripts, CI workflows, deployment configuration, operational entry points.
+   - Include a build/test/deploy flow diagram when package scripts or CI workflows exist.
+6. ## Cross-Cutting Concerns
+   - Configuration, security, APIs, data models, documentation trust, and other shared concerns.
+7. ## Caveats and Open Questions
+   - Source-grounded caveats, uncertainty, and open questions.
+   - If a diagram or claim is inferred from structure rather than directly verified, document that limitation here.`,
+  };
+}
+
+/**
+ * Foundation pages: Home, Build-Test-and-Run, Agent-Context-Pack, etc.
  * These are repo-wide summary pages derived from the full source inventory.
  */
 export function buildFoundationPrompt(context: PromptContext): BuiltPrompt {
@@ -355,6 +424,8 @@ Generate a complete "${context.pageTitle}" cross-cutting wiki page that:
  */
 export function buildPrompt(archetype: PageArchetype, context: PromptContext): BuiltPrompt {
   switch (archetype) {
+    case 'architecture':
+      return buildArchitecturePrompt(context);
     case 'foundation':
       return buildFoundationPrompt(context);
     case 'module':

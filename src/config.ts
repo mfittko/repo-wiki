@@ -31,7 +31,10 @@ export const DEFAULT_CONFIG = {
       max_output_tokens: LLM_DEFAULTS.maxOutputTokens,
       timeout_ms: LLM_DEFAULTS.timeoutMs,
       retries: LLM_DEFAULTS.retries,
-      validation_retries: LLM_DEFAULTS.validationRetries
+      validation_retries: LLM_DEFAULTS.validationRetries,
+      page_budgets: {
+        architecture: {}
+      }
     }
   },
   wiki: {
