@@ -478,6 +478,7 @@ Every generated local wiki page should eventually include:
 - YAML frontmatter with `kind`, `source_commit`, `compiled_at`, `source_paths`, `page_state`, and optional confidence metadata.
 - Target-specific publish transforms should hide or move metadata when the destination renders frontmatter visibly. GitHub Wiki publishing should default to stripping leading YAML frontmatter from the published copy while preserving it in local `.llmwiki/wiki` artifacts and machine-readable provenance.
 - source path citations for material claims.
+- Commit-pinned source links should include line or range anchors when scanner metadata can identify the exact construct being cited; file-level links remain the fallback for whole-file or module-level references.
 - stable headings suitable for wiki links.
 - compact summaries first, detail later.
 - links to related module and cross-cutting pages.
@@ -676,6 +677,7 @@ These items turn the deterministic compiler into a semantic compiler.
 - Preserve human notes byte-for-byte across deterministic and LLM modes.
 - Add retry/failure behavior for invalid provider output.
 - Add citation, confidence, contradiction, and open-question metadata to generated pages.
+- Add source-range metadata to scanner and compiler context outputs so generated citations can link to exact commit-pinned source lines where available.
 - Add evaluation fixtures that compare generated pages against expected source-grounded claims.
 
 ### P3: Query, search, and file-back workflows
@@ -759,6 +761,23 @@ Acceptance criteria:
 - Agents can read `Index.md` first to route to relevant pages.
 - `grep '^## \[' Log.md | tail -5` or an equivalent documented pattern returns the latest operations.
 - Re-running compilation with the same inputs does not create noisy index/log churn.
+
+#### Source line anchors for generated citations
+
+Parent: #37 and #3.
+
+Acceptance criteria:
+
+- Source cards and derived analysis records can carry optional `line` and `end_line` metadata for constructs such as package scripts, CI workflow commands, symbols, exports, routes, environment variables, migrations, models, and documentation claims.
+- Generated wiki citations remain commit-pinned and include `#Lx` or `#Lx-Ly` anchors whenever precise source ranges are available.
+- File-level links remain the fallback for whole-file, module-level, or unresolved references.
+- Compiler and prompt context preserve source ranges without forcing every extractor to support them at once.
+- Tests cover at least package scripts and CI workflow commands first, with follow-up coverage for symbols/routes as extractors grow.
+
+Suggested verification:
+
+- `npm test`
+- Fixture snapshots or assertions for generated GitHub source URLs with line anchors.
 
 #### Wiki health linting
 
@@ -945,7 +964,7 @@ These phases describe the desired implementation sequence in this plan. They are
 - Should the publisher open a pull request against the wiki repo, a GitHub Pages branch, or both instead of pushing directly?
 - Which documentation claims should block publishing by default?
 - How should ADR supersession be represented?
-- Should generated wiki pages use source line anchors or only path plus commit anchors?
+- What source-range schema should generated wiki pages use for line-anchored citations across languages and extractors?
 - How much raw code should the LLM compiler be allowed to read per page?
 - How should existing human-authored wiki pages be reconciled?
 - What is the right schema for filed-back query pages and investigation pages?
