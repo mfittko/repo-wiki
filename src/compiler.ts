@@ -1,19 +1,40 @@
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { hasDataModelSignals } from './data-model-signals.js';
-import { assembleAllPageContexts } from './context-assembler.js';
+import { assembleAllPageContexts, assemblePageContext } from './context-assembler.js';
 import { ensureDir, readJson, writeText } from './utils/fs.js';
 import { buildRouteSurfaceIndex, collectKnownEnvironmentVariables, collectManifestDirectories, dedupeRouteValidationFindings, normalizeRepoPath, resolveDocumentedPathFromManifest, validateRouteClaims } from './docs-validation.js';
 import { classifyDocumentedCommands, extractRouteClaims, mergePackageScripts } from './docs-ingestor.js';
 import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-ownership.js';
+import { buildRequest, createProvider, LLMProviderError } from './llm-provider.js';
+import type { LLMProvider } from './llm-provider.js';
+import { synthesizeWikiPage, WikiPatchError } from './wiki-patch.js';
 
-export async function compileWiki({ scanDir, planFile, wikiDir }) {
+export async function compileWiki({
+  scanDir,
+  planFile,
+  wikiDir,
+  config = null,
+  _provider = null
+}: {
+  scanDir: string;
+  planFile: string;
+  wikiDir: string;
+  /** Full config object (e.g. from loadConfig). Selects compiler.mode and LLM settings. */
+  config?: any | null;
+  /** Override the LLM provider (for testing). Only used when compiler.mode=llm. */
+  _provider?: LLMProvider | null;
+}) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
   const plan = await readJson(planFile);
   const pageContexts = assembleAllPageContexts({ manifest, plan });
   await ensureDir(wikiDir);
 
-  const pages = new Map();
+  const compilerMode: string = config?.compiler?.mode ?? 'deterministic';
+  const isLLMMode = compilerMode === 'llm';
+  const llmErrors: Array<{ file: string; error: string; issues?: any[] }> = [];
+
+  const pages = new Map<string, string>();
 
   pages.set('Home.md', renderHome(manifest, plan));
   pages.set('_Sidebar.md', renderSidebar(manifest, plan));
@@ -41,9 +62,67 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
 
   const sourceToTestsIndex = buildSourceToTestsIndex(manifest);
 
+  // Track which module pages are owned by the LLM synthesis path (success or failure).
+  // These are excluded from the deterministic fallback below.
+  const llmHandledModules = new Set<string>();
+
+  if (isLLMMode) {
+    // In LLM mode, synthesize module pages through the provider boundary.
+    // Foundation and cross-cutting pages continue to use deterministic renderers
+    // (phased archetype rollout – module pages first).
+    const llmProvider: LLMProvider = _provider ?? createProvider(config?.compiler ?? {});
+    const llmCfg = config?.compiler ?? {};
+    const retries: number = Number(llmCfg.llm?.retries ?? llmCfg.retries ?? 0);
+
+    for (const module of plan.modules || []) {
+      const modulePage = `${module.slug}.md`;
+      llmHandledModules.add(modulePage);
+
+      // Read existing content so the prompt can include it as context.
+      const filePath = path.join(wikiDir, modulePage);
+      let existingForPrompt: string | undefined;
+      try {
+        existingForPrompt = await fs.readFile(filePath, 'utf8');
+      } catch {
+        // New page – no existing content.
+      }
+
+      // Assemble the page context using the standard context assembler.
+      const syntheticPage = { path: modulePage, phase: 'modules', moduleName: module.name };
+      const pageCtx = assemblePageContext({ manifest, plan, page: syntheticPage });
+      const promptCtx = buildModulePromptContext(pageCtx, manifest, module, existingForPrompt);
+
+      // Build LLM request from the assembled context and provider settings.
+      const request = buildRequest('module', promptCtx, {
+        maxOutputTokens: llmCfg.llm?.max_output_tokens ?? llmCfg.maxOutputTokens,
+        systemPrompt: llmCfg.llm?.system_prompt ?? llmCfg.systemPrompt,
+        temperature: llmCfg.llm?.temperature ?? llmCfg.temperature,
+      });
+
+      // Synthesize with validation. On success, add to the pages Map so the
+      // shared write loop handles human-notes preservation and page-state checks.
+      // On failure, record the error and leave the existing file untouched.
+      try {
+        const patch = await synthesizeWikiPage(llmProvider, request, { maxRetries: retries });
+        pages.set(modulePage, patch.content);
+      } catch (err) {
+        if (err instanceof WikiPatchError) {
+          llmErrors.push({ file: modulePage, error: err.message, issues: err.issues });
+        } else if (err instanceof LLMProviderError) {
+          llmErrors.push({ file: modulePage, error: err.message });
+        } else {
+          throw err;
+        }
+        // Page NOT added to the Map → the shared write loop will not touch it,
+        // leaving any existing file intact.
+      }
+    }
+  }
+
+  // Deterministic module pages for modules not handled (or not eligible) for LLM synthesis.
   for (const module of plan.modules || []) {
     const modulePage = `${module.slug}.md`;
-    if (!pages.has(modulePage)) {
+    if (!llmHandledModules.has(modulePage) && !pages.has(modulePage)) {
       pages.set(modulePage, renderModulePage(manifest, module, sourceToTestsIndex));
     }
   }
@@ -81,7 +160,9 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
         let withNotes = preserveHumanNotes(newContent, notes);
         if (notes.trim().length > 0) {
           // Update page_state to "mixed" since human notes are present.
-          withNotes = withNotes.replace(/^page_state: "generated"/m, 'page_state: "mixed"');
+          // If the content already has page_state: "generated", replace it.
+          // If it has no page_state field at all (e.g. LLM output), inject it.
+          withNotes = setPageStateMixed(withNotes);
         }
         await writeText(filePath, withNotes);
         continue;
@@ -99,13 +180,69 @@ export async function compileWiki({ scanDir, planFile, wikiDir }) {
       skipped,
       skipped_by_state: skippedByState,
       commit: manifest.commit,
-      contexts: pageContexts.length
+      contexts: pageContexts.length,
+      ...(llmErrors.length > 0 ? { llm_errors: llmErrors } : {})
     }
+  };
+}
+
+/**
+ * Build a PromptContext for a module page from an assembled PageContext and plan module entry.
+ * Maps the context-assembler output format to the prompt-template input format.
+ */
+function buildModulePromptContext(
+  pageCtx: ReturnType<typeof assemblePageContext>,
+  manifest: any,
+  module: any,
+  existingContent?: string,
+) {
+  return {
+    pageName: String(pageCtx.page.path).replace(/\.md$/, ''),
+    pageTitle: module.name,
+    repoRemote: manifest.remote,
+    repoCommit: manifest.commit,
+    sourceCards: (pageCtx.source_inputs as any[]).map((si) => ({
+      path: si.path,
+      category: si.category,
+      language: si.language,
+      reasons: si.reasons,
+    })),
+    docCards: (pageCtx.documentation_inputs as any[]).map((di) => ({
+      path: di.path,
+      status: di.status,
+    })),
+    existingContent,
+    moduleInfo: {
+      name: module.name,
+      slug: module.slug,
+      files: module.files,
+      categories: module.categories,
+      languages: module.languages,
+      important_reasons: module.important_reasons,
+    },
   };
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
   return error instanceof Error && 'code' in error;
+}
+
+/**
+ * Update the page_state frontmatter field to "mixed".
+ * - If `page_state: "generated"` is present, replaces it.
+ * - If no `page_state:` field is present, injects one into the frontmatter block.
+ * - If `page_state: "mixed"` or any other value is already present, leaves it unchanged.
+ */
+function setPageStateMixed(content: string): string {
+  if (/^page_state: "generated"/m.test(content)) {
+    return content.replace(/^page_state: "generated"/m, 'page_state: "mixed"');
+  }
+  if (/^page_state:/m.test(content)) {
+    // Already set to something other than "generated"; leave it.
+    return content;
+  }
+  // No page_state field – inject it as the first field in the frontmatter block.
+  return content.replace(/---\n/, '---\npage_state: "mixed"\n');
 }
 
 function frontmatter(manifest, extra: any = {}) {
