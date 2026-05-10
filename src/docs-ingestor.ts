@@ -283,7 +283,7 @@ function leadingSpaces(line: string): number {
 }
 
 function pushCiWorkflowCommandSource(target: CiWorkflowCommandSource[], seen: Set<string>, value: CiWorkflowCommandSource) {
-  const key = `${value.command}\0${value.line ?? ''}\0${value.end_line ?? ''}`;
+  const key = `${value.command}␟${value.line ?? ''}␟${value.end_line ?? ''}`;
   if (seen.has(key)) {
     return;
   }

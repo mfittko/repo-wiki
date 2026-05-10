@@ -523,11 +523,11 @@ function encodePathSegments(filePath: string) {
 }
 
 function formatGitHubLineAnchor(sourceRange?: { line?: number; end_line?: number }) {
-  const line = normalizePositiveLineNumber(sourceRange?.line);
+  const line = sanitizeLineNumber(sourceRange?.line);
   if (!line) {
     return '';
   }
-  const endLine = normalizePositiveLineNumber(sourceRange?.end_line);
+  const endLine = sanitizeLineNumber(sourceRange?.end_line);
   if (!endLine || endLine === line) {
     return `#L${line}`;
   }
@@ -537,7 +537,7 @@ function formatGitHubLineAnchor(sourceRange?: { line?: number; end_line?: number
   return `#L${line}`;
 }
 
-function normalizePositiveLineNumber(value: unknown) {
+function sanitizeLineNumber(value: number | undefined) {
   const numeric = typeof value === 'number' ? Math.floor(value) : Number.NaN;
   return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
 }

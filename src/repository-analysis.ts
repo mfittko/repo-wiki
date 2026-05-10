@@ -104,7 +104,7 @@ function extractPackageScriptSources(content: string, scripts: Record<string, st
   const sources: Array<{ name: string; line?: number; end_line?: number }> = [];
   for (const name of Object.keys(scripts || {})) {
     const escapedName = escapeRegExp(name);
-    const pattern = new RegExp(`"${escapedName}"\\s*:`);
+    const pattern = new RegExp(`(?:["']${escapedName}["']|\\b${escapedName}\\b)\\s*:`);
     const lineIndex = lines.findIndex((line) => pattern.test(line));
     sources.push(lineIndex === -1 ? { name } : { name, line: lineIndex + 1 });
   }
