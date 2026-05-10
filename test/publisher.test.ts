@@ -1053,7 +1053,7 @@ test('publishWiki does not rewrite internal links for github-wiki target', async
   }
 });
 
-test('rewriteInternalWikiLinks normalises bare page names, strips leading ./, and preserves special links', () => {
+test('rewriteInternalWikiLinks normalizes bare page names, strips leading ./, and preserves special links', () => {
   assert.equal(rewriteInternalWikiLinks('[Home](Home)'), '[Home](Home.md)');
   assert.equal(rewriteInternalWikiLinks('[Arch](Architecture)'), '[Arch](Architecture.md)');
   assert.equal(rewriteInternalWikiLinks('[Page](./Page.md)'), '[Page](Page.md)');

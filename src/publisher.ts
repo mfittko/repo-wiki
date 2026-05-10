@@ -486,7 +486,7 @@ function parseSidebarToNavHtml(content: string): string {
       continue;
     }
 
-    const linkItemMatch = /^[ \t]*[-*+]\s+\[([^\]]*)\]\(([^)]*)\)/.exec(line);
+    const linkItemMatch = /^[ \t]*[-*+]\s+\[([^\]\n]{0,512})\]\(([^)\n]{0,512})\)/.exec(line);
     if (linkItemMatch) {
       if (!inList) {
         parts.push('<ul>');
