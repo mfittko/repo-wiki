@@ -166,12 +166,23 @@ function renderBuildTestAndRun(manifest) {
   const packageFiles = manifest.files.filter((file) => file.path.endsWith('package.json'));
   const ciFiles = manifest.files.filter((file) => file.category === 'ci');
   const packageScripts = (manifest.analysis?.package_scripts || []).filter((entry) => Object.keys(entry.scripts || {}).length > 0);
-  const scriptRows = packageScripts.flatMap((entry) => Object.entries(entry.scripts || {}).map(([name, command]) => [sourcePathLink(manifest, entry.path), entry.name ? code(entry.name) : 'unknown', code(name), code(String(command))]));
+  const scriptRows = packageScripts.flatMap((entry) => Object.entries(entry.scripts || {}).map(([name, command]) => [
+    sourcePathLink(manifest, entry.path, findNamedSourceRange(entry.script_sources, name)),
+    entry.name ? code(entry.name) : 'unknown',
+    code(name),
+    code(redactSensitiveText(String(command)))
+  ]));
   const scriptsSection = scriptRows.length
     ? `## Package scripts\n\n- Package manifests with scripts: ${packageScripts.length}\n- Scripts detected: ${scriptRows.length}\n\n${markdownTable(['Manifest', 'Package', 'Script', 'Command'], scriptRows)}\n`
     : `## Package scripts\n\nNo package scripts were extracted from manifest analysis. Inspect package manifests, task runners, and CI workflows directly when confirming canonical commands.\n`;
+  const ciCommandSources = manifest.analysis?.ci_workflow_command_sources || [];
+  const ciCommandsSection = ciCommandSources.length
+    ? `## CI workflow commands\n\n- Commands detected: ${ciCommandSources.length}\n\n${markdownTable(['Source', 'Command'], ciCommandSources.map((entry) => [sourcePathLink(manifest, entry.path, entry), code(redactSensitiveText(entry.command))]))}\n`
+    : manifest.analysis?.ci_workflow_commands?.length
+      ? `## CI workflow commands\n\n- Commands detected: ${manifest.analysis.ci_workflow_commands.length}\n\n${manifest.analysis.ci_workflow_commands.map((command) => `- ${code(redactSensitiveText(command))}`).join('\n')}\n`
+      : `## CI workflow commands\n\nNo workflow commands were extracted from CI analysis.\n`;
 
-  return `${frontmatter(manifest, { kind: 'build_test_run' })}# Build, Test, and Run\n\n## Detected package manifests\n\n${packageFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No package manifests detected.'}\n\n## Detected CI files\n\n${ciFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No CI files detected.'}\n\n${scriptsSection}\n## Manual verification guidance\n\nTreat extracted scripts as a starting point. Verify the canonical build, test, and run paths against CI workflows, container entrypoints, and deployment configs when they exist.\n`;
+  return `${frontmatter(manifest, { kind: 'build_test_run' })}# Build, Test, and Run\n\n## Detected package manifests\n\n${packageFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No package manifests detected.'}\n\n## Detected CI files\n\n${ciFiles.map((file) => `- ${sourcePathLink(manifest, file.path)}`).join('\n') || '- No CI files detected.'}\n\n${scriptsSection}\n${ciCommandsSection}\n## Manual verification guidance\n\nTreat extracted scripts as a starting point. Verify the canonical build, test, and run paths against CI workflows, container entrypoints, and deployment configs when they exist.\n`;
 }
 
 function renderOpenQuestions(manifest, plan) {
@@ -466,21 +477,21 @@ function formatSourcePathList(manifest: any, values: string[]) {
   return values.map((value) => sourcePathLink(manifest, value)).join(', ');
 }
 
-function sourcePathLink(manifest: any, filePath: string) {
-  const browserUrl = githubSourceUrl(manifest, filePath);
+function sourcePathLink(manifest: any, filePath: string, sourceRange?: { line?: number; end_line?: number }) {
+  const browserUrl = githubSourceUrl(manifest, filePath, sourceRange);
   if (!browserUrl) {
     return code(filePath);
   }
   return `[${escapeMarkdownLinkText(filePath)}](${browserUrl})`;
 }
 
-function githubSourceUrl(manifest: any, filePath: string) {
+function githubSourceUrl(manifest: any, filePath: string, sourceRange?: { line?: number; end_line?: number }) {
   const repoUrl = githubRepositoryUrl(manifest?.remote);
   const commit = manifest?.commit;
   if (!repoUrl || !commit || !filePath) {
     return null;
   }
-  return `${repoUrl}/blob/${encodeURIComponent(String(commit))}/${encodePathSegments(filePath)}`;
+  return `${repoUrl}/blob/${encodeURIComponent(String(commit))}/${encodePathSegments(filePath)}${formatGitHubLineAnchor(sourceRange)}`;
 }
 
 function githubRepositoryUrl(remote: string | undefined) {
@@ -511,8 +522,35 @@ function encodePathSegments(filePath: string) {
   return String(filePath).split('/').map((segment) => encodeURIComponent(segment)).join('/');
 }
 
+function formatGitHubLineAnchor(sourceRange?: { line?: number; end_line?: number }) {
+  const line = sanitizeLineNumber(sourceRange?.line);
+  if (!line) {
+    return '';
+  }
+  const endLine = sanitizeLineNumber(sourceRange?.end_line);
+  if (!endLine || endLine === line) {
+    return `#L${line}`;
+  }
+  if (endLine > line) {
+    return `#L${line}-L${endLine}`;
+  }
+  return `#L${line}`;
+}
+
+function sanitizeLineNumber(value: number | undefined) {
+  const numeric = typeof value === 'number' ? Math.floor(value) : Number.NaN;
+  return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+}
+
 function escapeMarkdownLinkText(value: string) {
   return String(value).replace(/\\/g, '\\\\').replace(/\[/g, '\\[').replace(/\]/g, '\\]');
+}
+
+function findNamedSourceRange(
+  sources: Array<{ name?: string; line?: number; end_line?: number }> | undefined,
+  name: string
+) {
+  return (sources || []).find((source) => source.name === name);
 }
 
 function uniqueSorted(values: Array<string | number>) {

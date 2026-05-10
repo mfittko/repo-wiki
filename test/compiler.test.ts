@@ -205,6 +205,66 @@ test('compileWiki falls back cleanly when richer analysis is absent', async () =
   }
 });
 
+test('compileWiki redacts sensitive CI command arguments in Build-Test-and-Run output', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'aa11bb22cc33',
+    mode: 'bootstrap',
+    totals: {
+      languages: { YAML: 1, JSON: 1 },
+      categories: { ci: 1, config: 1 },
+      runtime_hints: {}
+    },
+    files: [
+      {
+        path: '.github/workflows/ci.yml',
+        category: 'ci',
+        language: 'YAML',
+        imports: [],
+        runtime_hints: [],
+        reasons: ['ci']
+      },
+      {
+        path: 'package.json',
+        category: 'config',
+        language: 'JSON',
+        imports: [],
+        runtime_hints: [],
+        reasons: ['config']
+      }
+    ],
+    analysis: {
+      package_scripts: [],
+      ci_workflow_command_sources: [
+        {
+          path: '.github/workflows/ci.yml',
+          command: 'curl -H "authorization: bearer super-secret-token" https://example.test',
+          line: 12
+        },
+        {
+          path: '.github/workflows/ci.yml',
+          command: 'npm run deploy --token abc123',
+          line: 18
+        }
+      ]
+    }
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan: createPlan() });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+
+    const buildPage = await fs.readFile(path.join(wikiDir, 'Build-Test-and-Run.md'), 'utf8');
+    assert.match(buildPage, /authorization: bearer \[REDACTED\]/i);
+    assert.doesNotMatch(buildPage, /super-secret-token/);
+    assert.match(buildPage, /--token \[REDACTED\]/);
+    assert.doesNotMatch(buildPage, /--token abc123/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('compileWiki renders related tests in module pages', async () => {
   const manifest = {
     remote: 'origin',
@@ -291,7 +351,15 @@ test('compileWiki renders source file paths as commit-pinned GitHub links when r
       { path: 'test/file with spaces.test.ts', category: 'test', language: 'TypeScript', imports: ['../src/file [with] spaces.ts'], runtime_hints: [], reasons: ['test'] }
     ],
     analysis: {
-      package_scripts: [{ path: 'package.json', name: 'example', scripts: { test: 'node --test' } }],
+      package_scripts: [{
+        path: 'package.json',
+        name: 'example',
+        scripts: { test: 'node --test' },
+        script_sources: [{ name: 'test', line: 7 }]
+      }],
+      ci_workflow_command_sources: [
+        { path: '.github/workflows/ci.yml', command: 'npm ci', line: 12, end_line: 13 }
+      ],
       dependency_graph: {
         edges: [{ from: 'test/file with spaces.test.ts', to: 'src/file [with] spaces.ts', specifier: '../src/file [with] spaces.ts' }],
         summary: { edges: 1, importers: 1, imported_files: 1 }
@@ -329,7 +397,8 @@ test('compileWiki renders source file paths as commit-pinned GitHub links when r
     const dependencyPage = await fs.readFile(path.join(wikiDir, 'Dependency-Map.md'), 'utf8');
 
     assert.ok(modulePage.includes('[src/file \\[with\\] spaces.ts](https://github.com/owner/example/blob/abc123456789/src/file%20%5Bwith%5D%20spaces.ts)'));
-    assert.match(buildPage, /\[package\.json\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/package\.json\)/);
+    assert.match(buildPage, /\[package\.json\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/package\.json#L7\)/);
+    assert.match(buildPage, /\[\.github\/workflows\/ci\.yml\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/\.github\/workflows\/ci\.yml#L12-L13\)/);
     assert.match(testingPage, /\[test\/file with spaces\.test\.ts\]\(https:\/\/github\.com\/owner\/example\/blob\/abc123456789\/test\/file%20with%20spaces\.test\.ts\)/);
     assert.ok(dependencyPage.includes('[src/file \\[with\\] spaces.ts](https://github.com/owner/example/blob/abc123456789/src/file%20%5Bwith%5D%20spaces.ts)'));
   } finally {
@@ -639,4 +708,3 @@ test('compileWiki does not overwrite unmanaged pages by default', async () => {
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
-

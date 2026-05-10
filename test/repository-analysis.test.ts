@@ -16,11 +16,16 @@ test('extractPackageMetadata handles non-package files, valid package files, and
     package_scripts: {
       alpha: 'echo a',
       zeta: 'echo z'
-    }
+    },
+    package_script_sources: [
+      { name: 'alpha', line: 1 },
+      { name: 'zeta', line: 1 }
+    ]
   });
   assert.deepEqual(extractPackageMetadata('package.json', '{ invalid json'), {
     package_name: null,
-    package_scripts: {}
+    package_scripts: {},
+    package_script_sources: []
   });
 });
 
@@ -95,7 +100,8 @@ test('buildRepositoryAnalysis resolves imports, deduplicates edges, and maps fil
     {
       path: 'package.json',
       name: 'repo-wiki',
-      scripts: { build: 'tsc', test: 'node --test' }
+      scripts: { build: 'tsc', test: 'node --test' },
+      script_sources: []
     }
   ]);
 
@@ -159,4 +165,29 @@ test('buildRepositoryAnalysis resolves package subpaths and remains deterministi
     imported_packages: 2
   });
   assert.deepEqual(forward.dependency_graph, reversed.dependency_graph);
+});
+
+test('extractPackageMetadata resolves script lines only from top-level scripts object', () => {
+  const content = `{
+  "dependencies": {
+    "test": "not-a-script"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --test"
+  }
+}
+`;
+
+  assert.deepEqual(extractPackageMetadata('package.json', content), {
+    package_name: null,
+    package_scripts: {
+      build: 'tsc',
+      test: 'node --test'
+    },
+    package_script_sources: [
+      { name: 'build', line: 6 },
+      { name: 'test', line: 7 }
+    ]
+  });
 });

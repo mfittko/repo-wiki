@@ -253,13 +253,21 @@ function selectDocumentationCards({ documentationCards, page, selectedSources, p
 }
 
 function selectMetadata(manifest: any, page: any) {
+  const packageScripts = (manifest?.analysis?.package_scripts || []).map((entry: any) => ({
+    path: entry.path,
+    script_count: Object.keys(entry.scripts || {}).length,
+    ...((entry.script_sources || []).length > 0 ? {
+      script_sources: (entry.script_sources || []).map((source: any) => ({
+        name: source.name,
+        ...(typeof source.line === 'number' ? { line: source.line } : {}),
+        ...(typeof source.end_line === 'number' ? { end_line: source.end_line } : {})
+      }))
+    } : {})
+  }));
   const base = {
     dependency_graph: manifest?.analysis?.dependency_graph?.summary || null,
     test_to_source: manifest?.analysis?.test_to_source?.summary || null,
-    package_scripts: (manifest?.analysis?.package_scripts || []).map((entry: any) => ({
-      path: entry.path,
-      script_count: Object.keys(entry.scripts || {}).length
-    }))
+    package_scripts: packageScripts
   };
 
   if (page?.path === 'Dependency-Map.md') {
@@ -267,6 +275,17 @@ function selectMetadata(manifest: any, page: any) {
   }
   if (page?.path === 'Testing-Strategy.md') {
     return { test_to_source: base.test_to_source };
+  }
+  if (page?.path === 'Build-Test-and-Run.md') {
+    return {
+      package_scripts: base.package_scripts,
+      ci_workflow_command_sources: (manifest?.analysis?.ci_workflow_command_sources || []).map((entry: any) => ({
+        path: entry.path,
+        command: entry.command,
+        ...(typeof entry.line === 'number' ? { line: entry.line } : {}),
+        ...(typeof entry.end_line === 'number' ? { end_line: entry.end_line } : {})
+      }))
+    };
   }
   return {
     dependency_graph: base.dependency_graph,

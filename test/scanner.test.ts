@@ -53,7 +53,11 @@ test('scanRepository creates a manifest and source cards', async () => {
         scripts: {
           build: 'node build.js',
           test: 'node --test'
-        }
+        },
+        script_sources: [
+          { name: 'build', line: 4 },
+          { name: 'test', line: 5 }
+        ]
       }
     ]);
 
@@ -165,6 +169,73 @@ test('scanRepository hashes files even when content is skipped', async () => {
     assert.ok(binaryCard);
     assert.equal(binaryCard.skipped_content, true);
     assert.equal(binaryCard.sha256, crypto.createHash('sha256').update(binaryContent).digest('hex'));
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
+});
+
+test('scanRepository records optional source ranges for package scripts and CI workflow commands', async () => {
+  const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-source-ranges-test-'));
+
+  try {
+    await fs.mkdir(path.join(repo, '.github', 'workflows'), { recursive: true });
+    await fs.writeFile(path.join(repo, 'package.json'), `{
+  "name": "fixture-repo",
+  "scripts": {
+    "build": "node build.js",
+    "test": "node --test"
+  }
+}
+`, 'utf8');
+    await fs.writeFile(path.join(repo, '.github', 'workflows', 'ci.yml'), `name: CI
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: npm ci
+      - run: |-
+          npm run test \\
+            -- --watch=false
+`, 'utf8');
+
+    const result = await scanRepository({
+      mode: 'bootstrap',
+      repoPath: repo,
+      outDir: path.join(repo, '.llmwiki', 'run')
+    });
+
+    const packageCard = result.manifest.files.find((file) => file.path === 'package.json');
+    assert.ok(packageCard);
+    assert.deepEqual(packageCard.package_script_sources, [
+      { name: 'build', line: 4 },
+      { name: 'test', line: 5 }
+    ]);
+
+    const ciCard = result.manifest.files.find((file) => file.path === '.github/workflows/ci.yml');
+    assert.ok(ciCard);
+    assert.deepEqual(ciCard.ci_workflow_command_sources, [
+      { command: 'npm ci', line: 6 },
+      { command: 'npm run test -- --watch=false', line: 8, end_line: 9 }
+    ]);
+
+    assert.deepEqual(result.manifest.analysis.package_scripts, [
+      {
+        path: 'package.json',
+        name: 'fixture-repo',
+        scripts: {
+          build: 'node build.js',
+          test: 'node --test'
+        },
+        script_sources: [
+          { name: 'build', line: 4 },
+          { name: 'test', line: 5 }
+        ]
+      }
+    ]);
+    assert.deepEqual(result.manifest.analysis.ci_workflow_command_sources, [
+      { path: '.github/workflows/ci.yml', command: 'npm ci', line: 6 },
+      { path: '.github/workflows/ci.yml', command: 'npm run test -- --watch=false', line: 8, end_line: 9 }
+    ]);
   } finally {
     await fs.rm(repo, { recursive: true, force: true });
   }
