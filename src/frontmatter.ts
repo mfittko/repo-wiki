@@ -145,6 +145,8 @@ function renderFrontmatterAsProvenance(content: string): string {
 
   const metadata = parseSupportedFrontmatter(block.yaml);
   if (!metadata) {
+    // Intentional defensive fallback: unrecognised or malformed frontmatter (e.g. source_paths
+    // with an empty scalar value) is left untouched rather than partially rendered.
     return content;
   }
 

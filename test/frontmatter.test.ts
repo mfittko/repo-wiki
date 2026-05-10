@@ -280,6 +280,25 @@ test('applyFrontmatterPolicy provenance leaves invalid leading frontmatter uncha
   assert.equal(result, input);
 });
 
+test('applyFrontmatterPolicy provenance returns content unchanged when source_paths has empty scalar value', () => {
+  // source_paths: with no list items (empty scalar '') causes toStringArray to return null,
+  // which makes parseSupportedFrontmatter return null, triggering the defensive fallback in
+  // renderFrontmatterAsProvenance that returns the original content unchanged.
+  const input = [
+    '---',
+    'source_repo: "https://github.com/mfittko/repo-wiki.git"',
+    'source_paths:',
+    'compiled_at: "2026-05-10T00:00:00.000Z"',
+    '---',
+    '# Page',
+    ''
+  ].join('\n');
+  const result = applyFrontmatterPolicy(input, 'provenance');
+  // Current defensive behavior: raw frontmatter is returned unchanged rather than
+  // partially rendered with an empty source_paths field.
+  assert.equal(result, input);
+});
+
 test('applyFrontmatterPolicy strip is a no-op when content has no frontmatter', () => {
   const input = '# Page\n\nContent.\n';
   const result = applyFrontmatterPolicy(input, 'strip');
