@@ -100,6 +100,12 @@ test('validateWikiPatch returns error for unclosed frontmatter', () => {
   assert.ok(codes(issues).includes('missing-frontmatter'));
 });
 
+test('validateWikiPatch rejects malformed closing frontmatter delimiter', () => {
+  const content = '---\nsource_commit: "abc"\nkind: "module"\n---not-a-delimiter\n# Body\n';
+  const issues = validateWikiPatch(content, 'Module-Auth');
+  assert.ok(codes(issues).includes('missing-frontmatter'));
+});
+
 test('validateWikiPatch returns error when source_commit is missing', () => {
   const content = '---\nkind: "module"\nsource_paths: []\n---\n\n# Body\n';
   const issues = validateWikiPatch(content, 'Module-Auth');
@@ -146,6 +152,19 @@ test('validateWikiPatch accepts empty source_paths array', () => {
   assert.ok(!codes(issues).includes('missing-source-paths'), 'empty array is acceptable');
   assert.ok(!codes(issues).includes('empty-content'));
   assert.ok(!codes(issues).includes('missing-source-commit'));
+});
+
+test('validateWikiPatch returns error when source_paths contains non-strings', () => {
+  const content = '---\nsource_commit: "abc123"\nkind: "module"\nsource_paths: ["src/a.ts", 123, true]\n---\n\n# Body\n';
+  const issues = validateWikiPatch(content, 'Module-Auth');
+  assert.ok(codes(issues).includes('invalid-source-paths'));
+  assert.equal(issues.find((i) => i.code === 'invalid-source-paths')?.level, 'error');
+});
+
+test('validateWikiPatch returns error when source_paths contains blank strings', () => {
+  const content = '---\nsource_commit: "abc123"\nkind: "module"\nsource_paths: ["src/a.ts", "   "]\n---\n\n# Body\n';
+  const issues = validateWikiPatch(content, 'Module-Auth');
+  assert.ok(codes(issues).includes('invalid-source-paths'));
 });
 
 test('validateWikiPatch returns error for AWS access key pattern', () => {
@@ -450,6 +469,32 @@ test('synthesizeWikiPage defaults to maxRetries=0 when not specified', async () 
     WikiPatchError,
   );
   assert.equal(callCount, 1, 'default maxRetries=0 means exactly one attempt');
+});
+
+test('synthesizeWikiPage rejects negative maxRetries before provider call', async () => {
+  let callCount = 0;
+  const provider: LLMProvider = {
+    name: 'counting',
+    async complete(): Promise<LLMResponse> {
+      callCount++;
+      return { content: validPatch(), provider: 'counting' };
+    },
+  };
+
+  await assert.rejects(
+    () => synthesizeWikiPage(provider, makeRequest(), { maxRetries: -1 }),
+    RangeError,
+  );
+  assert.equal(callCount, 0, 'invalid retry configuration should fail before synthesis');
+});
+
+test('synthesizeWikiPage rejects non-finite maxRetries before provider call', async () => {
+  const provider = fixedProvider(validPatch());
+
+  await assert.rejects(
+    () => synthesizeWikiPage(provider, makeRequest(), { maxRetries: Number.NaN }),
+    RangeError,
+  );
 });
 
 // ── WikiPatchError ─────────────────────────────────────────────────────────

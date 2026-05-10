@@ -18,6 +18,7 @@
  *   const patch = await synthesizeWikiPage(provider, request, { maxRetries: 2 });
  */
 
+import { containsSecretLikeContent } from './secret-patterns.js';
 import type { LLMProvider, LLMRequest } from './llm-provider.js';
 
 // ── Issue types ────────────────────────────────────────────────────────────
@@ -114,23 +115,6 @@ export interface SynthesizeOptions {
   maxRetries?: number;
 }
 
-// ── Secret patterns ────────────────────────────────────────────────────────
-
-/**
- * Patterns that indicate a page contains secret-like content.
- * Mirrors the patterns in `src/linter.ts` to keep per-patch and per-wiki
- * lint gates consistent.
- */
-const SECRET_PATTERNS: readonly RegExp[] = [
-  /AKIA[0-9A-Z]{16}/,
-  /-----BEGIN (RSA|DSA|EC|OPENSSH) PRIVATE KEY-----/,
-  /ghp_[A-Za-z0-9_]{30,}/,
-  /xox[baprs]-[A-Za-z0-9-]{20,}/,
-  /sk-[A-Za-z0-9]{20,}/,
-  /authorization:\s*bearer\s+[^\s"']{8,}/i,
-  /(?:token|password|api[_-]?key|secret)=[^\s&]{8,}/i,
-];
-
 // ── Frontmatter parsing ────────────────────────────────────────────────────
 
 /**
@@ -141,19 +125,22 @@ const SECRET_PATTERNS: readonly RegExp[] = [
  */
 function splitFrontmatterAndBody(content: string): { frontmatterRaw: string | null; body: string } {
   const normalized = content.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
+  const opening = normalized.match(/^---[ \t]*\n/);
 
-  if (!normalized.startsWith('---\n')) {
+  if (!opening) {
     return { frontmatterRaw: null, body: normalized };
   }
 
-  const end = normalized.indexOf('\n---', 4);
-  if (end === -1) {
+  const closingPattern = /^---[ \t]*$/gm;
+  closingPattern.lastIndex = opening[0].length;
+  const closing = closingPattern.exec(normalized);
+  if (!closing) {
     return { frontmatterRaw: null, body: normalized };
   }
 
-  const frontmatterRaw = normalized.slice(4, end);
+  const frontmatterRaw = normalized.slice(opening[0].length, closing.index);
   // Strip the single newline that separates frontmatter from the body.
-  const body = normalized.slice(end + 4).replace(/^\n/, '');
+  const body = normalized.slice(closing.index + closing[0].length).replace(/^\n/, '');
 
   return { frontmatterRaw, body };
 }
@@ -161,9 +148,10 @@ function splitFrontmatterAndBody(content: string): { frontmatterRaw: string | nu
 /**
  * Parse a raw YAML frontmatter string into a key→value record.
  *
- * Handles both JSON-stringified scalar values (as emitted by `compiler.ts`)
- * and bare YAML scalar values (as an LLM might produce). Also handles
- * single-line and multi-line block sequence notation for array fields.
+ * Handles the frontmatter subset repo-wiki emits and asks LLMs to return:
+ * top-level `key: value` pairs, JSON-quoted or bare scalar values, JSON-style
+ * inline arrays, and indented block sequences. It intentionally does not try
+ * to be a general YAML parser.
  */
 function parseFrontmatterFields(raw: string): Record<string, unknown> {
   const fields: Record<string, unknown> = {};
@@ -263,9 +251,10 @@ function parseScalar(value: string): string {
  *   4. `missing-kind`        – Frontmatter lacks a `kind` field.
  *   5. `empty-body`          – No markdown content after the frontmatter block.
  *   6. `secret-like-content` – Content matches a known credential pattern.
+ *   7. `invalid-source-paths` – `source_paths` contains non-string or blank entries.
  *
  * Lint gates applied (warning-level):
- *   7. `missing-source-paths` – Frontmatter lacks a `source_paths` array.
+ *   8. `missing-source-paths` – Frontmatter lacks a `source_paths` array.
  */
 export function validateWikiPatch(rawContent: string, pageName: string): WikiPatchIssue[] {
   const issues: WikiPatchIssue[] = [];
@@ -322,25 +311,29 @@ export function validateWikiPatch(rawContent: string, pageName: string): WikiPat
     }
 
     // 7. Warning: source_paths should be a list
-    if (!Array.isArray(fields['source_paths'])) {
+    const sourcePaths = fields['source_paths'];
+    if (!Array.isArray(sourcePaths)) {
       issues.push({
         level: 'warning',
         code: 'missing-source-paths',
         message: `${pageName}: frontmatter is missing a "source_paths" array.`,
       });
+    } else if (!sourcePaths.every(isNonEmptyString)) {
+      issues.push({
+        level: 'error',
+        code: 'invalid-source-paths',
+        message: `${pageName}: frontmatter field "source_paths" must contain only non-empty strings.`,
+      });
     }
   }
 
   // 6. Secret-like content check (run over the full content)
-  for (const pattern of SECRET_PATTERNS) {
-    if (pattern.test(rawContent)) {
-      issues.push({
-        level: 'error',
-        code: 'secret-like-content',
-        message: `${pageName}: content contains secret-like content that cannot be accepted.`,
-      });
-      break; // One error per page is sufficient
-    }
+  if (containsSecretLikeContent(rawContent)) {
+    issues.push({
+      level: 'error',
+      code: 'secret-like-content',
+      message: `${pageName}: content contains secret-like content that cannot be accepted.`,
+    });
   }
 
   return issues;
@@ -384,7 +377,7 @@ export function parseWikiPatch(rawContent: string, pageName: string): WikiPatch 
     source_commit: String(fields['source_commit'] ?? ''),
     kind: String(fields['kind'] ?? ''),
     source_paths: Array.isArray(fields['source_paths'])
-      ? (fields['source_paths'] as string[])
+      ? fields['source_paths'].filter(isNonEmptyString)
       : [],
     ...Object.fromEntries(
       Object.entries(fields).filter(([k]) => !['source_commit', 'kind', 'source_paths'].includes(k)),
@@ -412,13 +405,14 @@ export function parseWikiPatch(rawContent: string, pageName: string): WikiPatch 
  * @returns A validated `WikiPatch`.
  * @throws {WikiPatchError} When all synthesis attempts produce invalid patches.
  * @throws {LLMProviderError} On unrecoverable provider failures.
+ * @throws {RangeError} When `maxRetries` is not a non-negative finite number.
  */
 export async function synthesizeWikiPage(
   provider: LLMProvider,
   request: LLMRequest,
   options: SynthesizeOptions = {},
 ): Promise<WikiPatch> {
-  const maxRetries = options.maxRetries ?? 0;
+  const maxRetries = normalizeMaxRetries(options.maxRetries);
   let lastError: WikiPatchError | undefined;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -435,4 +429,16 @@ export async function synthesizeWikiPage(
 
   // All attempts exhausted — re-throw the last validation error
   throw lastError!;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+
+function normalizeMaxRetries(maxRetries: number | undefined): number {
+  if (maxRetries === undefined) return 0;
+  if (!Number.isFinite(maxRetries) || maxRetries < 0) {
+    throw new RangeError('maxRetries must be a non-negative finite number.');
+  }
+  return Math.floor(maxRetries);
 }
