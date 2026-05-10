@@ -205,7 +205,7 @@ function hasMaterialClaimLikeText(content: string) {
     if (inFence) continue;
     if (
       line.startsWith('#')
-      || /^[-*]\s+\[[^\]]+\]\([^)]+\)$/.test(line)
+      || /^[-*]\s+\[[^\]]+\]\([^)]+\)/.test(line)
       || /^\|[-:\s|]+\|?$/.test(line)
       || /^<!--/.test(line)
       || FRONTMATTER_POLICY_PATTERN.test(line)

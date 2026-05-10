@@ -664,10 +664,11 @@ function buildDocumentationReviewQueue(docs: any[]) {
 
   for (const doc of docs || []) {
     const reasons = new Set<string>();
+    const contradictionCount = doc.validation?.contradictions?.length || 0;
     if (doc.stale) reasons.add(`stale (${doc.age_days} days old)`);
-    if (doc.validation?.contradictions?.length) reasons.add(`contradicted (${doc.validation.contradictions.length} ${pluralize(doc.validation.contradictions.length, 'signal', 'signals')})`);
+    if (contradictionCount > 0) reasons.add(`contradicted (${contradictionCount} ${pluralize(contradictionCount, 'signal', 'signals')})`);
     if (doc.status === 'unvalidated') reasons.add('unvalidated status');
-    if ((doc.claims?.length || 0) > 0 && doc.status !== 'validated') reasons.add('claims need validation');
+    if ((doc.claims?.length || 0) > 0 && !['validated', 'unvalidated'].includes(doc.status)) reasons.add('claims need validation');
 
     if (!reasons.size) continue;
 
