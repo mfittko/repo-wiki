@@ -547,6 +547,13 @@ const PAGES_LAYOUT = `<!doctype html>
     .breadcrumb { color: #57606a; font-size: 0.875rem; margin-bottom: 1rem; }
     .breadcrumb a { color: #0969da; text-decoration: none; }
     .breadcrumb a:hover { text-decoration: underline; }
+    .page-metadata { background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; color: #57606a; font-size: 0.875rem; margin: 0 0 1.5rem; padding: 0.75rem 1rem; }
+    .page-metadata summary { color: #24292f; cursor: pointer; font-weight: 600; }
+    .page-metadata dl { display: grid; gap: 0.35rem 1rem; grid-template-columns: max-content minmax(0, 1fr); margin: 0.75rem 0 0; }
+    .page-metadata dt { color: #24292f; font-weight: 600; }
+    .page-metadata dd { margin: 0; min-width: 0; }
+    .page-metadata ul { margin: 0; padding-left: 1.25rem; }
+    .page-metadata code { color: #24292f; }
     .back-link { border-top: 1px solid #d0d7de; color: #57606a; font-size: 0.875rem; margin-top: 2rem; padding-top: 1rem; }
     .back-link a { color: #0969da; text-decoration: none; }
     .back-link a:hover { text-decoration: underline; }
@@ -591,6 +598,21 @@ const PAGES_LAYOUT = `<!doctype html>
         <a href="{{ _base }}Home.md">Home</a> &rsaquo;
         <span>{{ page.title | default: page.name | replace: '.md', '' }}</span>
       </nav>{% endif %}
+      {% if page.page_state or page.kind or page.confidence or page.claim_status or page.source_repo or page.source_commit or page.compiled_at or page.source_paths %}
+      <details class="page-metadata">
+        <summary>Page metadata</summary>
+        <dl>
+          {% if page.kind %}<dt>Kind</dt><dd>{{ page.kind | escape }}</dd>{% endif %}
+          {% if page.page_state %}<dt>State</dt><dd>{{ page.page_state | escape }}</dd>{% endif %}
+          {% if page.confidence %}<dt>Confidence</dt><dd>{{ page.confidence | escape }}</dd>{% endif %}
+          {% if page.claim_status %}<dt>Claim status</dt><dd>{{ page.claim_status | escape }}</dd>{% endif %}
+          {% if page.source_repo %}<dt>Source repo</dt><dd>{{ page.source_repo | escape }}</dd>{% endif %}
+          {% if page.source_commit %}<dt>Source commit</dt><dd><code>{{ page.source_commit | escape }}</code></dd>{% endif %}
+          {% if page.compiled_at %}<dt>Compiled at</dt><dd>{{ page.compiled_at | escape }}</dd>{% endif %}
+          {% if page.source_paths %}<dt>Source paths</dt><dd><ul>{% for source_path in page.source_paths %}<li><code>{{ source_path | escape }}</code></li>{% endfor %}</ul></dd>{% endif %}
+        </dl>
+      </details>
+      {% endif %}
       {{ content }}
       {% if _kind != 'home' %}<div class="back-link"><a href="{{ _base }}Index.md">&larr; Back to Index</a></div>{% endif %}
     </main>

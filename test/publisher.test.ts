@@ -878,7 +878,7 @@ test('publishWiki preserves existing _includes/wiki_nav.html without overwriting
   }
 });
 
-test('publishWiki layout contains navigation sidebar and breadcrumb elements', async () => {
+test('publishWiki layout contains navigation sidebar, breadcrumbs, and page metadata elements', async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
   const wikiDir = path.join(tempDir, 'wiki');
   const remoteDir = path.join(tempDir, 'remote.git');
@@ -903,6 +903,17 @@ test('publishWiki layout contains navigation sidebar and breadcrumb elements', a
     assert.match(layout, /class="sidebar"/);
     assert.match(layout, /class="site-nav"/);
     assert.match(layout, /class="breadcrumb"/);
+    assert.match(layout, /class="page-metadata"/);
+    assert.match(layout, /Page metadata/);
+    assert.match(layout, /page\.page_state/);
+    assert.match(layout, /page\.kind/);
+    assert.match(layout, /page\.confidence/);
+    assert.match(layout, /page\.claim_status/);
+    assert.match(layout, /page\.source_repo/);
+    assert.match(layout, /page\.source_commit/);
+    assert.match(layout, /page\.compiled_at/);
+    assert.match(layout, /page\.source_paths/);
+    assert.match(layout, /source_path in page\.source_paths/);
     assert.match(layout, /class="back-link"/);
     assert.match(layout, /\{% include wiki_nav\.html %\}/);
     assert.match(layout, /Home\.md/);
