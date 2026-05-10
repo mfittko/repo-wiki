@@ -126,7 +126,7 @@ export interface SynthesizeOptions {
 function stripSurroundingMarkdownFence(content: string): string {
   const normalized = content.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n');
   const trimmed = normalized.trim();
-  const fence = /^```[A-Za-z0-9_-]*[ \t]*\n([\s\S]*)\n```[ \t]*$/.exec(trimmed);
+  const fence = /^```[A-Za-z0-9_-]*[ \t]*\n([\s\S]*?)\n?```[ \t]*$/.exec(trimmed);
   if (!fence) {
     return normalized;
   }

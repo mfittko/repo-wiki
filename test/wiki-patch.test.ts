@@ -81,6 +81,11 @@ test('validateWikiPatch strips only a surrounding markdown fence when inner cont
   assert.deepEqual(issues, []);
 });
 
+test('validateWikiPatch strips surrounding markdown fence without a final inner newline', () => {
+  const issues = validateWikiPatch(`\`\`\`markdown\n${validPatch().trimEnd()}\`\`\``, 'Module-Auth');
+  assert.deepEqual(issues, []);
+});
+
 test('validateWikiPatch still rejects fenced content when inner content lacks frontmatter', () => {
   const issues = validateWikiPatch('```markdown\n# No frontmatter\n```', 'Module-Auth');
   assert.ok(codes(issues).includes('missing-frontmatter'));

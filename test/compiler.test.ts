@@ -1047,9 +1047,14 @@ test('compileWiki in LLM mode does not overwrite existing page when provider out
       /LLM compilation failed.*Module-Auth\.md/s
     );
 
-    // Existing page must be preserved byte-for-byte.
+    // Existing page must be preserved byte-for-byte, and fail-fast semantics
+    // must prevent partial writes of deterministic pages from the same run.
     const afterCompile = await fs.readFile(path.join(wikiDir, 'Module-Auth.md'), 'utf8');
     assert.equal(afterCompile, existingContent);
+    await assert.rejects(
+      () => fs.readFile(path.join(wikiDir, 'Home.md'), 'utf8'),
+      (error: any) => error?.code === 'ENOENT'
+    );
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

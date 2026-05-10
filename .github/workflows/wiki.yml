@@ -59,6 +59,14 @@ jobs:
         run: node ./dist/bin/repo-wiki.js plan --scan .llmwiki/run --out .llmwiki/plan.json
 
       - name: Compile
+        env:
+          LLMWIKI_COMPILER_MODE: ${{ vars.LLMWIKI_COMPILER_MODE }}
+          LLMWIKI_LLM_PROVIDER: ${{ vars.LLMWIKI_LLM_PROVIDER }}
+          LLMWIKI_LLM_MODEL: ${{ vars.LLMWIKI_LLM_MODEL }}
+          LLMWIKI_LLM_TEMPERATURE: ${{ vars.LLMWIKI_LLM_TEMPERATURE }}
+          LLMWIKI_LLM_MAX_OUTPUT_TOKENS: ${{ vars.LLMWIKI_LLM_MAX_OUTPUT_TOKENS }}
+          LLMWIKI_LLM_RETRIES: ${{ vars.LLMWIKI_LLM_RETRIES }}
+          LLMWIKI_LLM_API_KEY: ${{ secrets.LLMWIKI_LLM_API_KEY }}
         run: node ./dist/bin/repo-wiki.js compile --scan .llmwiki/run --plan .llmwiki/plan.json --wiki .llmwiki/wiki
 
       - name: Lint

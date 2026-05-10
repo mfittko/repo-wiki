@@ -125,7 +125,8 @@ export async function compileWiki({
 
       // Synthesize with validation. On success, add to the pages Map so the
       // shared write loop handles human-notes preservation and page-state checks.
-      // On failure, record the error and leave the existing file untouched.
+      // On failure, record the error. LLM mode fails fast before the write loop
+      // below, so invalid LLM output cannot trigger partial wiki writes.
       try {
         const patch = await synthesizeWikiPage(llmProvider!, request, { maxRetries: retries });
         pages.set(modulePage, normalizeLLMGeneratedContent(patch.content, manifest, module));
@@ -137,8 +138,8 @@ export async function compileWiki({
         } else {
           throw err;
         }
-        // Page NOT added to the Map → the shared write loop will not touch it,
-        // leaving any existing file intact.
+        // Page NOT added to the Map. If any LLM page fails, compilation throws
+        // before writing any page, leaving the existing wiki intact.
       }
     }
   }
