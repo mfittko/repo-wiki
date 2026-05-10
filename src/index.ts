@@ -18,3 +18,5 @@ export { detectPageState, extractHumanNotes, injectHumanNotes, preserveHumanNote
 export type { PageState } from './page-ownership.js';
 export { FRONTMATTER_POLICIES, isFrontmatterPolicy, stripFrontmatter, applyFrontmatterPolicy, parseFrontmatterPolicy } from './frontmatter.js';
 export type { FrontmatterPolicy } from './frontmatter.js';
+export { WikiPatchError, validateWikiPatch, parseWikiPatch, synthesizeWikiPage } from './wiki-patch.js';
+export type { WikiPatch, WikiPatchFrontmatter, WikiPatchIssue, SynthesizeOptions } from './wiki-patch.js';
