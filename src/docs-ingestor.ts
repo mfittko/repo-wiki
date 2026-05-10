@@ -341,7 +341,7 @@ function hasLineContinuation(line: string) {
 }
 
 function stripContinuationBackslash(line: string) {
-  return line.replace(/(\\+)\s*$/, (_, slashes: string) => `${slashes.slice(0, -1)}`);
+  return line.replace(/(\\+)(\s*)$/, (_, slashes: string, ws: string) => `${slashes.slice(0, -1)}${ws}`);
 }
 
 function parseNpmRunScript(command: string): string | undefined {
