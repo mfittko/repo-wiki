@@ -19,7 +19,7 @@ import {
 } from './extractors.js';
 import { buildRepositoryAnalysis, extractPackageMetadata } from './repository-analysis.js';
 import { loadConfig } from './config.js';
-import { isDocumentationFile, createDocumentationCard, extractCiCommands } from './docs-ingestor.js';
+import { isDocumentationFile, createDocumentationCard, extractCiCommandSources } from './docs-ingestor.js';
 
 const MAX_TEXT_BYTES = 512_000;
 
@@ -77,7 +77,8 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
       hash = await hashFile(file.absolute);
     }
     const packageMetadata = contentAvailable ? extractPackageMetadata(file.relative, content) : null;
-    const ciWorkflowCommands = contentAvailable && kind === 'ci' ? extractCiCommands(content) : [];
+    const ciWorkflowCommandSources = contentAvailable && kind === 'ci' ? extractCiCommandSources(content) : [];
+    const ciWorkflowCommands = [...new Set(ciWorkflowCommandSources.map((entry) => entry.command))];
     const goPackage = (language === 'Go' && contentAvailable) ? extractGoPackage(content, language) : null;
     const imports = contentAvailable ? extractImports(content, language) : [];
     const symbols = contentAvailable ? extractSymbols(content, language) : [];
@@ -120,6 +121,7 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
       runtime_hints: runtimeHints,
       ...(packageMetadata || {}),
       ...(ciWorkflowCommands.length ? { ci_workflow_commands: ciWorkflowCommands } : {}),
+      ...(ciWorkflowCommandSources.length ? { ci_workflow_command_sources: ciWorkflowCommandSources } : {}),
       ...(goPackage !== null ? { go_package: goPackage } : {}),
       skipped_content: !contentAvailable,
       reasons: inferReasons(file.relative, kind, content, { environmentVariables, routeSurfaces, migrationSurfaces, modelSurfaces })

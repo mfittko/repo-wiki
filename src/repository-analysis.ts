@@ -9,7 +9,9 @@ type SourceCard = {
   imports?: string[];
   package_name?: string | null;
   package_scripts?: Record<string, string>;
+  package_script_sources?: Array<{ name: string; line?: number; end_line?: number }>;
   ci_workflow_commands?: string[];
+  ci_workflow_command_sources?: Array<{ command: string; line?: number; end_line?: number }>;
 };
 
 const FILE_NODE_PREFIX = 'file:';
@@ -17,7 +19,10 @@ const PACKAGE_NODE_PREFIX = 'package:';
 const SCHEME_SPECIFIER_PATTERN = /^[A-Za-z][A-Za-z+.-]*:/;
 const NODE_BUILTIN_MODULES = new Set(builtinModules.map((moduleName) => moduleName.replace(/^node:/, '')));
 
-export function extractPackageMetadata(filePath: string, content: string): { package_name: string | null; package_scripts: Record<string, string> } | null {
+export function extractPackageMetadata(
+  filePath: string,
+  content: string
+): { package_name: string | null; package_scripts: Record<string, string>; package_script_sources: Array<{ name: string; line?: number; end_line?: number }> } | null {
   if (!filePath.toLowerCase().endsWith('package.json')) {
     return null;
   }
@@ -28,12 +33,14 @@ export function extractPackageMetadata(filePath: string, content: string): { pac
 
     return {
       package_name: typeof parsed.name === 'string' ? parsed.name : null,
-      package_scripts: scripts
+      package_scripts: scripts,
+      package_script_sources: extractPackageScriptSources(content, scripts)
     };
   } catch {
     return {
       package_name: null,
-      package_scripts: {}
+      package_scripts: {},
+      package_script_sources: []
     };
   }
 }
@@ -45,7 +52,12 @@ export function buildRepositoryAnalysis(cards: SourceCard[]) {
     .map((card) => ({
       path: card.path,
       name: card.package_name || null,
-      scripts: card.package_scripts || {}
+      scripts: card.package_scripts || {},
+      script_sources: (card.package_script_sources || []).map((source) => ({
+        name: source.name,
+        ...(typeof source.line === 'number' ? { line: source.line } : {}),
+        ...(typeof source.end_line === 'number' ? { end_line: source.end_line } : {})
+      }))
     }))
     .sort((left, right) => left.path.localeCompare(right.path));
 
@@ -54,10 +66,19 @@ export function buildRepositoryAnalysis(cards: SourceCard[]) {
   const testMappings = buildTestMappings(cards, dependencyEdges, fileIndex);
 
   const ciWorkflowCommands = [...new Set(cards.flatMap((card) => card.ci_workflow_commands || []))].sort();
+  const ciWorkflowCommandSources = cards
+    .flatMap((card) => (card.ci_workflow_command_sources || []).map((entry) => ({
+      path: card.path,
+      command: entry.command,
+      ...(typeof entry.line === 'number' ? { line: entry.line } : {}),
+      ...(typeof entry.end_line === 'number' ? { end_line: entry.end_line } : {})
+    })))
+    .sort(compareCommandSourceEntries);
 
   return {
     package_scripts: packageScripts,
     ci_workflow_commands: ciWorkflowCommands,
+    ci_workflow_command_sources: ciWorkflowCommandSources,
     dependency_graph: {
       nodes: dependencyGraph.nodes,
       edges: dependencyEdges,
@@ -76,6 +97,176 @@ export function buildRepositoryAnalysis(cards: SourceCard[]) {
       }
     }
   };
+}
+
+function extractPackageScriptSources(content: string, scripts: Record<string, string>) {
+  const lines = content.split('\n');
+  const sources: Array<{ name: string; line?: number; end_line?: number }> = [];
+  const scriptsRange = locateTopLevelObjectPropertyRange(content, 'scripts');
+  if (!scriptsRange) {
+    return Object.keys(scripts || {}).map((name) => ({ name }));
+  }
+
+  const startLine = lineNumberAtIndex(content, scriptsRange.valueStartIndex);
+  const endLine = lineNumberAtIndex(content, scriptsRange.valueEndIndex);
+  const rangeLines = lines.slice(startLine - 1, endLine);
+  for (const name of Object.keys(scripts || {})) {
+    const jsonEscapedName = JSON.stringify(name).slice(1, -1);
+    const escapedName = escapeRegExp(jsonEscapedName);
+    const pattern = new RegExp(`(?:^|[,{])\\s*"${escapedName}"\\s*:`);
+    const lineIndex = rangeLines.findIndex((line) => pattern.test(line));
+    sources.push(lineIndex === -1 ? { name } : { name, line: startLine + lineIndex });
+  }
+  return sources;
+}
+
+function locateTopLevelObjectPropertyRange(content: string, propertyName: string) {
+  let inString = false;
+  let escaped = false;
+  let depth = 0;
+
+  for (let index = 0; index < content.length; index += 1) {
+    const char = content[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      const key = readJsonString(content, index);
+      if (!key) {
+        inString = true;
+        continue;
+      }
+
+      if (depth === 1 && key.value === propertyName) {
+        const colonIndex = skipWhitespace(content, key.endIndex + 1);
+        if (content[colonIndex] !== ':') {
+          index = key.endIndex;
+          continue;
+        }
+        const valueStartIndex = skipWhitespace(content, colonIndex + 1);
+        if (content[valueStartIndex] !== '{') {
+          return null;
+        }
+        const valueEndIndex = findMatchingBrace(content, valueStartIndex);
+        if (valueEndIndex === -1) {
+          return null;
+        }
+        return { valueStartIndex, valueEndIndex };
+      }
+
+      index = key.endIndex;
+      continue;
+    }
+
+    if (char === '{') {
+      depth += 1;
+      continue;
+    }
+
+    if (char === '}') {
+      depth -= 1;
+      if (depth < 0) {
+        return null;
+      }
+    }
+  }
+
+  return null;
+}
+
+function readJsonString(content: string, quoteIndex: number) {
+  let escaped = false;
+  for (let index = quoteIndex + 1; index < content.length; index += 1) {
+    const char = content[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (char === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (char === '"') {
+      return { value: content.slice(quoteIndex + 1, index), endIndex: index };
+    }
+  }
+  return null;
+}
+
+function findMatchingBrace(content: string, startIndex: number) {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+
+  for (let index = startIndex; index < content.length; index += 1) {
+    const char = content[index];
+
+    if (inString) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === '"') {
+        inString = false;
+      }
+      continue;
+    }
+
+    if (char === '"') {
+      inString = true;
+      continue;
+    }
+
+    if (char === '{') {
+      depth += 1;
+      continue;
+    }
+
+    if (char === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return index;
+      }
+    }
+  }
+
+  return -1;
+}
+
+function skipWhitespace(content: string, startIndex: number) {
+  let index = startIndex;
+  while (index < content.length && /\s/.test(content[index])) {
+    index += 1;
+  }
+  return index;
+}
+
+function lineNumberAtIndex(content: string, index: number) {
+  let line = 1;
+  const boundedIndex = Math.max(0, Math.min(index, content.length));
+  for (let cursor = 0; cursor < boundedIndex; cursor += 1) {
+    if (content[cursor] === '\n') {
+      line += 1;
+    }
+  }
+  return line;
 }
 
 function collectDependencyGraph(cards, fileIndex) {
@@ -281,6 +472,10 @@ function countUnique(values) {
   return new Set(values).size;
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function compareEdges(left, right) {
   if (left.from !== right.from) {
     return left.from.localeCompare(right.from);
@@ -295,6 +490,22 @@ function compareEdges(left, right) {
 
 function compareNodes(left, right) {
   return left.id.localeCompare(right.id);
+}
+
+function compareCommandSourceEntries(
+  left: { path: string; command: string; line?: number; end_line?: number },
+  right: { path: string; command: string; line?: number; end_line?: number }
+) {
+  if (left.path !== right.path) {
+    return left.path.localeCompare(right.path);
+  }
+  if ((left.line || 0) !== (right.line || 0)) {
+    return (left.line || 0) - (right.line || 0);
+  }
+  if ((left.end_line || 0) !== (right.end_line || 0)) {
+    return (left.end_line || 0) - (right.end_line || 0);
+  }
+  return left.command.localeCompare(right.command);
 }
 
 function isPackageEdge(edge) {

@@ -5,7 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { scanRepository } from '../src/scanner.js';
 import { lintDocs } from '../src/docs-linter.js';
-import { classifyDocumentedCommands, extractCiCommands, extractDocumentedFilePaths, extractRouteClaims } from '../src/docs-ingestor.js';
+import { classifyDocumentedCommands, extractCiCommandSources, extractCiCommands, extractDocumentedFilePaths, extractRouteClaims } from '../src/docs-ingestor.js';
 import { compileWiki } from '../src/compiler.js';
 import { candidateRepoPaths, normalizeRoutePath } from '../src/docs-validation.js';
 
@@ -267,6 +267,62 @@ jobs:
   assert.ok(cmds.includes('npm run pack:check'));
   // Template expressions anywhere in the command should be excluded
   assert.ok(!cmds.some((c) => c.includes('${{')));
+});
+
+test('extractCiCommandSources captures end_line for multiline run blocks', () => {
+  const yaml = `
+jobs:
+  test:
+    steps:
+      - run: |-
+          npm run build \\
+            && npm run test
+`;
+
+  const sources = extractCiCommandSources(yaml);
+  assert.deepEqual(sources, [
+    { command: 'npm run build', line: 6, end_line: 7 },
+    { command: 'npm run test', line: 6, end_line: 7 }
+  ]);
+});
+
+test('extractCiCommandSources handles multiple multiline blocks and keeps single-line commands un-ranged', () => {
+  const yaml = `
+jobs:
+  test:
+    steps:
+      - run: |-
+          npm run lint \\
+            && npm run test
+      - run: npm run pack:check
+      - run: |-
+          npm run build \\
+            && npm run coverage
+`;
+
+  const sources = extractCiCommandSources(yaml);
+  assert.deepEqual(sources, [
+    { command: 'npm run lint', line: 6, end_line: 7 },
+    { command: 'npm run test', line: 6, end_line: 7 },
+    { command: 'npm run pack:check', line: 8 },
+    { command: 'npm run build', line: 10, end_line: 11 },
+    { command: 'npm run coverage', line: 10, end_line: 11 }
+  ]);
+});
+
+test('extractCiCommandSources preserves literal trailing backslashes on non-continuation lines', () => {
+  const yaml = `
+jobs:
+  test:
+    steps:
+      - run: |-
+          printf path\\\\
+`;
+
+  const sources = extractCiCommandSources(yaml);
+  assert.deepEqual(sources, [
+    { command: 'printf path\\\\', line: 6 }
+  ]);
 });
 
 test('lintDocs reports missing-package-script for commands not in package.json', async () => {

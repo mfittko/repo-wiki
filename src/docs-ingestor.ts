@@ -29,12 +29,28 @@ export type DocumentedFilePath = {
   source: 'link' | 'inline_code';
 };
 
+export type SourceRange = {
+  line?: number;
+  end_line?: number;
+};
+
+export type CiWorkflowCommandSource = {
+  command: string;
+  line?: number;
+  end_line?: number;
+};
+
 /**
  * Extract npm/shell commands from CI workflow YAML content.
  * Parses `run:` lines and `command:` matrix fields.
  */
 export function extractCiCommands(content: string): string[] {
-  const commands: string[] = [];
+  return [...new Set(extractCiCommandSources(content).map((entry) => entry.command))];
+}
+
+export function extractCiCommandSources(content: string): CiWorkflowCommandSource[] {
+  const commands: CiWorkflowCommandSource[] = [];
+  const seen = new Set<string>();
   const lines = content.split('\n');
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
@@ -42,7 +58,9 @@ export function extractCiCommands(content: string): string[] {
     const runMatch = /^(\s+)(?:-\s+)?run:\s+(.+)$/.exec(line);
     if (runMatch) {
       const { parts, lastLineIndex } = extractWorkflowCommandValue(runMatch[2], lines, index, runMatch[1].length);
-      commands.push(...parts);
+      for (const part of parts) {
+        pushCiWorkflowCommandSource(commands, seen, part);
+      }
       index = lastLineIndex;
       continue;
     }
@@ -50,11 +68,13 @@ export function extractCiCommands(content: string): string[] {
     const cmdMatch = /^(\s+)command:\s+(.+)$/.exec(line);
     if (cmdMatch) {
       const { parts, lastLineIndex } = extractWorkflowCommandValue(cmdMatch[2], lines, index, cmdMatch[1].length);
-      commands.push(...parts);
+      for (const part of parts) {
+        pushCiWorkflowCommandSource(commands, seen, part);
+      }
       index = lastLineIndex;
     }
   }
-  return [...new Set(commands)];
+  return commands;
 }
 
 /**
@@ -305,26 +325,34 @@ function isEnvironmentVariableMention(value: string) {
   return true;
 }
 
-function extractWorkflowCommandValue(value: string, lines: string[], lineIndex: number, baseIndent: number): { parts: string[]; lastLineIndex: number } {
+function extractWorkflowCommandValue(value: string, lines: string[], lineIndex: number, baseIndent: number): { parts: CiWorkflowCommandSource[]; lastLineIndex: number } {
   if (/^[|>](?:[+-]?\d*|\d*[+-]?)$/.test(value.trim())) {
-    const blockLines: string[] = [];
+    const blockLines: Array<{ line: string; lineNumber: number }> = [];
     let lastLineIndex = lineIndex;
     for (let index = lineIndex + 1; index < lines.length; index += 1) {
       const line = lines[index];
       if (line.trim() && leadingSpaces(line) <= baseIndent) break;
       lastLineIndex = index;
-      if (line.trim()) blockLines.push(line.trim());
+      if (!line.trim()) continue;
+      blockLines.push({ line: line.trim(), lineNumber: index + 1 });
     }
-    return { parts: blockLines.flatMap((line) => extractWorkflowCommandParts(line)), lastLineIndex };
+    const parts = coalesceMultilineWorkflowCommands(blockLines).flatMap((entry) => extractWorkflowCommandParts(entry.command, entry.start_line, entry.end_line));
+    return { parts, lastLineIndex };
   }
 
-  return { parts: extractWorkflowCommandParts(value), lastLineIndex: lineIndex };
+  return { parts: extractWorkflowCommandParts(value, lineIndex + 1), lastLineIndex: lineIndex };
 }
 
-function extractWorkflowCommandParts(command: string): string[] {
+function extractWorkflowCommandParts(command: string, line: number, endLine?: number): CiWorkflowCommandSource[] {
   const unquoted = command.trim().replace(/^["']|["']$/g, '');
   if (!unquoted || unquoted.includes('${{')) return [];
-  return splitShellCommand(unquoted, false).filter((part) => !isShellReservedCommand(part));
+  return splitShellCommand(unquoted, false)
+    .filter((part) => !isShellReservedCommand(part))
+    .map((part) => ({
+      command: part,
+      line,
+      ...(typeof endLine === 'number' && endLine > line ? { end_line: endLine } : {})
+    }));
 }
 
 function isShellReservedCommand(command: string): boolean {
@@ -334,6 +362,63 @@ function isShellReservedCommand(command: string): boolean {
 
 function leadingSpaces(line: string): number {
   return /^ */.exec(line)?.[0].length || 0;
+}
+
+function pushCiWorkflowCommandSource(target: CiWorkflowCommandSource[], seen: Set<string>, value: CiWorkflowCommandSource) {
+  const key = `${value.command}␟${value.line ?? ''}␟${value.end_line ?? ''}`;
+  if (seen.has(key)) {
+    return;
+  }
+  seen.add(key);
+  target.push(value);
+}
+
+function coalesceMultilineWorkflowCommands(lines: Array<{ line: string; lineNumber: number }>) {
+  const commands: Array<{ command: string; start_line: number; end_line: number }> = [];
+  let pending = '';
+  let startLine = 0;
+  let lastLineNumber = 0;
+
+  for (const entry of lines) {
+    lastLineNumber = entry.lineNumber;
+    const line = entry.line;
+    const continues = hasLineContinuation(line);
+    const normalized = (continues ? stripContinuationBackslash(line) : line).trim();
+    if (!normalized) {
+      if (!continues) {
+        pending = '';
+        startLine = 0;
+      }
+      continue;
+    }
+
+    if (!pending) {
+      pending = normalized;
+      startLine = entry.lineNumber;
+    } else {
+      pending = `${pending} ${normalized}`;
+    }
+
+    if (!continues) {
+      commands.push({ command: pending, start_line: startLine, end_line: entry.lineNumber });
+      pending = '';
+      startLine = 0;
+    }
+  }
+
+  if (pending && startLine > 0) {
+    commands.push({ command: pending, start_line: startLine, end_line: lastLineNumber || startLine });
+  }
+
+  return commands;
+}
+
+function hasLineContinuation(line: string) {
+  return ((/(\\+)\s*$/.exec(line)?.[1].length ?? 0) % 2) === 1;
+}
+
+function stripContinuationBackslash(line: string) {
+  return line.replace(/(\\+)(\s*)$/, (_, slashes: string, ws: string) => `${slashes.slice(0, -1)}${ws}`);
 }
 
 function parseNpmRunScript(command: string): string | undefined {
