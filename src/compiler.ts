@@ -640,8 +640,8 @@ function uniqueCount(values: Array<string | number>) {
   return new Set(values || []).size;
 }
 
-function confidenceForKind(kind: string | undefined): 'high' | 'medium' | 'low' {
-  switch (kind) {
+function confidenceForKind(pageKind: string | undefined): 'high' | 'medium' | 'low' {
+  switch (pageKind) {
     case 'module':
     case 'build_test_run':
     case 'testing_strategy':
@@ -665,7 +665,7 @@ function buildDocumentationReviewQueue(docs: any[]) {
   for (const doc of docs || []) {
     const reasons = new Set<string>();
     if (doc.stale) reasons.add(`stale (${doc.age_days} days old)`);
-    if (doc.validation?.contradictions?.length) reasons.add(`contradicted (${doc.validation.contradictions.length} signal${doc.validation.contradictions.length === 1 ? '' : 's'})`);
+    if (doc.validation?.contradictions?.length) reasons.add(`contradicted (${doc.validation.contradictions.length} ${pluralize(doc.validation.contradictions.length, 'signal', 'signals')})`);
     if (doc.status === 'unvalidated') reasons.add('unvalidated status');
     if ((doc.claims?.length || 0) > 0 && doc.status !== 'validated') reasons.add('claims need validation');
 
@@ -680,6 +680,10 @@ function buildDocumentationReviewQueue(docs: any[]) {
   return [...queue.entries()]
     .map(([path, reasons]) => ({ path, reasons: [...reasons].sort() }))
     .sort((left, right) => left.path.localeCompare(right.path));
+}
+
+function pluralize(count: number, singular: string, plural: string) {
+  return count === 1 ? singular : plural;
 }
 
 function code(value: string | number) {

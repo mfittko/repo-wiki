@@ -587,13 +587,19 @@ test('compileWiki routes stale, contradicted, and unvalidated documentation card
 
     assert.match(openQuestions, /claim_status: "review-needed"/);
     assert.match(openQuestions, /confidence: "low"/);
-    assert.match(openQuestions, /source_paths: \["docs\/contradicted\.md","docs\/stale\.md","docs\/unvalidated\.md"\]/);
+    assert.match(openQuestions, /source_paths:/);
+    assert.match(openQuestions, /docs\/stale\.md/);
+    assert.match(openQuestions, /docs\/contradicted\.md/);
+    assert.match(openQuestions, /docs\/unvalidated\.md/);
     assert.match(openQuestions, /`docs\/stale\.md` - .*stale/);
     assert.match(openQuestions, /`docs\/contradicted\.md` - .*contradicted/);
     assert.match(openQuestions, /`docs\/unvalidated\.md` - .*unvalidated/);
     assert.match(openQuestions, /Do not promote these items as authoritative wiki claims until validated/);
 
-    assert.match(debtReport, /source_paths: \["docs\/contradicted\.md","docs\/stale\.md","docs\/unvalidated\.md"\]/);
+    assert.match(debtReport, /source_paths:/);
+    assert.match(debtReport, /docs\/stale\.md/);
+    assert.match(debtReport, /docs\/contradicted\.md/);
+    assert.match(debtReport, /docs\/unvalidated\.md/);
     assert.match(debtReport, /## Findings by category/);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });

@@ -21,6 +21,19 @@ const PROVENANCE_EXEMPT_PAGES = new Set([
   'Index.md',
   'Log.md'
 ]);
+const MATERIAL_CLAIM_MIN_LENGTH = 24;
+const FRONTMATTER_POLICY_FIELDS = [
+  'source_repo',
+  'source_commit',
+  'compiled_at',
+  'page_state',
+  'kind',
+  'module',
+  'confidence',
+  'claim_status',
+  'source_paths'
+];
+const FRONTMATTER_POLICY_PATTERN = new RegExp(`^(${FRONTMATTER_POLICY_FIELDS.join('|')}):`);
 
 export async function lintWiki({ wikiDir, scanDir }: { wikiDir: string; scanDir: string }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
@@ -195,11 +208,11 @@ function hasMaterialClaimLikeText(content: string) {
       || /^[-*]\s+\[[^\]]+\]\([^)]+\)$/.test(line)
       || /^\|[-:\s|]+\|?$/.test(line)
       || /^<!--/.test(line)
-      || /^(source_repo|source_commit|compiled_at|page_state|kind|module|confidence|claim_status|source_paths):/.test(line)
+      || FRONTMATTER_POLICY_PATTERN.test(line)
     ) {
       continue;
     }
-    if (line.length >= 24 && /[A-Za-z]/.test(line) && !/^[`()[\]{}|:;.,\-–—_]+$/.test(line)) {
+    if (line.length >= MATERIAL_CLAIM_MIN_LENGTH && /[A-Za-z]/.test(line) && !/^[`()[\]{}|:;.,\-–—_]+$/.test(line)) {
       return true;
     }
   }
