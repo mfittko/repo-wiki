@@ -30,7 +30,7 @@ export function normalizeRoutePath(routePath: string | null | undefined) {
   if (!cleaned) return '';
   cleaned = cleaned
     .replace(/^[`'"\[({<]+/, '')
-    .replace(/[`'"\])}>.,;:!?]+$/, '')
+    .replace(/[`'"\]\)}>.,;:!?]+$/, '')
     .trim();
   if (!cleaned) return '';
 
