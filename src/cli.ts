@@ -290,6 +290,7 @@ async function runPipeline(options: ParsedArgs) {
     });
     publishSummary = publish.summary;
   }
+  const lintBlocked = lint.summary.errors > 0;
 
   return {
     scan,
@@ -298,8 +299,8 @@ async function runPipeline(options: ParsedArgs) {
     lint,
     publish,
     summary: {
-      status: lint.summary.errors > 0 ? 'blocked' : 'ok',
-      blockedStage: lint.summary.errors > 0 ? 'lint' : null,
+      status: lintBlocked ? 'blocked' : 'ok',
+      blockedStage: lintBlocked ? 'lint' : null,
       mode,
       repoPath,
       scan: scan.summary,
