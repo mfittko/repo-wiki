@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "3c7f4808701c06a5d3bcd8e1455221b272566b71"
+source_commit: "f47907b8f64c2674438a61f152c6d5a09a19c523"
 page_state: "generated"
 source_paths: ["src/prompts.ts"]
-compiled_at: "2024-06-15T00:00:00Z"
+compiled_at: "2024-06-05T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -41,12 +41,12 @@ This module provides a collection of functions and types related to building and
 
 ## Related tests
 
-- No documentation or source cards indicate the presence of related test files or test cases for this module.
+- No documentation or source cards indicate the presence of related test files or test suites for this module.
 
 ## Known gaps or open questions
 
 - There is no explicit documentation or comments describing the detailed behavior or usage scenarios of the exported functions and types.
-- The absence of related test information leaves the testing coverage and reliability of this module unclear.
+- The absence of related tests or test references leaves the coverage and reliability of this module unclear.
 - The source repository and commit information are unknown, limiting traceability.
 - The exact relationships and interactions between the various context types and prompt builders are not detailed.
 

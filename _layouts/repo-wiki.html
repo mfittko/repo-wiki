@@ -48,16 +48,16 @@
 {% assign _rp = page.path %}{% assign _wd = site.wiki_pages_dir | default: '.' %}{% if _wd != '.' %}{% assign _wd_prefix = _wd | append: '/' %}{% assign _rp = _rp | remove_first: _wd_prefix %}{% endif %}{% assign _depth = _rp | split: '/' | size | minus: 1 %}{% assign _base = '' %}{% for _i in (1.._depth) %}{% assign _base = _base | append: '../' %}{% endfor %}
   <div class="layout">
     <aside class="sidebar">
-      <div class="sidebar-title"><a href="{{ _base }}Home.md">Wiki</a></div>
+      <div class="sidebar-title"><a href="{{ _base }}Home.html">Wiki</a></div>
       <nav class="site-nav" aria-label="Site navigation">
         <h4 class="nav-section">Quick links</h4>
         <ul>
-          <li><a href="{{ _base }}Home.md">Home</a></li>
-          <li><a href="{{ _base }}Index.md">Index</a></li>
-          <li><a href="{{ _base }}Architecture.md">Architecture</a></li>
-          <li><a href="{{ _base }}Agent-Context-Pack.md">Agent Context Pack</a></li>
-          <li><a href="{{ _base }}Build-Test-and-Run.md">Build, Test &amp; Run</a></li>
-          <li><a href="{{ _base }}Documentation-Debt-Report.md">Documentation Debt</a></li>
+          <li><a href="{{ _base }}Home.html">Home</a></li>
+          <li><a href="{{ _base }}Index.html">Index</a></li>
+          <li><a href="{{ _base }}Architecture.html">Architecture</a></li>
+          <li><a href="{{ _base }}Agent-Context-Pack.html">Agent Context Pack</a></li>
+          <li><a href="{{ _base }}Build-Test-and-Run.html">Build, Test &amp; Run</a></li>
+          <li><a href="{{ _base }}Documentation-Debt-Report.html">Documentation Debt</a></li>
         </ul>
         <hr class="nav-divider">
         {% include wiki_nav.html %}
@@ -66,12 +66,12 @@
     <main>
       {% assign _kind = page.kind | default: '' %}{% if _kind == 'module' %}
       <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="{{ _base }}Home.md">Home</a> &rsaquo;
-        <a href="{{ _base }}Index.md">Index</a> &rsaquo;
+        <a href="{{ _base }}Home.html">Home</a> &rsaquo;
+        <a href="{{ _base }}Index.html">Index</a> &rsaquo;
         <span>{{ page.title | default: page.name | replace: '.md', '' | escape }}</span>
       </nav>{% elsif _kind != '' and _kind != 'home' %}
       <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="{{ _base }}Home.md">Home</a> &rsaquo;
+        <a href="{{ _base }}Home.html">Home</a> &rsaquo;
         <span>{{ page.title | default: page.name | replace: '.md', '' | escape }}</span>
       </nav>{% endif %}
       {% if page.page_state or page.kind or page.confidence or page.claim_status or page.source_repo or page.source_commit or page.compiled_at or page.source_paths %}
@@ -90,7 +90,7 @@
       </details>
       {% endif %}
       {{ content }}
-      {% if _kind != 'home' %}<div class="back-link"><a href="{{ _base }}Index.md">&larr; Back to Index</a></div>{% endif %}
+      {% if _kind != 'home' %}<div class="back-link"><a href="{{ _base }}Index.html">&larr; Back to Index</a></div>{% endif %}
     </main>
   </div>
   <script type="module">

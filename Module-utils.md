@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "3c7f4808701c06a5d3bcd8e1455221b272566b71"
+source_commit: "f47907b8f64c2674438a61f152c6d5a09a19c523"
 page_state: "generated"
 source_paths: ["src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -69,9 +69,9 @@ No test files or test-related documentation cards are present in the current sou
 ## Known gaps or open questions
 
 - There is no explicit documentation or test coverage information available for this module.
-- The exact repository remote URL and commit SHA are not specified.
+- The exact repository remote URL and commit SHA are not provided.
 - The usage context or higher-level integration of these utilities is not described.
-- No information on error handling strategies or performance considerations is provided.
+- No information on error handling strategies or performance considerations is available.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

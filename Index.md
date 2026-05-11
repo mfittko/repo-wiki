@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "3c7f4808701c06a5d3bcd8e1455221b272566b71"
-compiled_at: "2026-05-11T06:58:40.127Z"
+source_commit: "f47907b8f64c2674438a61f152c6d5a09a19c523"
+compiled_at: "2026-05-11T08:03:18.692Z"
 kind: "index"
 confidence: "medium"
 page_state: "generated"
@@ -10,56 +10,56 @@ page_state: "generated"
 
 ## Foundation
 
-- [Home](Home.md) - Human and agent entry point.
-- [_Sidebar](_Sidebar.md) - GitHub Wiki navigation sidebar.
-- [Index](Index.md) - Full page index and routing map.
-- [Log](Log.md) - Chronological compilation log.
-- [Agent Context Pack](Agent-Context-Pack.md) - Small, high-signal entry page for coding agents.
-- [Repository Overview](Repository-Overview.md) - Repository purpose, languages, and structure.
-- [Architecture](Architecture.md) - Architecture summary inferred from source layout.
-- [Build Test and Run](Build-Test-and-Run.md) - Detected build, test, and run commands.
-- [Open Questions](Open-Questions.md) - Known gaps and uncertain inferences.
-- [Documentation Debt Report](Documentation-Debt-Report.md) - Markdown documentation validation, staleness, and claim-confidence report.
+- [Home](Home.html) - Human and agent entry point.
+- [_Sidebar](_Sidebar.html) - GitHub Wiki navigation sidebar.
+- [Index](Index.html) - Full page index and routing map.
+- [Log](Log.html) - Chronological compilation log.
+- [Agent Context Pack](Agent-Context-Pack.html) - Small, high-signal entry page for coding agents.
+- [Repository Overview](Repository-Overview.html) - Repository purpose, languages, and structure.
+- [Architecture](Architecture.html) - Architecture summary inferred from source layout.
+- [Build Test and Run](Build-Test-and-Run.html) - Detected build, test, and run commands.
+- [Open Questions](Open-Questions.html) - Known gaps and uncertain inferences.
+- [Documentation Debt Report](Documentation-Debt-Report.html) - Markdown documentation validation, staleness, and claim-confidence report.
 
 ## Modules
 
-- [Repository Root](Repository-Root.md) - Compiled page for Repository Root.
-- [CI and Automation](CI-and-Automation.md) - Compiled page for CI and Automation.
-- [Documentation](Documentation.md) - Compiled page for Documentation.
-- [Module utils](Module-utils.md) - Compiled page for Module utils.
-- [Module cli ts](Module-cli-ts.md) - Compiled page for Module cli.ts.
-- [Module compiler ts](Module-compiler-ts.md) - Compiled page for Module compiler.ts.
-- [Module config ts](Module-config-ts.md) - Compiled page for Module config.ts.
-- [Module context assembler ts](Module-context-assembler-ts.md) - Compiled page for Module context-assembler.ts.
-- [Module data model signals ts](Module-data-model-signals-ts.md) - Compiled page for Module data-model-signals.ts.
-- [Module docs ingestor ts](Module-docs-ingestor-ts.md) - Compiled page for Module docs-ingestor.ts.
-- [Module docs linter ts](Module-docs-linter-ts.md) - Compiled page for Module docs-linter.ts.
-- [Module docs validation ts](Module-docs-validation-ts.md) - Compiled page for Module docs-validation.ts.
-- [Module extractors ts](Module-extractors-ts.md) - Compiled page for Module extractors.ts.
-- [Module frontmatter ts](Module-frontmatter-ts.md) - Compiled page for Module frontmatter.ts.
-- [Module index ts](Module-index-ts.md) - Compiled page for Module index.ts.
-- [Module init ts](Module-init-ts.md) - Compiled page for Module init.ts.
-- [Module language ts](Module-language-ts.md) - Compiled page for Module language.ts.
-- [Module linter ts](Module-linter-ts.md) - Compiled page for Module linter.ts.
-- [Module llm provider ts](Module-llm-provider-ts.md) - Compiled page for Module llm-provider.ts.
-- [Module page ownership ts](Module-page-ownership-ts.md) - Compiled page for Module page-ownership.ts.
-- [Module planner ts](Module-planner-ts.md) - Compiled page for Module planner.ts.
-- [Module prompts ts](Module-prompts-ts.md) - Compiled page for Module prompts.ts.
-- [Module publisher ts](Module-publisher-ts.md) - Compiled page for Module publisher.ts.
-- [Module repository analysis ts](Module-repository-analysis-ts.md) - Compiled page for Module repository-analysis.ts.
-- [Module scanner ts](Module-scanner-ts.md) - Compiled page for Module scanner.ts.
-- [Module secret patterns ts](Module-secret-patterns-ts.md) - Compiled page for Module secret-patterns.ts.
-- [Module wiki patch ts](Module-wiki-patch-ts.md) - Compiled page for Module wiki-patch.ts.
+- [Repository Root](Repository-Root.html) - Compiled page for Repository Root.
+- [CI and Automation](CI-and-Automation.html) - Compiled page for CI and Automation.
+- [Documentation](Documentation.html) - Compiled page for Documentation.
+- [Module utils](Module-utils.html) - Compiled page for Module utils.
+- [Module cli ts](Module-cli-ts.html) - Compiled page for Module cli.ts.
+- [Module compiler ts](Module-compiler-ts.html) - Compiled page for Module compiler.ts.
+- [Module config ts](Module-config-ts.html) - Compiled page for Module config.ts.
+- [Module context assembler ts](Module-context-assembler-ts.html) - Compiled page for Module context-assembler.ts.
+- [Module data model signals ts](Module-data-model-signals-ts.html) - Compiled page for Module data-model-signals.ts.
+- [Module docs ingestor ts](Module-docs-ingestor-ts.html) - Compiled page for Module docs-ingestor.ts.
+- [Module docs linter ts](Module-docs-linter-ts.html) - Compiled page for Module docs-linter.ts.
+- [Module docs validation ts](Module-docs-validation-ts.html) - Compiled page for Module docs-validation.ts.
+- [Module extractors ts](Module-extractors-ts.html) - Compiled page for Module extractors.ts.
+- [Module frontmatter ts](Module-frontmatter-ts.html) - Compiled page for Module frontmatter.ts.
+- [Module index ts](Module-index-ts.html) - Compiled page for Module index.ts.
+- [Module init ts](Module-init-ts.html) - Compiled page for Module init.ts.
+- [Module language ts](Module-language-ts.html) - Compiled page for Module language.ts.
+- [Module linter ts](Module-linter-ts.html) - Compiled page for Module linter.ts.
+- [Module llm provider ts](Module-llm-provider-ts.html) - Compiled page for Module llm-provider.ts.
+- [Module page ownership ts](Module-page-ownership-ts.html) - Compiled page for Module page-ownership.ts.
+- [Module planner ts](Module-planner-ts.html) - Compiled page for Module planner.ts.
+- [Module prompts ts](Module-prompts-ts.html) - Compiled page for Module prompts.ts.
+- [Module publisher ts](Module-publisher-ts.html) - Compiled page for Module publisher.ts.
+- [Module repository analysis ts](Module-repository-analysis-ts.html) - Compiled page for Module repository-analysis.ts.
+- [Module scanner ts](Module-scanner-ts.html) - Compiled page for Module scanner.ts.
+- [Module secret patterns ts](Module-secret-patterns-ts.html) - Compiled page for Module secret-patterns.ts.
+- [Module wiki patch ts](Module-wiki-patch-ts.html) - Compiled page for Module wiki-patch.ts.
 
 ## Cross-cutting
 
-- [Dependency Map](Dependency-Map.md) - Internal and external dependency overview.
-- [Testing Strategy](Testing-Strategy.md) - Detected tests and verification strategy.
-- [Configuration and Environment](Configuration-and-Environment.md) - Environment variables and configuration surfaces.
-- [Security and Secrets](Security-and-Secrets.md) - Security-sensitive areas and secret-handling policy.
-- [Operational Runbook](Operational-Runbook.md) - Operational commands, deployment, and troubleshooting notes.
-- [API HTTP Routes](API-HTTP-Routes.md) - Detected HTTP routing surfaces.
-- [Data Model and Migrations](Data-Model-and-Migrations.md) - Data models, migrations, and schema-related files.
+- [Dependency Map](Dependency-Map.html) - Internal and external dependency overview.
+- [Testing Strategy](Testing-Strategy.html) - Detected tests and verification strategy.
+- [Configuration and Environment](Configuration-and-Environment.html) - Environment variables and configuration surfaces.
+- [Security and Secrets](Security-and-Secrets.html) - Security-sensitive areas and secret-handling policy.
+- [Operational Runbook](Operational-Runbook.html) - Operational commands, deployment, and troubleshooting notes.
+- [API HTTP Routes](API-HTTP-Routes.html) - Detected HTTP routing surfaces.
+- [Data Model and Migrations](Data-Model-and-Migrations.html) - Data models, migrations, and schema-related files.
 
 ## Source inventory summary
 
