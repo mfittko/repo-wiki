@@ -61,3 +61,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - Fix Ruby extractor heredoc and end-token edge cases.
 - Implement deterministic compiler context assembly with token budgeting.
+- Handle GPT-5 token params in OpenAI-compatible provider.
