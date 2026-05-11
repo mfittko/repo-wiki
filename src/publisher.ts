@@ -503,23 +503,26 @@ export function rewriteInternalWikiLinks(content: string): string {
 }
 
 function isExternalOrAnchorHref(href: string): boolean {
-  return /^(?:https?:|mailto:|ftp:|\/\/|#)/i.test(href);
+  return /^(?:https?:|mailto:|ftp:|\/\/|#)/i.test(href.trim());
 }
 
 function normalizeWikiHref(href: string): string {
-  // Reject unsafe URI schemes — return a safe no-op href
-  if (/^(?:javascript:|data:|vbscript:|blob:|about:)/i.test(href)) {
+  const normalizedHref = href.trim();
+
+  // Reject unsafe URI schemes after trimming surrounding whitespace so leading
+  // spaces/tabs cannot bypass scheme detection in downstream markdown/HTML.
+  if (/^(?:javascript:|data:|vbscript:|blob:|about:)/i.test(normalizedHref)) {
     return '#';
   }
 
   // Leave external links, mailto, anchor-only, and protocol-relative links unchanged
-  if (isExternalOrAnchorHref(href)) {
-    return href;
+  if (isExternalOrAnchorHref(normalizedHref)) {
+    return normalizedHref;
   }
 
   // Split off query string and fragment before applying extension logic
-  const hashIndex = href.indexOf('#');
-  const queryIndex = href.indexOf('?');
+  const hashIndex = normalizedHref.indexOf('#');
+  const queryIndex = normalizedHref.indexOf('?');
   let separatorIndex: number;
   if (queryIndex === -1) {
     separatorIndex = hashIndex;
@@ -529,12 +532,12 @@ function normalizeWikiHref(href: string): string {
     separatorIndex = Math.min(queryIndex, hashIndex);
   }
 
-  const pathPart = separatorIndex === -1 ? href : href.slice(0, separatorIndex);
-  const suffix = separatorIndex === -1 ? '' : href.slice(separatorIndex);
+  const pathPart = separatorIndex === -1 ? normalizedHref : normalizedHref.slice(0, separatorIndex);
+  const suffix = separatorIndex === -1 ? '' : normalizedHref.slice(separatorIndex);
 
   // Leave known non-markdown asset extensions unchanged
   if (/\.(?:png|jpe?g|gif|svg|webp|ico|pdf|txt|json|ya?ml|html?|css|js|ts)$/i.test(pathPart)) {
-    return href;
+    return normalizedHref;
   }
 
   // Normalize leading ./

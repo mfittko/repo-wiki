@@ -1183,6 +1183,9 @@ test('rewriteInternalWikiLinks rejects unsafe URI schemes and preserves query st
   assert.equal(rewriteInternalWikiLinks('[VBS](vbscript:msgbox)'), '[VBS](#)');
   assert.equal(rewriteInternalWikiLinks('[Blob](blob:https://example.com/id)'), '[Blob](#)');
   assert.equal(rewriteInternalWikiLinks('[About](about:blank)'), '[About](#)');
+  assert.equal(rewriteInternalWikiLinks('[XSS-space]( javascript:evil)'), '[XSS-space](#)');
+  assert.equal(rewriteInternalWikiLinks('[XSS-tab](\tJAVASCRIPT:evil)'), '[XSS-tab](#)');
+  assert.equal(rewriteInternalWikiLinks('[XSS-trailing]( JAVASCRIPT:evil )'), '[XSS-trailing](#)');
 
   // Query strings preserved
   assert.equal(rewriteInternalWikiLinks('[Raw](logo.png?raw=1)'), '[Raw](logo.png?raw=1)');
@@ -1445,6 +1448,8 @@ test('publishWiki unsafe sidebar href is sanitized to # in wiki_nav.html', async
       '## Nav',
       '- [Safe](Home)',
       '- [XSS](javascript:alert(1))',
+      '- [Spaced XSS]( javascript:evil)',
+      '- [Tabbed XSS](\tJAVASCRIPT:evil)',
       '- [Data](data:text/html,evil)',
     ].join('\n') + '\n', 'utf8');
     await git(['init', '--bare', remoteDir]);
@@ -1463,8 +1468,10 @@ test('publishWiki unsafe sidebar href is sanitized to # in wiki_nav.html', async
     assert.ok(navHtml.includes('href="{{ _base }}Home.md"'), 'safe link present');
     // Unsafe schemes must be replaced with #
     assert.ok(!navHtml.includes('javascript:'), 'javascript: scheme must not appear in output');
+    assert.ok(!navHtml.includes('JAVASCRIPT:'), 'uppercase javascript: scheme must not appear in output');
     assert.ok(!navHtml.includes('data:'), 'data: scheme must not appear in output');
-    assert.match(navHtml, /href="#"/);
+    assert.match(navHtml, /<a href="#">Spaced XSS<\/a>/);
+    assert.match(navHtml, /<a href="#">Tabbed XSS<\/a>/);
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
