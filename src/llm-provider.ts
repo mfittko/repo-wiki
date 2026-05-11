@@ -132,6 +132,7 @@ type OpenAIChatRequest = {
   model: string;
   messages: OpenAIChatMessage[];
   max_tokens?: number;
+  max_completion_tokens?: number;
   temperature?: number;
 };
 
@@ -163,7 +164,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
         { role: 'system', content: request.systemPrompt },
         { role: 'user', content: request.userPrompt }
       ],
-      ...(request.maxTokens !== undefined ? { max_tokens: request.maxTokens } : {}),
+      ...buildOpenAICompatibleTokenBudget(this.model, request.maxTokens),
       ...(request.temperature !== undefined ? { temperature: request.temperature } : {})
     };
 
@@ -224,7 +225,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
       if (!response.ok) {
         const retryable = response.status === 408 || response.status === 409 || response.status === 429 || response.status >= 500;
         throw new LLMProviderError(
-          `OpenAI-compatible provider request failed with HTTP ${response.status}.`,
+          formatOpenAICompatibleHttpError(response.status, json),
           this.name,
           `HTTP_${response.status}`,
           retryable
@@ -245,6 +246,52 @@ export class OpenAICompatibleProvider implements LLMProvider {
       clearTimeout(timeout);
     }
   }
+}
+
+function buildOpenAICompatibleTokenBudget(model: string, maxTokens: number | undefined): Pick<OpenAIChatRequest, 'max_tokens' | 'max_completion_tokens'> {
+  if (maxTokens === undefined) {
+    return {};
+  }
+
+  return usesMaxCompletionTokens(model)
+    ? { max_completion_tokens: maxTokens }
+    : { max_tokens: maxTokens };
+}
+
+function usesMaxCompletionTokens(model: string): boolean {
+  const normalized = model.trim().toLowerCase();
+  return /^(gpt-5|o[1-9])(?:$|[-.])/.test(normalized);
+}
+
+function formatOpenAICompatibleHttpError(status: number, payload: any): string {
+  const details = describeOpenAICompatibleError(payload);
+  return details
+    ? `OpenAI-compatible provider request failed with HTTP ${status}: ${details}.`
+    : `OpenAI-compatible provider request failed with HTTP ${status}.`;
+}
+
+function describeOpenAICompatibleError(payload: any): string | null {
+  const error = payload?.error;
+  if (!error || typeof error !== 'object') {
+    return null;
+  }
+
+  const message = typeof error.message === 'string' && error.message.trim()
+    ? error.message.trim()
+    : null;
+  const extras = [
+    typeof error.type === 'string' && error.type.trim() ? `type=${error.type.trim()}` : null,
+    typeof error.code === 'string' && error.code.trim() ? `code=${error.code.trim()}` : null,
+    typeof error.param === 'string' && error.param.trim() ? `param=${error.param.trim()}` : null,
+  ].filter(Boolean);
+
+  if (!message && extras.length === 0) {
+    return null;
+  }
+
+  return extras.length > 0
+    ? `${message ?? 'provider error'} (${extras.join(', ')})`
+    : message;
 }
 
 function buildMockContent(request: LLMRequest): string {

@@ -371,10 +371,30 @@ test('OpenAICompatibleProvider posts chat-completions request', async (t) => {
   assert.equal(captured.authorization, 'Bearer key-123');
   assert.equal(captured.body.model, 'test-model');
   assert.equal(captured.body.max_tokens, 123);
+  assert.equal(captured.body.max_completion_tokens, undefined);
   assert.equal(captured.body.temperature, 0.4);
   assert.equal(response.content, '# Generated');
   assert.equal(response.promptTokens, 10);
   assert.equal(response.completionTokens, 2);
+});
+
+test('OpenAICompatibleProvider uses max_completion_tokens for GPT-5 reasoning-family models', async (t) => {
+  let captured: { body?: any } = {};
+  t.mock.method(globalThis, 'fetch', (async (_url: string, init: any) => {
+    captured = {
+      body: JSON.parse(String(init.body)),
+    };
+    return new Response(JSON.stringify({
+      choices: [{ message: { content: '# Generated' } }],
+      usage: { prompt_tokens: 10, completion_tokens: 2 },
+    }), { status: 200, headers: { 'content-type': 'application/json' } });
+  }) as typeof fetch);
+
+  const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123', model: 'gpt-5.5', baseUrl: 'https://llm.example/v1' });
+  await provider.complete(makeRequest({ maxTokens: 123, temperature: 0 }));
+  assert.equal(captured.body.max_tokens, undefined);
+  assert.equal(captured.body.max_completion_tokens, 123);
+  assert.equal(captured.body.temperature, 0);
 });
 
 async function assertProviderRejectsCode(promise: Promise<unknown>, code: string, retryable?: boolean) {
@@ -431,6 +451,31 @@ test('OpenAICompatibleProvider retries retryable HTTP failures', async (t) => {
   const response = await provider.complete(makeRequest());
   assert.equal(calls, 2);
   assert.equal(response.content, '# After retry');
+});
+
+test('OpenAICompatibleProvider includes sanitized provider error details for HTTP failures', async (t) => {
+  t.mock.method(globalThis, 'fetch', (async () => new Response(JSON.stringify({
+    error: {
+      message: "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.",
+      type: 'invalid_request_error',
+      code: 'unsupported_parameter',
+      param: 'max_tokens',
+    },
+  }), { status: 400, headers: { 'content-type': 'application/json' } })) as typeof fetch);
+
+  const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123', model: 'gpt-5.5' });
+  await assert.rejects(
+    provider.complete(makeRequest({ maxTokens: 123 })),
+    (err: unknown) => {
+      assert.ok(err instanceof LLMProviderError);
+      assert.equal(err.code, 'HTTP_400');
+      assert.match(err.message, /Unsupported parameter: 'max_tokens'/);
+      assert.match(err.message, /type=invalid_request_error/);
+      assert.match(err.message, /code=unsupported_parameter/);
+      assert.match(err.message, /param=max_tokens/);
+      return true;
+    },
+  );
 });
 
 test('OpenAICompatibleProvider surfaces timeout as retryable', async (t) => {
