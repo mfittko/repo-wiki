@@ -1,8 +1,9 @@
 /**
  * Prompt template structure for LLM-backed wiki synthesis.
  *
- * Three page archetypes map to distinct templates:
- *   - foundation   : repo-wide pages (Home, Architecture, Build-Test-and-Run, …)
+ * Four page archetypes map to distinct templates:
+ *   - foundation   : repo-wide pages (Home, Build-Test-and-Run, Agent-Context-Pack, …)
+ *   - architecture : dedicated repository architecture synthesis for Architecture.md
  *   - module       : per-module pages derived from grouped source cards
  *   - cross-cutting: shared-concern pages (Dependency-Map, Testing-Strategy, …)
  */
@@ -418,7 +419,7 @@ Generate a complete "${context.pageTitle}" cross-cutting wiki page that:
 /**
  * Build a prompt for the given page archetype and context.
  *
- * @param archetype - Page archetype ('foundation' | 'module' | 'cross-cutting')
+ * @param archetype - Page archetype ('foundation' | 'architecture' | 'module' | 'cross-cutting')
  * @param context   - Assembled context for this page
  * @returns { system, user } prompt pair ready for an LLM provider
  */

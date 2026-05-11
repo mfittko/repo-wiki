@@ -1513,7 +1513,7 @@ test('compileWiki in LLM mode synthesizes Architecture.md through the mock provi
   }
 });
 
-test('compileWiki in LLM mode falls back to deterministic Architecture.md in deterministic mode', async () => {
+test('compileWiki in deterministic mode renders Architecture.md without LLM synthesis', async () => {
   const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
 
   try {
