@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "176374fc6ec27cb41eb2b6ed9e5833b68ee7778a"
+source_commit: "3c7f4808701c06a5d3bcd8e1455221b272566b71"
 page_state: "generated"
 source_paths: ["src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -37,7 +37,7 @@ The `utils` module provides a collection of utility functions and types implemen
 - `DEFAULT_WALK_EXCLUDES` — Default patterns to exclude when walking directories.
 - `ensureDir` — Function to ensure a directory exists, creating it if necessary.
 - `fileExists` — Function to check if a file exists.
-- `readJson` — Function to read and parse JSON files.
+- `readJson` — Function to read and parse a JSON file.
 - `walkFiles` — Function to recursively walk files in a directory.
 - `writeJson` — Function to write JSON data to a file.
 - `writeText` — Function to write text data to a file.
@@ -64,14 +64,14 @@ The `utils` module provides a collection of utility functions and types implemen
 
 ## Related tests
 
-No test files or test-related documentation cards were identified in the source data for this module.
+No test files or test-related documentation cards are present in the current source data for this module.
 
 ## Known gaps or open questions
 
 - There is no explicit documentation or test coverage information available for this module.
-- The exact repository remote URL and commit SHA are not provided.
+- The exact repository remote URL and commit SHA are not specified.
 - The usage context or higher-level integration of these utilities is not described.
-- No information on error handling strategies or performance considerations is present.
+- No information on error handling strategies or performance considerations is provided.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

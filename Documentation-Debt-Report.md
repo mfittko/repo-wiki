@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "176374fc6ec27cb41eb2b6ed9e5833b68ee7778a"
-compiled_at: "2026-05-10T22:57:37.032Z"
+source_commit: "3c7f4808701c06a5d3bcd8e1455221b272566b71"
+compiled_at: "2026-05-11T06:58:40.143Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 claim_status: "review-needed"
@@ -273,5 +273,5 @@ Route and API claims from documentation prose are validated against scanner-extr
 - Do not suppress documentation by default.
 - Never treat docs as more authoritative than code at the pinned commit.
 - Promote documentation-derived claims only when validated or clearly labeled.
-- Include unvalidated operational claims in this report and in [Open Questions](Open-Questions).
+- Include unvalidated operational claims in this report and in [Open Questions](Open-Questions.md).
 - Fail publishing when project policy marks stale or contradicted docs as error-level.

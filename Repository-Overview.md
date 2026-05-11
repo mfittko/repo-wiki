@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "176374fc6ec27cb41eb2b6ed9e5833b68ee7778a"
-compiled_at: "2026-05-10T22:57:37.025Z"
+source_commit: "3c7f4808701c06a5d3bcd8e1455221b272566b71"
+compiled_at: "2026-05-11T06:58:40.135Z"
 kind: "repository_overview"
 claim_status: "grounded"
 source_paths: [".env.example",".github/ISSUE_TEMPLATE/config.yml",".github/ISSUE_TEMPLATE/epic.yml",".github/ISSUE_TEMPLATE/task.yml",".github/workflows/changelog-on-merge.yml",".github/workflows/changelog-release.yml",".github/workflows/ci.yml",".github/workflows/wiki.yml",".gitignore",".pi/settings.json",".tsbuildinfo","bin/repo-wiki.ts","LICENSE","package-lock.json","package.json","scripts/update-changelog.mjs","src/cli.ts","src/compiler.ts","src/config.ts","src/context-assembler.ts","src/data-model-signals.ts","src/docs-ingestor.ts","src/docs-linter.ts","src/docs-validation.ts","src/extractors.ts","src/frontmatter.ts","src/index.ts","src/init.ts","src/language.ts","src/linter.ts","src/llm-provider.ts","src/page-ownership.ts","src/planner.ts","src/prompts.ts","src/publisher.ts","src/repository-analysis.ts","src/scanner.ts","src/secret-patterns.ts","src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts","src/wiki-patch.ts","test/cli.test.ts","test/compiler.test.ts","test/context-assembler.test.ts","test/docs-linter.test.ts","test/dotenv.test.ts","test/extractors-go.test.ts","test/extractors-rust.test.ts"]
@@ -33,30 +33,30 @@ page_state: "generated"
 
 ## Main knowledge units
 
-- [Repository Root](Repository-Root) - 38 files
-- [CI and Automation](CI-and-Automation) - 17 files
-- [Documentation](Documentation) - 15 files
-- [Module utils](Module-utils) - 4 files
-- [Module cli.ts](Module-cli-ts) - 1 files
-- [Module compiler.ts](Module-compiler-ts) - 1 files
-- [Module config.ts](Module-config-ts) - 1 files
-- [Module context-assembler.ts](Module-context-assembler-ts) - 1 files
-- [Module data-model-signals.ts](Module-data-model-signals-ts) - 1 files
-- [Module docs-ingestor.ts](Module-docs-ingestor-ts) - 1 files
-- [Module docs-linter.ts](Module-docs-linter-ts) - 1 files
-- [Module docs-validation.ts](Module-docs-validation-ts) - 1 files
-- [Module extractors.ts](Module-extractors-ts) - 1 files
-- [Module frontmatter.ts](Module-frontmatter-ts) - 1 files
-- [Module index.ts](Module-index-ts) - 1 files
-- [Module init.ts](Module-init-ts) - 1 files
-- [Module language.ts](Module-language-ts) - 1 files
-- [Module linter.ts](Module-linter-ts) - 1 files
-- [Module llm-provider.ts](Module-llm-provider-ts) - 1 files
-- [Module page-ownership.ts](Module-page-ownership-ts) - 1 files
-- [Module planner.ts](Module-planner-ts) - 1 files
-- [Module prompts.ts](Module-prompts-ts) - 1 files
-- [Module publisher.ts](Module-publisher-ts) - 1 files
-- [Module repository-analysis.ts](Module-repository-analysis-ts) - 1 files
-- [Module scanner.ts](Module-scanner-ts) - 1 files
-- [Module secret-patterns.ts](Module-secret-patterns-ts) - 1 files
-- [Module wiki-patch.ts](Module-wiki-patch-ts) - 1 files
+- [Repository Root](Repository-Root.md) - 38 files
+- [CI and Automation](CI-and-Automation.md) - 17 files
+- [Documentation](Documentation.md) - 15 files
+- [Module utils](Module-utils.md) - 4 files
+- [Module cli.ts](Module-cli-ts.md) - 1 files
+- [Module compiler.ts](Module-compiler-ts.md) - 1 files
+- [Module config.ts](Module-config-ts.md) - 1 files
+- [Module context-assembler.ts](Module-context-assembler-ts.md) - 1 files
+- [Module data-model-signals.ts](Module-data-model-signals-ts.md) - 1 files
+- [Module docs-ingestor.ts](Module-docs-ingestor-ts.md) - 1 files
+- [Module docs-linter.ts](Module-docs-linter-ts.md) - 1 files
+- [Module docs-validation.ts](Module-docs-validation-ts.md) - 1 files
+- [Module extractors.ts](Module-extractors-ts.md) - 1 files
+- [Module frontmatter.ts](Module-frontmatter-ts.md) - 1 files
+- [Module index.ts](Module-index-ts.md) - 1 files
+- [Module init.ts](Module-init-ts.md) - 1 files
+- [Module language.ts](Module-language-ts.md) - 1 files
+- [Module linter.ts](Module-linter-ts.md) - 1 files
+- [Module llm-provider.ts](Module-llm-provider-ts.md) - 1 files
+- [Module page-ownership.ts](Module-page-ownership-ts.md) - 1 files
+- [Module planner.ts](Module-planner-ts.md) - 1 files
+- [Module prompts.ts](Module-prompts-ts.md) - 1 files
+- [Module publisher.ts](Module-publisher-ts.md) - 1 files
+- [Module repository-analysis.ts](Module-repository-analysis-ts.md) - 1 files
+- [Module scanner.ts](Module-scanner-ts.md) - 1 files
+- [Module secret-patterns.ts](Module-secret-patterns-ts.md) - 1 files
+- [Module wiki-patch.ts](Module-wiki-patch-ts.md) - 1 files

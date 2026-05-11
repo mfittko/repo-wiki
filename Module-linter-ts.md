@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "176374fc6ec27cb41eb2b6ed9e5833b68ee7778a"
+source_commit: "3c7f4808701c06a5d3bcd8e1455221b272566b71"
 page_state: "generated"
 source_paths: ["src/linter.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "2024-06-05T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -21,22 +21,22 @@ This module provides linting functionality as indicated by the presence of the `
 
 ## Key symbols and entry points
 
-- `lintWiki`: The primary exported symbol from this module, presumably the main function or object responsible for linting wiki content.
+- `lintWiki`: The primary exported symbol from this module, presumably the main function or object responsible for performing linting tasks.
 
 ## Dependencies and imports
 
-The module imports several internal and Node.js modules:
+The module imports several internal and external dependencies:
 
-- Internal imports:
+- Internal modules:
   - `./frontmatter.js`
   - `./secret-patterns.js`
   - `./utils/fs.js`
 
 - Node.js built-in modules:
-  - `fs`
-  - `path`
+  - `fs` (from `node:fs`)
+  - `path` (from `node:path`)
 
-These dependencies suggest the module interacts with file system operations, path manipulations, and possibly processes frontmatter metadata and secret pattern detection as part of its linting process.
+These imports suggest the module interacts with file system operations, path manipulations, frontmatter parsing, and secret pattern detection or handling.
 
 ## Related tests
 
@@ -44,10 +44,10 @@ No documentation or test cards are currently associated with this module, and no
 
 ## Known gaps or open questions
 
-- The exact implementation details and linting rules applied by `lintWiki` are not documented here.
+- The exact implementation details and behavior of `lintWiki` are not described here.
 - There is no information on how this module integrates with the rest of the system or how it is invoked.
-- No test coverage or examples are provided, limiting insight into usage and reliability.
-- The repository remote URL and commit SHA are unknown, which restricts traceability.
+- No test coverage or examples are documented, which limits understanding of usage and reliability.
+- The repository and commit information are unknown, which restricts traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

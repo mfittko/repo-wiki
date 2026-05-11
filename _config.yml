@@ -1,3 +1,4 @@
+# repo-wiki-generated: regenerated on each publish
 defaults:
   - scope:
       path: ""

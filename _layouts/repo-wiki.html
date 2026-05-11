@@ -1,12 +1,38 @@
 <!doctype html>
+<!-- repo-wiki-generated: regenerated on each publish -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% if page.title %}{{ page.title | escape }}{% else %}{{ page.name | replace: '.md', '' | escape }}{% endif %}</title>
+  <title>{% if page.title %}{{ page.title | escape }}{% else %}{{ page.name | replace: '.md', '' | escape }}{% endif %} &mdash; Wiki</title>
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
     body { color: #24292f; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; margin: 0; }
-    main { box-sizing: border-box; margin: 0 auto; max-width: 980px; padding: 2rem; }
+    .layout { display: flex; min-height: 100vh; }
+    .sidebar { background: #f6f8fa; border-right: 1px solid #d0d7de; flex-shrink: 0; overflow-y: auto; padding: 1rem; width: 220px; }
+    .sidebar-title { font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem; }
+    .sidebar-title a { color: #24292f; text-decoration: none; }
+    .sidebar-title a:hover { color: #0969da; }
+    .site-nav ul { list-style: none; margin: 0; padding: 0; }
+    .site-nav li { margin: 0.15rem 0; }
+    .site-nav a { color: #0969da; font-size: 0.875rem; text-decoration: none; }
+    .site-nav a:hover { text-decoration: underline; }
+    .site-nav .nav-section { color: #57606a; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.05em; margin: 0.75rem 0 0.25rem; text-transform: uppercase; }
+    .nav-divider { border: none; border-top: 1px solid #d0d7de; margin: 0.5rem 0; }
+    main { flex: 1; min-width: 0; max-width: 980px; padding: 2rem; }
+    .breadcrumb { color: #57606a; font-size: 0.875rem; margin-bottom: 1rem; }
+    .breadcrumb a { color: #0969da; text-decoration: none; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .page-metadata { background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 6px; color: #57606a; font-size: 0.875rem; margin: 0 0 1.5rem; padding: 0.75rem 1rem; }
+    .page-metadata summary { color: #24292f; cursor: pointer; font-weight: 600; }
+    .page-metadata dl { display: grid; gap: 0.35rem 1rem; grid-template-columns: max-content minmax(0, 1fr); margin: 0.75rem 0 0; }
+    .page-metadata dt { color: #24292f; font-weight: 600; }
+    .page-metadata dd { margin: 0; min-width: 0; }
+    .page-metadata ul { margin: 0; padding-left: 1.25rem; }
+    .page-metadata code { color: #24292f; }
+    .back-link { border-top: 1px solid #d0d7de; color: #57606a; font-size: 0.875rem; margin-top: 2rem; padding-top: 1rem; }
+    .back-link a { color: #0969da; text-decoration: none; }
+    .back-link a:hover { text-decoration: underline; }
     a { color: #0969da; text-decoration: none; }
     a:hover { text-decoration: underline; }
     pre { background: #f6f8fa; border-radius: 6px; overflow: auto; padding: 1rem; }
@@ -15,12 +41,58 @@
     table { border-collapse: collapse; display: block; overflow: auto; width: 100%; }
     th, td { border: 1px solid #d0d7de; padding: 0.4rem 0.75rem; }
     .mermaid { background: #fff; border: 1px solid #d0d7de; border-radius: 6px; margin: 1rem 0; padding: 1rem; }
+    @media (max-width: 768px) { .layout { flex-direction: column; } .sidebar { border-right: none; border-bottom: 1px solid #d0d7de; width: 100%; } }
   </style>
 </head>
 <body>
-  <main>
-    {{ content }}
-  </main>
+{% assign _rp = page.path %}{% assign _wd = site.wiki_pages_dir | default: '.' %}{% if _wd != '.' %}{% assign _wd_prefix = _wd | append: '/' %}{% assign _rp = _rp | remove_first: _wd_prefix %}{% endif %}{% assign _depth = _rp | split: '/' | size | minus: 1 %}{% assign _base = '' %}{% for _i in (1.._depth) %}{% assign _base = _base | append: '../' %}{% endfor %}
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-title"><a href="{{ _base }}Home.md">Wiki</a></div>
+      <nav class="site-nav" aria-label="Site navigation">
+        <h4 class="nav-section">Quick links</h4>
+        <ul>
+          <li><a href="{{ _base }}Home.md">Home</a></li>
+          <li><a href="{{ _base }}Index.md">Index</a></li>
+          <li><a href="{{ _base }}Architecture.md">Architecture</a></li>
+          <li><a href="{{ _base }}Agent-Context-Pack.md">Agent Context Pack</a></li>
+          <li><a href="{{ _base }}Build-Test-and-Run.md">Build, Test &amp; Run</a></li>
+          <li><a href="{{ _base }}Documentation-Debt-Report.md">Documentation Debt</a></li>
+        </ul>
+        <hr class="nav-divider">
+        {% include wiki_nav.html %}
+      </nav>
+    </aside>
+    <main>
+      {% assign _kind = page.kind | default: '' %}{% if _kind == 'module' %}
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ _base }}Home.md">Home</a> &rsaquo;
+        <a href="{{ _base }}Index.md">Index</a> &rsaquo;
+        <span>{{ page.title | default: page.name | replace: '.md', '' | escape }}</span>
+      </nav>{% elsif _kind != '' and _kind != 'home' %}
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="{{ _base }}Home.md">Home</a> &rsaquo;
+        <span>{{ page.title | default: page.name | replace: '.md', '' | escape }}</span>
+      </nav>{% endif %}
+      {% if page.page_state or page.kind or page.confidence or page.claim_status or page.source_repo or page.source_commit or page.compiled_at or page.source_paths %}
+      <details class="page-metadata">
+        <summary>Page metadata</summary>
+        <dl>
+          {% if page.kind %}<dt>Kind</dt><dd>{{ page.kind | escape }}</dd>{% endif %}
+          {% if page.page_state %}<dt>State</dt><dd>{{ page.page_state | escape }}</dd>{% endif %}
+          {% if page.confidence %}<dt>Confidence</dt><dd>{{ page.confidence | escape }}</dd>{% endif %}
+          {% if page.claim_status %}<dt>Claim status</dt><dd>{{ page.claim_status | escape }}</dd>{% endif %}
+          {% if page.source_repo %}<dt>Source repo</dt><dd>{{ page.source_repo | escape }}</dd>{% endif %}
+          {% if page.source_commit %}<dt>Source commit</dt><dd><code>{{ page.source_commit | escape }}</code></dd>{% endif %}
+          {% if page.compiled_at %}<dt>Compiled at</dt><dd>{{ page.compiled_at | escape }}</dd>{% endif %}
+          {% if page.source_paths %}<dt>Source paths</dt><dd><ul>{% for source_path in page.source_paths %}<li><code>{{ source_path | escape }}</code></li>{% endfor %}</ul></dd>{% endif %}
+        </dl>
+      </details>
+      {% endif %}
+      {{ content }}
+      {% if _kind != 'home' %}<div class="back-link"><a href="{{ _base }}Index.md">&larr; Back to Index</a></div>{% endif %}
+    </main>
+  </div>
   <script type="module">
     import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
     mermaid.initialize({ startOnLoad: false, securityLevel: 'strict' });

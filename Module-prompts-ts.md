@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "176374fc6ec27cb41eb2b6ed9e5833b68ee7778a"
+source_commit: "3c7f4808701c06a5d3bcd8e1455221b272566b71"
 page_state: "generated"
 source_paths: ["src/prompts.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "2024-06-15T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides a collection of functions and types related to constructing and managing prompts within the system. It includes utilities to build various specialized prompts such as cross-cutting, foundation, and module-specific prompts. The module also defines several context and metadata types that support prompt construction and documentation generation workflows.
+This module provides a collection of functions and types related to building and managing prompts within the system. It includes utilities to construct various specialized prompts such as cross-cutting, foundation, and module-specific prompts. The module also defines several context and metadata types that support prompt construction and usage.
 
 ## Source file list
 
@@ -24,16 +24,16 @@ This module provides a collection of functions and types related to constructing
 - **Functions:**
   - `buildCrossCuttingPrompt` — Constructs prompts that address cross-cutting concerns.
   - `buildFoundationPrompt` — Builds foundational prompts likely used as base templates.
-  - `buildModulePrompt` — Creates prompts specific to individual modules.
-  - `buildPrompt` — A general-purpose prompt builder function.
+  - `buildModulePrompt` — Creates prompts specific to a given module.
+  - `buildPrompt` — A general prompt builder function.
 
 - **Types and Interfaces:**
   - `BuiltPrompt` — Represents a constructed prompt object.
-  - `DocCardContext` — Contextual information for documentation cards.
-  - `MigrationContext` — Context related to migration processes.
-  - `ModelContext` — Context for model-related operations.
+  - `DocCardContext` — Contextual information related to documentation cards.
+  - `MigrationContext` — Context used during migration processes.
+  - `ModelContext` — Context related to the model state or environment.
   - `ModuleInfo` — Metadata describing a module.
-  - `PageArchetype` — Defines archetypes for pages, possibly influencing prompt generation.
+  - `PageArchetype` — Defines archetypes or templates for pages.
 
 ## Dependencies and imports
 
@@ -41,14 +41,14 @@ This module provides a collection of functions and types related to constructing
 
 ## Related tests
 
-- No test files or test-related documentation cards are referenced or available for this module.
+- No documentation or source cards indicate the presence of related test files or test cases for this module.
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or comments describing the detailed behavior or usage scenarios of the prompt-building functions.
-- The relationships and intended usage patterns between the various context types (`DocCardContext`, `MigrationContext`, `ModelContext`) are not detailed.
-- No information is available about how these prompts integrate with other parts of the system or how they are consumed.
-- Absence of related tests or examples limits understanding of expected inputs and outputs.
+- There is no explicit documentation or comments describing the detailed behavior or usage scenarios of the exported functions and types.
+- The absence of related test information leaves the testing coverage and reliability of this module unclear.
+- The source repository and commit information are unknown, limiting traceability.
+- The exact relationships and interactions between the various context types and prompt builders are not detailed.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
