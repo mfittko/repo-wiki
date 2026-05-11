@@ -191,7 +191,7 @@ export async function runCli(argv: string[]) {
     case 'run': {
       const result = await runPipeline(options);
       console.log(JSON.stringify(result.summary, null, 2));
-      if (result.summary.lint.errors > 0) {
+      if (result.summary.status === 'blocked') {
         process.exitCode = 1;
       }
       return;
@@ -236,6 +236,30 @@ async function runPipeline(options: ParsedArgs) {
     repoPath
   });
 
+  if (docsLint.summary.errors > 0) {
+    const reason = 'docs-lint-errors';
+    return {
+      scan,
+      plan,
+      docsLint,
+      compile: null,
+      lint: null,
+      publish: null,
+      summary: {
+        status: 'blocked',
+        blockedStage: 'lint-docs',
+        mode,
+        repoPath,
+        scan: scan.summary,
+        plan: plan.summary,
+        docsLint: docsLint.summary,
+        compile: { status: 'skipped', reason },
+        lint: { status: 'skipped', reason },
+        publish: options.publish ? { status: 'blocked', reason } : null
+      }
+    };
+  }
+
   const compile = await compileWiki({
     scanDir,
     planFile,
@@ -249,7 +273,10 @@ async function runPipeline(options: ParsedArgs) {
   });
 
   let publish = null;
-  if (options.publish) {
+  let publishSummary: Record<string, unknown> | null = null;
+  if (options.publish && lint.summary.errors > 0) {
+    publishSummary = { status: 'blocked', reason: 'wiki-lint-errors' };
+  } else if (options.publish) {
     const target = getPublishTargetOption(options, config.publish?.target);
     publish = await publishWiki({
       wikiDir,
@@ -261,6 +288,7 @@ async function runPipeline(options: ParsedArgs) {
       dryRun: Boolean(options['dry-run']),
       frontmatterPolicy: getFrontmatterPolicyOption(options, target, getConfiguredFrontmatterPolicy(config.publish, target))
     });
+    publishSummary = publish.summary;
   }
 
   return {
@@ -270,6 +298,8 @@ async function runPipeline(options: ParsedArgs) {
     lint,
     publish,
     summary: {
+      status: lint.summary.errors > 0 ? 'blocked' : 'ok',
+      blockedStage: lint.summary.errors > 0 ? 'lint' : null,
       mode,
       repoPath,
       scan: scan.summary,
@@ -277,7 +307,7 @@ async function runPipeline(options: ParsedArgs) {
       docsLint: docsLint.summary,
       compile: compile.summary,
       lint: lint.summary,
-      publish: publish?.summary || null
+      publish: publishSummary
     }
   };
 }
