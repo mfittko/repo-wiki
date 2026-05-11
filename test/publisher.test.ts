@@ -413,7 +413,19 @@ test('publishWiki publishes github-pages output into configured path and preserv
   try {
     await fs.mkdir(wikiDir, { recursive: true });
     await fs.writeFile(path.join(wikiDir, 'Home.md'), '---\nkind: home\n---\n# Home\n', 'utf8');
-    await fs.writeFile(path.join(wikiDir, '_Sidebar.md'), '---\nkind: sidebar\n---\n# Navigation\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, '_Sidebar.md'), [
+      '---',
+      'kind: sidebar',
+      '---',
+      '# Navigation',
+      '',
+      '- [Home](Home)',
+      '- [Architecture](Architecture)',
+      '- [Index with extension](Index.md)',
+      '- [External](https://example.com/docs)',
+      '- [Anchor](#top)',
+      ''
+    ].join('\n'), 'utf8');
     await git(['init', '--bare', remoteDir]);
 
     const publishResult = await publishWiki({
@@ -433,7 +445,19 @@ test('publishWiki publishes github-pages output into configured path and preserv
     await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
     assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'Home.md'), 'utf8'), '---\nkind: home\n---\n# Home\n');
     assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'index.md'), 'utf8'), '---\nkind: home\n---\n# Home\n');
-    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'Navigation.md'), 'utf8'), '---\nkind: sidebar\n---\n# Navigation\n');
+    assert.equal(await fs.readFile(path.join(checkoutDir, 'docs', 'Navigation.md'), 'utf8'), [
+      '---',
+      'kind: sidebar',
+      '---',
+      '# Navigation',
+      '',
+      '- [Home](Home.html)',
+      '- [Architecture](Architecture.html)',
+      '- [Index with extension](Index.html)',
+      '- [External](https://example.com/docs)',
+      '- [Anchor](#top)',
+      ''
+    ].join('\n'));
     const pagesConfig = await fs.readFile(path.join(checkoutDir, '_config.yml'), 'utf8');
     assert.match(pagesConfig, /layout: "repo-wiki"/);
     const pagesLayout = await fs.readFile(path.join(checkoutDir, '_layouts', 'repo-wiki.html'), 'utf8');
@@ -804,10 +828,10 @@ test('publishWiki generates _includes/wiki_nav.html from _Sidebar.md for github-
     assert.match(navHtml, /<h4 class="nav-section">Contents<\/h4>/);
     assert.match(navHtml, /<h4 class="nav-section">Foundation<\/h4>/);
     // Internal links use {{ _base }} prefix for depth-relative navigation
-    assert.ok(navHtml.includes('href="{{ _base }}Home.md"'), 'Home link should use {{ _base }} prefix');
-    assert.ok(navHtml.includes('href="{{ _base }}Index.md"'), 'Index link should use {{ _base }} prefix');
-    assert.ok(navHtml.includes('href="{{ _base }}Architecture.md"'), 'Architecture link should use {{ _base }} prefix');
-    assert.ok(navHtml.includes('href="{{ _base }}Build-Test-and-Run.md"'), 'Build link should use {{ _base }} prefix');
+    assert.ok(navHtml.includes('href="{{ _base }}Home.html"'), 'Home link should use {{ _base }} prefix');
+    assert.ok(navHtml.includes('href="{{ _base }}Index.html"'), 'Index link should use {{ _base }} prefix');
+    assert.ok(navHtml.includes('href="{{ _base }}Architecture.html"'), 'Architecture link should use {{ _base }} prefix');
+    assert.ok(navHtml.includes('href="{{ _base }}Build-Test-and-Run.html"'), 'Build link should use {{ _base }} prefix');
     assert.ok(navHtml.includes('href="HTTPS://example.com/docs"'), 'uppercase HTTPS link should not use {{ _base }} prefix');
     assert.ok(navHtml.includes('href="MAILTO:test@example.com"'), 'uppercase MAILTO link should not use {{ _base }} prefix');
     // Link text is HTML-escaped
@@ -839,7 +863,7 @@ test('publishWiki generates _includes/wiki_nav.html from Navigation.md when _Sid
 
     await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
     const navHtml = await fs.readFile(path.join(checkoutDir, '_includes', 'wiki_nav.html'), 'utf8');
-    assert.ok(navHtml.includes('href="{{ _base }}Home.md"'), 'Navigation.md fallback should also use {{ _base }} prefix');
+    assert.ok(navHtml.includes('href="{{ _base }}Home.html"'), 'Navigation.md fallback should also use {{ _base }} prefix');
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
@@ -997,12 +1021,12 @@ test('publishWiki layout contains navigation sidebar, breadcrumbs, and page meta
     assert.match(layout, /source_path in page\.source_paths/);
     assert.match(layout, /class="back-link"/);
     assert.match(layout, /\{% include wiki_nav\.html %\}/);
-    assert.match(layout, /Home\.md/);
-    assert.match(layout, /Index\.md/);
-    assert.match(layout, /Architecture\.md/);
-    assert.match(layout, /Agent-Context-Pack\.md/);
-    assert.match(layout, /Build-Test-and-Run\.md/);
-    assert.match(layout, /Documentation-Debt-Report\.md/);
+    assert.match(layout, /Home\.html/);
+    assert.match(layout, /Index\.html/);
+    assert.match(layout, /Architecture\.html/);
+    assert.match(layout, /Agent-Context-Pack\.html/);
+    assert.match(layout, /Build-Test-and-Run\.html/);
+    assert.match(layout, /Documentation-Debt-Report\.html/);
     assert.match(layout, /_kind == 'module'/);
     assert.match(layout, /_kind != 'home'/);
     assert.match(layout, /Back to Index/);
@@ -1076,7 +1100,7 @@ test('publishWiki does not add wiki_pages_dir to _config.yml when pagesPath is r
   }
 });
 
-test('publishWiki rewrites internal wiki links to use .md extension for github-pages output', async () => {
+test('publishWiki rewrites internal wiki links to use .html extension for github-pages output', async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
   const wikiDir = path.join(tempDir, 'wiki');
   const remoteDir = path.join(tempDir, 'remote.git');
@@ -1109,9 +1133,9 @@ test('publishWiki rewrites internal wiki links to use .md extension for github-p
     await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
     const published = await fs.readFile(path.join(checkoutDir, 'Home.md'), 'utf8');
 
-    assert.match(published, /\[Architecture\]\(Architecture\.md\)/);
-    assert.match(published, /\[Build steps\]\(Build-Test-and-Run\.md\)/);
-    assert.match(published, /\[Index\]\(Index\.md#overview\)/);
+    assert.match(published, /\[Architecture\]\(Architecture\.html\)/);
+    assert.match(published, /\[Build steps\]\(Build-Test-and-Run\.html\)/);
+    assert.match(published, /\[Index\]\(Index\.html#overview\)/);
     assert.match(published, /\[GitHub\]\(https:\/\/github\.com\)/);
     assert.match(published, /\[Top\]\(#top\)/);
     assert.match(published, /!\[Logo\]\(assets\/logo\.png\)/);
@@ -1150,12 +1174,12 @@ test('publishWiki does not rewrite internal links for github-wiki target', async
 });
 
 test('rewriteInternalWikiLinks normalizes bare page names, strips leading ./, and preserves special links', () => {
-  assert.equal(rewriteInternalWikiLinks('[Home](Home)'), '[Home](Home.md)');
-  assert.equal(rewriteInternalWikiLinks('[Arch](Architecture)'), '[Arch](Architecture.md)');
-  assert.equal(rewriteInternalWikiLinks('[Page](./Page.md)'), '[Page](Page.md)');
-  assert.equal(rewriteInternalWikiLinks('[Page](./Page)'), '[Page](Page.md)');
-  assert.equal(rewriteInternalWikiLinks('[Index](Index.md#section)'), '[Index](Index.md#section)');
-  assert.equal(rewriteInternalWikiLinks('[Index](Index#section)'), '[Index](Index.md#section)');
+  assert.equal(rewriteInternalWikiLinks('[Home](Home)'), '[Home](Home.html)');
+  assert.equal(rewriteInternalWikiLinks('[Arch](Architecture)'), '[Arch](Architecture.html)');
+  assert.equal(rewriteInternalWikiLinks('[Page](./Page.md)'), '[Page](Page.html)');
+  assert.equal(rewriteInternalWikiLinks('[Page](./Page)'), '[Page](Page.html)');
+  assert.equal(rewriteInternalWikiLinks('[Index](Index.md#section)'), '[Index](Index.html#section)');
+  assert.equal(rewriteInternalWikiLinks('[Index](Index#section)'), '[Index](Index.html#section)');
   assert.equal(rewriteInternalWikiLinks('[GitHub](https://github.com)'), '[GitHub](https://github.com)');
   assert.equal(rewriteInternalWikiLinks('[GitHub](HTTPS://github.com)'), '[GitHub](HTTPS://github.com)');
   assert.equal(rewriteInternalWikiLinks('[Mail](mailto:test@example.com)'), '[Mail](mailto:test@example.com)');
@@ -1172,7 +1196,7 @@ test('rewriteInternalWikiLinks normalizes bare page names, strips leading ./, an
   assert.equal(rewriteInternalWikiLinks('[JSON](data.json)'), '[JSON](data.json)');
   assert.equal(rewriteInternalWikiLinks('[YAML](config.yml)'), '[YAML](config.yml)');
   const result = rewriteInternalWikiLinks('[Home](Home) and [Arch](Architecture) and [GitHub](https://github.com)');
-  assert.equal(result, '[Home](Home.md) and [Arch](Architecture.md) and [GitHub](https://github.com)');
+  assert.equal(result, '[Home](Home.html) and [Arch](Architecture.html) and [GitHub](https://github.com)');
 });
 
 test('rewriteInternalWikiLinks rejects unsafe URI schemes and preserves query strings', () => {
@@ -1189,8 +1213,8 @@ test('rewriteInternalWikiLinks rejects unsafe URI schemes and preserves query st
 
   // Query strings preserved
   assert.equal(rewriteInternalWikiLinks('[Raw](logo.png?raw=1)'), '[Raw](logo.png?raw=1)');
-  assert.equal(rewriteInternalWikiLinks('[Page](Page?x=1)'), '[Page](Page.md?x=1)');
-  assert.equal(rewriteInternalWikiLinks('[Page](Page?x=1#section)'), '[Page](Page.md?x=1#section)');
+  assert.equal(rewriteInternalWikiLinks('[Page](Page?x=1)'), '[Page](Page.html?x=1)');
+  assert.equal(rewriteInternalWikiLinks('[Page](Page?x=1#section)'), '[Page](Page.html?x=1#section)');
 });
 
 test('publishWiki regenerates repo-wiki-generated support files on subsequent publish', async () => {
@@ -1229,7 +1253,7 @@ test('publishWiki regenerates repo-wiki-generated support files on subsequent pu
     await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
     const navHtml = await fs.readFile(path.join(checkoutDir, '_includes', 'wiki_nav.html'), 'utf8');
     assert.match(navHtml, /repo-wiki-generated/, 'generated marker present after second publish');
-    assert.ok(navHtml.includes('href="{{ _base }}Architecture.md"'), 'updated Architecture link present after second publish');
+    assert.ok(navHtml.includes('href="{{ _base }}Architecture.html"'), 'updated Architecture link present after second publish');
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
@@ -1465,7 +1489,7 @@ test('publishWiki unsafe sidebar href is sanitized to # in wiki_nav.html', async
     await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
     const navHtml = await fs.readFile(path.join(checkoutDir, '_includes', 'wiki_nav.html'), 'utf8');
     // Safe link should be present with {{ _base }} prefix
-    assert.ok(navHtml.includes('href="{{ _base }}Home.md"'), 'safe link present');
+    assert.ok(navHtml.includes('href="{{ _base }}Home.html"'), 'safe link present');
     // Unsafe schemes must be replaced with #
     assert.ok(!navHtml.includes('javascript:'), 'javascript: scheme must not appear in output');
     assert.ok(!navHtml.includes('JAVASCRIPT:'), 'uppercase javascript: scheme must not appear in output');

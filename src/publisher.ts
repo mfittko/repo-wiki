@@ -425,8 +425,38 @@ async function ensurePagesEntryAndNavigation(publishDir: string) {
   const navigationPath = path.join(publishDir, 'Navigation.md');
   if (await fileExists(sidebarPath) && !await fileExists(navigationPath)) {
     const sidebarContent = await fs.readFile(sidebarPath, 'utf8');
-    await fs.writeFile(navigationPath, sidebarContent, 'utf8');
+    await fs.writeFile(navigationPath, rewritePagesNavigationLinks(sidebarContent), 'utf8');
   }
+}
+
+function rewritePagesNavigationLinks(content: string) {
+  return content.replace(/(?<!!)(\[[^\]]+\]\()([^\s)]+)(\))/g, (_match, prefix: string, target: string, suffix: string) => {
+    const rewritten = rewritePagesNavigationTarget(target);
+    return `${prefix}${rewritten}${suffix}`;
+  });
+}
+
+function rewritePagesNavigationTarget(target: string) {
+  if (!target || target.startsWith('#')) {
+    return target;
+  }
+  if (/^[a-z][a-z\d+.-]*:/i.test(target) || target.startsWith('//') || target.startsWith('/')) {
+    return target;
+  }
+
+  const [pathPart, hash = ''] = target.split('#', 2);
+  if (!pathPart || /[/?]/.test(pathPart)) {
+    return target;
+  }
+
+  if (path.extname(pathPart).toLowerCase() === '.md') {
+    return `${pathPart.slice(0, -3)}.html${hash ? `#${hash}` : ''}`;
+  }
+  if (path.extname(pathPart)) {
+    return target;
+  }
+
+  return `${pathPart}.html${hash ? `#${hash}` : ''}`;
 }
 
 async function ensurePagesMermaidSupport(siteRootDir: string, pagesPath: string) {
@@ -483,12 +513,12 @@ async function ensurePagesNavInclude(siteRootDir: string, publishDir: string) {
 }
 
 /**
- * Rewrite internal wiki-style links in markdown content so they include the
- * `.md` extension, ensuring they resolve correctly under Jekyll GitHub Pages.
+ * Rewrite internal wiki-style links in markdown content so they use the
+ * published `.html` page URLs expected under GitHub Pages.
  *
  * Rules:
- * - `[text](PageName)` → `[text](PageName.md)` (bare page-name link)
- * - `[text](./Page.md)` → `[text](Page.md)` (normalize leading `./`)
+ * - `[text](PageName)` → `[text](PageName.html)` (bare page-name link)
+ * - `[text](./Page.md)` → `[text](Page.html)` (normalize leading `./` and convert markdown source links)
  * - External URLs, `mailto:`, anchor-only, and known asset extensions are left unchanged.
  *
  * Quantifiers are bounded to prevent polynomial backtracking on adversarial input.
@@ -543,9 +573,11 @@ function normalizeWikiHref(href: string): string {
   // Normalize leading ./
   let normalized = pathPart.replace(/^\.\//, '');
 
-  // Add .md if the path has no file extension
-  if (normalized && !/\.[a-z]{1,10}$/i.test(normalized) && !normalized.endsWith('/')) {
-    normalized += '.md';
+  // Convert markdown source links to published HTML page URLs.
+  if (/\.md$/i.test(normalized)) {
+    normalized = normalized.replace(/\.md$/i, '.html');
+  } else if (normalized && !/\.[a-z]{1,10}$/i.test(normalized) && !normalized.endsWith('/')) {
+    normalized += '.html';
   }
 
   return normalized + suffix;
@@ -668,16 +700,16 @@ const PAGES_LAYOUT = `<!doctype html>
 {% assign _rp = page.path %}{% assign _wd = site.wiki_pages_dir | default: '.' %}{% if _wd != '.' %}{% assign _wd_prefix = _wd | append: '/' %}{% assign _rp = _rp | remove_first: _wd_prefix %}{% endif %}{% assign _depth = _rp | split: '/' | size | minus: 1 %}{% assign _base = '' %}{% for _i in (1.._depth) %}{% assign _base = _base | append: '../' %}{% endfor %}
   <div class="layout">
     <aside class="sidebar">
-      <div class="sidebar-title"><a href="{{ _base }}Home.md">Wiki</a></div>
+      <div class="sidebar-title"><a href="{{ _base }}Home.html">Wiki</a></div>
       <nav class="site-nav" aria-label="Site navigation">
         <h4 class="nav-section">Quick links</h4>
         <ul>
-          <li><a href="{{ _base }}Home.md">Home</a></li>
-          <li><a href="{{ _base }}Index.md">Index</a></li>
-          <li><a href="{{ _base }}Architecture.md">Architecture</a></li>
-          <li><a href="{{ _base }}Agent-Context-Pack.md">Agent Context Pack</a></li>
-          <li><a href="{{ _base }}Build-Test-and-Run.md">Build, Test &amp; Run</a></li>
-          <li><a href="{{ _base }}Documentation-Debt-Report.md">Documentation Debt</a></li>
+          <li><a href="{{ _base }}Home.html">Home</a></li>
+          <li><a href="{{ _base }}Index.html">Index</a></li>
+          <li><a href="{{ _base }}Architecture.html">Architecture</a></li>
+          <li><a href="{{ _base }}Agent-Context-Pack.html">Agent Context Pack</a></li>
+          <li><a href="{{ _base }}Build-Test-and-Run.html">Build, Test &amp; Run</a></li>
+          <li><a href="{{ _base }}Documentation-Debt-Report.html">Documentation Debt</a></li>
         </ul>
         <hr class="nav-divider">
         {% include wiki_nav.html %}
@@ -686,12 +718,12 @@ const PAGES_LAYOUT = `<!doctype html>
     <main>
       {% assign _kind = page.kind | default: '' %}{% if _kind == 'module' %}
       <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="{{ _base }}Home.md">Home</a> &rsaquo;
-        <a href="{{ _base }}Index.md">Index</a> &rsaquo;
+        <a href="{{ _base }}Home.html">Home</a> &rsaquo;
+        <a href="{{ _base }}Index.html">Index</a> &rsaquo;
         <span>{{ page.title | default: page.name | replace: '.md', '' | escape }}</span>
       </nav>{% elsif _kind != '' and _kind != 'home' %}
       <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="{{ _base }}Home.md">Home</a> &rsaquo;
+        <a href="{{ _base }}Home.html">Home</a> &rsaquo;
         <span>{{ page.title | default: page.name | replace: '.md', '' | escape }}</span>
       </nav>{% endif %}
       {% if page.page_state or page.kind or page.confidence or page.claim_status or page.source_repo or page.source_commit or page.compiled_at or page.source_paths %}
@@ -710,7 +742,7 @@ const PAGES_LAYOUT = `<!doctype html>
       </details>
       {% endif %}
       {{ content }}
-      {% if _kind != 'home' %}<div class="back-link"><a href="{{ _base }}Index.md">&larr; Back to Index</a></div>{% endif %}
+      {% if _kind != 'home' %}<div class="back-link"><a href="{{ _base }}Index.html">&larr; Back to Index</a></div>{% endif %}
     </main>
   </div>
   <script type="module">
