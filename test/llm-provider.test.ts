@@ -752,6 +752,19 @@ test('resolveArchitectureOverrides reads max_output_tokens from config page_budg
   assert.equal(overrides.maxOutputTokens, 12000);
 });
 
+test('resolveArchitectureOverrides rejects invalid max output tokens from config page_budgets', () => {
+  assert.throws(
+    () => resolveArchitectureOverrides({
+      page_budgets: { architecture: { max_output_tokens: -1 } }
+    }, {}),
+    (err: unknown) => {
+      assert.ok(err instanceof LLMProviderError);
+      assert.equal(err.code, 'INVALID_CONFIG');
+      return true;
+    }
+  );
+});
+
 test('resolveArchitectureOverrides reads model from LLMWIKI_LLM_ARCHITECTURE_MODEL env var', () => {
   const overrides = resolveArchitectureOverrides({}, { LLMWIKI_LLM_ARCHITECTURE_MODEL: 'gpt-4.1' });
   assert.equal(overrides.model, 'gpt-4.1');

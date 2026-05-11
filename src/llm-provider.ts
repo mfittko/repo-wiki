@@ -569,11 +569,12 @@ export function resolveArchitectureOverrides(
   const globalEnvMaxOutputTokens = optionalEnv(env, 'LLMWIKI_LLM_MAX_OUTPUT_TOKENS');
 
   const model = envModel ?? (globalEnvModel !== undefined ? undefined : nonBlank(pageBudgets.model));
+  const configuredMaxOutputTokens = pageBudgets.max_output_tokens !== undefined
+    ? parseOptionalNonNegativeInteger(pageBudgets.max_output_tokens, 'architecture maxOutputTokens')
+    : undefined;
   const maxOutputTokens = envMaxOutputTokens !== undefined
     ? parseNonNegativeInteger(envMaxOutputTokens, 0, 'architecture maxOutputTokens')
-    : (globalEnvMaxOutputTokens !== undefined
-      ? undefined
-      : (pageBudgets.max_output_tokens !== undefined ? pageBudgets.max_output_tokens : undefined));
+    : (globalEnvMaxOutputTokens !== undefined ? undefined : configuredMaxOutputTokens);
 
   return { model, maxOutputTokens };
 }
@@ -588,6 +589,14 @@ function parseNumber(value: string | undefined, fallback: number, field: string)
 
 function parseNonNegativeInteger(value: string | undefined, fallback: number, field: string): number {
   const candidate = value === undefined ? fallback : Number(value);
+  if (!Number.isInteger(candidate) || candidate < 0) {
+    throw new LLMProviderError(`Invalid non-negative integer LLM config for ${field}.`, 'config', 'INVALID_CONFIG');
+  }
+  return candidate;
+}
+
+function parseOptionalNonNegativeInteger(value: unknown, field: string): number {
+  const candidate = typeof value === 'number' ? value : Number(value);
   if (!Number.isInteger(candidate) || candidate < 0) {
     throw new LLMProviderError(`Invalid non-negative integer LLM config for ${field}.`, 'config', 'INVALID_CONFIG');
   }

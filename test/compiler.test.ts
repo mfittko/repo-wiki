@@ -1596,6 +1596,105 @@ test('compileWiki in LLM mode uses architecture archetype for Architecture.md pr
   }
 });
 
+test('compileWiki in LLM mode keeps architecture-specific system prompt guardrails', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  const capturedSystemPrompts: Record<string, string> = {};
+
+  const capturingProvider: LLMProvider = {
+    name: 'system-prompt-capturing-mock',
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      capturedSystemPrompts[req.archetype] = req.systemPrompt;
+      return {
+        provider: 'system-prompt-capturing-mock',
+        content: validLLMTestContent(req)
+      };
+    }
+  };
+
+  try {
+    await compileWiki({
+      scanDir,
+      planFile,
+      wikiDir,
+      config: { compiler: { mode: 'llm', llm: { system_prompt: 'Global custom system prompt.' } } },
+      _provider: capturingProvider
+    });
+
+    assert.equal(capturedSystemPrompts.module, 'Global custom system prompt.');
+    assert.match(capturedSystemPrompts.architecture, /Architecture synthesis rules:/);
+    assert.match(capturedSystemPrompts.architecture, /Do not invent unsupported relationships or architectural layers/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki in LLM mode normalizes Architecture.md source_paths from the prompt context', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'architecture-budget-test',
+    mode: 'bootstrap',
+    totals: { languages: { TypeScript: 31 }, categories: { source: 31 }, runtime_hints: {} },
+    files: [
+      {
+        path: 'src/auth.ts',
+        category: 'source',
+        language: 'TypeScript',
+        imports: Array.from({ length: 20 }, (_, index) => `./dep-${index}.js`),
+        exported_symbols: Array.from({ length: 20 }, (_, index) => ({ name: `authSymbol${index}${'X'.repeat(40)}` })),
+        runtime_hints: [],
+        reasons: ['source']
+      },
+      ...Array.from({ length: 30 }, (_, index) => ({
+        path: `src/feature-${String(index).padStart(2, '0')}.ts`,
+        category: 'source',
+        language: 'TypeScript',
+        imports: Array.from({ length: 20 }, (_, depIndex) => `./feature-${index}-dep-${depIndex}.js`),
+        exported_symbols: Array.from({ length: 20 }, (_, symbolIndex) => ({ name: `feature${index}Symbol${symbolIndex}${'Y'.repeat(40)}` })),
+        runtime_hints: [],
+        reasons: ['source']
+      }))
+    ],
+    analysis: { package_scripts: [], dependency_graph: { edges: [], summary: {} }, test_to_source: { mappings: [], summary: {} } }
+  };
+  const plan = createLLMPlan();
+  let capturedArchitectureSourcePaths: string[] = [];
+
+  const capturingProvider: LLMProvider = {
+    name: 'source-path-capturing-mock',
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      if (req.archetype === 'architecture') {
+        capturedArchitectureSourcePaths = req.sourcePaths ?? [];
+      }
+      return {
+        provider: 'source-path-capturing-mock',
+        content: validLLMTestContent(req)
+      };
+    }
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    await compileWiki({
+      scanDir,
+      planFile,
+      wikiDir,
+      config: { compiler: { mode: 'llm' } },
+      _provider: capturingProvider
+    });
+
+    assert.ok(capturedArchitectureSourcePaths.length > 0);
+    assert.ok(capturedArchitectureSourcePaths.length < 20, 'test fixture should exercise a budgeted architecture context');
+
+    const archPage = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+    const sourcePathsMatch = /^source_paths: (\[[^\n]+\])$/m.exec(archPage);
+    assert.ok(sourcePathsMatch, 'Architecture.md should contain normalized source_paths JSON');
+    assert.deepEqual(JSON.parse(sourcePathsMatch[1]), capturedArchitectureSourcePaths.slice(0, 20));
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('compileWiki in LLM mode applies architecture max_output_tokens override to the request', async () => {
   const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
   const capturedMaxTokens: Record<string, number | undefined> = {};

@@ -196,13 +196,12 @@ export async function compileWiki({
 
       const archRequest = buildRequest('architecture', archPromptCtx, {
         maxOutputTokens: archOverrides.maxOutputTokens ?? resolvedLLMCfg.maxOutputTokens,
-        systemPrompt: resolvedLLMCfg.systemPrompt,
         temperature: resolvedLLMCfg.temperature,
       });
 
       try {
         const patch = await synthesizeWikiPage(archProvider, archRequest, { maxRetries: validationRetries });
-        const normalized = normalizeLLMArchitectureContent(patch.content, manifest);
+        const normalized = normalizeLLMArchitectureContent(patch.content, manifest, archRequest.sourcePaths);
         pages.set('Architecture.md', normalized);
         llmGeneratedPages.add('Architecture.md');
       } catch (err) {
@@ -376,9 +375,10 @@ function buildArchitecturePromptContext(
 /**
  * Normalize LLM-generated Architecture page content by enforcing canonical
  * provenance frontmatter fields (source_repo, source_commit, page_state,
- * source_paths) regardless of what the provider returned.
+ * source_paths) using the prompt context source paths that were actually
+ * provided to the model.
  */
-function normalizeLLMArchitectureContent(content: string, manifest: any): string {
+function normalizeLLMArchitectureContent(content: string, manifest: any, requestSourcePaths: string[] = []): string {
   if (!content.startsWith('---\n')) {
     return content;
   }
@@ -390,7 +390,7 @@ function normalizeLLMArchitectureContent(content: string, manifest: any): string
 
   const frontmatterRaw = content.slice(4, closing);
   const body = content.slice(closing);
-  const sourcePaths = collectPrimarySourcePaths(manifest).slice(0, 20);
+  const sourcePaths = uniqueSorted((requestSourcePaths || []).filter((value) => typeof value === 'string' && value.trim())).slice(0, 20);
   const lines = removeNormalizedFrontmatterFields(frontmatterRaw.split('\n'), /* removeConservativeEvidenceFields= */ false);
   const withoutNormalized = lines.filter((line) => line.trim().length > 0);
   const normalizedLines = [
