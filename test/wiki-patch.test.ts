@@ -626,6 +626,132 @@ test('synthesizeWikiPage rejects non-finite maxRetries before provider call', as
   );
 });
 
+
+// ── Architecture synthesis validation ─────────────────────────────────────
+
+function validArchitecturePatch(overrides: {
+  kind?: string;
+  source_paths?: string;
+  frontmatterExtra?: string[];
+  bodyExtra?: string;
+  omitHumanNotes?: boolean;
+  omitHeading?: string;
+} = {}): string {
+  const headings = [
+    '## Executive Architecture Summary',
+    '## System and Repository Context',
+    '## Major Modules and Responsibilities',
+    '## Runtime, Data, and Control-Flow Relationships',
+    '## Build, Test, Deployment, and Operational Surfaces',
+    '## Cross-Cutting Concerns',
+    '## Caveats and Open Questions',
+  ].filter((heading) => heading !== overrides.omitHeading);
+  const body = [
+    '# Architecture',
+    '',
+    ...headings.flatMap((heading) => [heading, '', 'Grounded architecture content.', '']),
+    overrides.bodyExtra ?? '',
+    ...(overrides.omitHumanNotes ? [] : ['<!-- HUMAN_NOTES_START -->', '<!-- HUMAN_NOTES_END -->']),
+    ''
+  ].join('\n');
+
+  return [
+    '---',
+    'source_commit: "abc123"',
+    `kind: ${JSON.stringify(overrides.kind ?? 'architecture')}`,
+    'compiled_at: "2026-01-01T00:00:00.000Z"',
+    'confidence: "medium"',
+    'claim_status: "grounded"',
+    `source_paths: ${overrides.source_paths ?? '["src/example.ts"]'}`,
+    ...(overrides.frontmatterExtra ?? []),
+    '---',
+    body
+  ].join('\n');
+}
+
+test('synthesizeWikiPage accepts architecture patch with required metadata, headings, notes, and source paths', async () => {
+  const patch = await synthesizeWikiPage(
+    fixedProvider(validArchitecturePatch()),
+    makeRequest({ archetype: 'architecture', pageName: 'Architecture', pageTitle: 'Architecture', sourcePaths: ['src/example.ts'] }),
+  );
+
+  assert.equal(patch.frontmatter.kind, 'architecture');
+});
+
+test('synthesizeWikiPage rejects architecture patch missing required heading', async () => {
+  await assert.rejects(
+    () => synthesizeWikiPage(
+      fixedProvider(validArchitecturePatch({ omitHeading: '## Caveats and Open Questions' })),
+      makeRequest({ archetype: 'architecture', pageName: 'Architecture', pageTitle: 'Architecture', sourcePaths: ['src/example.ts'] }),
+    ),
+    (err: unknown) => {
+      assert.ok(err instanceof WikiPatchError);
+      assert.ok(err.issues.some((issue) => issue.code === 'missing-architecture-heading'));
+      return true;
+    }
+  );
+});
+
+test('synthesizeWikiPage rejects architecture patch missing human notes block', async () => {
+  await assert.rejects(
+    () => synthesizeWikiPage(
+      fixedProvider(validArchitecturePatch({ omitHumanNotes: true })),
+      makeRequest({ archetype: 'architecture', pageName: 'Architecture', pageTitle: 'Architecture', sourcePaths: ['src/example.ts'] }),
+    ),
+    (err: unknown) => {
+      assert.ok(err instanceof WikiPatchError);
+      assert.ok(err.issues.some((issue) => issue.code === 'missing-human-notes-block'));
+      return true;
+    }
+  );
+});
+
+test('synthesizeWikiPage rejects architecture patch with out-of-context source_paths', async () => {
+  await assert.rejects(
+    () => synthesizeWikiPage(
+      fixedProvider(validArchitecturePatch({ source_paths: '["src/other.ts"]' })),
+      makeRequest({ archetype: 'architecture', pageName: 'Architecture', pageTitle: 'Architecture', sourcePaths: ['src/example.ts'] }),
+    ),
+    (err: unknown) => {
+      assert.ok(err instanceof WikiPatchError);
+      assert.ok(err.issues.some((issue) => issue.code === 'out-of-context-source-paths'));
+      return true;
+    }
+  );
+});
+
+test('synthesizeWikiPage rejects architecture patch missing confidence metadata', async () => {
+  const content = validArchitecturePatch().replace('confidence: "medium"\n', '');
+
+  await assert.rejects(
+    () => synthesizeWikiPage(
+      fixedProvider(content),
+      makeRequest({ archetype: 'architecture', pageName: 'Architecture', pageTitle: 'Architecture', sourcePaths: ['src/example.ts'] }),
+    ),
+    (err: unknown) => {
+      assert.ok(err instanceof WikiPatchError);
+      assert.ok(err.issues.some((issue) => issue.code === 'missing-confidence'));
+      return true;
+    }
+  );
+});
+
+test('synthesizeWikiPage rejects architecture patch missing source_paths', async () => {
+  const content = validArchitecturePatch().replace('source_paths: ["src/example.ts"]\n', '');
+
+  await assert.rejects(
+    () => synthesizeWikiPage(
+      fixedProvider(content),
+      makeRequest({ archetype: 'architecture', pageName: 'Architecture', pageTitle: 'Architecture', sourcePaths: ['src/example.ts'] }),
+    ),
+    (err: unknown) => {
+      assert.ok(err instanceof WikiPatchError);
+      assert.ok(err.issues.some((issue) => issue.code === 'missing-source-paths' && issue.level === 'error'));
+      return true;
+    }
+  );
+});
+
 // ── WikiPatchError ─────────────────────────────────────────────────────────
 
 test('WikiPatchError has correct name', () => {

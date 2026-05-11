@@ -267,6 +267,38 @@ function buildMockContent(request: LLMRequest): string {
     '',
   ];
 
+  if (request.archetype === 'architecture') {
+    lines.splice(2, 0, 'confidence: "medium"', 'claim_status: "grounded"');
+    lines.push('## Executive Architecture Summary');
+    lines.push('');
+    lines.push('Mock architecture summary grounded in prompt source paths.');
+    lines.push('');
+    lines.push('## System and Repository Context');
+    lines.push('');
+    lines.push('Mock repository context.');
+    lines.push('');
+    lines.push('## Major Modules and Responsibilities');
+    lines.push('');
+    lines.push('Mock module responsibility summary.');
+    lines.push('');
+    lines.push('## Runtime, Data, and Control-Flow Relationships');
+    lines.push('');
+    lines.push('Mock runtime relationship summary.');
+    lines.push('');
+    lines.push('## Build, Test, Deployment, and Operational Surfaces');
+    lines.push('');
+    lines.push('Mock build and operations summary.');
+    lines.push('');
+    lines.push('## Cross-Cutting Concerns');
+    lines.push('');
+    lines.push('Mock cross-cutting concern summary.');
+    lines.push('');
+    lines.push('## Caveats and Open Questions');
+    lines.push('');
+    lines.push('Mock caveats.');
+    lines.push('');
+  }
+
   if (request.archetype === 'module' || request.archetype === 'architecture') {
     lines.push('<!-- HUMAN_NOTES_START -->');
     lines.push('<!-- HUMAN_NOTES_END -->');
@@ -374,7 +406,15 @@ export interface ResolvedLLMProviderConfig extends LLMProviderConfig {
  * back to an unexpected behaviour.
  */
 export function createProvider(config: LLMProviderConfig = {}): LLMProvider {
-  const resolved = resolveProviderConfig(config);
+  return createProviderFromResolvedConfig(resolveProviderConfig(config));
+}
+
+/**
+ * Create an `LLMProvider` from an already-resolved config without re-reading
+ * environment variables. Use this when a caller has applied page/archetype
+ * overrides that must not be superseded by global env resolution a second time.
+ */
+export function createProviderFromResolvedConfig(resolved: ResolvedLLMProviderConfig): LLMProvider {
   const providerName = resolved.provider;
 
   if (providerName === 'mock') {
@@ -525,11 +565,15 @@ export function resolveArchitectureOverrides(
 
   const envModel = optionalEnv(env, 'LLMWIKI_LLM_ARCHITECTURE_MODEL');
   const envMaxOutputTokens = optionalEnv(env, 'LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS');
+  const globalEnvModel = optionalEnv(env, 'LLMWIKI_LLM_MODEL');
+  const globalEnvMaxOutputTokens = optionalEnv(env, 'LLMWIKI_LLM_MAX_OUTPUT_TOKENS');
 
-  const model = envModel ?? nonBlank(pageBudgets.model);
+  const model = envModel ?? (globalEnvModel !== undefined ? undefined : nonBlank(pageBudgets.model));
   const maxOutputTokens = envMaxOutputTokens !== undefined
     ? parseNonNegativeInteger(envMaxOutputTokens, 0, 'architecture maxOutputTokens')
-    : (pageBudgets.max_output_tokens !== undefined ? pageBudgets.max_output_tokens : undefined);
+    : (globalEnvMaxOutputTokens !== undefined
+      ? undefined
+      : (pageBudgets.max_output_tokens !== undefined ? pageBudgets.max_output_tokens : undefined));
 
   return { model, maxOutputTokens };
 }

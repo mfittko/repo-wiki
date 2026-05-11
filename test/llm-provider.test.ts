@@ -5,6 +5,7 @@ import {
   OpenAICompatibleProvider,
   LLMProviderError,
   createProvider,
+  createProviderFromResolvedConfig,
   resolveProviderConfig,
   buildRequest,
 } from '../src/llm-provider.js';
@@ -768,6 +769,66 @@ test('resolveArchitectureOverrides env var overrides config page_budgets', () =>
   );
   assert.equal(overrides.model, 'gpt-4.1');
   assert.equal(overrides.maxOutputTokens, 12000);
+});
+
+test('resolveArchitectureOverrides lets global env model override config page_budgets', () => {
+  const overrides = resolveArchitectureOverrides(
+    { page_budgets: { architecture: { model: 'gpt-4.1' } } },
+    { LLMWIKI_LLM_MODEL: 'gpt-4.1-mini' }
+  );
+  assert.equal(overrides.model, undefined);
+});
+
+test('resolveArchitectureOverrides lets global env max output tokens override config page_budgets', () => {
+  const overrides = resolveArchitectureOverrides(
+    { page_budgets: { architecture: { max_output_tokens: 12000 } } },
+    { LLMWIKI_LLM_MAX_OUTPUT_TOKENS: '8000' }
+  );
+  assert.equal(overrides.maxOutputTokens, undefined);
+});
+
+test('resolveArchitectureOverrides architecture env var overrides global env var', () => {
+  const overrides = resolveArchitectureOverrides(
+    { page_budgets: { architecture: { model: 'configured-model', max_output_tokens: 4000 } } },
+    {
+      LLMWIKI_LLM_MODEL: 'global-model',
+      LLMWIKI_LLM_ARCHITECTURE_MODEL: 'architecture-model',
+      LLMWIKI_LLM_MAX_OUTPUT_TOKENS: '8000',
+      LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS: '12000'
+    }
+  );
+  assert.equal(overrides.model, 'architecture-model');
+  assert.equal(overrides.maxOutputTokens, 12000);
+});
+
+test('createProviderFromResolvedConfig does not re-read global model env over resolved architecture model', () => {
+  const previousModel = process.env.LLMWIKI_LLM_MODEL;
+  process.env.LLMWIKI_LLM_MODEL = 'global-model';
+
+  try {
+    const provider = createProviderFromResolvedConfig({
+      provider: 'openai-compatible',
+      apiKey: 'test-key',
+      apiKeyEnv: 'LLMWIKI_LLM_API_KEY',
+      model: 'architecture-model',
+      baseUrl: 'https://example.test/v1',
+      systemPrompt: 'system',
+      temperature: 0.1,
+      maxOutputTokens: 12000,
+      timeoutMs: 1000,
+      retries: 0,
+      validationRetries: 0,
+    });
+
+    assert.ok(provider instanceof OpenAICompatibleProvider);
+    assert.equal(provider.model, 'architecture-model');
+  } finally {
+    if (previousModel === undefined) {
+      delete process.env.LLMWIKI_LLM_MODEL;
+    } else {
+      process.env.LLMWIKI_LLM_MODEL = previousModel;
+    }
+  }
 });
 
 test('resolveArchitectureOverrides reads page_budgets from nested llm config', () => {

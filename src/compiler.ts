@@ -6,7 +6,7 @@ import { ensureDir, readJson, writeText } from './utils/fs.js';
 import { buildRouteSurfaceIndex, collectKnownEnvironmentVariables, collectManifestDirectories, dedupeRouteValidationFindings, normalizeRepoPath, resolveDocumentedPathFromManifest, validateRouteClaims } from './docs-validation.js';
 import { classifyDocumentedCommands, extractRouteClaims, mergePackageScripts } from './docs-ingestor.js';
 import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-ownership.js';
-import { buildRequest, createProvider, LLMProviderError, resolveArchitectureOverrides, resolveProviderConfig } from './llm-provider.js';
+import { buildRequest, createProvider, createProviderFromResolvedConfig, LLMProviderError, resolveArchitectureOverrides, resolveProviderConfig } from './llm-provider.js';
 import type { LLMProvider } from './llm-provider.js';
 import { synthesizeWikiPage, WikiPatchError } from './wiki-patch.js';
 
@@ -183,10 +183,11 @@ export async function compileWiki({
       let archProvider: LLMProvider;
       if (_provider !== null) {
         archProvider = _provider;
-      } else if (archOverrides.model && archOverrides.model !== resolvedLLMCfg.model) {
-        archProvider = createProvider({ ...resolvedLLMCfg, model: archOverrides.model });
       } else {
-        archProvider = createProvider(resolvedLLMCfg);
+        archProvider = createProviderFromResolvedConfig({
+          ...resolvedLLMCfg,
+          model: archOverrides.model ?? resolvedLLMCfg.model
+        });
       }
 
       const syntheticArchPage = { path: 'Architecture.md', phase: 'foundation' };

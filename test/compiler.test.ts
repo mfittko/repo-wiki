@@ -828,6 +828,62 @@ function createLLMPlan() {
   };
 }
 
+function validLLMTestContent(req: LLMRequest): string {
+  const sourcePaths = req.sourcePaths?.length ? req.sourcePaths : ['src/auth.ts'];
+  const frontmatter = [
+    '---',
+    `kind: ${JSON.stringify(req.archetype)}`,
+    'compiled_at: "mock"',
+    'source_repo: "mock"',
+    'source_commit: "mock"',
+    'page_state: "generated"',
+    ...(req.archetype === 'architecture' ? ['confidence: "medium"', 'claim_status: "grounded"'] : []),
+    `source_paths: ${JSON.stringify(sourcePaths)}`,
+    '---',
+    '',
+    `# ${req.pageTitle}`,
+    '',
+    `> Archetype: ${req.archetype}`,
+    '',
+  ];
+
+  if (req.archetype === 'architecture') {
+    frontmatter.push(
+      '## Executive Architecture Summary',
+      '',
+      'Test architecture summary.',
+      '',
+      '## System and Repository Context',
+      '',
+      'Test repository context.',
+      '',
+      '## Major Modules and Responsibilities',
+      '',
+      'Test module responsibilities.',
+      '',
+      '## Runtime, Data, and Control-Flow Relationships',
+      '',
+      'Test runtime relationships.',
+      '',
+      '## Build, Test, Deployment, and Operational Surfaces',
+      '',
+      'Test build surfaces.',
+      '',
+      '## Cross-Cutting Concerns',
+      '',
+      'Test cross-cutting concerns.',
+      '',
+      '## Caveats and Open Questions',
+      '',
+      'Test caveats.',
+      '',
+    );
+  }
+
+  frontmatter.push('<!-- HUMAN_NOTES_START -->', '<!-- HUMAN_NOTES_END -->', '');
+  return frontmatter.join('\n');
+}
+
 const defaultLLMManifest = {
   remote: 'origin',
   commit: 'llm-test-commit',
@@ -884,7 +940,10 @@ test('compileWiki normalizes LLM block-list source_paths without leaving sequenc
   const config = { compiler: { mode: 'llm' } };
   const blockListProvider: LLMProvider = {
     name: 'block-list-mock',
-    async complete(_request: LLMRequest): Promise<LLMResponse> {
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      if (req.archetype === 'architecture') {
+        return { provider: 'block-list-mock', content: validLLMTestContent(req) };
+      }
       return {
         provider: 'block-list-mock',
         content: [
@@ -965,7 +1024,10 @@ test('compileWiki in LLM mode normalizes docs-only module evidence conservativel
   };
   const provider: LLMProvider = {
     name: 'docs-only-mock',
-    async complete(_request: LLMRequest): Promise<LLMResponse> {
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      if (req.archetype === 'architecture') {
+        return { provider: 'docs-only-mock', content: validLLMTestContent(req) };
+      }
       return {
         provider: 'docs-only-mock',
         content: [
@@ -1071,10 +1133,13 @@ test('compileWiki uses validation retries independently from provider transport 
   let calls = 0;
   const provider: LLMProvider = {
     name: 'validation-retry-mock',
-    async complete(_request: LLMRequest): Promise<LLMResponse> {
+    async complete(req: LLMRequest): Promise<LLMResponse> {
       calls += 1;
       if (calls === 1) {
         return { content: '# Invalid - no frontmatter', provider: 'validation-retry-mock' };
+      }
+      if (req.archetype === 'architecture') {
+        return { provider: 'validation-retry-mock', content: validLLMTestContent(req) };
       }
       return {
         provider: 'validation-retry-mock',
@@ -1510,24 +1575,7 @@ test('compileWiki in LLM mode uses architecture archetype for Architecture.md pr
       archetypes.push(req.archetype);
       return {
         provider: 'archetype-capturing-mock',
-        content: [
-          '---',
-          `kind: ${JSON.stringify(req.archetype)}`,
-          'compiled_at: "mock"',
-          `source_repo: "mock"`,
-          `source_commit: "mock"`,
-          'page_state: "generated"',
-          `source_paths: ["src/auth.ts"]`,
-          '---',
-          '',
-          `# ${req.pageTitle}`,
-          '',
-          `> Archetype: ${req.archetype}`,
-          '',
-          '<!-- HUMAN_NOTES_START -->',
-          '<!-- HUMAN_NOTES_END -->',
-          ''
-        ].join('\n')
+        content: validLLMTestContent(req)
       };
     }
   };
@@ -1558,22 +1606,7 @@ test('compileWiki in LLM mode applies architecture max_output_tokens override to
       capturedMaxTokens[req.archetype] = req.maxTokens;
       return {
         provider: 'token-capturing-mock',
-        content: [
-          '---',
-          `kind: ${JSON.stringify(req.archetype)}`,
-          'compiled_at: "mock"',
-          `source_repo: "mock"`,
-          `source_commit: "mock"`,
-          'page_state: "generated"',
-          `source_paths: ["src/auth.ts"]`,
-          '---',
-          '',
-          `# ${req.pageTitle}`,
-          '',
-          '<!-- HUMAN_NOTES_START -->',
-          '<!-- HUMAN_NOTES_END -->',
-          ''
-        ].join('\n')
+        content: validLLMTestContent(req)
       };
     }
   };
