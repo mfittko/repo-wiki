@@ -27,7 +27,8 @@ export const LLM_DEFAULTS = {
   maxOutputTokens: 4000,
   timeoutMs: 60000,
   retries: 2,
-  validationRetries: 1
+  validationRetries: 1,
+  reasoningEffort: undefined,
 } as const;
 
 export type { PageArchetype };
@@ -57,6 +58,8 @@ export interface LLMRequest {
   maxTokens?: number;
   /** Optional sampling temperature. */
   temperature?: number;
+  /** Optional reasoning effort for supported reasoning-family models. */
+  reasoningEffort?: ReasoningEffort;
 }
 
 /** Output returned by an LLM provider after synthesis. */
@@ -134,6 +137,7 @@ type OpenAIChatRequest = {
   max_tokens?: number;
   max_completion_tokens?: number;
   temperature?: number;
+  reasoning_effort?: ReasoningEffort;
 };
 
 type OpenAIChatResponse = {
@@ -165,7 +169,8 @@ export class OpenAICompatibleProvider implements LLMProvider {
         { role: 'user', content: request.userPrompt }
       ],
       ...buildOpenAICompatibleTokenBudget(this.model, request.maxTokens),
-      ...buildOpenAICompatibleTemperatureConfig(this.model, request.temperature)
+      ...buildOpenAICompatibleTemperatureConfig(this.model, request.temperature),
+      ...buildOpenAICompatibleReasoningConfig(this.model, request.reasoningEffort)
     };
 
     const payload = assertOpenAIChatResponse(await this.postWithRetries(body), this.name);
@@ -264,6 +269,14 @@ function buildOpenAICompatibleTemperatureConfig(model: string, temperature: numb
   }
 
   return { temperature };
+}
+
+function buildOpenAICompatibleReasoningConfig(model: string, reasoningEffort: ReasoningEffort | undefined): Pick<OpenAIChatRequest, 'reasoning_effort'> {
+  if (reasoningEffort === undefined || !usesReasoningModelChatCompat(model)) {
+    return {};
+  }
+
+  return { reasoning_effort: reasoningEffort };
 }
 
 function usesReasoningModelChatCompat(model: string): boolean {
@@ -365,12 +378,18 @@ function buildMockContent(request: LLMRequest): string {
 
 // ── Provider configuration ─────────────────────────────────────────────────
 
-/** Per-archetype LLM overrides. */
+export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+
+/** Per-archetype LLM overrides for architecture synthesis requests. */
 export interface ArchitecturePageBudget {
   /** Model override for architecture synthesis. */
   model?: string;
   /** Output-token budget override for architecture synthesis. */
   max_output_tokens?: number;
+  /** Timeout override for architecture synthesis. */
+  timeout_ms?: number;
+  /** Reasoning effort override for architecture synthesis. */
+  reasoning_effort?: ReasoningEffort;
 }
 
 /** Per-archetype LLM override configuration. */
@@ -417,6 +436,10 @@ export interface LLMProviderConfig {
   timeoutMs?: number;
   /** JSON config alias for `timeoutMs`. */
   timeout_ms?: number;
+  /** Optional reasoning effort for supported reasoning-family models. */
+  reasoningEffort?: ReasoningEffort;
+  /** JSON config alias for `reasoningEffort`. */
+  reasoning_effort?: ReasoningEffort;
   /** Number of retries for retryable hosted provider failures. */
   retries?: number;
   /** Number of corrective retries after wiki patch validation failures. */
@@ -427,7 +450,7 @@ export interface LLMProviderConfig {
   mode?: string;
   /** Nested LLM settings used when callers pass the whole compiler config. */
   llm?: LLMProviderConfig;
-  /** Per-archetype LLM overrides (model and output budget). */
+  /** Per-archetype LLM overrides (model, output budget, timeout, reasoning effort). */
   page_budgets?: PageBudgets;
 }
 
@@ -440,6 +463,7 @@ export interface ResolvedLLMProviderConfig extends LLMProviderConfig {
   temperature: number;
   maxOutputTokens: number;
   timeoutMs: number;
+  reasoningEffort: ReasoningEffort | undefined;
   retries: number;
   validationRetries: number;
 }
@@ -525,6 +549,10 @@ export function resolveProviderConfig(
     temperature: parseNumber(optionalEnv(env, 'LLMWIKI_LLM_TEMPERATURE'), llmConfig.temperature ?? LLM_DEFAULTS.temperature, 'temperature'),
     maxOutputTokens: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_MAX_OUTPUT_TOKENS'), llmConfig.maxOutputTokens ?? llmConfig.max_output_tokens ?? LLM_DEFAULTS.maxOutputTokens, 'maxOutputTokens'),
     timeoutMs: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_TIMEOUT_MS'), llmConfig.timeoutMs ?? llmConfig.timeout_ms ?? LLM_DEFAULTS.timeoutMs, 'timeoutMs'),
+    reasoningEffort: parseReasoningEffort(
+      optionalEnv(env, 'LLMWIKI_LLM_REASONING_EFFORT') ?? llmConfig.reasoningEffort ?? llmConfig.reasoning_effort,
+      'reasoningEffort',
+    ),
     retries: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_RETRIES'), llmConfig.retries ?? LLM_DEFAULTS.retries, 'retries'),
     validationRetries: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_VALIDATION_RETRIES'), llmConfig.validationRetries ?? llmConfig.validation_retries ?? LLM_DEFAULTS.validationRetries, 'validationRetries')
   };
@@ -532,7 +560,7 @@ export function resolveProviderConfig(
 
 // ── Convenience builder ────────────────────────────────────────────────────
 
-export interface BuildRequestOptions extends Pick<LLMProviderConfig, 'systemPrompt' | 'temperature' | 'maxOutputTokens'> {
+export interface BuildRequestOptions extends Pick<LLMProviderConfig, 'systemPrompt' | 'temperature' | 'maxOutputTokens' | 'reasoningEffort'> {
   /** Optional completion-token budget for the provider. */
   maxTokens?: number;
 }
@@ -555,13 +583,13 @@ export function buildRequest(
   archetype: PageArchetype,
   context: PromptContext,
   maxTokens?: number,
-  config?: Pick<LLMProviderConfig, 'systemPrompt' | 'temperature' | 'maxOutputTokens'>,
+  config?: Pick<LLMProviderConfig, 'systemPrompt' | 'temperature' | 'maxOutputTokens' | 'reasoningEffort'>,
 ): LLMRequest;
 export function buildRequest(
   archetype: PageArchetype,
   context: PromptContext,
   maxTokensOrOptions?: number | BuildRequestOptions | null,
-  config: Pick<LLMProviderConfig, 'systemPrompt' | 'temperature' | 'maxOutputTokens'> = {},
+  config: Pick<LLMProviderConfig, 'systemPrompt' | 'temperature' | 'maxOutputTokens' | 'reasoningEffort'> = {},
 ): LLMRequest {
   const prompt = buildPrompt(archetype, context);
   const options: BuildRequestOptions = maxTokensOrOptions !== null && typeof maxTokensOrOptions === 'object'
@@ -578,6 +606,7 @@ export function buildRequest(
     sourcePaths: context.sourceCards.map((card) => card.path).filter((value) => typeof value === 'string' && value.trim()),
     maxTokens: options.maxTokens ?? options.maxOutputTokens,
     temperature: options.temperature,
+    reasoningEffort: options.reasoningEffort,
   };
 }
 
@@ -588,22 +617,28 @@ function providerForMode(mode?: string): string | undefined {
 }
 
 /**
- * Resolved per-architecture overrides for model and output token budget.
- * These supplement (not replace) the global provider config.
+ * Resolved per-architecture overrides for model, output token budget, timeout,
+ * and reasoning effort. These supplement (not replace) the global provider
+ * config.
  */
 export interface ResolvedArchitectureOverrides {
   /** Architecture-specific model override, or undefined if not set. */
   model: string | undefined;
   /** Architecture-specific max output tokens override, or undefined if not set. */
   maxOutputTokens: number | undefined;
+  /** Architecture-specific timeout override, or undefined if not set. */
+  timeoutMs: number | undefined;
+  /** Architecture-specific reasoning effort override, or undefined if not set. */
+  reasoningEffort: ReasoningEffort | undefined;
 }
 
 /**
- * Resolve architecture-specific model and output-token overrides.
+ * Resolve architecture-specific model, output-token, timeout, and
+ * reasoning-effort overrides.
  *
  * Precedence (highest to lowest):
- * 1. `LLMWIKI_LLM_ARCHITECTURE_MODEL` / `LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS` env vars
- * 2. `LLMWIKI_LLM_MODEL` / `LLMWIKI_LLM_MAX_OUTPUT_TOKENS` global env vars (already applied by resolveProviderConfig)
+ * 1. Architecture-specific env vars (`LLMWIKI_LLM_ARCHITECTURE_*`)
+ * 2. Global env vars for the same setting (already applied by resolveProviderConfig)
  * 3. `.llmwiki/config.json` `compiler.llm.page_budgets.architecture` overrides
  * 4. Global config defaults (already applied by resolveProviderConfig)
  * 5. Built-in defaults
@@ -620,18 +655,53 @@ export function resolveArchitectureOverrides(
 
   const envModel = optionalEnv(env, 'LLMWIKI_LLM_ARCHITECTURE_MODEL');
   const envMaxOutputTokens = optionalEnv(env, 'LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS');
+  const envTimeoutMs = optionalEnv(env, 'LLMWIKI_LLM_ARCHITECTURE_TIMEOUT_MS');
+  const envReasoningEffort = optionalEnv(env, 'LLMWIKI_LLM_ARCHITECTURE_REASONING_EFFORT');
   const globalEnvModel = optionalEnv(env, 'LLMWIKI_LLM_MODEL');
   const globalEnvMaxOutputTokens = optionalEnv(env, 'LLMWIKI_LLM_MAX_OUTPUT_TOKENS');
+  const globalEnvTimeoutMs = optionalEnv(env, 'LLMWIKI_LLM_TIMEOUT_MS');
+  const globalEnvReasoningEffort = optionalEnv(env, 'LLMWIKI_LLM_REASONING_EFFORT');
 
   const model = envModel ?? (globalEnvModel !== undefined ? undefined : nonBlank(pageBudgets.model));
   const configuredMaxOutputTokens = pageBudgets.max_output_tokens !== undefined
     ? parseOptionalNonNegativeInteger(pageBudgets.max_output_tokens, 'architecture maxOutputTokens')
     : undefined;
+  const configuredTimeoutMs = pageBudgets.timeout_ms !== undefined
+    ? parseOptionalNonNegativeInteger(pageBudgets.timeout_ms, 'architecture timeoutMs')
+    : undefined;
+  const configuredReasoningEffort = parseReasoningEffort(
+    pageBudgets.reasoning_effort,
+    'architecture reasoningEffort',
+  );
   const maxOutputTokens = envMaxOutputTokens !== undefined
     ? parseNonNegativeInteger(envMaxOutputTokens, 0, 'architecture maxOutputTokens')
     : (globalEnvMaxOutputTokens !== undefined ? undefined : configuredMaxOutputTokens);
+  const timeoutMs = envTimeoutMs !== undefined
+    ? parseNonNegativeInteger(envTimeoutMs, 0, 'architecture timeoutMs')
+    : (globalEnvTimeoutMs !== undefined ? undefined : configuredTimeoutMs);
+  const reasoningEffort = envReasoningEffort !== undefined
+    ? parseReasoningEffort(envReasoningEffort, 'architecture reasoningEffort')
+    : (globalEnvReasoningEffort !== undefined ? undefined : configuredReasoningEffort);
 
-  return { model, maxOutputTokens };
+  return { model, maxOutputTokens, timeoutMs, reasoningEffort };
+}
+
+function parseReasoningEffort(value: unknown, field = 'reasoningEffort'): ReasoningEffort | undefined {
+  if (value === undefined || value === null || value === '') {
+    return undefined;
+  }
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  if (normalized === '') {
+    return undefined;
+  }
+  if (['none', 'minimal', 'low', 'medium', 'high', 'xhigh'].includes(normalized)) {
+    return normalized as ReasoningEffort;
+  }
+  throw new LLMProviderError(
+    `Invalid reasoning effort LLM config for ${field}: ${JSON.stringify(value)}.`,
+    'config',
+    'INVALID_CONFIG',
+  );
 }
 
 function parseNumber(value: string | undefined, fallback: number, field: string): number {
