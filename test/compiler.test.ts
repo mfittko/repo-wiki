@@ -1695,14 +1695,17 @@ test('compileWiki in LLM mode normalizes Architecture.md source_paths from the p
   }
 });
 
-test('compileWiki in LLM mode applies architecture max_output_tokens override to the request', async () => {
+test('compileWiki in LLM mode applies architecture request overrides', async () => {
   const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
-  const capturedMaxTokens: Record<string, number | undefined> = {};
+  const capturedRequests: Record<string, { maxTokens?: number; reasoningEffort?: string | undefined }> = {};
 
   const capturingProvider: LLMProvider = {
     name: 'token-capturing-mock',
     async complete(req: LLMRequest): Promise<LLMResponse> {
-      capturedMaxTokens[req.archetype] = req.maxTokens;
+      capturedRequests[req.archetype] = {
+        maxTokens: req.maxTokens,
+        reasoningEffort: req.reasoningEffort,
+      };
       return {
         provider: 'token-capturing-mock',
         content: validLLMTestContent(req)
@@ -1716,8 +1719,9 @@ test('compileWiki in LLM mode applies architecture max_output_tokens override to
       llm: {
         provider: 'mock',
         max_output_tokens: 4000,
+        reasoning_effort: 'medium',
         page_budgets: {
-          architecture: { max_output_tokens: 12000 }
+          architecture: { max_output_tokens: 12000, reasoning_effort: 'low' }
         }
       }
     }
@@ -1726,10 +1730,12 @@ test('compileWiki in LLM mode applies architecture max_output_tokens override to
   try {
     await compileWiki({ scanDir, planFile, wikiDir, config, _provider: capturingProvider });
 
-    // Architecture page must receive the architecture-specific token budget.
-    assert.equal(capturedMaxTokens['architecture'], 12000);
-    // Module page must receive the global token budget.
-    assert.equal(capturedMaxTokens['module'], 4000);
+    // Architecture page must receive the architecture-specific request overrides.
+    assert.equal(capturedRequests['architecture'].maxTokens, 12000);
+    assert.equal(capturedRequests['architecture'].reasoningEffort, 'low');
+    // Module pages must receive the global request settings.
+    assert.equal(capturedRequests['module'].maxTokens, 4000);
+    assert.equal(capturedRequests['module'].reasoningEffort, 'medium');
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

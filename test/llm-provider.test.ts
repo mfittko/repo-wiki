@@ -199,6 +199,7 @@ test('resolveProviderConfig applies env overrides and resolves api key', () => {
       temperature: 0.2,
       max_output_tokens: 1000,
       timeout_ms: 10000,
+      reasoning_effort: 'medium',
       retries: 1,
       validation_retries: 3,
     },
@@ -210,6 +211,7 @@ test('resolveProviderConfig applies env overrides and resolves api key', () => {
       LLMWIKI_LLM_API_KEY: 'secret-key',
       LLMWIKI_LLM_SYSTEM_PROMPT: 'env prompt',
       LLMWIKI_LLM_TEMPERATURE: '0.3',
+      LLMWIKI_LLM_REASONING_EFFORT: 'low',
       LLMWIKI_LLM_MAX_OUTPUT_TOKENS: '2000',
       LLMWIKI_LLM_RETRIES: '4',
       LLMWIKI_LLM_VALIDATION_RETRIES: '2',
@@ -225,6 +227,7 @@ test('resolveProviderConfig applies env overrides and resolves api key', () => {
   assert.equal(resolved.temperature, 0.3);
   assert.equal(resolved.maxOutputTokens, 2000);
   assert.equal(resolved.timeoutMs, 10000);
+  assert.equal(resolved.reasoningEffort, 'low');
   assert.equal(resolved.retries, 4);
   assert.equal(resolved.validationRetries, 2);
 });
@@ -320,6 +323,18 @@ test('resolveProviderConfig rejects invalid numeric environment config', () => {
   );
 });
 
+test('resolveProviderConfig rejects invalid reasoning effort config', () => {
+  assert.throws(
+    () => resolveProviderConfig({}, { LLMWIKI_LLM_REASONING_EFFORT: 'turbo' }),
+    (err: unknown) => {
+      assert.ok(err instanceof LLMProviderError);
+      assert.equal(err.code, 'INVALID_CONFIG');
+      assert.equal(err.provider, 'config');
+      return true;
+    },
+  );
+});
+
 test('resolveProviderConfig rejects invalid numeric JSON config', () => {
   assert.throws(
     () => resolveProviderConfig({ timeoutMs: 'soon' } as any, {}),
@@ -391,10 +406,11 @@ test('OpenAICompatibleProvider uses reasoning-model chat compatibility params fo
   }) as typeof fetch);
 
   const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123', model: 'gpt-5.5', baseUrl: 'https://llm.example/v1' });
-  await provider.complete(makeRequest({ maxTokens: 123, temperature: 0 }));
+  await provider.complete(makeRequest({ maxTokens: 123, temperature: 0, reasoningEffort: 'low' }));
   assert.equal(captured.body.max_tokens, undefined);
   assert.equal(captured.body.max_completion_tokens, 123);
   assert.equal(captured.body.temperature, undefined);
+  assert.equal(captured.body.reasoning_effort, 'low');
 });
 
 async function assertProviderRejectsCode(promise: Promise<unknown>, code: string, retryable?: boolean) {
@@ -519,11 +535,13 @@ test('buildRequest accepts request options without positional maxTokens', () => 
   const req = buildRequest('foundation', ctx, {
     systemPrompt: 'Custom system prompt.',
     temperature: 0.2,
+    reasoningEffort: 'low',
     maxOutputTokens: 2048,
   });
 
   assert.equal(req.systemPrompt, 'Custom system prompt.');
   assert.equal(req.temperature, 0.2);
+  assert.equal(req.reasoningEffort, 'low');
   assert.equal(req.maxTokens, 2048);
 });
 
@@ -797,6 +815,14 @@ test('resolveArchitectureOverrides reads max_output_tokens from config page_budg
   assert.equal(overrides.maxOutputTokens, 12000);
 });
 
+test('resolveArchitectureOverrides reads timeout and reasoning effort from config page_budgets', () => {
+  const overrides = resolveArchitectureOverrides({
+    page_budgets: { architecture: { timeout_ms: 180000, reasoning_effort: 'low' } }
+  }, {});
+  assert.equal(overrides.timeoutMs, 180000);
+  assert.equal(overrides.reasoningEffort, 'low');
+});
+
 test('resolveArchitectureOverrides rejects invalid max output tokens from config page_budgets', () => {
   for (const maxOutputTokens of [-1, null]) {
     assert.throws(
@@ -820,6 +846,15 @@ test('resolveArchitectureOverrides reads model from LLMWIKI_LLM_ARCHITECTURE_MOD
 test('resolveArchitectureOverrides reads max tokens from LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS env var', () => {
   const overrides = resolveArchitectureOverrides({}, { LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS: '12000' });
   assert.equal(overrides.maxOutputTokens, 12000);
+});
+
+test('resolveArchitectureOverrides reads timeout and reasoning effort from architecture env vars', () => {
+  const overrides = resolveArchitectureOverrides({}, {
+    LLMWIKI_LLM_ARCHITECTURE_TIMEOUT_MS: '180000',
+    LLMWIKI_LLM_ARCHITECTURE_REASONING_EFFORT: 'low'
+  });
+  assert.equal(overrides.timeoutMs, 180000);
+  assert.equal(overrides.reasoningEffort, 'low');
 });
 
 test('resolveArchitectureOverrides env var overrides config page_budgets', () => {
@@ -849,16 +884,22 @@ test('resolveArchitectureOverrides lets global env max output tokens override co
 
 test('resolveArchitectureOverrides architecture env var overrides global env var', () => {
   const overrides = resolveArchitectureOverrides(
-    { page_budgets: { architecture: { model: 'configured-model', max_output_tokens: 4000 } } },
+    { page_budgets: { architecture: { model: 'configured-model', max_output_tokens: 4000, timeout_ms: 60000, reasoning_effort: 'medium' } } },
     {
       LLMWIKI_LLM_MODEL: 'global-model',
       LLMWIKI_LLM_ARCHITECTURE_MODEL: 'architecture-model',
       LLMWIKI_LLM_MAX_OUTPUT_TOKENS: '8000',
-      LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS: '12000'
+      LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS: '12000',
+      LLMWIKI_LLM_TIMEOUT_MS: '90000',
+      LLMWIKI_LLM_ARCHITECTURE_TIMEOUT_MS: '180000',
+      LLMWIKI_LLM_REASONING_EFFORT: 'medium',
+      LLMWIKI_LLM_ARCHITECTURE_REASONING_EFFORT: 'low'
     }
   );
   assert.equal(overrides.model, 'architecture-model');
   assert.equal(overrides.maxOutputTokens, 12000);
+  assert.equal(overrides.timeoutMs, 180000);
+  assert.equal(overrides.reasoningEffort, 'low');
 });
 
 test('createProviderFromResolvedConfig does not re-read global model env over resolved architecture model', () => {
@@ -876,6 +917,7 @@ test('createProviderFromResolvedConfig does not re-read global model env over re
       temperature: 0.1,
       maxOutputTokens: 12000,
       timeoutMs: 1000,
+      reasoningEffort: undefined,
       retries: 0,
       validationRetries: 0,
     });
@@ -894,10 +936,12 @@ test('createProviderFromResolvedConfig does not re-read global model env over re
 test('resolveArchitectureOverrides reads page_budgets from nested llm config', () => {
   const overrides = resolveArchitectureOverrides({
     mode: 'llm',
-    llm: { page_budgets: { architecture: { model: 'gpt-4.1', max_output_tokens: 12000 } } }
+    llm: { page_budgets: { architecture: { model: 'gpt-4.1', max_output_tokens: 12000, timeout_ms: 180000, reasoning_effort: 'low' } } }
   }, {});
   assert.equal(overrides.model, 'gpt-4.1');
   assert.equal(overrides.maxOutputTokens, 12000);
+  assert.equal(overrides.timeoutMs, 180000);
+  assert.equal(overrides.reasoningEffort, 'low');
 });
 
 test('resolveArchitectureOverrides treats blank env var as unset', () => {
@@ -918,4 +962,20 @@ test('resolveArchitectureOverrides rejects invalid max output tokens env var', (
       return true;
     }
   );
+});
+
+test('resolveArchitectureOverrides rejects invalid timeout and reasoning effort env vars', () => {
+  for (const env of [
+    { LLMWIKI_LLM_ARCHITECTURE_TIMEOUT_MS: 'not-a-number' },
+    { LLMWIKI_LLM_ARCHITECTURE_REASONING_EFFORT: 'turbo' },
+  ]) {
+    assert.throws(
+      () => resolveArchitectureOverrides({}, env),
+      (err: unknown) => {
+        assert.ok(err instanceof LLMProviderError);
+        assert.equal(err.code, 'INVALID_CONFIG');
+        return true;
+      }
+    );
+  }
 });

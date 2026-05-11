@@ -123,6 +123,7 @@ export async function compileWiki({
         maxOutputTokens: resolvedLLMCfg!.maxOutputTokens,
         systemPrompt: resolvedLLMCfg!.systemPrompt,
         temperature: resolvedLLMCfg!.temperature,
+        reasoningEffort: resolvedLLMCfg!.reasoningEffort,
       });
 
       // Synthesize with validation. On success, add to the pages Map so the
@@ -183,7 +184,8 @@ export async function compileWiki({
       } else {
         archProvider = createProviderFromResolvedConfig({
           ...resolvedLLMCfg!,
-          model: archOverrides.model ?? resolvedLLMCfg!.model
+          model: archOverrides.model ?? resolvedLLMCfg!.model,
+          timeoutMs: archOverrides.timeoutMs ?? resolvedLLMCfg!.timeoutMs,
         });
       }
 
@@ -194,6 +196,7 @@ export async function compileWiki({
       const archRequest = buildRequest('architecture', archPromptCtx, {
         maxOutputTokens: archOverrides.maxOutputTokens ?? resolvedLLMCfg!.maxOutputTokens,
         temperature: resolvedLLMCfg!.temperature,
+        reasoningEffort: archOverrides.reasoningEffort ?? resolvedLLMCfg!.reasoningEffort,
       });
 
       try {
