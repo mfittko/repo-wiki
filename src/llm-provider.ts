@@ -596,7 +596,11 @@ function parseNonNegativeInteger(value: string | undefined, fallback: number, fi
 }
 
 function parseOptionalNonNegativeInteger(value: unknown, field: string): number {
-  const candidate = typeof value === 'number' ? value : Number(value);
+  const candidate = typeof value === 'number'
+    ? value
+    : typeof value === 'string' && value.trim().length > 0
+      ? Number(value)
+      : Number.NaN;
   if (!Number.isInteger(candidate) || candidate < 0) {
     throw new LLMProviderError(`Invalid non-negative integer LLM config for ${field}.`, 'config', 'INVALID_CONFIG');
   }

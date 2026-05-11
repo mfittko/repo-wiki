@@ -37,6 +37,9 @@ export async function compileWiki({
     console.warn(`compileWiki: unknown compiler.mode "${rawMode}"; falling back to "deterministic".`);
   }
   const isLLMMode = compilerMode === 'llm';
+  const llmCfg = config?.compiler ?? {};
+  const resolvedLLMCfg = isLLMMode ? resolveProviderConfig(llmCfg) : null;
+  const validationRetries = resolvedLLMCfg?.validationRetries ?? 0;
   const llmErrors: Array<{ file: string; error: string; issues?: any[] }> = [];
 
   const pages = new Map<string, string>();
@@ -79,9 +82,6 @@ export async function compileWiki({
     // In LLM mode, synthesize module pages through the provider boundary.
     // Foundation and cross-cutting pages continue to use deterministic renderers
     // (phased archetype rollout – module pages first).
-    const llmCfg = config?.compiler ?? {};
-    const resolvedLLMCfg = resolveProviderConfig(llmCfg);
-    const validationRetries: number = resolvedLLMCfg.validationRetries;
     const llmCandidates: Array<{ module: any; modulePage: string; existingForPrompt?: string }> = [];
 
     for (const module of plan.modules || []) {
@@ -110,7 +110,7 @@ export async function compileWiki({
       llmCandidates.push({ module, modulePage, existingForPrompt });
     }
 
-    const llmProvider: LLMProvider | null = llmCandidates.length > 0 ? (_provider ?? createProvider(resolvedLLMCfg)) : null;
+    const llmProvider: LLMProvider | null = llmCandidates.length > 0 ? (_provider ?? createProvider(resolvedLLMCfg!)) : null;
 
     for (const { module, modulePage, existingForPrompt } of llmCandidates) {
       // Assemble the page context using the standard context assembler.
@@ -120,9 +120,9 @@ export async function compileWiki({
 
       // Build LLM request from the assembled context and provider settings.
       const request = buildRequest('module', promptCtx, {
-        maxOutputTokens: resolvedLLMCfg.maxOutputTokens,
-        systemPrompt: resolvedLLMCfg.systemPrompt,
-        temperature: resolvedLLMCfg.temperature,
+        maxOutputTokens: resolvedLLMCfg!.maxOutputTokens,
+        systemPrompt: resolvedLLMCfg!.systemPrompt,
+        temperature: resolvedLLMCfg!.temperature,
       });
 
       // Synthesize with validation. On success, add to the pages Map so the
@@ -153,10 +153,7 @@ export async function compileWiki({
     // The deterministic renderArchitecture() output already in the pages map
     // is replaced on success; on failure the error is recorded and compilation
     // throws before any page is written, leaving the existing wiki intact.
-    const llmCfg = config?.compiler ?? {};
-    const resolvedLLMCfg = resolveProviderConfig(llmCfg);
     const archOverrides = resolveArchitectureOverrides(llmCfg);
-    const validationRetries: number = resolvedLLMCfg.validationRetries;
 
     const archFilePath = path.join(wikiDir, 'Architecture.md');
     let existingArchContent: string | undefined;
@@ -185,8 +182,8 @@ export async function compileWiki({
         archProvider = _provider;
       } else {
         archProvider = createProviderFromResolvedConfig({
-          ...resolvedLLMCfg,
-          model: archOverrides.model ?? resolvedLLMCfg.model
+          ...resolvedLLMCfg!,
+          model: archOverrides.model ?? resolvedLLMCfg!.model
         });
       }
 
@@ -195,8 +192,8 @@ export async function compileWiki({
       const archPromptCtx = buildArchitecturePromptContext(archPageCtx, manifest, existingArchContent);
 
       const archRequest = buildRequest('architecture', archPromptCtx, {
-        maxOutputTokens: archOverrides.maxOutputTokens ?? resolvedLLMCfg.maxOutputTokens,
-        temperature: resolvedLLMCfg.temperature,
+        maxOutputTokens: archOverrides.maxOutputTokens ?? resolvedLLMCfg!.maxOutputTokens,
+        temperature: resolvedLLMCfg!.temperature,
       });
 
       try {

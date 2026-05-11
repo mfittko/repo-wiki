@@ -706,6 +706,20 @@ test('synthesizeWikiPage rejects architecture patch missing human notes block', 
   );
 });
 
+test('synthesizeWikiPage rejects architecture patch that writes inside the human notes block', async () => {
+  await assert.rejects(
+    () => synthesizeWikiPage(
+      fixedProvider(validArchitecturePatch({ bodyExtra: '<!-- HUMAN_NOTES_START -->\nDo not synthesize human notes.\n<!-- HUMAN_NOTES_END -->' })),
+      makeRequest({ archetype: 'architecture', pageName: 'Architecture', pageTitle: 'Architecture', sourcePaths: ['src/example.ts'] }),
+    ),
+    (err: unknown) => {
+      assert.ok(err instanceof WikiPatchError);
+      assert.ok(err.issues.some((issue) => issue.code === 'non-empty-human-notes-block'));
+      return true;
+    }
+  );
+});
+
 test('synthesizeWikiPage rejects architecture patch with out-of-context source_paths', async () => {
   await assert.rejects(
     () => synthesizeWikiPage(

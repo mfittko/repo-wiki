@@ -561,11 +561,18 @@ function validateArchitecturePatch(rawContent: string, request: LLMRequest): Wik
     }
   }
 
-  if (!body.includes('<!-- HUMAN_NOTES_START -->') || !body.includes('<!-- HUMAN_NOTES_END -->')) {
+  const humanNotesBlock = /<!-- HUMAN_NOTES_START -->([\s\S]*?)<!-- HUMAN_NOTES_END -->/.exec(body);
+  if (!humanNotesBlock) {
     issues.push({
       level: 'error',
       code: 'missing-human-notes-block',
       message: `${request.pageName}: Architecture page must include a HUMAN_NOTES block.`,
+    });
+  } else if (humanNotesBlock[1].trim().length > 0) {
+    issues.push({
+      level: 'error',
+      code: 'non-empty-human-notes-block',
+      message: `${request.pageName}: Architecture page HUMAN_NOTES block must remain empty in synthesized output.`,
     });
   }
 
