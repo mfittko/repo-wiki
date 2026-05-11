@@ -19,14 +19,62 @@ const REPO_WIKI_GENERATED_MARKER = 'repo-wiki-generated: regenerated on each pub
 const REPO_WIKI_GENERATED_HTML_COMMENT = `<!-- ${REPO_WIKI_GENERATED_MARKER} -->`;
 const REPO_WIKI_GENERATED_YAML_COMMENT = `# ${REPO_WIKI_GENERATED_MARKER}`;
 
-/** Returns true if the file exists and was written by repo-wiki (contains the generated marker). */
-async function isRepoWikiGeneratedFile(filePath: string): Promise<boolean> {
+type PagesSupportFileKind = 'config' | 'layout' | 'nav';
+
+/** Returns true if the file exists and was written by repo-wiki. */
+async function isRepoWikiGeneratedFile(filePath: string, kind?: PagesSupportFileKind): Promise<boolean> {
   try {
     const content = await fs.readFile(filePath, 'utf8');
-    return content.includes(REPO_WIKI_GENERATED_MARKER);
+    return isRepoWikiGeneratedContent(content, kind);
   } catch {
     return false;
   }
+}
+
+function isRepoWikiGeneratedContent(content: string, kind?: PagesSupportFileKind): boolean {
+  if (content.includes(REPO_WIKI_GENERATED_MARKER)) {
+    return true;
+  }
+  switch (kind) {
+    case 'config':
+      return isLegacyRepoWikiPagesConfig(content);
+    case 'layout':
+      return isLegacyRepoWikiPagesLayout(content);
+    case 'nav':
+      return isLegacyRepoWikiPagesNav(content);
+    default:
+      return false;
+  }
+}
+
+function isLegacyRepoWikiPagesConfig(content: string): boolean {
+  return /^defaults:\n  - scope:\n      path: ""\n    values:\n      layout: "repo-wiki"\n(?:wiki_pages_dir: "[^"\n]*"\n)?$/.test(content);
+}
+
+function isLegacyRepoWikiPagesLayout(content: string): boolean {
+  return content.startsWith('<!doctype html>\n<html lang="en">\n')
+    && content.includes('<title>{% if page.title %}{{ page.title | escape }}{% else %}{{ page.name | replace: \'.md\', \'\' | escape }}{% endif %}')
+    && content.includes('import mermaid from \'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs\';')
+    && content.includes('document.querySelectorAll(\'pre > code.language-mermaid\')')
+    && (content.includes('<main>\n    {{ content }}\n  </main>')
+      || content.includes('{% assign _rp = page.path %}') && content.includes('{% include wiki_nav.html %}'));
+}
+
+function isLegacyRepoWikiPagesNav(content: string): boolean {
+  if (!content.trim()) {
+    return false;
+  }
+  const lines = content.split('\n');
+  if (lines.at(-1) === '') {
+    lines.pop();
+  }
+  return lines.length > 0 && lines.every((line) => {
+    return /^<h4 class="nav-section">[^<>]*<\/h4>$/.test(line)
+      || line === '<ul>'
+      || line === '</ul>'
+      || /^<li><a href="(?:[^"<>]|&amp;|&lt;|&gt;|&quot;)*">[^<>]*<\/a><\/li>$/.test(line)
+      || /^<li>[^<>]*<\/li>$/.test(line);
+  });
 }
 
 export interface PublishWikiOptions {
@@ -402,15 +450,15 @@ async function ensurePagesEntryAndNavigation(publishDir: string) {
 
 async function ensurePagesMermaidSupport(siteRootDir: string, pagesPath: string) {
   const configPath = path.join(siteRootDir, '_config.yml');
-  // Regenerate if new (doesn't exist) or if it was written by a previous repo-wiki publish.
-  // Preserve files without the marker — those are user-customized.
-  if (!await fileExists(configPath) || await isRepoWikiGeneratedFile(configPath)) {
+  // Regenerate if new, marked as repo-wiki generated, or matching known legacy repo-wiki defaults.
+  // Preserve markerless files that do not match those legacy signatures as user-customized.
+  if (!await fileExists(configPath) || await isRepoWikiGeneratedFile(configPath, 'config')) {
     await fs.writeFile(configPath, buildPagesConfig(pagesPath), 'utf8');
   }
 
   const layoutDir = path.join(siteRootDir, '_layouts');
   const layoutPath = path.join(layoutDir, 'repo-wiki.html');
-  if (!await fileExists(layoutPath) || await isRepoWikiGeneratedFile(layoutPath)) {
+  if (!await fileExists(layoutPath) || await isRepoWikiGeneratedFile(layoutPath, 'layout')) {
     await fs.mkdir(layoutDir, { recursive: true });
     await fs.writeFile(layoutPath, PAGES_LAYOUT, 'utf8');
   }
@@ -431,10 +479,9 @@ async function ensurePagesNavInclude(siteRootDir: string, publishDir: string) {
   const includesDir = path.join(siteRootDir, '_includes');
   const navIncludePath = path.join(includesDir, 'wiki_nav.html');
 
-  // Only preserve the existing file if it is user-customized (no generated marker).
-  // Generated nav files (with the marker) are always refreshed so navigation stays
-  // current as the wiki's _Sidebar.md evolves.
-  if (await fileExists(navIncludePath) && !await isRepoWikiGeneratedFile(navIncludePath)) {
+  // Only preserve the existing file if it is user-customized (no marker or legacy generated signature).
+  // Generated nav files are always refreshed so navigation stays current as the wiki's _Sidebar.md evolves.
+  if (await fileExists(navIncludePath) && !await isRepoWikiGeneratedFile(navIncludePath, 'nav')) {
     return;
   }
 

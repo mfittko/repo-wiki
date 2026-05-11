@@ -22,6 +22,28 @@ async function fileExists(filePath: string) {
   }
 }
 
+function legacyGeneratedPagesLayout() {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if page.title %}{{ page.title | escape }}{% else %}{{ page.name | replace: '.md', '' | escape }}{% endif %}</title>
+</head>
+<body>
+  <main>
+    {{ content }}
+  </main>
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    const blocks = document.querySelectorAll('pre > code.language-mermaid');
+    await mermaid.run({ nodes: document.querySelectorAll('.mermaid') });
+  </script>
+</body>
+</html>
+`;
+}
+
 test('publishWiki redacts credential-bearing remotes in dry-run summaries', async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
   const wikiDir = path.join(tempDir, 'wiki');
@@ -1158,7 +1180,49 @@ test('publishWiki regenerates repo-wiki-generated support files on subsequent pu
   }
 });
 
-test('publishWiki preserves user-customized support files that lack the generated marker', async () => {
+test('publishWiki upgrades markerless legacy generated pages layout and config', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const seedDir = path.join(tempDir, 'seed');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, '_Sidebar.md'), '## Nav\n- [Home](Home)\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+    await git(['clone', remoteDir, seedDir]);
+    await git(['config', 'user.name', 'repo-wiki-test'], seedDir);
+    await git(['config', 'user.email', 'repo-wiki-test@example.com'], seedDir);
+    await fs.mkdir(path.join(seedDir, '_layouts'), { recursive: true });
+    await fs.writeFile(path.join(seedDir, '_config.yml'), 'defaults:\n  - scope:\n      path: ""\n    values:\n      layout: "repo-wiki"\n', 'utf8');
+    await fs.writeFile(path.join(seedDir, '_layouts', 'repo-wiki.html'), legacyGeneratedPagesLayout(), 'utf8');
+    await git(['add', '.'], seedDir);
+    await git(['commit', '-m', 'Seed legacy generated support files'], seedDir);
+    await git(['push', 'origin', 'HEAD:gh-pages'], seedDir);
+
+    await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      message: 'Upgrade legacy support files'
+    });
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    const config = await fs.readFile(path.join(checkoutDir, '_config.yml'), 'utf8');
+    const layout = await fs.readFile(path.join(checkoutDir, '_layouts', 'repo-wiki.html'), 'utf8');
+    assert.match(config, /repo-wiki-generated/);
+    assert.match(layout, /repo-wiki-generated/);
+    assert.match(layout, /class="page-metadata"/);
+    assert.match(layout, /\{% include wiki_nav\.html %\}/);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki preserves markerless custom pages layout and config', async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
   const wikiDir = path.join(tempDir, 'wiki');
   const remoteDir = path.join(tempDir, 'remote.git');
@@ -1196,6 +1260,85 @@ test('publishWiki preserves user-customized support files that lack the generate
     assert.equal(await fs.readFile(path.join(checkoutDir, '_includes', 'wiki_nav.html'), 'utf8'), '<nav>custom nav</nav>\n');
     assert.equal(await fs.readFile(path.join(checkoutDir, '_layouts', 'repo-wiki.html'), 'utf8'), '<main>{{ content }}</main>\n');
     assert.equal(await fs.readFile(path.join(checkoutDir, '_config.yml'), 'utf8'), 'title: Custom site\nlayout: custom\n');
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki refreshes marked generated pages layout and config', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const seedDir = path.join(tempDir, 'seed');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+    await git(['clone', remoteDir, seedDir]);
+    await git(['config', 'user.name', 'repo-wiki-test'], seedDir);
+    await git(['config', 'user.email', 'repo-wiki-test@example.com'], seedDir);
+    await fs.mkdir(path.join(seedDir, '_layouts'), { recursive: true });
+    await fs.writeFile(path.join(seedDir, '_config.yml'), '# repo-wiki-generated: regenerated on each publish\ndefaults: []\n', 'utf8');
+    await fs.writeFile(path.join(seedDir, '_layouts', 'repo-wiki.html'), '<!-- repo-wiki-generated: regenerated on each publish -->\n<main>old</main>\n', 'utf8');
+    await git(['add', '.'], seedDir);
+    await git(['commit', '-m', 'Seed marked support files'], seedDir);
+    await git(['push', 'origin', 'HEAD:gh-pages'], seedDir);
+
+    await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      message: 'Refresh marked support files'
+    });
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    const config = await fs.readFile(path.join(checkoutDir, '_config.yml'), 'utf8');
+    const layout = await fs.readFile(path.join(checkoutDir, '_layouts', 'repo-wiki.html'), 'utf8');
+    assert.match(config, /layout: "repo-wiki"/);
+    assert.doesNotMatch(config, /defaults: \[\]/);
+    assert.match(layout, /class="page-metadata"/);
+    assert.doesNotMatch(layout, /<main>old<\/main>/);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('publishWiki updates wiki_pages_dir when upgrading legacy generated config', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const seedDir = path.join(tempDir, 'seed');
+  const checkoutDir = path.join(tempDir, 'checkout');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+    await git(['clone', remoteDir, seedDir]);
+    await git(['config', 'user.name', 'repo-wiki-test'], seedDir);
+    await git(['config', 'user.email', 'repo-wiki-test@example.com'], seedDir);
+    await fs.writeFile(path.join(seedDir, '_config.yml'), 'defaults:\n  - scope:\n      path: ""\n    values:\n      layout: "repo-wiki"\n', 'utf8');
+    await git(['add', '.'], seedDir);
+    await git(['commit', '-m', 'Seed legacy generated config'], seedDir);
+    await git(['push', 'origin', 'HEAD:gh-pages'], seedDir);
+
+    await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      pagesPath: 'nested/pages',
+      message: 'Upgrade legacy config with nested path'
+    });
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    const config = await fs.readFile(path.join(checkoutDir, '_config.yml'), 'utf8');
+    assert.match(config, /repo-wiki-generated/);
+    assert.match(config, /wiki_pages_dir: "nested\/pages"/);
+    assert.equal(await fileExists(path.join(checkoutDir, 'nested', 'pages', 'Home.md')), true);
   } finally {
     await fs.rm(tempDir, { recursive: true, force: true });
   }
