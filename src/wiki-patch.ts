@@ -454,6 +454,7 @@ export async function synthesizeWikiPage(
     const response = await provider.complete(nextRequest);
 
     try {
+      validateWikiPatchForRequest(response.content, request);
       return parseWikiPatch(response.content, request.pageName);
     } catch (err) {
       if (!(err instanceof WikiPatchError)) throw err;
@@ -466,6 +467,116 @@ export async function synthesizeWikiPage(
 
   // All attempts exhausted — re-throw the last validation error
   throw lastError!;
+}
+
+function validateWikiPatchForRequest(rawContent: string, request: LLMRequest): void {
+  const issues = validateWikiPatch(rawContent, request.pageName);
+
+  if (request.archetype === 'architecture') {
+    issues.push(...validateArchitecturePatch(rawContent, request));
+  }
+
+  const errorCount = issues.filter((i) => i.level === 'error').length;
+  if (errorCount > 0) {
+    throw new WikiPatchError(
+      `Wiki patch for "${request.pageName}" failed validation with ${errorCount} error(s).`,
+      request.pageName,
+      issues,
+    );
+  }
+}
+
+const ARCHITECTURE_REQUIRED_HEADINGS = [
+  '## Executive Architecture Summary',
+  '## System and Repository Context',
+  '## Major Modules and Responsibilities',
+  '## Runtime, Data, and Control-Flow Relationships',
+  '## Build, Test, Deployment, and Operational Surfaces',
+  '## Cross-Cutting Concerns',
+  '## Caveats and Open Questions',
+];
+
+function validateArchitecturePatch(rawContent: string, request: LLMRequest): WikiPatchIssue[] {
+  const issues: WikiPatchIssue[] = [];
+  const normalizedContent = normalizeLLMOutput(rawContent);
+  const { frontmatterRaw, body } = splitFrontmatterAndBody(normalizedContent);
+  if (frontmatterRaw === null) {
+    return issues;
+  }
+
+  const fields = parseFrontmatterFields(frontmatterRaw);
+  if (fields['kind'] !== 'architecture') {
+    issues.push({
+      level: 'error',
+      code: 'invalid-architecture-kind',
+      message: `${request.pageName}: Architecture page frontmatter must set kind: "architecture".`,
+    });
+  }
+
+  for (const field of ['confidence', 'claim_status']) {
+    const value = fields[field];
+    if (!value || typeof value !== 'string' || !value.trim()) {
+      issues.push({
+        level: 'error',
+        code: `missing-${field.replace('_', '-')}`,
+        message: `${request.pageName}: Architecture page frontmatter is missing required field "${field}".`,
+      });
+    }
+  }
+
+  const sourcePaths = fields['source_paths'];
+  if (sourcePaths === undefined) {
+    issues.push({
+      level: 'error',
+      code: 'missing-source-paths',
+      message: `${request.pageName}: Architecture page frontmatter is missing required field "source_paths".`,
+    });
+  } else if (Array.isArray(sourcePaths)) {
+    if (sourcePaths.length === 0) {
+      issues.push({
+        level: 'error',
+        code: 'empty-source-paths',
+        message: `${request.pageName}: Architecture page source_paths must not be empty.`,
+      });
+    }
+
+    const allowedSourcePaths = new Set((request.sourcePaths || []).filter(isNonEmptyString));
+    const outOfContextPaths = sourcePaths.filter((entry) => isNonEmptyString(entry) && !allowedSourcePaths.has(entry));
+    if (outOfContextPaths.length > 0) {
+      issues.push({
+        level: 'error',
+        code: 'out-of-context-source-paths',
+        message: `${request.pageName}: Architecture page source_paths must be drawn from the prompt source cards: ${outOfContextPaths.join(', ')}.`,
+      });
+    }
+  }
+
+  for (const heading of ARCHITECTURE_REQUIRED_HEADINGS) {
+    if (!body.includes(heading)) {
+      issues.push({
+        level: 'error',
+        code: 'missing-architecture-heading',
+        message: `${request.pageName}: Architecture page is missing required heading "${heading}".`,
+      });
+    }
+  }
+
+  const humanNotesBlock = /<!-- HUMAN_NOTES_START -->([\s\S]*?)<!-- HUMAN_NOTES_END -->/.exec(body);
+  if (!humanNotesBlock) {
+    issues.push({
+      level: 'error',
+      code: 'missing-human-notes-block',
+      message: `${request.pageName}: Architecture page must include a HUMAN_NOTES block.`,
+    });
+  } else if (humanNotesBlock[1].trim().length > 0) {
+    issues.push({
+      level: 'error',
+      code: 'non-empty-human-notes-block',
+      message: `${request.pageName}: Architecture page HUMAN_NOTES block must remain empty in synthesized output.`,
+    });
+  }
+
+  return issues;
 }
 
 function withValidationFeedback(request: LLMRequest, error: WikiPatchError): LLMRequest {

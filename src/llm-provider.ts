@@ -267,7 +267,39 @@ function buildMockContent(request: LLMRequest): string {
     '',
   ];
 
-  if (request.archetype === 'module') {
+  if (request.archetype === 'architecture') {
+    lines.splice(2, 0, 'confidence: "medium"', 'claim_status: "grounded"');
+    lines.push('## Executive Architecture Summary');
+    lines.push('');
+    lines.push('Mock architecture summary grounded in prompt source paths.');
+    lines.push('');
+    lines.push('## System and Repository Context');
+    lines.push('');
+    lines.push('Mock repository context.');
+    lines.push('');
+    lines.push('## Major Modules and Responsibilities');
+    lines.push('');
+    lines.push('Mock module responsibility summary.');
+    lines.push('');
+    lines.push('## Runtime, Data, and Control-Flow Relationships');
+    lines.push('');
+    lines.push('Mock runtime relationship summary.');
+    lines.push('');
+    lines.push('## Build, Test, Deployment, and Operational Surfaces');
+    lines.push('');
+    lines.push('Mock build and operations summary.');
+    lines.push('');
+    lines.push('## Cross-Cutting Concerns');
+    lines.push('');
+    lines.push('Mock cross-cutting concern summary.');
+    lines.push('');
+    lines.push('## Caveats and Open Questions');
+    lines.push('');
+    lines.push('Mock caveats.');
+    lines.push('');
+  }
+
+  if (request.archetype === 'module' || request.archetype === 'architecture') {
     lines.push('<!-- HUMAN_NOTES_START -->');
     lines.push('<!-- HUMAN_NOTES_END -->');
     lines.push('');
@@ -277,6 +309,20 @@ function buildMockContent(request: LLMRequest): string {
 }
 
 // ── Provider configuration ─────────────────────────────────────────────────
+
+/** Per-archetype LLM overrides. */
+export interface ArchitecturePageBudget {
+  /** Model override for architecture synthesis. */
+  model?: string;
+  /** Output-token budget override for architecture synthesis. */
+  max_output_tokens?: number;
+}
+
+/** Per-archetype LLM override configuration. */
+export interface PageBudgets {
+  /** Overrides applied when synthesizing the Architecture page. */
+  architecture?: ArchitecturePageBudget;
+}
 
 /** Configuration passed to `createProvider`. */
 export interface LLMProviderConfig {
@@ -326,6 +372,8 @@ export interface LLMProviderConfig {
   mode?: string;
   /** Nested LLM settings used when callers pass the whole compiler config. */
   llm?: LLMProviderConfig;
+  /** Per-archetype LLM overrides (model and output budget). */
+  page_budgets?: PageBudgets;
 }
 
 export interface ResolvedLLMProviderConfig extends LLMProviderConfig {
@@ -358,7 +406,15 @@ export interface ResolvedLLMProviderConfig extends LLMProviderConfig {
  * back to an unexpected behaviour.
  */
 export function createProvider(config: LLMProviderConfig = {}): LLMProvider {
-  const resolved = resolveProviderConfig(config);
+  return createProviderFromResolvedConfig(resolveProviderConfig(config));
+}
+
+/**
+ * Create an `LLMProvider` from an already-resolved config without re-reading
+ * environment variables. Use this when a caller has applied page/archetype
+ * overrides that must not be superseded by global env resolution a second time.
+ */
+export function createProviderFromResolvedConfig(resolved: ResolvedLLMProviderConfig): LLMProvider {
   const providerName = resolved.provider;
 
   if (providerName === 'mock') {
@@ -476,6 +532,53 @@ function providerForMode(mode?: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Resolved per-architecture overrides for model and output token budget.
+ * These supplement (not replace) the global provider config.
+ */
+export interface ResolvedArchitectureOverrides {
+  /** Architecture-specific model override, or undefined if not set. */
+  model: string | undefined;
+  /** Architecture-specific max output tokens override, or undefined if not set. */
+  maxOutputTokens: number | undefined;
+}
+
+/**
+ * Resolve architecture-specific model and output-token overrides.
+ *
+ * Precedence (highest to lowest):
+ * 1. `LLMWIKI_LLM_ARCHITECTURE_MODEL` / `LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS` env vars
+ * 2. `LLMWIKI_LLM_MODEL` / `LLMWIKI_LLM_MAX_OUTPUT_TOKENS` global env vars (already applied by resolveProviderConfig)
+ * 3. `.llmwiki/config.json` `compiler.llm.page_budgets.architecture` overrides
+ * 4. Global config defaults (already applied by resolveProviderConfig)
+ * 5. Built-in defaults
+ *
+ * Returns only the fields that are explicitly overridden; callers fall back to
+ * the global resolved config for fields that are not set.
+ */
+export function resolveArchitectureOverrides(
+  config: LLMProviderConfig = {},
+  env: NodeJS.ProcessEnv = process.env,
+): ResolvedArchitectureOverrides {
+  const llmConfig = config.llm ? config.llm : config;
+  const pageBudgets = llmConfig.page_budgets?.architecture ?? {};
+
+  const envModel = optionalEnv(env, 'LLMWIKI_LLM_ARCHITECTURE_MODEL');
+  const envMaxOutputTokens = optionalEnv(env, 'LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS');
+  const globalEnvModel = optionalEnv(env, 'LLMWIKI_LLM_MODEL');
+  const globalEnvMaxOutputTokens = optionalEnv(env, 'LLMWIKI_LLM_MAX_OUTPUT_TOKENS');
+
+  const model = envModel ?? (globalEnvModel !== undefined ? undefined : nonBlank(pageBudgets.model));
+  const configuredMaxOutputTokens = pageBudgets.max_output_tokens !== undefined
+    ? parseOptionalNonNegativeInteger(pageBudgets.max_output_tokens, 'architecture maxOutputTokens')
+    : undefined;
+  const maxOutputTokens = envMaxOutputTokens !== undefined
+    ? parseNonNegativeInteger(envMaxOutputTokens, 0, 'architecture maxOutputTokens')
+    : (globalEnvMaxOutputTokens !== undefined ? undefined : configuredMaxOutputTokens);
+
+  return { model, maxOutputTokens };
+}
+
 function parseNumber(value: string | undefined, fallback: number, field: string): number {
   const candidate = value === undefined ? fallback : Number(value);
   if (!Number.isFinite(candidate)) {
@@ -486,6 +589,18 @@ function parseNumber(value: string | undefined, fallback: number, field: string)
 
 function parseNonNegativeInteger(value: string | undefined, fallback: number, field: string): number {
   const candidate = value === undefined ? fallback : Number(value);
+  if (!Number.isInteger(candidate) || candidate < 0) {
+    throw new LLMProviderError(`Invalid non-negative integer LLM config for ${field}.`, 'config', 'INVALID_CONFIG');
+  }
+  return candidate;
+}
+
+function parseOptionalNonNegativeInteger(value: unknown, field: string): number {
+  const candidate = typeof value === 'number'
+    ? value
+    : typeof value === 'string' && value.trim().length > 0
+      ? Number(value)
+      : Number.NaN;
   if (!Number.isInteger(candidate) || candidate < 0) {
     throw new LLMProviderError(`Invalid non-negative integer LLM config for ${field}.`, 'config', 'INVALID_CONFIG');
   }

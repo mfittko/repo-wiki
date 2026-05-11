@@ -828,6 +828,62 @@ function createLLMPlan() {
   };
 }
 
+function validLLMTestContent(req: LLMRequest): string {
+  const sourcePaths = req.sourcePaths?.length ? req.sourcePaths : ['src/auth.ts'];
+  const frontmatter = [
+    '---',
+    `kind: ${JSON.stringify(req.archetype)}`,
+    'compiled_at: "mock"',
+    'source_repo: "mock"',
+    'source_commit: "mock"',
+    'page_state: "generated"',
+    ...(req.archetype === 'architecture' ? ['confidence: "medium"', 'claim_status: "grounded"'] : []),
+    `source_paths: ${JSON.stringify(sourcePaths)}`,
+    '---',
+    '',
+    `# ${req.pageTitle}`,
+    '',
+    `> Archetype: ${req.archetype}`,
+    '',
+  ];
+
+  if (req.archetype === 'architecture') {
+    frontmatter.push(
+      '## Executive Architecture Summary',
+      '',
+      'Test architecture summary.',
+      '',
+      '## System and Repository Context',
+      '',
+      'Test repository context.',
+      '',
+      '## Major Modules and Responsibilities',
+      '',
+      'Test module responsibilities.',
+      '',
+      '## Runtime, Data, and Control-Flow Relationships',
+      '',
+      'Test runtime relationships.',
+      '',
+      '## Build, Test, Deployment, and Operational Surfaces',
+      '',
+      'Test build surfaces.',
+      '',
+      '## Cross-Cutting Concerns',
+      '',
+      'Test cross-cutting concerns.',
+      '',
+      '## Caveats and Open Questions',
+      '',
+      'Test caveats.',
+      '',
+    );
+  }
+
+  frontmatter.push('<!-- HUMAN_NOTES_START -->', '<!-- HUMAN_NOTES_END -->', '');
+  return frontmatter.join('\n');
+}
+
 const defaultLLMManifest = {
   remote: 'origin',
   commit: 'llm-test-commit',
@@ -871,7 +927,8 @@ test('compileWiki in LLM mode synthesizes module pages through the mock provider
     assert.ok(result.summary.pages > 0);
     // Summary must report compiler mode and per-renderer page counts.
     assert.equal(result.summary.compiler_mode, 'llm');
-    assert.equal(result.summary.llm_pages, 1);
+    // Architecture.md is also synthesized through LLM in LLM mode.
+    assert.equal(result.summary.llm_pages, 2);
     assert.ok(result.summary.deterministic_pages >= 1);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
@@ -883,7 +940,10 @@ test('compileWiki normalizes LLM block-list source_paths without leaving sequenc
   const config = { compiler: { mode: 'llm' } };
   const blockListProvider: LLMProvider = {
     name: 'block-list-mock',
-    async complete(_request: LLMRequest): Promise<LLMResponse> {
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      if (req.archetype === 'architecture') {
+        return { provider: 'block-list-mock', content: validLLMTestContent(req) };
+      }
       return {
         provider: 'block-list-mock',
         content: [
@@ -964,7 +1024,10 @@ test('compileWiki in LLM mode normalizes docs-only module evidence conservativel
   };
   const provider: LLMProvider = {
     name: 'docs-only-mock',
-    async complete(_request: LLMRequest): Promise<LLMResponse> {
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      if (req.archetype === 'architecture') {
+        return { provider: 'docs-only-mock', content: validLLMTestContent(req) };
+      }
       return {
         provider: 'docs-only-mock',
         content: [
@@ -1070,10 +1133,13 @@ test('compileWiki uses validation retries independently from provider transport 
   let calls = 0;
   const provider: LLMProvider = {
     name: 'validation-retry-mock',
-    async complete(_request: LLMRequest): Promise<LLMResponse> {
+    async complete(req: LLMRequest): Promise<LLMResponse> {
       calls += 1;
       if (calls === 1) {
         return { content: '# Invalid - no frontmatter', provider: 'validation-retry-mock' };
+      }
+      if (req.archetype === 'architecture') {
+        return { provider: 'validation-retry-mock', content: validLLMTestContent(req) };
       }
       return {
         provider: 'validation-retry-mock',
@@ -1106,7 +1172,8 @@ test('compileWiki uses validation retries independently from provider transport 
     });
 
     const modulePage = await fs.readFile(path.join(wikiDir, 'Module-Auth.md'), 'utf8');
-    assert.equal(calls, 2);
+    // calls: 1 invalid (module) + 1 valid (module retry) + 1 valid (architecture) = 3
+    assert.equal(calls, 3);
     assert.match(modulePage, /Valid retry output/);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
@@ -1135,7 +1202,8 @@ test('compileWiki does not use provider transport retries for validation correct
       }),
       /LLM compilation failed.*Module-Auth\.md/s
     );
-    assert.equal(calls, 1);
+    // calls: 1 module attempt (fails, no retries) + 1 architecture attempt (fails, no retries) = 2
+    assert.equal(calls, 2);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
@@ -1258,7 +1326,8 @@ test('compileWiki in LLM mode honors explicit mock provider config without API k
 
     const modulePage = await fs.readFile(path.join(wikiDir, 'Module-Auth.md'), 'utf8');
     assert.equal(result.summary.compiler_mode, 'llm');
-    assert.equal(result.summary.llm_pages, 1);
+    // Module-Auth + Architecture.md are both synthesized via LLM.
+    assert.equal(result.summary.llm_pages, 2);
     assert.match(modulePage, /Generated by the mock LLM provider/);
   } finally {
     if (previousProvider === undefined) {
@@ -1333,8 +1402,23 @@ test('compileWiki skips human-owned and unmanaged module pages before creating a
       ''
     ].join('\n');
     const unmanaged = '# Unmanaged page\n\nHuman content.\n';
+    const humanOwnedArch = [
+      '---',
+      'source_commit: "old"',
+      'kind: "architecture"',
+      'compiled_at: "2024-01-01T00:00:00Z"',
+      'source_paths: ["src/auth.ts"]',
+      'page_state: "human-owned"',
+      '---',
+      '',
+      '# Architecture',
+      '',
+      'Human-maintained architecture page.',
+      ''
+    ].join('\n');
     await fs.writeFile(path.join(wikiDir, 'Module-Human.md'), humanOwned, 'utf8');
     await fs.writeFile(path.join(wikiDir, 'Module-Unmanaged.md'), unmanaged, 'utf8');
+    await fs.writeFile(path.join(wikiDir, 'Architecture.md'), humanOwnedArch, 'utf8');
 
     const result = await compileWiki({
       scanDir,
@@ -1345,7 +1429,8 @@ test('compileWiki skips human-owned and unmanaged module pages before creating a
 
     assert.equal(await fs.readFile(path.join(wikiDir, 'Module-Human.md'), 'utf8'), humanOwned);
     assert.equal(await fs.readFile(path.join(wikiDir, 'Module-Unmanaged.md'), 'utf8'), unmanaged);
-    assert.equal(result.summary.skipped_by_state['human-owned'], 1);
+    assert.equal(await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8'), humanOwnedArch);
+    assert.equal(result.summary.skipped_by_state['human-owned'], 2);
     assert.equal(result.summary.skipped_by_state.unmanaged, 1);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
@@ -1397,6 +1482,282 @@ test('compileWiki deterministic mode is unaffected by config presence', async ()
     assert.equal(result.summary.compiler_mode, 'deterministic');
     assert.equal(result.summary.llm_pages, 0);
     assert.ok(result.summary.deterministic_pages >= 1);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Architecture LLM synthesis
+// ---------------------------------------------------------------------------
+
+test('compileWiki in LLM mode synthesizes Architecture.md through the mock provider', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  const config = { compiler: { mode: 'llm' } };
+
+  try {
+    const result = await compileWiki({ scanDir, planFile, wikiDir, config, _provider: new MockLLMProvider() });
+
+    const archPage = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+
+    // Architecture page must come from the LLM provider (mock output marker).
+    assert.match(archPage, /Generated by the mock LLM provider/);
+    assert.match(archPage, /kind: "architecture"/);
+    assert.match(archPage, /page_state: "generated"/);
+    assert.match(archPage, /source_commit: "llm-test-commit"/);
+
+    // Architecture is counted as an LLM page together with the module page.
+    assert.equal(result.summary.llm_pages, 2);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki in deterministic mode renders Architecture.md without LLM synthesis', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+
+  try {
+    const result = await compileWiki({ scanDir, planFile, wikiDir });
+
+    const archPage = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+
+    // Deterministic renderer output — not from the LLM.
+    assert.doesNotMatch(archPage, /Generated by the mock LLM provider/);
+    assert.match(archPage, /# Architecture/);
+    assert.match(archPage, /first-pass architecture summary/);
+    assert.equal(result.summary.llm_pages, 0);
+    assert.equal(result.summary.compiler_mode, 'deterministic');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki in LLM mode skips human-owned Architecture.md without overwriting', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  const config = { compiler: { mode: 'llm' } };
+
+  const humanOwnedArch = [
+    '---',
+    'source_commit: "hand-written"',
+    'kind: "architecture"',
+    'compiled_at: "2024-01-01T00:00:00Z"',
+    'source_paths: ["src/auth.ts"]',
+    'page_state: "human-owned"',
+    '---',
+    '',
+    '# Architecture',
+    '',
+    'Human-maintained architecture page.',
+    ''
+  ].join('\n');
+
+  await fs.mkdir(wikiDir, { recursive: true });
+  await fs.writeFile(path.join(wikiDir, 'Architecture.md'), humanOwnedArch, 'utf8');
+
+  try {
+    const result = await compileWiki({ scanDir, planFile, wikiDir, config, _provider: new MockLLMProvider() });
+
+    const afterCompile = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+    assert.equal(afterCompile, humanOwnedArch);
+    assert.equal(result.summary.skipped_by_state['human-owned'], 1);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki in LLM mode uses architecture archetype for Architecture.md prompt', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  const archetypes: string[] = [];
+
+  const capturingProvider: LLMProvider = {
+    name: 'archetype-capturing-mock',
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      archetypes.push(req.archetype);
+      return {
+        provider: 'archetype-capturing-mock',
+        content: validLLMTestContent(req)
+      };
+    }
+  };
+
+  try {
+    await compileWiki({
+      scanDir,
+      planFile,
+      wikiDir,
+      config: { compiler: { mode: 'llm' } },
+      _provider: capturingProvider
+    });
+
+    assert.ok(archetypes.includes('architecture'), 'Architecture archetype must be used for Architecture.md');
+    assert.ok(archetypes.includes('module'), 'Module archetype must be used for module pages');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki in LLM mode keeps architecture-specific system prompt guardrails', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  const capturedSystemPrompts: Record<string, string> = {};
+
+  const capturingProvider: LLMProvider = {
+    name: 'system-prompt-capturing-mock',
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      capturedSystemPrompts[req.archetype] = req.systemPrompt;
+      return {
+        provider: 'system-prompt-capturing-mock',
+        content: validLLMTestContent(req)
+      };
+    }
+  };
+
+  try {
+    await compileWiki({
+      scanDir,
+      planFile,
+      wikiDir,
+      config: { compiler: { mode: 'llm', llm: { system_prompt: 'Global custom system prompt.' } } },
+      _provider: capturingProvider
+    });
+
+    assert.equal(capturedSystemPrompts.module, 'Global custom system prompt.');
+    assert.match(capturedSystemPrompts.architecture, /Architecture synthesis rules:/);
+    assert.match(capturedSystemPrompts.architecture, /Do not invent unsupported relationships or architectural layers/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki in LLM mode normalizes Architecture.md source_paths from the prompt context', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'architecture-budget-test',
+    mode: 'bootstrap',
+    totals: { languages: { TypeScript: 31 }, categories: { source: 31 }, runtime_hints: {} },
+    files: [
+      {
+        path: 'src/auth.ts',
+        category: 'source',
+        language: 'TypeScript',
+        imports: Array.from({ length: 20 }, (_, index) => `./dep-${index}.js`),
+        exported_symbols: Array.from({ length: 20 }, (_, index) => ({ name: `authSymbol${index}${'X'.repeat(40)}` })),
+        runtime_hints: [],
+        reasons: ['source']
+      },
+      ...Array.from({ length: 30 }, (_, index) => ({
+        path: `src/feature-${String(index).padStart(2, '0')}.ts`,
+        category: 'source',
+        language: 'TypeScript',
+        imports: Array.from({ length: 20 }, (_, depIndex) => `./feature-${index}-dep-${depIndex}.js`),
+        exported_symbols: Array.from({ length: 20 }, (_, symbolIndex) => ({ name: `feature${index}Symbol${symbolIndex}${'Y'.repeat(40)}` })),
+        runtime_hints: [],
+        reasons: ['source']
+      }))
+    ],
+    analysis: { package_scripts: [], dependency_graph: { edges: [], summary: {} }, test_to_source: { mappings: [], summary: {} } }
+  };
+  const plan = createLLMPlan();
+  let capturedArchitectureSourcePaths: string[] = [];
+
+  const capturingProvider: LLMProvider = {
+    name: 'source-path-capturing-mock',
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      if (req.archetype === 'architecture') {
+        capturedArchitectureSourcePaths = req.sourcePaths ?? [];
+      }
+      return {
+        provider: 'source-path-capturing-mock',
+        content: validLLMTestContent(req)
+      };
+    }
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    await compileWiki({
+      scanDir,
+      planFile,
+      wikiDir,
+      config: { compiler: { mode: 'llm' } },
+      _provider: capturingProvider
+    });
+
+    assert.ok(capturedArchitectureSourcePaths.length > 0);
+    assert.ok(capturedArchitectureSourcePaths.length < 20, 'test fixture should exercise a budgeted architecture context');
+
+    const archPage = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+    const sourcePathsMatch = /^source_paths: (\[[^\n]+\])$/m.exec(archPage);
+    assert.ok(sourcePathsMatch, 'Architecture.md should contain normalized source_paths JSON');
+    assert.deepEqual(JSON.parse(sourcePathsMatch[1]), capturedArchitectureSourcePaths.slice(0, 20));
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki in LLM mode applies architecture max_output_tokens override to the request', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  const capturedMaxTokens: Record<string, number | undefined> = {};
+
+  const capturingProvider: LLMProvider = {
+    name: 'token-capturing-mock',
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      capturedMaxTokens[req.archetype] = req.maxTokens;
+      return {
+        provider: 'token-capturing-mock',
+        content: validLLMTestContent(req)
+      };
+    }
+  };
+
+  const config = {
+    compiler: {
+      mode: 'llm',
+      llm: {
+        provider: 'mock',
+        max_output_tokens: 4000,
+        page_budgets: {
+          architecture: { max_output_tokens: 12000 }
+        }
+      }
+    }
+  };
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir, config, _provider: capturingProvider });
+
+    // Architecture page must receive the architecture-specific token budget.
+    assert.equal(capturedMaxTokens['architecture'], 12000);
+    // Module page must receive the global token budget.
+    assert.equal(capturedMaxTokens['module'], 4000);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki in LLM mode preserves human notes on Architecture.md synthesis', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  const config = { compiler: { mode: 'llm' } };
+
+  // Compile in deterministic mode first to create a generated Architecture.md.
+  await compileWiki({ scanDir, planFile, wikiDir });
+  const firstPage = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+
+  // Simulate a human adding notes to the architecture page.
+  const humanNotes = '\n## Custom architecture notes\n\nThis was written by a human.\n';
+  const pageWithNotes = firstPage + `<!-- HUMAN_NOTES_START -->${humanNotes}<!-- HUMAN_NOTES_END -->\n`;
+  await fs.writeFile(path.join(wikiDir, 'Architecture.md'), pageWithNotes, 'utf8');
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir, config, _provider: new MockLLMProvider() });
+
+    const afterLLM = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+    // Human notes must be preserved.
+    assert.equal(extractHumanNotes(afterLLM), humanNotes);
+    // Page state must be "mixed" because human notes are non-empty.
+    assert.match(afterLLM, /page_state: "mixed"/);
+    // LLM content must be present.
+    assert.match(afterLLM, /Generated by the mock LLM provider/);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
