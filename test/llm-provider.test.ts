@@ -463,7 +463,7 @@ test('OpenAICompatibleProvider includes sanitized provider error details for HTT
     },
   }), { status: 400, headers: { 'content-type': 'application/json' } })) as typeof fetch);
 
-  const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123', model: 'gpt-5.5' });
+  const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123', model: 'test-model' });
   await assert.rejects(
     provider.complete(makeRequest({ temperature: 0 })),
     (err: unknown) => {
