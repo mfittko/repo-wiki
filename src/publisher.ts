@@ -484,10 +484,14 @@ function normalizeWikiHref(href: string): string {
   // Split off query string and fragment before applying extension logic
   const hashIndex = href.indexOf('#');
   const queryIndex = href.indexOf('?');
-  const separatorIndex =
-    queryIndex === -1 ? hashIndex
-    : hashIndex === -1 ? queryIndex
-    : Math.min(queryIndex, hashIndex);
+  let separatorIndex: number;
+  if (queryIndex === -1) {
+    separatorIndex = hashIndex;
+  } else if (hashIndex === -1) {
+    separatorIndex = queryIndex;
+  } else {
+    separatorIndex = Math.min(queryIndex, hashIndex);
+  }
 
   const pathPart = separatorIndex === -1 ? href : href.slice(0, separatorIndex);
   const suffix = separatorIndex === -1 ? '' : href.slice(separatorIndex);

@@ -1103,8 +1103,8 @@ test('rewriteInternalWikiLinks normalizes bare page names, strips leading ./, an
 
 test('rewriteInternalWikiLinks rejects unsafe URI schemes and preserves query strings', () => {
   // Unsafe scheme rejection — URLs without inner parens so the regex captures them cleanly
-  assert.equal(rewriteInternalWikiLinks('[XSS](javascript:void)'), '[XSS](#)');
-  assert.equal(rewriteInternalWikiLinks('[XSS](JAVASCRIPT:void)'), '[XSS](#)');
+  assert.equal(rewriteInternalWikiLinks('[XSS-lower](javascript:void)'), '[XSS-lower](#)');
+  assert.equal(rewriteInternalWikiLinks('[XSS-upper](JAVASCRIPT:void)'), '[XSS-upper](#)');
   assert.equal(rewriteInternalWikiLinks('[Data](data:text/html,evil)'), '[Data](#)');
   assert.equal(rewriteInternalWikiLinks('[VBS](vbscript:msgbox)'), '[VBS](#)');
   assert.equal(rewriteInternalWikiLinks('[Blob](blob:https://example.com/id)'), '[Blob](#)');
