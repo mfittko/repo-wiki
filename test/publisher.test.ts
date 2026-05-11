@@ -777,6 +777,8 @@ test('publishWiki generates _includes/wiki_nav.html from _Sidebar.md for github-
       '## Contents',
       '- [Home](Home)',
       '- [Index](Index)',
+      '- [External](HTTPS://example.com/docs)',
+      '- [Mail](MAILTO:test@example.com)',
       '## Foundation',
       '- [Architecture](Architecture)',
       '- [Build, Test & Run](Build-Test-and-Run)',
@@ -806,6 +808,8 @@ test('publishWiki generates _includes/wiki_nav.html from _Sidebar.md for github-
     assert.ok(navHtml.includes('href="{{ _base }}Index.md"'), 'Index link should use {{ _base }} prefix');
     assert.ok(navHtml.includes('href="{{ _base }}Architecture.md"'), 'Architecture link should use {{ _base }} prefix');
     assert.ok(navHtml.includes('href="{{ _base }}Build-Test-and-Run.md"'), 'Build link should use {{ _base }} prefix');
+    assert.ok(navHtml.includes('href="HTTPS://example.com/docs"'), 'uppercase HTTPS link should not use {{ _base }} prefix');
+    assert.ok(navHtml.includes('href="MAILTO:test@example.com"'), 'uppercase MAILTO link should not use {{ _base }} prefix');
     // Link text is HTML-escaped
     assert.match(navHtml, />Build, Test &amp; Run<\/a>/);
   } finally {
@@ -1153,13 +1157,17 @@ test('rewriteInternalWikiLinks normalizes bare page names, strips leading ./, an
   assert.equal(rewriteInternalWikiLinks('[Index](Index.md#section)'), '[Index](Index.md#section)');
   assert.equal(rewriteInternalWikiLinks('[Index](Index#section)'), '[Index](Index.md#section)');
   assert.equal(rewriteInternalWikiLinks('[GitHub](https://github.com)'), '[GitHub](https://github.com)');
+  assert.equal(rewriteInternalWikiLinks('[GitHub](HTTPS://github.com)'), '[GitHub](HTTPS://github.com)');
   assert.equal(rewriteInternalWikiLinks('[Mail](mailto:test@example.com)'), '[Mail](mailto:test@example.com)');
+  assert.equal(rewriteInternalWikiLinks('[Mail](MAILTO:test@example.com)'), '[Mail](MAILTO:test@example.com)');
   assert.equal(rewriteInternalWikiLinks('[FTP](ftp://example.com)'), '[FTP](ftp://example.com)');
+  assert.equal(rewriteInternalWikiLinks('[FTP](FTP://example.com)'), '[FTP](FTP://example.com)');
   assert.equal(rewriteInternalWikiLinks('[Proto](//example.com)'), '[Proto](//example.com)');
   assert.equal(rewriteInternalWikiLinks('[Top](#top)'), '[Top](#top)');
   assert.equal(rewriteInternalWikiLinks('![Logo](logo.png)'), '![Logo](logo.png)');
   assert.equal(rewriteInternalWikiLinks('![Img](photo.jpg)'), '![Img](photo.jpg)');
   assert.equal(rewriteInternalWikiLinks('![Diagram](diagram.svg)'), '![Diagram](diagram.svg)');
+  assert.equal(rewriteInternalWikiLinks('![Diagram](Architecture)'), '![Diagram](Architecture)');
   assert.equal(rewriteInternalWikiLinks('[PDF](guide.pdf)'), '[PDF](guide.pdf)');
   assert.equal(rewriteInternalWikiLinks('[JSON](data.json)'), '[JSON](data.json)');
   assert.equal(rewriteInternalWikiLinks('[YAML](config.yml)'), '[YAML](config.yml)');

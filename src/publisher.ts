@@ -494,9 +494,16 @@ async function ensurePagesNavInclude(siteRootDir: string, publishDir: string) {
  * Quantifiers are bounded to prevent polynomial backtracking on adversarial input.
  */
 export function rewriteInternalWikiLinks(content: string): string {
-  return content.replace(/\[([^\]\n]{0,2048})\]\(([^)\n]{1,2048})\)/g, (_match, text, href) => {
+  return content.replace(/\[([^\]\n]{0,2048})\]\(([^)\n]{1,2048})\)/g, (match, text, href, offset) => {
+    if (offset > 0 && content[offset - 1] === '!') {
+      return match;
+    }
     return `[${text}](${normalizeWikiHref(href)})`;
   });
+}
+
+function isExternalOrAnchorHref(href: string): boolean {
+  return /^(?:https?:|mailto:|ftp:|\/\/|#)/i.test(href);
 }
 
 function normalizeWikiHref(href: string): string {
@@ -506,7 +513,7 @@ function normalizeWikiHref(href: string): string {
   }
 
   // Leave external links, mailto, anchor-only, and protocol-relative links unchanged
-  if (/^(?:https?:|mailto:|ftp:|\/\/|#)/.test(href)) {
+  if (isExternalOrAnchorHref(href)) {
     return href;
   }
 
@@ -574,7 +581,7 @@ function parseSidebarToNavHtml(content: string): string {
       }
       const text = escapeHtml(linkItemMatch[1]);
       const rawHref = normalizeWikiHref(linkItemMatch[2]);
-      const isInternal = !/^(?:https?:|mailto:|ftp:|\/\/|#)/.test(rawHref);
+      const isInternal = !isExternalOrAnchorHref(rawHref);
       const escapedHref = escapeHtml(rawHref);
       // Prefix internal links with {{ _base }} so they remain depth-relative.
       // Jekyll evaluates the include in the layout's Liquid scope, so _base is available.
