@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f47907b8f64c2674438a61f152c6d5a09a19c523"
-compiled_at: "2026-05-11T08:03:18.692Z"
+source_commit: "3d197a3e565e4f3a6a053214eb093873fb70b90a"
+compiled_at: "2026-05-11T09:50:07.036Z"
 kind: "index"
 confidence: "medium"
 page_state: "generated"
@@ -81,9 +81,9 @@ page_state: "generated"
     "test": 18
   },
   "runtime_hints": {
-    "environment-variable": 13,
+    "environment-variable": 14,
     "background-work": 7,
-    "http-route": 4,
+    "http-route": 5,
     "data-model": 2,
     "orm-model": 2
   },

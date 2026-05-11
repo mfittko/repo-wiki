@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f47907b8f64c2674438a61f152c6d5a09a19c523"
+source_commit: "3d197a3e565e4f3a6a053214eb093873fb70b90a"
 page_state: "generated"
 source_paths: ["src/publisher.ts"]
 compiled_at: "2024-06-05T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to publishing content to GitHub Wikis. It includes configuration for different publishing targets, policies for frontmatter handling, and utilities to rewrite internal wiki links. The main entry point is a function to publish wiki content, supporting environment-variable-driven configuration for remote repositories and Git user information. The module is implemented in TypeScript and integrates with Git operations and file system utilities, as well as external libraries such as Mermaid for diagram rendering.
+The `publisher.ts` module provides functionality related to publishing content to GitHub Wikis. It includes configuration and source code to manage publishing targets, policies for frontmatter in wiki pages, and utilities to rewrite internal wiki links. The module supports environment-variable-driven configuration for Git remotes and user identity, facilitating automated or scripted publishing workflows.
 
 ## Source file list
 
@@ -21,36 +21,36 @@ This module provides functionality related to publishing content to GitHub Wikis
 
 ## Key symbols and entry points
 
-- **defaultFrontmatterPolicyForTarget**: Defines default policies for handling frontmatter metadata depending on the publishing target.
+- **defaultFrontmatterPolicyForTarget**: Defines default policies for frontmatter metadata depending on the publishing target.
 - **PUBLISH_TARGETS**: A collection or enumeration of supported publishing targets.
-- **PublishTarget**: Type or interface representing a publishing target configuration.
-- **publishWiki**: The primary function to publish content to a GitHub Wiki, accepting options to customize behavior.
-- **PublishWikiOptions**: Interface/type defining options for the `publishWiki` function.
-- **rewriteInternalWikiLinks**: Utility function to adjust internal wiki links within content to match the target wiki structure.
+- **PublishTarget**: Type or interface representing a publishing target.
+- **publishWiki**: Main function to publish content to a GitHub Wiki repository.
+- **PublishWikiOptions**: Options interface/type for configuring the `publishWiki` function.
+- **rewriteInternalWikiLinks**: Utility function to adjust internal wiki links within content, ensuring they are correct for the target wiki environment.
 
 ## Dependencies and imports
 
 - Local modules:
-  - `./frontmatter.js` — likely for frontmatter parsing and policy management.
-  - `./utils/fs.js` — file system utilities.
+  - `./frontmatter.js` — likely handles frontmatter metadata processing.
+  - `./utils/fs.js` — filesystem utilities.
   - `./utils/git.js` — Git-related utilities.
-- External libraries:
-  - `https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs` — Mermaid library for rendering diagrams.
+- External modules:
+  - `https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs` — Mermaid diagram rendering library.
 - Node.js built-in modules:
-  - `fs` — file system operations.
-  - `os` — operating system utilities.
-  - `path` — path manipulation utilities.
+  - `fs`
+  - `os`
+  - `path`
 
 ## Related tests
 
-No documentation or source cards indicate the presence of related tests for this module.
+No explicit test files or test-related documentation cards are listed for this module.
 
 ## Known gaps or open questions
 
-- No explicit test coverage or test files are documented for this module.
-- The exact behavior and configuration details of `defaultFrontmatterPolicyForTarget` and `PUBLISH_TARGETS` are not described in detail.
-- The environment variables `GITHUB_WIKI_REMOTE`, `LLMWIKI_GIT_USER_EMAIL`, `LLMWIKI_GIT_USER_NAME`, and `LLMWIKI_PUBLISH_REMOTE` are referenced as runtime hints but their usage and defaults are not fully documented here.
-- No usage examples or higher-level documentation are currently available.
+- No documentation cards or detailed usage examples are available.
+- The exact behavior and configuration details of `defaultFrontmatterPolicyForTarget` and `PUBLISH_TARGETS` are not described.
+- The integration and usage of the Mermaid library within the publishing workflow is not detailed.
+- Environment variables such as `GITHUB_WIKI_REMOTE`, `LLMWIKI_GIT_USER_EMAIL`, `LLMWIKI_GIT_USER_NAME`, and `LLMWIKI_PUBLISH_REMOTE` are referenced but their expected values and effects are not documented here.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

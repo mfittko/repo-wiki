@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f47907b8f64c2674438a61f152c6d5a09a19c523"
+source_commit: "3d197a3e565e4f3a6a053214eb093873fb70b90a"
 page_state: "generated"
 source_paths: ["src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -18,60 +18,67 @@ The `utils` module provides a collection of utility functions and types implemen
 ## Source file list
 
 - `src/utils/args.ts`  
+  Implements argument parsing utilities including the `parseArgs` function and the `ParsedArgs` type.
+
 - `src/utils/dotenv.ts`  
+  Provides functionality to load and parse `.env` files with symbols such as `loadDotEnv`, `parseDotEnv`, and the `DotEnvLoadResult` type.
+
 - `src/utils/fs.ts`  
+  Contains filesystem-related utilities including directory creation, file existence checks, JSON reading/writing, text writing, and file walking. Key symbols include `ensureDir`, `fileExists`, `readJson`, `writeJson`, `writeText`, `walkFiles`, and the constant `DEFAULT_WALK_EXCLUDES`.
+
 - `src/utils/git.ts`  
+  Offers Git-related utilities to run Git commands and retrieve information such as the current commit, remote URL, and status. Exposed symbols include `runGit`, `getGitCommit`, `getGitRemote`, and `getGitStatus`.
 
 ## Key symbols and entry points
 
-### `src/utils/args.ts`
-- `parseArgs` — Function to parse command-line arguments.
-- `ParsedArgs` — Type representing the structure of parsed arguments.
+- **Argument Parsing**  
+  - `parseArgs`  
+  - `ParsedArgs`
 
-### `src/utils/dotenv.ts`
-- `loadDotEnv` — Function to load environment variables from `.env` files.
-- `parseDotEnv` — Function to parse `.env` file content.
-- `DotEnvLoadResult` — Type representing the result of loading `.env` files.
+- **Environment Variable Handling**  
+  - `loadDotEnv`  
+  - `parseDotEnv`  
+  - `DotEnvLoadResult`
 
-### `src/utils/fs.ts`
-- `DEFAULT_WALK_EXCLUDES` — Default patterns to exclude when walking directories.
-- `ensureDir` — Function to ensure a directory exists, creating it if necessary.
-- `fileExists` — Function to check if a file exists.
-- `readJson` — Function to read and parse a JSON file.
-- `walkFiles` — Function to recursively walk files in a directory.
-- `writeJson` — Function to write JSON data to a file.
-- `writeText` — Function to write text data to a file.
+- **Filesystem Utilities**  
+  - `DEFAULT_WALK_EXCLUDES`  
+  - `ensureDir`  
+  - `fileExists`  
+  - `readJson`  
+  - `writeJson`  
+  - `writeText`  
+  - `walkFiles`
 
-### `src/utils/git.ts`
-- `runGit` — Function to run arbitrary Git commands.
-- `getGitCommit` — Function to retrieve the current Git commit hash.
-- `getGitRemote` — Function to get the Git remote URL.
-- `getGitStatus` — Function to get the current Git status.
+- **Git Utilities**  
+  - `runGit`  
+  - `getGitCommit`  
+  - `getGitRemote`  
+  - `getGitStatus`
 
 ## Dependencies and imports
 
-- `src/utils/dotenv.ts` imports:
-  - `./fs.js` (local filesystem utilities)
+- `src/utils/dotenv.ts` imports:  
+  - `./fs.js` (local filesystem utilities)  
   - Node.js built-in modules: `fs`, `path`
 
-- `src/utils/fs.ts` imports:
+- `src/utils/fs.ts` imports:  
   - Node.js built-in modules: `fs`, `path`
 
-- `src/utils/git.ts` imports:
+- `src/utils/git.ts` imports:  
   - Node.js built-in modules: `child_process`, `util`
 
-- `src/utils/args.ts` has no imports.
+- `src/utils/args.ts` has no imports
 
 ## Related tests
 
-No test files or test-related documentation cards are present in the current source data for this module.
+No test files or test-related documentation cards were identified for this module in the current source data.
 
 ## Known gaps or open questions
 
 - There is no explicit documentation or test coverage information available for this module.
 - The exact repository remote URL and commit SHA are not provided.
-- The usage context or higher-level integration of these utilities is not described.
-- No information on error handling strategies or performance considerations is available.
+- The module's integration or usage context within the larger project is not described.
+- No information on error handling strategies or performance considerations is present.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

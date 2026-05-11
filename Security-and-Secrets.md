@@ -1,10 +1,10 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f47907b8f64c2674438a61f152c6d5a09a19c523"
-compiled_at: "2026-05-11T08:03:18.709Z"
+source_commit: "3d197a3e565e4f3a6a053214eb093873fb70b90a"
+compiled_at: "2026-05-11T09:50:07.051Z"
 kind: "security"
 claim_status: "grounded"
-source_paths: [".env.example",".github/workflows/changelog-on-merge.yml",".github/workflows/wiki.yml","src/compiler.ts","src/llm-provider.ts","src/publisher.ts","test/compiler.test.ts","test/docs-linter.test.ts","test/dotenv.test.ts","test/extractors-utils.test.ts","test/publisher.test.ts","test/scanner.test.ts","test/update-changelog.test.ts"]
+source_paths: [".env.example",".github/workflows/changelog-on-merge.yml",".github/workflows/wiki.yml","src/compiler.ts","src/llm-provider.ts","src/publisher.ts","test/compiler.test.ts","test/docs-linter.test.ts","test/dotenv.test.ts","test/extractors-utils.test.ts","test/llm-provider.test.ts","test/publisher.test.ts","test/scanner.test.ts","test/update-changelog.test.ts"]
 confidence: "medium"
 page_state: "generated"
 ---
@@ -12,19 +12,20 @@ page_state: "generated"
 
 ## Security-sensitive source areas
 
-- [.env.example](https://github.com/mfittko/repo-wiki/blob/f47907b8f64c2674438a61f152c6d5a09a19c523/.env.example) - configuration, source
-- [.github/workflows/changelog-on-merge.yml](https://github.com/mfittko/repo-wiki/blob/f47907b8f64c2674438a61f152c6d5a09a19c523/.github/workflows/changelog-on-merge.yml) - ci, configuration
-- [.github/workflows/wiki.yml](https://github.com/mfittko/repo-wiki/blob/f47907b8f64c2674438a61f152c6d5a09a19c523/.github/workflows/wiki.yml) - ci, configuration
-- [src/compiler.ts](https://github.com/mfittko/repo-wiki/blob/f47907b8f64c2674438a61f152c6d5a09a19c523/src/compiler.ts) - configuration, source
-- [src/llm-provider.ts](https://github.com/mfittko/repo-wiki/blob/f47907b8f64c2674438a61f152c6d5a09a19c523/src/llm-provider.ts) - configuration, source
-- [src/publisher.ts](https://github.com/mfittko/repo-wiki/blob/f47907b8f64c2674438a61f152c6d5a09a19c523/src/publisher.ts) - configuration, source
-- [test/compiler.test.ts](https://github.com/mfittko/repo-wiki/blob/f47907b8f64c2674438a61f152c6d5a09a19c523/test/compiler.test.ts) - configuration, test
-- [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/f47907b8f64c2674438a61f152c6d5a09a19c523/test/docs-linter.test.ts) - api-surface, configuration, test
-- [test/dotenv.test.ts](https://github.com/mfittko/repo-wiki/blob/f47907b8f64c2674438a61f152c6d5a09a19c523/test/dotenv.test.ts) - configuration, test
-- [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/f47907b8f64c2674438a61f152c6d5a09a19c523/test/extractors-utils.test.ts) - api-surface, configuration, data-model, orm-model, test
-- [test/publisher.test.ts](https://github.com/mfittko/repo-wiki/blob/f47907b8f64c2674438a61f152c6d5a09a19c523/test/publisher.test.ts) - configuration, test
-- [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/f47907b8f64c2674438a61f152c6d5a09a19c523/test/scanner.test.ts) - api-surface, configuration, data-model, orm-model, test
-- [test/update-changelog.test.ts](https://github.com/mfittko/repo-wiki/blob/f47907b8f64c2674438a61f152c6d5a09a19c523/test/update-changelog.test.ts) - configuration, test
+- [.env.example](https://github.com/mfittko/repo-wiki/blob/3d197a3e565e4f3a6a053214eb093873fb70b90a/.env.example) - configuration, source
+- [.github/workflows/changelog-on-merge.yml](https://github.com/mfittko/repo-wiki/blob/3d197a3e565e4f3a6a053214eb093873fb70b90a/.github/workflows/changelog-on-merge.yml) - ci, configuration
+- [.github/workflows/wiki.yml](https://github.com/mfittko/repo-wiki/blob/3d197a3e565e4f3a6a053214eb093873fb70b90a/.github/workflows/wiki.yml) - ci, configuration
+- [src/compiler.ts](https://github.com/mfittko/repo-wiki/blob/3d197a3e565e4f3a6a053214eb093873fb70b90a/src/compiler.ts) - api-surface, configuration, source
+- [src/llm-provider.ts](https://github.com/mfittko/repo-wiki/blob/3d197a3e565e4f3a6a053214eb093873fb70b90a/src/llm-provider.ts) - configuration, source
+- [src/publisher.ts](https://github.com/mfittko/repo-wiki/blob/3d197a3e565e4f3a6a053214eb093873fb70b90a/src/publisher.ts) - configuration, source
+- [test/compiler.test.ts](https://github.com/mfittko/repo-wiki/blob/3d197a3e565e4f3a6a053214eb093873fb70b90a/test/compiler.test.ts) - configuration, test
+- [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/3d197a3e565e4f3a6a053214eb093873fb70b90a/test/docs-linter.test.ts) - api-surface, configuration, test
+- [test/dotenv.test.ts](https://github.com/mfittko/repo-wiki/blob/3d197a3e565e4f3a6a053214eb093873fb70b90a/test/dotenv.test.ts) - configuration, test
+- [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/3d197a3e565e4f3a6a053214eb093873fb70b90a/test/extractors-utils.test.ts) - api-surface, configuration, data-model, orm-model, test
+- [test/llm-provider.test.ts](https://github.com/mfittko/repo-wiki/blob/3d197a3e565e4f3a6a053214eb093873fb70b90a/test/llm-provider.test.ts) - configuration, test
+- [test/publisher.test.ts](https://github.com/mfittko/repo-wiki/blob/3d197a3e565e4f3a6a053214eb093873fb70b90a/test/publisher.test.ts) - configuration, test
+- [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/3d197a3e565e4f3a6a053214eb093873fb70b90a/test/scanner.test.ts) - api-surface, configuration, data-model, orm-model, test
+- [test/update-changelog.test.ts](https://github.com/mfittko/repo-wiki/blob/3d197a3e565e4f3a6a053214eb093873fb70b90a/test/update-changelog.test.ts) - configuration, test
 
 ## Policy
 

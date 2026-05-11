@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f47907b8f64c2674438a61f152c6d5a09a19c523"
+source_commit: "3d197a3e565e4f3a6a053214eb093873fb70b90a"
 page_state: "generated"
 source_paths: ["src/frontmatter.ts"]
 compiled_at: "2024-06-05T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides utilities and types for handling frontmatter blocks within source files or documents. It includes functionality to extract, parse, apply policies to, and strip frontmatter sections. The module is designed to support structured metadata management embedded in text files, commonly used in markdown or similar formats.
+This module provides utilities and types for handling frontmatter in source files. It includes functionality to extract, parse, apply policies to, and strip frontmatter blocks. The module defines policies and types related to frontmatter processing, enabling controlled manipulation and validation of frontmatter content.
 
 ## Source file list
 
@@ -22,28 +22,27 @@ This module provides utilities and types for handling frontmatter blocks within 
 ## Key symbols and entry points
 
 - **applyFrontmatterPolicy**: Applies a specified frontmatter policy to a frontmatter block.
-- **extractFrontmatterBlock**: Extracts the frontmatter block from a given text input.
-- **FRONTMATTER_POLICIES**: A collection or enumeration of predefined frontmatter policies.
-- **FrontmatterBlock**: Type representing a frontmatter block structure.
-- **FrontmatterPolicy**: Type defining the shape or interface of a frontmatter policy.
-- **isFrontmatterPolicy**: Type guard function to check if a value conforms to the FrontmatterPolicy type.
+- **extractFrontmatterBlock**: Extracts the frontmatter block from a source text.
+- **FRONTMATTER_POLICIES**: A collection of predefined frontmatter policies.
+- **FrontmatterBlock**: Type representing a frontmatter block.
+- **FrontmatterPolicy**: Type defining the structure of a frontmatter policy.
+- **isFrontmatterPolicy**: Type guard to check if an object is a frontmatter policy.
 - **parseFrontmatterPolicy**: Parses a frontmatter policy from a given input.
-- **stripFrontmatter**: Removes the frontmatter block from a text input.
+- **stripFrontmatter**: Removes the frontmatter block from a source text.
 
 ## Dependencies and imports
 
-- Imports from `./secret-patterns.js` (likely providing regex patterns or utilities related to secret or sensitive data handling within frontmatter).
+- Imports from `./secret-patterns.js` for internal pattern matching or secret handling related to frontmatter processing.
 
 ## Related tests
 
-No explicit test files or test documentation cards are listed for this module.
+No explicit test files or test-related documentation are listed for this module.
 
 ## Known gaps or open questions
 
-- No documentation cards or explicit usage examples are provided.
+- No documentation cards or test references are available, indicating potential gaps in usage examples or test coverage.
+- The source repository and commit information are unknown, limiting traceability.
 - The exact nature and structure of `FRONTMATTER_POLICIES` and how policies are defined or applied are not detailed here.
-- The relationship between frontmatter handling and secret patterns imported from `./secret-patterns.js` is not elaborated.
-- Test coverage and integration with other modules remain unspecified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
