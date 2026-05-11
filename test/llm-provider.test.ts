@@ -378,7 +378,7 @@ test('OpenAICompatibleProvider posts chat-completions request', async (t) => {
   assert.equal(response.completionTokens, 2);
 });
 
-test('OpenAICompatibleProvider uses max_completion_tokens for GPT-5 reasoning-family models', async (t) => {
+test('OpenAICompatibleProvider uses reasoning-model chat compatibility params for GPT-5 models', async (t) => {
   let captured: { body?: any } = {};
   t.mock.method(globalThis, 'fetch', (async (_url: string, init: any) => {
     captured = {
@@ -394,7 +394,7 @@ test('OpenAICompatibleProvider uses max_completion_tokens for GPT-5 reasoning-fa
   await provider.complete(makeRequest({ maxTokens: 123, temperature: 0 }));
   assert.equal(captured.body.max_tokens, undefined);
   assert.equal(captured.body.max_completion_tokens, 123);
-  assert.equal(captured.body.temperature, 0);
+  assert.equal(captured.body.temperature, undefined);
 });
 
 async function assertProviderRejectsCode(promise: Promise<unknown>, code: string, retryable?: boolean) {
@@ -456,23 +456,23 @@ test('OpenAICompatibleProvider retries retryable HTTP failures', async (t) => {
 test('OpenAICompatibleProvider includes sanitized provider error details for HTTP failures', async (t) => {
   t.mock.method(globalThis, 'fetch', (async () => new Response(JSON.stringify({
     error: {
-      message: "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.",
+      message: "Unsupported value: 'temperature' does not support 0 with this model. Only the default (1) value is supported.",
       type: 'invalid_request_error',
-      code: 'unsupported_parameter',
-      param: 'max_tokens',
+      code: 'unsupported_value',
+      param: 'temperature',
     },
   }), { status: 400, headers: { 'content-type': 'application/json' } })) as typeof fetch);
 
   const provider = createProvider({ provider: 'openai-compatible', apiKey: 'key-123', model: 'gpt-5.5' });
   await assert.rejects(
-    provider.complete(makeRequest({ maxTokens: 123 })),
+    provider.complete(makeRequest({ temperature: 0 })),
     (err: unknown) => {
       assert.ok(err instanceof LLMProviderError);
       assert.equal(err.code, 'HTTP_400');
-      assert.match(err.message, /Unsupported parameter: 'max_tokens'/);
+      assert.match(err.message, /Unsupported value: 'temperature'/);
       assert.match(err.message, /type=invalid_request_error/);
-      assert.match(err.message, /code=unsupported_parameter/);
-      assert.match(err.message, /param=max_tokens/);
+      assert.match(err.message, /code=unsupported_value/);
+      assert.match(err.message, /param=temperature/);
       return true;
     },
   );

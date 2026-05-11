@@ -165,7 +165,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
         { role: 'user', content: request.userPrompt }
       ],
       ...buildOpenAICompatibleTokenBudget(this.model, request.maxTokens),
-      ...(request.temperature !== undefined ? { temperature: request.temperature } : {})
+      ...buildOpenAICompatibleTemperatureConfig(this.model, request.temperature)
     };
 
     const payload = assertOpenAIChatResponse(await this.postWithRetries(body), this.name);
@@ -253,12 +253,20 @@ function buildOpenAICompatibleTokenBudget(model: string, maxTokens: number | und
     return {};
   }
 
-  return usesMaxCompletionTokens(model)
+  return usesReasoningModelChatCompat(model)
     ? { max_completion_tokens: maxTokens }
     : { max_tokens: maxTokens };
 }
 
-function usesMaxCompletionTokens(model: string): boolean {
+function buildOpenAICompatibleTemperatureConfig(model: string, temperature: number | undefined): Pick<OpenAIChatRequest, 'temperature'> {
+  if (temperature === undefined || usesReasoningModelChatCompat(model)) {
+    return {};
+  }
+
+  return { temperature };
+}
+
+function usesReasoningModelChatCompat(model: string): boolean {
   const normalized = model.trim().toLowerCase();
   return /^(gpt-5|o[1-9])(?:$|[-.])/.test(normalized);
 }
