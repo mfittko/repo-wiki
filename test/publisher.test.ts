@@ -908,6 +908,50 @@ test('publishWiki preserves existing _includes/wiki_nav.html without overwriting
   }
 });
 
+test('publishWiki preserves markerless generated-like custom nav include', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const remoteDir = path.join(tempDir, 'remote.git');
+  const seedDir = path.join(tempDir, 'seed');
+  const checkoutDir = path.join(tempDir, 'checkout');
+  const customNav = [
+    '<h4 class="nav-section">Custom</h4>',
+    '<ul>',
+    '<li><a href="Custom.md">Custom</a></li>',
+    '<li><a href="https://example.com">External</a></li>',
+    '</ul>',
+    ''
+  ].join('\n');
+
+  try {
+    await fs.mkdir(wikiDir, { recursive: true });
+    await fs.writeFile(path.join(wikiDir, 'Home.md'), '# Home\n', 'utf8');
+    await fs.writeFile(path.join(wikiDir, '_Sidebar.md'), '## Nav\n- [Home](Home)\n- [Architecture](Architecture)\n', 'utf8');
+    await git(['init', '--bare', remoteDir]);
+    await git(['clone', remoteDir, seedDir]);
+    await git(['config', 'user.name', 'repo-wiki-test'], seedDir);
+    await git(['config', 'user.email', 'repo-wiki-test@example.com'], seedDir);
+    await fs.mkdir(path.join(seedDir, '_includes'), { recursive: true });
+    await fs.writeFile(path.join(seedDir, '_includes', 'wiki_nav.html'), customNav, 'utf8');
+    await git(['add', '.'], seedDir);
+    await git(['commit', '-m', 'Seed generated-like custom nav include'], seedDir);
+    await git(['push', 'origin', 'HEAD:gh-pages'], seedDir);
+
+    await publishWiki({
+      wikiDir,
+      remote: remoteDir,
+      target: 'github-pages',
+      branch: 'gh-pages',
+      message: 'Publish without overwriting generated-like custom nav'
+    });
+
+    await git(['clone', '--branch', 'gh-pages', remoteDir, checkoutDir]);
+    assert.equal(await fs.readFile(path.join(checkoutDir, '_includes', 'wiki_nav.html'), 'utf8'), customNav);
+  } finally {
+    await fs.rm(tempDir, { recursive: true, force: true });
+  }
+});
+
 test('publishWiki layout contains navigation sidebar, breadcrumbs, and page metadata elements', async () => {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-publisher-test-'));
   const wikiDir = path.join(tempDir, 'wiki');

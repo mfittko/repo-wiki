@@ -19,7 +19,7 @@ const REPO_WIKI_GENERATED_MARKER = 'repo-wiki-generated: regenerated on each pub
 const REPO_WIKI_GENERATED_HTML_COMMENT = `<!-- ${REPO_WIKI_GENERATED_MARKER} -->`;
 const REPO_WIKI_GENERATED_YAML_COMMENT = `# ${REPO_WIKI_GENERATED_MARKER}`;
 
-type PagesSupportFileKind = 'config' | 'layout' | 'nav';
+type PagesSupportFileKind = 'config' | 'layout';
 
 /** Returns true if the file exists and was written by repo-wiki. */
 async function isRepoWikiGeneratedFile(filePath: string, kind?: PagesSupportFileKind): Promise<boolean> {
@@ -40,8 +40,6 @@ function isRepoWikiGeneratedContent(content: string, kind?: PagesSupportFileKind
       return isLegacyRepoWikiPagesConfig(content);
     case 'layout':
       return isLegacyRepoWikiPagesLayout(content);
-    case 'nav':
-      return isLegacyRepoWikiPagesNav(content);
     default:
       return false;
   }
@@ -58,23 +56,6 @@ function isLegacyRepoWikiPagesLayout(content: string): boolean {
     && content.includes('document.querySelectorAll(\'pre > code.language-mermaid\')')
     && (content.includes('<main>\n    {{ content }}\n  </main>')
       || content.includes('{% assign _rp = page.path %}') && content.includes('{% include wiki_nav.html %}'));
-}
-
-function isLegacyRepoWikiPagesNav(content: string): boolean {
-  if (!content.trim()) {
-    return false;
-  }
-  const lines = content.split('\n');
-  if (lines.at(-1) === '') {
-    lines.pop();
-  }
-  return lines.length > 0 && lines.every((line) => {
-    return /^<h4 class="nav-section">[^<>]*<\/h4>$/.test(line)
-      || line === '<ul>'
-      || line === '</ul>'
-      || /^<li><a href="(?:[^"<>]|&amp;|&lt;|&gt;|&quot;)*">[^<>]*<\/a><\/li>$/.test(line)
-      || /^<li>[^<>]*<\/li>$/.test(line);
-  });
 }
 
 export interface PublishWikiOptions {
@@ -479,9 +460,10 @@ async function ensurePagesNavInclude(siteRootDir: string, publishDir: string) {
   const includesDir = path.join(siteRootDir, '_includes');
   const navIncludePath = path.join(includesDir, 'wiki_nav.html');
 
-  // Only preserve the existing file if it is user-customized (no marker or legacy generated signature).
-  // Generated nav files are always refreshed so navigation stays current as the wiki's _Sidebar.md evolves.
-  if (await fileExists(navIncludePath) && !await isRepoWikiGeneratedFile(navIncludePath, 'nav')) {
+  // Preserve every markerless existing nav include as user-customized. Even markup
+  // resembling an older generated nav may have been edited by hand, so only files
+  // with the current repo-wiki marker are safe to refresh automatically.
+  if (await fileExists(navIncludePath) && !await isRepoWikiGeneratedFile(navIncludePath)) {
     return;
   }
 
