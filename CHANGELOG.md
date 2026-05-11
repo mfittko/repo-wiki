@@ -55,6 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix Ruby quoted heredocs and inline end counting.
 - Add explicit GitHub Pages publish target with destination-specific frontmatter defaults and remote-error redaction hardening.
 - Apply plan review findings: 6 new plan docs, P5 drift fix, debt-report linter fixes.
+- use html links in github-pages navigation.
 
 ### Security
 - Fix Ruby extractor heredoc and end-token edge cases.
