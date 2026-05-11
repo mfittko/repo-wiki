@@ -380,7 +380,7 @@ function buildMockContent(request: LLMRequest): string {
 
 export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
 
-/** Per-archetype LLM overrides. */
+/** Per-archetype LLM overrides for architecture synthesis requests. */
 export interface ArchitecturePageBudget {
   /** Model override for architecture synthesis. */
   model?: string;
@@ -450,7 +450,7 @@ export interface LLMProviderConfig {
   mode?: string;
   /** Nested LLM settings used when callers pass the whole compiler config. */
   llm?: LLMProviderConfig;
-  /** Per-archetype LLM overrides (model and output budget). */
+  /** Per-archetype LLM overrides (model, output budget, timeout, reasoning effort). */
   page_budgets?: PageBudgets;
 }
 
@@ -549,7 +549,10 @@ export function resolveProviderConfig(
     temperature: parseNumber(optionalEnv(env, 'LLMWIKI_LLM_TEMPERATURE'), llmConfig.temperature ?? LLM_DEFAULTS.temperature, 'temperature'),
     maxOutputTokens: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_MAX_OUTPUT_TOKENS'), llmConfig.maxOutputTokens ?? llmConfig.max_output_tokens ?? LLM_DEFAULTS.maxOutputTokens, 'maxOutputTokens'),
     timeoutMs: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_TIMEOUT_MS'), llmConfig.timeoutMs ?? llmConfig.timeout_ms ?? LLM_DEFAULTS.timeoutMs, 'timeoutMs'),
-    reasoningEffort: parseReasoningEffort(optionalEnv(env, 'LLMWIKI_LLM_REASONING_EFFORT') ?? llmConfig.reasoningEffort ?? llmConfig.reasoning_effort),
+    reasoningEffort: parseReasoningEffort(
+      optionalEnv(env, 'LLMWIKI_LLM_REASONING_EFFORT') ?? llmConfig.reasoningEffort ?? llmConfig.reasoning_effort,
+      'reasoningEffort',
+    ),
     retries: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_RETRIES'), llmConfig.retries ?? LLM_DEFAULTS.retries, 'retries'),
     validationRetries: parseNonNegativeInteger(optionalEnv(env, 'LLMWIKI_LLM_VALIDATION_RETRIES'), llmConfig.validationRetries ?? llmConfig.validation_retries ?? LLM_DEFAULTS.validationRetries, 'validationRetries')
   };
@@ -614,8 +617,9 @@ function providerForMode(mode?: string): string | undefined {
 }
 
 /**
- * Resolved per-architecture overrides for model and output token budget.
- * These supplement (not replace) the global provider config.
+ * Resolved per-architecture overrides for model, output token budget, timeout,
+ * and reasoning effort. These supplement (not replace) the global provider
+ * config.
  */
 export interface ResolvedArchitectureOverrides {
   /** Architecture-specific model override, or undefined if not set. */
@@ -629,7 +633,8 @@ export interface ResolvedArchitectureOverrides {
 }
 
 /**
- * Resolve architecture-specific model and output-token overrides.
+ * Resolve architecture-specific model, output-token, timeout, and
+ * reasoning-effort overrides.
  *
  * Precedence (highest to lowest):
  * 1. Architecture-specific env vars (`LLMWIKI_LLM_ARCHITECTURE_*`)
@@ -664,7 +669,10 @@ export function resolveArchitectureOverrides(
   const configuredTimeoutMs = pageBudgets.timeout_ms !== undefined
     ? parseOptionalNonNegativeInteger(pageBudgets.timeout_ms, 'architecture timeoutMs')
     : undefined;
-  const configuredReasoningEffort = parseReasoningEffort(pageBudgets.reasoning_effort);
+  const configuredReasoningEffort = parseReasoningEffort(
+    pageBudgets.reasoning_effort,
+    'architecture reasoningEffort',
+  );
   const maxOutputTokens = envMaxOutputTokens !== undefined
     ? parseNonNegativeInteger(envMaxOutputTokens, 0, 'architecture maxOutputTokens')
     : (globalEnvMaxOutputTokens !== undefined ? undefined : configuredMaxOutputTokens);
@@ -672,13 +680,13 @@ export function resolveArchitectureOverrides(
     ? parseNonNegativeInteger(envTimeoutMs, 0, 'architecture timeoutMs')
     : (globalEnvTimeoutMs !== undefined ? undefined : configuredTimeoutMs);
   const reasoningEffort = envReasoningEffort !== undefined
-    ? parseReasoningEffort(envReasoningEffort)
+    ? parseReasoningEffort(envReasoningEffort, 'architecture reasoningEffort')
     : (globalEnvReasoningEffort !== undefined ? undefined : configuredReasoningEffort);
 
   return { model, maxOutputTokens, timeoutMs, reasoningEffort };
 }
 
-function parseReasoningEffort(value: unknown): ReasoningEffort | undefined {
+function parseReasoningEffort(value: unknown, field = 'reasoningEffort'): ReasoningEffort | undefined {
   if (value === undefined || value === null || value === '') {
     return undefined;
   }
@@ -689,7 +697,11 @@ function parseReasoningEffort(value: unknown): ReasoningEffort | undefined {
   if (['none', 'minimal', 'low', 'medium', 'high', 'xhigh'].includes(normalized)) {
     return normalized as ReasoningEffort;
   }
-  throw new LLMProviderError('Invalid reasoning effort LLM config.', 'config', 'INVALID_CONFIG');
+  throw new LLMProviderError(
+    `Invalid reasoning effort LLM config for ${field}: ${JSON.stringify(value)}.`,
+    'config',
+    'INVALID_CONFIG',
+  );
 }
 
 function parseNumber(value: string | undefined, fallback: number, field: string): number {

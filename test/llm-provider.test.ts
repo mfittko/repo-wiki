@@ -323,13 +323,15 @@ test('resolveProviderConfig rejects invalid numeric environment config', () => {
   );
 });
 
-test('resolveProviderConfig rejects invalid reasoning effort config', () => {
+test('resolveProviderConfig rejects invalid reasoning effort config with field context', () => {
   assert.throws(
     () => resolveProviderConfig({}, { LLMWIKI_LLM_REASONING_EFFORT: 'turbo' }),
     (err: unknown) => {
       assert.ok(err instanceof LLMProviderError);
       assert.equal(err.code, 'INVALID_CONFIG');
       assert.equal(err.provider, 'config');
+      assert.match(err.message, /reasoningEffort/);
+      assert.match(err.message, /"turbo"/);
       return true;
     },
   );
@@ -964,18 +966,25 @@ test('resolveArchitectureOverrides rejects invalid max output tokens env var', (
   );
 });
 
-test('resolveArchitectureOverrides rejects invalid timeout and reasoning effort env vars', () => {
-  for (const env of [
-    { LLMWIKI_LLM_ARCHITECTURE_TIMEOUT_MS: 'not-a-number' },
-    { LLMWIKI_LLM_ARCHITECTURE_REASONING_EFFORT: 'turbo' },
-  ]) {
-    assert.throws(
-      () => resolveArchitectureOverrides({}, env),
-      (err: unknown) => {
-        assert.ok(err instanceof LLMProviderError);
-        assert.equal(err.code, 'INVALID_CONFIG');
-        return true;
-      }
-    );
-  }
+test('resolveArchitectureOverrides rejects invalid timeout and reasoning effort env vars with field context', () => {
+  assert.throws(
+    () => resolveArchitectureOverrides({}, { LLMWIKI_LLM_ARCHITECTURE_TIMEOUT_MS: 'not-a-number' }),
+    (err: unknown) => {
+      assert.ok(err instanceof LLMProviderError);
+      assert.equal(err.code, 'INVALID_CONFIG');
+      assert.match(err.message, /architecture timeoutMs/);
+      return true;
+    }
+  );
+
+  assert.throws(
+    () => resolveArchitectureOverrides({}, { LLMWIKI_LLM_ARCHITECTURE_REASONING_EFFORT: 'turbo' }),
+    (err: unknown) => {
+      assert.ok(err instanceof LLMProviderError);
+      assert.equal(err.code, 'INVALID_CONFIG');
+      assert.match(err.message, /architecture reasoningEffort/);
+      assert.match(err.message, /"turbo"/);
+      return true;
+    }
+  );
 });
