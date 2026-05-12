@@ -20,10 +20,11 @@ async function captureCliResult(argv: string[], cwd: string) {
     const result = await execFileAsync(process.execPath, [cliPath, ...argv], { cwd });
     return { stdout: result.stdout.trim(), stderr: result.stderr.trim(), exitCode: 0 };
   } catch (error: any) {
+    const exitCode = typeof error?.code === 'number' ? error.code : 1;
     return {
       stdout: String(error.stdout || '').trim(),
       stderr: String(error.stderr || '').trim(),
-      exitCode: Number(error.code || 1)
+      exitCode
     };
   }
 }
