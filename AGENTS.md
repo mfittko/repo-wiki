@@ -15,7 +15,7 @@ Source code is authoritative. Generated wiki pages are derived artifacts.
 For repository orientation, use the generated local wiki as a navigation aid before diving into source, but keep the read surface minimal:
 
 1. Start with the single most relevant of `.llmwiki/wiki/Agent-Context-Pack.md`, `.llmwiki/wiki/Index.md`, or `.llmwiki/wiki/Architecture.md`.
-2. Then read only the relevant `.llmwiki/wiki/Module-*.md` page or cross-cutting page for the task area if needed.
+2. Read only the relevant `.llmwiki/wiki/Module-*.md` page or cross-cutting page for the task area if needed.
 
 Do not preload broad source context by default. Prefer targeted reads, narrow line ranges, and task-local files first. The local wiki is not authoritative; verify material claims against source, tests, configuration, and CI.
 
