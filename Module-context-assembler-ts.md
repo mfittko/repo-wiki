@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "3d197a3e565e4f3a6a053214eb093873fb70b90a"
+source_commit: "575a1251f58ee2bfc04d8c2780711f70f08c2481"
 page_state: "generated"
 source_paths: ["src/context-assembler.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality for assembling and managing page context data structures in TypeScript. It exports several symbols related to constructing and manipulating page contexts, including assembling all page contexts, assembling individual page contexts, and handling context budgets and types. Additionally, it includes utilities for redacting sensitive or secret-like text within these contexts.
+This module provides functionality to assemble and manage page context data structures in TypeScript. It exports several symbols related to constructing and handling page contexts, including assembling contexts for individual pages or all pages, defining input types, and utilities for redacting sensitive information. The module appears to be a core part of source code responsible for context assembly without external dependencies.
 
 ## Source file list
 
@@ -21,14 +21,14 @@ This module provides functionality for assembling and managing page context data
 
 ## Key symbols and entry points
 
-- **assembleAllPageContexts**: Function to assemble all page contexts, likely aggregating multiple page context objects.
-- **assemblePageContext**: Function to assemble a single page context from input data.
-- **AssemblePageContextInput**: Type or interface defining the input structure for assembling a page context.
-- **PageContext**: Type or interface representing the structure of a page context.
-- **PageContextBudget**: Type or interface related to budgeting or resource constraints within a page context.
-- **PageContextPage**: Type or interface representing a page within the context.
-- **PageContextType**: Enum or type defining possible types of page contexts.
-- **redactSecretLikeText**: Utility function to redact text that appears to be secret or sensitive within the context data.
+- **assembleAllPageContexts**: Function to assemble contexts for all pages.
+- **assemblePageContext**: Function to assemble the context for a single page.
+- **AssemblePageContextInput**: Input type/interface for assembling a page context.
+- **PageContext**: Type/interface representing the assembled page context.
+- **PageContextBudget**: Type/interface related to budgeting aspects of page context.
+- **PageContextPage**: Type/interface representing a page within the context.
+- **PageContextType**: Enum or type defining possible page context types.
+- **redactSecretLikeText**: Utility function to redact text that resembles secrets.
 
 ## Dependencies and imports
 
@@ -40,10 +40,10 @@ This module provides functionality for assembling and managing page context data
 
 ## Known gaps or open questions
 
-- The module does not specify any dependencies or external integrations.
 - There is no explicit documentation or test coverage information available.
-- The exact behavior and implementation details of the key functions and types are not described beyond their names and inferred roles.
-- The source repository and commit information are unknown, limiting traceability.
+- The exact behavior and implementation details of the exported functions and types are not described beyond their names and presence.
+- The repository and commit information are unknown, limiting traceability.
+- The module's integration with other parts of the system is not detailed.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "3d197a3e565e4f3a6a053214eb093873fb70b90a"
+source_commit: "575a1251f58ee2bfc04d8c2780711f70f08c2481"
 page_state: "generated"
 source_paths: ["src/page-ownership.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to managing and preserving human-generated notes and page state within a system. It includes utilities to detect the current state of a page, extract human notes embedded in the content, inject such notes back into the page, and preserve these notes across operations. The module is implemented in TypeScript and serves as a source-level component without external dependencies.
+This module provides functionality related to managing and preserving human-generated notes and page state within a system. It includes utilities to detect the current state of a page, extract human notes embedded in the content, inject such notes back into the page, and preserve these notes across operations. The module is implemented in TypeScript and contains no external imports.
 
 ## Source file list
 
@@ -21,7 +21,7 @@ This module provides functionality related to managing and preserving human-gene
 
 ## Key symbols and entry points
 
-- **detectPageState**: Function to analyze and determine the current state of a page.
+- **detectPageState**: Function to determine the current state of a page.
 - **extractHumanNotes**: Function to extract human-authored notes from page content.
 - **injectHumanNotes**: Function to insert or re-insert human notes into page content.
 - **preserveHumanNotes**: Function to maintain human notes intact during page updates or transformations.
@@ -38,8 +38,9 @@ This module provides functionality related to managing and preserving human-gene
 ## Known gaps or open questions
 
 - There is no explicit documentation or test coverage information available.
-- The exact structure and usage details of `PageState` are not described.
-- The module's integration context or how it interacts with other parts of the system is not specified.
+- The exact structure and usage of `PageState` are not detailed.
+- The internal implementation details and how these functions interact with other parts of the system are not described.
+- The module's integration context or usage scenarios remain unspecified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

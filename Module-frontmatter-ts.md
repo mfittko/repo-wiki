@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "3d197a3e565e4f3a6a053214eb093873fb70b90a"
+source_commit: "575a1251f58ee2bfc04d8c2780711f70f08c2481"
 page_state: "generated"
 source_paths: ["src/frontmatter.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -32,17 +32,17 @@ This module provides utilities and types for handling frontmatter in source file
 
 ## Dependencies and imports
 
-- Imports from `./secret-patterns.js` for internal pattern matching or secret handling related to frontmatter processing.
+- Imports from `./secret-patterns.js`
 
 ## Related tests
 
-No explicit test files or test-related documentation are listed for this module.
+No documentation or test files are explicitly linked to this module in the provided source cards.
 
 ## Known gaps or open questions
 
-- No documentation cards or test references are available, indicating potential gaps in usage examples or test coverage.
-- The source repository and commit information are unknown, limiting traceability.
-- The exact nature and structure of `FRONTMATTER_POLICIES` and how policies are defined or applied are not detailed here.
+- No explicit documentation or test coverage is referenced.
+- The exact nature and structure of `FRONTMATTER_POLICIES` and how policies are defined or used are not detailed.
+- The relationship and usage context of the imported `./secret-patterns.js` module are not described.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
