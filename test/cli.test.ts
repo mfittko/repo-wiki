@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { access, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +13,20 @@ const cliPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../b
 async function captureCli(argv: string[], cwd: string) {
   const result = await execFileAsync(process.execPath, [cliPath, ...argv], { cwd });
   return { stdout: result.stdout.trim(), stderr: result.stderr.trim() };
+}
+
+async function captureCliResult(argv: string[], cwd: string) {
+  try {
+    const result = await execFileAsync(process.execPath, [cliPath, ...argv], { cwd });
+    return { stdout: result.stdout.trim(), stderr: result.stderr.trim(), exitCode: 0 };
+  } catch (error: any) {
+    const exitCode = typeof error?.code === 'number' ? error.code : 1;
+    return {
+      stdout: String(error.stdout || '').trim(),
+      stderr: String(error.stderr || '').trim(),
+      exitCode
+    };
+  }
 }
 
 test('CLI help describes GitHub Wiki and GitHub Pages publish targets', async () => {
@@ -279,6 +293,126 @@ test('CLI run executes scan-plan-lint-compile and dry-run publish with pages tar
     assert.equal(summary.publish.target, 'github-pages');
     assert.equal(summary.publish.branch, 'site');
     assert.equal(summary.publish.path, 'docs');
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('CLI run blocks before compile when docs lint reports errors', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-cli-test-'));
+  const repoDir = path.join(tempDir, 'repo');
+  const scanDir = path.join(tempDir, 'scan');
+  const planFile = path.join(tempDir, 'plan.json');
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  try {
+    await mkdir(path.join(repoDir, 'src'), { recursive: true });
+    await mkdir(path.join(repoDir, '.llmwiki'), { recursive: true });
+    await writeFile(path.join(repoDir, 'package.json'), JSON.stringify({ name: 'fixture', scripts: { test: 'node --test' } }), 'utf8');
+    await writeFile(path.join(repoDir, 'README.md'), '# Docs\n\nSee [missing](docs/missing.md).\n', 'utf8');
+    await writeFile(path.join(repoDir, 'src', 'index.ts'), 'export const value = 1;\n', 'utf8');
+    await writeFile(path.join(repoDir, '.llmwiki', 'config.json'), JSON.stringify({
+      lint: {
+        broken_file_references: 'error'
+      }
+    }), 'utf8');
+
+    const { stdout, exitCode } = await captureCliResult([
+      'run',
+      '--repo', repoDir,
+      '--scan', scanDir,
+      '--plan', planFile,
+      '--wiki', wikiDir,
+      '--publish',
+      '--dry-run'
+    ], tempDir);
+    const summary = JSON.parse(stdout);
+
+    assert.equal(exitCode, 1);
+    assert.equal(summary.status, 'blocked');
+    assert.equal(summary.blockedStage, 'lint-docs');
+    assert.ok(summary.docsLint.errors > 0);
+    assert.deepEqual(summary.compile, { status: 'skipped', reason: 'docs-lint-errors' });
+    assert.deepEqual(summary.lint, { status: 'skipped', reason: 'docs-lint-errors' });
+    assert.deepEqual(summary.publish, { status: 'blocked', reason: 'docs-lint-errors' });
+    await assert.rejects(access(wikiDir));
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('CLI run continues to compile when docs lint is warning-only', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-cli-test-'));
+  const repoDir = path.join(tempDir, 'repo');
+  const scanDir = path.join(tempDir, 'scan');
+  const planFile = path.join(tempDir, 'plan.json');
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  try {
+    await mkdir(path.join(repoDir, 'src'), { recursive: true });
+    await mkdir(path.join(repoDir, '.llmwiki'), { recursive: true });
+    await writeFile(path.join(repoDir, 'package.json'), JSON.stringify({ name: 'fixture', scripts: { test: 'node --test' } }), 'utf8');
+    await writeFile(path.join(repoDir, 'README.md'), '# Docs\n\nSee [missing](docs/missing.md).\n', 'utf8');
+    await writeFile(path.join(repoDir, 'src', 'index.ts'), 'export const value = 1;\n', 'utf8');
+    await writeFile(path.join(repoDir, '.llmwiki', 'config.json'), JSON.stringify({
+      lint: {
+        broken_file_references: 'warning'
+      }
+    }), 'utf8');
+
+    const { stdout } = await captureCli([
+      'run',
+      '--repo', repoDir,
+      '--scan', scanDir,
+      '--plan', planFile,
+      '--wiki', wikiDir
+    ], tempDir);
+    const summary = JSON.parse(stdout);
+
+    assert.equal(summary.status, 'ok');
+    assert.equal(summary.blockedStage, null);
+    assert.equal(summary.docsLint.errors, 0);
+    assert.ok(summary.docsLint.warnings > 0);
+    assert.equal(summary.compile.pages > 0, true);
+    assert.equal(summary.lint.errors, 0);
+    assert.equal(summary.publish, null);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('CLI run --publish blocks publish when wiki lint reports errors', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-cli-test-'));
+  const repoDir = path.join(tempDir, 'repo');
+  const scanDir = path.join(tempDir, 'scan');
+  const planFile = path.join(tempDir, 'plan.json');
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  try {
+    await mkdir(path.join(repoDir, 'src'), { recursive: true });
+    await mkdir(path.join(repoDir, '.llmwiki'), { recursive: true });
+    await mkdir(wikiDir, { recursive: true });
+    await writeFile(path.join(repoDir, 'package.json'), JSON.stringify({ name: 'fixture', scripts: { test: 'node --test' } }), 'utf8');
+    await writeFile(path.join(repoDir, 'README.md'), '# Docs\n', 'utf8');
+    await writeFile(path.join(repoDir, 'src', 'index.ts'), 'export const value = 1;\n', 'utf8');
+    await writeFile(path.join(wikiDir, 'Bad.md'), 'token=12345678\n', 'utf8');
+
+    const { stdout, exitCode } = await captureCliResult([
+      'run',
+      '--repo', repoDir,
+      '--scan', scanDir,
+      '--plan', planFile,
+      '--wiki', wikiDir,
+      '--publish',
+      '--dry-run'
+    ], tempDir);
+    const summary = JSON.parse(stdout);
+
+    assert.equal(exitCode, 1);
+    assert.equal(summary.status, 'blocked');
+    assert.equal(summary.blockedStage, 'lint');
+    assert.ok(summary.lint.errors > 0);
+    assert.deepEqual(summary.publish, { status: 'blocked', reason: 'wiki-lint-errors' });
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
