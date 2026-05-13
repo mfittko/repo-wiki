@@ -86,10 +86,10 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     const packageMetadata = contentAvailable ? extractPackageMetadata(file.relative, content) : null;
     const ciWorkflowCommandSources = contentAvailable && kind === 'ci' ? extractCiCommandSources(content) : [];
     const ciWorkflowCommands = [...new Set(ciWorkflowCommandSources.map((entry) => entry.command))];
-    const lowerPath = file.relative.toLowerCase();
-    const makeTargetSources = contentAvailable && lowerPath.endsWith('makefile') ? extractMakeTargetSources(content) : [];
+    const lowerBaseName = path.basename(file.relative).toLowerCase();
+    const makeTargetSources = contentAvailable && lowerBaseName === 'makefile' ? extractMakeTargetSources(content) : [];
     const makeTargets = [...new Set(makeTargetSources.map((entry) => entry.target))];
-    const taskRunnerTargetSources = getTaskRunnerTargetSources(lowerPath, content, contentAvailable);
+    const taskRunnerTargetSources = getTaskRunnerTargetSources(lowerBaseName, content, contentAvailable);
     const taskRunnerTargets = [...new Set(taskRunnerTargetSources.map((entry) => entry.target))];
     const goPackage = (language === 'Go' && contentAvailable) ? extractGoPackage(content, language) : null;
     const imports = contentAvailable ? extractImports(content, language) : [];
@@ -362,9 +362,9 @@ function summarizeDocumentation(cards: any[]) {
   return { files: cards.length, statuses, stale, claims, commands, env_vars: envVars, file_paths: filePaths };
 }
 
-function getTaskRunnerTargetSources(lowerPath: string, content: string, contentAvailable: boolean) {
+function getTaskRunnerTargetSources(lowerBaseName: string, content: string, contentAvailable: boolean) {
   if (!contentAvailable) return [];
-  if (lowerPath.endsWith('justfile')) return extractJustfileTargetSources(content);
-  if (lowerPath.endsWith('taskfile.yml') || lowerPath.endsWith('taskfile.yaml')) return extractTaskfileTargetSources(content);
+  if (lowerBaseName === 'justfile') return extractJustfileTargetSources(content);
+  if (lowerBaseName === 'taskfile.yml' || lowerBaseName === 'taskfile.yaml') return extractTaskfileTargetSources(content);
   return [];
 }

@@ -55,6 +55,18 @@ export type TaskRunnerTargetSource = {
   line?: number;
 };
 
+type CommandClassificationOptions = {
+  makeTargets?: string[];
+  taskRunnerTargets?: string[];
+  taskRunnerTargetsByRunner?: Partial<Record<TaskRunnerName, string[]>>;
+};
+
+type NormalizedCommandClassificationOptions = {
+  makeTargets: Set<string>;
+  taskRunnerTargets: Set<string>;
+  taskRunnerTargetsByRunner: Partial<Record<TaskRunnerName, Set<string>>>;
+};
+
 /**
  * Extract npm/shell commands from CI workflow YAML content.
  * Parses `run:` lines and `command:` matrix fields.
@@ -128,7 +140,7 @@ export function extractJustfileTargetSources(content: string): TaskRunnerTargetS
   for (let index = 0; index < lines.length; index += 1) {
     const rawLine = lines[index];
     if (/^\s*#/.test(rawLine) || /^\s+/.test(rawLine)) continue;
-    const match = /^([A-Za-z0-9][A-Za-z0-9_./-]*)\s*:(?![=])/.exec(rawLine);
+    const match = /^([A-Za-z0-9_][A-Za-z0-9_./-]*)\s*:(?![=])/.exec(rawLine);
     if (!match) continue;
     const target = match[1];
     if (!isDeterministicTargetName(target)) continue;
@@ -173,7 +185,7 @@ export function extractTaskfileTargetSources(content: string): TaskRunnerTargetS
     if (indent !== tasksIndent + 2) continue;
 
     // Taskfile keys may be quoted. `\1` matches the same quote char captured in group 1.
-    const targetMatch = /^\s*(["']?)([A-Za-z0-9][A-Za-z0-9_./-]*)\1\s*:\s*(?:$|#)/.exec(rawLine);
+    const targetMatch = /^\s*(["']?)([A-Za-z0-9_][A-Za-z0-9_./-]*)\1\s*:\s*(?:$|#)/.exec(rawLine);
     if (!targetMatch) continue;
     const target = targetMatch[2];
     if (!isDeterministicTargetName(target)) continue;
@@ -207,24 +219,17 @@ export function classifyDocumentedCommands(
   commands: string[],
   packageScripts: Record<string, string>,
   ciCommands: string[],
-  options: {
-    makeTargets?: string[];
-    taskRunnerTargets?: string[];
-    taskRunnerTargetsByRunner?: Partial<Record<TaskRunnerName, string[]>>;
-  } = {}
+  options: CommandClassificationOptions = {}
 ): CommandClassification[] {
-  return commands.flatMap((command) => splitShellCommand(command).map((part) => classifyCommand(part, packageScripts, ciCommands, options)));
+  const normalizedOptions = normalizeCommandClassificationOptions(options);
+  return commands.flatMap((command) => splitShellCommand(command).map((part) => classifyCommand(part, packageScripts, ciCommands, normalizedOptions)));
 }
 
 function classifyCommand(
   command: string,
   packageScripts: Record<string, string>,
   ciCommands: string[],
-  options: {
-    makeTargets?: string[];
-    taskRunnerTargets?: string[];
-    taskRunnerTargetsByRunner?: Partial<Record<TaskRunnerName, string[]>>;
-  }
+  options: NormalizedCommandClassificationOptions
 ): CommandClassification {
   // A verbatim CI workflow match is authoritative for any supported command form,
   // including npm workspace invocations this best-effort parser cannot map safely.
@@ -265,10 +270,9 @@ function classifyCommand(
 
   const makeTarget = parseMakeTarget(command);
   if (makeTarget) {
-    const known = new Set(options.makeTargets || []);
     return {
       command,
-      status: known.has(makeTarget) ? 'validated' : 'missing',
+      status: options.makeTargets.has(makeTarget) ? 'validated' : 'missing',
       source: 'makefile',
       target_name: makeTarget
     };
@@ -276,11 +280,7 @@ function classifyCommand(
 
   const taskRunnerTarget = parseTaskRunnerTarget(command);
   if (taskRunnerTarget) {
-    const known = new Set(
-      options.taskRunnerTargetsByRunner?.[taskRunnerTarget.runner]
-      || options.taskRunnerTargets
-      || []
-    );
+    const known = options.taskRunnerTargetsByRunner[taskRunnerTarget.runner] || options.taskRunnerTargets;
     return {
       command,
       status: known.has(taskRunnerTarget.target) ? 'validated' : 'missing',
@@ -566,6 +566,17 @@ function hasLineContinuation(line: string) {
 
 function stripContinuationBackslash(line: string) {
   return line.replace(/(\\+)(\s*)$/, (_, slashes: string, ws: string) => `${slashes.slice(0, -1)}${ws}`);
+}
+
+function normalizeCommandClassificationOptions(options: CommandClassificationOptions): NormalizedCommandClassificationOptions {
+  return {
+    makeTargets: new Set(options.makeTargets || []),
+    taskRunnerTargets: new Set(options.taskRunnerTargets || []),
+    taskRunnerTargetsByRunner: {
+      just: new Set(options.taskRunnerTargetsByRunner?.just || []),
+      taskfile: new Set(options.taskRunnerTargetsByRunner?.taskfile || [])
+    }
+  };
 }
 
 function parseNpmRunScript(command: string): string | undefined {
