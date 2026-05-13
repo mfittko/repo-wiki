@@ -6,7 +6,7 @@ user-invocable: false
 
 # repo-wiki Navigation
 
-Use this skill before substantial exploration, implementation, or review work in this repository.
+Use this skill before substantial exploration, implementation, or review work in this repository, but keep orientation reads intentionally narrow.
 
 ## Purpose
 
@@ -14,13 +14,17 @@ The generated local wiki in `.llmwiki/wiki/` is a navigation aid for coding agen
 
 ## Read First
 
-1. `.llmwiki/wiki/Agent-Context-Pack.md`
-2. `.llmwiki/wiki/Index.md`
-3. `.llmwiki/wiki/Architecture.md`
-4. `.llmwiki/wiki/Build-Test-and-Run.md`
-5. Relevant `.llmwiki/wiki/Module-*.md` page for the task area
+Start with the smallest useful orientation slice, not the full wiki set.
 
-Useful cross-cutting pages:
+1. Read exactly one high-signal entry page first:
+   - `.llmwiki/wiki/Agent-Context-Pack.md`, or
+   - `.llmwiki/wiki/Index.md`, or
+   - `.llmwiki/wiki/Architecture.md`
+2. Read the single most relevant `.llmwiki/wiki/Module-*.md` page for the task area only if needed.
+3. Read `.llmwiki/wiki/Build-Test-and-Run.md` only when verification or command surface is part of the task.
+4. Read cross-cutting pages only when the task specifically touches those concerns.
+
+Useful cross-cutting pages when needed:
 
 - `.llmwiki/wiki/Dependency-Map.md`
 - `.llmwiki/wiki/Testing-Strategy.md`
@@ -32,5 +36,5 @@ Useful cross-cutting pages:
 
 The wiki is generated and may be stale. Use it for orientation only.
 
-Source files, tests, configuration, and CI are authoritative. Verify any material claim against source before editing or reviewing behavior.
+After orientation, do not preload broad source context by default. Start from the issue, diff, failing test, or named file; then use targeted source reads and narrow line ranges. Source files, tests, configuration, and CI are authoritative. Verify any material claim against source before editing or reviewing behavior.
 

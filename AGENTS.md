@@ -6,20 +6,18 @@ Before editing implementation details, read:
 
 1. `docs/PLAN.md`
 2. `.llmwiki/schema.md`
-3. `src/cli.ts`
-4. `src/scanner.ts`
-5. `src/compiler.ts`
+3. Read only the task-relevant source files.
+
+Use `src/cli.ts`, `src/scanner.ts`, and `src/compiler.ts` as default anchor files only when the task touches CLI flow, repository scanning, compilation/report rendering, or when the relevant ownership is still unclear after a targeted read.
 
 Source code is authoritative. Generated wiki pages are derived artifacts.
 
-For repository orientation, use the generated local wiki as a navigation aid before diving into source:
+For repository orientation, use the generated local wiki as a navigation aid before diving into source, but keep the read surface minimal:
 
-1. `.llmwiki/wiki/Agent-Context-Pack.md`
-2. `.llmwiki/wiki/Index.md`
-3. `.llmwiki/wiki/Architecture.md`
-4. Relevant `.llmwiki/wiki/Module-*.md` pages
+1. Start with the single most relevant of `.llmwiki/wiki/Agent-Context-Pack.md`, `.llmwiki/wiki/Index.md`, or `.llmwiki/wiki/Architecture.md`.
+2. Read only the relevant `.llmwiki/wiki/Module-*.md` page or cross-cutting page for the task area if needed.
 
-The local wiki is not authoritative; verify material claims against source, tests, configuration, and CI.
+Do not preload broad source context by default. Prefer targeted reads, narrow line ranges, and task-local files first. The local wiki is not authoritative; verify material claims against source, tests, configuration, and CI.
 
 Repository-maintained cross-platform skills can live under `skills/` when they are intended to ship with or describe repo-wiki itself. Integration-specific skill roots such as `.github/skills/` and `.pi/skills/` may also contain integration-only skills, but any shared repo-wiki skill there should be a symlink to the canonical `skills/` directory, not a duplicate copy.
 
