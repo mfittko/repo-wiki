@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "575a1251f58ee2bfc04d8c2780711f70f08c2481"
+source_commit: "73d2678ea962143138b0ea2c5c2afd3eb79dd847"
 page_state: "generated"
 source_paths: ["src/prompts.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -46,8 +46,8 @@ This module provides a collection of functions and types related to building and
 ## Known gaps or open questions
 
 - There is no explicit documentation or test coverage information available.
-- The exact internal implementation details and usage scenarios of the prompt-building functions are not described.
-- The relationships and interactions between the various context types (`DocCardContext`, `MigrationContext`, `ModelContext`) and prompt builders are not detailed.
+- The exact behavior and implementation details of the prompt-building functions are not described beyond their names and symbol presence.
+- The relationships and usage scenarios for the context types (`DocCardContext`, `MigrationContext`, `ModelContext`) and `ModuleInfo` are not detailed.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

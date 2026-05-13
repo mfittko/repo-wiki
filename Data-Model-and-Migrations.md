@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "575a1251f58ee2bfc04d8c2780711f70f08c2481"
-compiled_at: "2026-05-13T12:48:37.494Z"
+source_commit: "73d2678ea962143138b0ea2c5c2afd3eb79dd847"
+compiled_at: "2026-05-13T17:29:32.096Z"
 kind: "data_model"
 claim_status: "grounded"
 source_paths: [".llmwiki/schema.md","test/extractors-utils.test.ts","test/scanner.test.ts"]
@@ -12,6 +12,6 @@ page_state: "generated"
 
 ## Detected data-related files
 
-- [.llmwiki/schema.md](https://github.com/mfittko/repo-wiki/blob/575a1251f58ee2bfc04d8c2780711f70f08c2481/.llmwiki/schema.md)
-- [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/575a1251f58ee2bfc04d8c2780711f70f08c2481/test/extractors-utils.test.ts)
-- [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/575a1251f58ee2bfc04d8c2780711f70f08c2481/test/scanner.test.ts)
+- [.llmwiki/schema.md](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/.llmwiki/schema.md)
+- [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts)
+- [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/scanner.test.ts)
