@@ -52,6 +52,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - LLM-enhance Architecture page with dedicated archetype, prompt, and per-archetype budget overrides.
 - Omit temperature for GPT-5 chat compatibility.
 - Tune architecture LLM timeout and reasoning.
+- Tighten repo-local reading guidance.
 
 ### Fixed
 - Complete deterministic scanner coverage for NestJS, Koa, tRPC, GraphQL, and OpenAPI API surfaces (including GraphQL field-config resolver mapping).
