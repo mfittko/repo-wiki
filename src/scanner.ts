@@ -89,13 +89,7 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     const lowerPath = file.relative.toLowerCase();
     const makeTargetSources = contentAvailable && lowerPath.endsWith('makefile') ? extractMakeTargetSources(content) : [];
     const makeTargets = [...new Set(makeTargetSources.map((entry) => entry.target))];
-    const taskRunnerTargetSources = contentAvailable
-      ? lowerPath.endsWith('justfile')
-        ? extractJustfileTargetSources(content)
-        : lowerPath.endsWith('taskfile.yml') || lowerPath.endsWith('taskfile.yaml')
-          ? extractTaskfileTargetSources(content)
-          : []
-      : [];
+    const taskRunnerTargetSources = getTaskRunnerTargetSources(lowerPath, content, contentAvailable);
     const taskRunnerTargets = [...new Set(taskRunnerTargetSources.map((entry) => entry.target))];
     const goPackage = (language === 'Go' && contentAvailable) ? extractGoPackage(content, language) : null;
     const imports = contentAvailable ? extractImports(content, language) : [];
@@ -366,4 +360,11 @@ function summarizeDocumentation(cards: any[]) {
   }
 
   return { files: cards.length, statuses, stale, claims, commands, env_vars: envVars, file_paths: filePaths };
+}
+
+function getTaskRunnerTargetSources(lowerPath: string, content: string, contentAvailable: boolean) {
+  if (!contentAvailable) return [];
+  if (lowerPath.endsWith('justfile')) return extractJustfileTargetSources(content);
+  if (lowerPath.endsWith('taskfile.yml') || lowerPath.endsWith('taskfile.yaml')) return extractTaskfileTargetSources(content);
+  return [];
 }

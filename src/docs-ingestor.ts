@@ -168,6 +168,7 @@ export function extractTaskfileTargetSources(content: string): TaskRunnerTargetS
     }
     if (indent !== tasksIndent + 2) continue;
 
+    // Taskfile keys may be quoted. `\1` enforces a matching closing quote type.
     const targetMatch = /^\s*(["']?)([A-Za-z0-9][A-Za-z0-9_./-]*)\1\s*:\s*(?:$|#)/.exec(rawLine);
     if (!targetMatch) continue;
     const target = targetMatch[2];
@@ -594,7 +595,7 @@ function findFirstTaskToken(tokens: string[]): string | undefined {
     if (token === '--') return tokens[index + 1];
     if (token.includes('=')) continue;
     if (token.startsWith('-')) {
-      if (optionConsumesValue(token) && index + 1 < tokens.length) {
+      if (makeOrTaskOptionConsumesValue(token) && index + 1 < tokens.length) {
         index += 1;
       }
       continue;
@@ -604,7 +605,7 @@ function findFirstTaskToken(tokens: string[]): string | undefined {
   return undefined;
 }
 
-function optionConsumesValue(option: string) {
+function makeOrTaskOptionConsumesValue(option: string) {
   return option === '-C'
     || option === '-f'
     || option === '--directory'
@@ -613,6 +614,7 @@ function optionConsumesValue(option: string) {
 }
 
 function isDeterministicTargetName(target: string) {
+  // Exclude Make special/pattern/expansion tokens to keep extraction line-oriented.
   return Boolean(target)
     && !target.startsWith('.')
     && !target.includes('%')
