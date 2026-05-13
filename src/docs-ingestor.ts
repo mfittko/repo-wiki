@@ -14,13 +14,14 @@ const SHELL_RESERVED_WORDS = new Set(['if', 'then', 'else', 'elif', 'fi', 'for',
 const COMMON_ENV_VAR_NAMES = new Set(['CI', 'HOME', 'PATH', 'PORT', 'SHELL', 'TERM', 'USER']);
 
 export type CommandStatus = 'validated' | 'missing' | 'unvalidated';
-export type CommandSource = 'package_scripts' | 'ci_workflow' | 'unknown';
+export type CommandSource = 'package_scripts' | 'ci_workflow' | 'makefile' | 'task_runner' | 'unknown';
 
 export type CommandClassification = {
   command: string;
   status: CommandStatus;
   source: CommandSource;
   script_name?: string;
+  target_name?: string;
 };
 
 export type DocumentedFilePath = {
@@ -38,6 +39,17 @@ export type CiWorkflowCommandSource = {
   command: string;
   line?: number;
   end_line?: number;
+};
+
+export type MakeTargetSource = {
+  target: string;
+  line?: number;
+};
+
+export type TaskRunnerTargetSource = {
+  target: string;
+  runner: 'just' | 'taskfile';
+  line?: number;
 };
 
 /**
@@ -77,6 +89,98 @@ export function extractCiCommandSources(content: string): CiWorkflowCommandSourc
   return commands;
 }
 
+export function extractMakeTargets(content: string): string[] {
+  return [...new Set(extractMakeTargetSources(content).map((entry) => entry.target))];
+}
+
+export function extractMakeTargetSources(content: string): MakeTargetSource[] {
+  const targets: MakeTargetSource[] = [];
+  const seen = new Set<string>();
+  const lines = content.split('\n');
+  for (let index = 0; index < lines.length; index += 1) {
+    const rawLine = lines[index];
+    if (/^\s*#/.test(rawLine) || /^\t/.test(rawLine)) continue;
+    const line = rawLine.trimStart();
+    const match = /^([^:#=][^:#=]*?):(?![=])/.exec(line);
+    if (!match) continue;
+    for (const target of match[1].trim().split(/\s+/)) {
+      if (!isDeterministicTargetName(target)) continue;
+      const key = `${target}\u0000${index + 1}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      targets.push({ target, line: index + 1 });
+    }
+  }
+  return targets;
+}
+
+export function extractJustfileTargets(content: string): string[] {
+  return [...new Set(extractJustfileTargetSources(content).map((entry) => entry.target))];
+}
+
+export function extractJustfileTargetSources(content: string): TaskRunnerTargetSource[] {
+  const targets: TaskRunnerTargetSource[] = [];
+  const seen = new Set<string>();
+  const lines = content.split('\n');
+  for (let index = 0; index < lines.length; index += 1) {
+    const rawLine = lines[index];
+    if (/^\s*#/.test(rawLine) || /^\s+/.test(rawLine)) continue;
+    const match = /^([A-Za-z0-9][A-Za-z0-9_./-]*)\s*:(?![=])/.exec(rawLine);
+    if (!match) continue;
+    const target = match[1];
+    if (!isDeterministicTargetName(target)) continue;
+    const key = `${target}\u0000${index + 1}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    targets.push({ target, runner: 'just', line: index + 1 });
+  }
+  return targets;
+}
+
+export function extractTaskfileTargets(content: string): string[] {
+  return [...new Set(extractTaskfileTargetSources(content).map((entry) => entry.target))];
+}
+
+export function extractTaskfileTargetSources(content: string): TaskRunnerTargetSource[] {
+  const targets: TaskRunnerTargetSource[] = [];
+  const seen = new Set<string>();
+  const lines = content.split('\n');
+  let tasksIndent: number | null = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const rawLine = lines[index];
+    const trimmed = rawLine.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    if (tasksIndent === null) {
+      const tasksMatch = /^(\s*)tasks\s*:\s*(?:#.*)?$/.exec(rawLine);
+      if (tasksMatch) {
+        tasksIndent = tasksMatch[1].length;
+      }
+      continue;
+    }
+
+    const indent = leadingSpaces(rawLine);
+    if (indent <= tasksIndent) {
+      tasksIndent = null;
+      index -= 1;
+      continue;
+    }
+    if (indent !== tasksIndent + 2) continue;
+
+    const targetMatch = /^\s*(["']?)([A-Za-z0-9][A-Za-z0-9_./-]*)\1\s*:\s*(?:$|#)/.exec(rawLine);
+    if (!targetMatch) continue;
+    const target = targetMatch[2];
+    if (!isDeterministicTargetName(target)) continue;
+    const key = `${target}\u0000${index + 1}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    targets.push({ target, runner: 'taskfile', line: index + 1 });
+  }
+
+  return targets;
+}
+
 /**
  * Merge package scripts from all package.json entries in a manifest's analysis.
  * Later entries overwrite earlier ones on key collision, following the manifest's
@@ -97,15 +201,17 @@ export function mergePackageScripts(manifest: { analysis?: { package_scripts?: A
 export function classifyDocumentedCommands(
   commands: string[],
   packageScripts: Record<string, string>,
-  ciCommands: string[]
+  ciCommands: string[],
+  options: { makeTargets?: string[]; taskRunnerTargets?: string[] } = {}
 ): CommandClassification[] {
-  return commands.flatMap((command) => splitShellCommand(command).map((part) => classifyCommand(part, packageScripts, ciCommands)));
+  return commands.flatMap((command) => splitShellCommand(command).map((part) => classifyCommand(part, packageScripts, ciCommands, options)));
 }
 
 function classifyCommand(
   command: string,
   packageScripts: Record<string, string>,
-  ciCommands: string[]
+  ciCommands: string[],
+  options: { makeTargets?: string[]; taskRunnerTargets?: string[] }
 ): CommandClassification {
   // A verbatim CI workflow match is authoritative for any supported command form,
   // including npm workspace invocations this best-effort parser cannot map safely.
@@ -141,6 +247,28 @@ function classifyCommand(
       status: scriptName in packageScripts ? 'validated' : 'unvalidated',
       source: 'package_scripts',
       script_name: scriptName
+    };
+  }
+
+  const makeTarget = parseMakeTarget(command);
+  if (makeTarget) {
+    const known = new Set(options.makeTargets || []);
+    return {
+      command,
+      status: known.has(makeTarget) ? 'validated' : 'missing',
+      source: 'makefile',
+      target_name: makeTarget
+    };
+  }
+
+  const taskRunnerTarget = parseTaskRunnerTarget(command);
+  if (taskRunnerTarget) {
+    const known = new Set(options.taskRunnerTargets || []);
+    return {
+      command,
+      status: known.has(taskRunnerTarget) ? 'validated' : 'missing',
+      source: 'task_runner',
+      target_name: taskRunnerTarget
     };
   }
 
@@ -210,7 +338,7 @@ export function validateDocClaims({ claims, content, filePath }) {
     if (/^(bash|sh|shell|zsh|console)?$/i.test(block.language || '')) {
       for (const line of block.content.split('\n')) {
         const trimmed = line.trim().replace(/^[$>]\s*/, '');
-        if (/^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(trimmed)) {
+        if (/^(npm|pnpm|yarn|node|npx|make|just|task|docker|git)\b/.test(trimmed)) {
           commands.push(...splitShellCommand(trimmed));
         }
       }
@@ -447,6 +575,52 @@ function tokenizeShellWords(command: string): string[] {
   return (command.match(/"[^"]*"|'[^']*'|\S+/g) || []).map((token) => token.replace(/^["']|["']$/g, ''));
 }
 
+function parseMakeTarget(command: string): string | undefined {
+  const tokens = tokenizeShellWords(command);
+  if (tokens[0] !== 'make') return undefined;
+  return findFirstTaskToken(tokens.slice(1));
+}
+
+function parseTaskRunnerTarget(command: string): string | undefined {
+  const tokens = tokenizeShellWords(command);
+  if (tokens[0] !== 'just' && tokens[0] !== 'task') return undefined;
+  return findFirstTaskToken(tokens.slice(1));
+}
+
+function findFirstTaskToken(tokens: string[]): string | undefined {
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (!token) continue;
+    if (token === '--') return tokens[index + 1];
+    if (token.includes('=')) continue;
+    if (token.startsWith('-')) {
+      if (optionConsumesValue(token) && index + 1 < tokens.length) {
+        index += 1;
+      }
+      continue;
+    }
+    return token;
+  }
+  return undefined;
+}
+
+function optionConsumesValue(option: string) {
+  return option === '-C'
+    || option === '-f'
+    || option === '--directory'
+    || option === '--file'
+    || option === '--makefile';
+}
+
+function isDeterministicTargetName(target: string) {
+  return Boolean(target)
+    && !target.startsWith('.')
+    && !target.includes('%')
+    && !target.includes('$')
+    && !target.includes('(')
+    && !target.includes(')');
+}
+
 function splitShellCommand(command: string, recognizedOnly = true): string[] {
   const parts: string[] = [];
   let current = '';
@@ -480,7 +654,7 @@ function splitShellCommand(command: string, recognizedOnly = true): string[] {
   }
   parts.push(current.trim());
 
-  return parts.filter((part) => part && (!recognizedOnly || /^(npm|pnpm|yarn|node|npx|make|docker|git)\b/.test(part)));
+  return parts.filter((part) => part && (!recognizedOnly || /^(npm|pnpm|yarn|node|npx|make|just|task|docker|git)\b/.test(part)));
 }
 
 export function extractDocumentedFilePaths(content: string): DocumentedFilePath[] {

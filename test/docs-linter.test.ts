@@ -196,6 +196,21 @@ test('classifyDocumentedCommands validates known package scripts, flags missing 
   assert.equal(workspace[0].status, 'unvalidated');
   assert.equal(workspace[0].source, 'unknown');
 
+  const makeKnown = classifyDocumentedCommands(['make build'], packageScripts, [], { makeTargets: ['build'] });
+  assert.equal(makeKnown[0].status, 'validated');
+  assert.equal(makeKnown[0].source, 'makefile');
+  assert.equal(makeKnown[0].target_name, 'build');
+
+  const makeMissing = classifyDocumentedCommands(['make deploy'], packageScripts, [], { makeTargets: ['build'] });
+  assert.equal(makeMissing[0].status, 'missing');
+  assert.equal(makeMissing[0].source, 'makefile');
+  assert.equal(makeMissing[0].target_name, 'deploy');
+
+  const taskKnown = classifyDocumentedCommands(['just build'], packageScripts, [], { taskRunnerTargets: ['build'] });
+  assert.equal(taskKnown[0].status, 'validated');
+  assert.equal(taskKnown[0].source, 'task_runner');
+  assert.equal(taskKnown[0].target_name, 'build');
+
   // Separators inside quotes are not split into fake commands.
   const quoted = classifyDocumentedCommands(['npm run "build;prod" && npm run missing'], { 'build;prod': 'tsc' }, []);
   assert.equal(quoted.length, 2);
@@ -386,6 +401,43 @@ test('lintDocs and Documentation Debt Report validate exact commands from CI wor
     assert.match(report, /\| `npm run ci-only` \| ✅ validated \| CI workflow \|/);
     assert.match(report, /`docker login --password \[REDACTED\]`/);
     assert.doesNotMatch(report, /supersecretvalue/);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintDocs and Documentation Debt Report validate Makefile and task-runner targets', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-make-task-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: {
+        ingest: true,
+        include: ['README.md'],
+        exclude: [],
+        stale_after_days: 9999
+      }
+    }), 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\n```bash\nmake build\nmake deploy\njust docs\njust release\n```\n', 'utf8');
+    await writeFile(path.join(dir, 'Makefile'), 'build:\n\t@echo build\n', 'utf8');
+    await writeFile(path.join(dir, 'justfile'), 'docs:\n  @echo docs\n', 'utf8');
+    await writeFile(path.join(dir, 'package.json'), JSON.stringify({ scripts: {} }), 'utf8');
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    assert.equal(lint.issues.filter((i) => i.code === 'missing-make-target').length, 1);
+    assert.equal(lint.issues.filter((i) => i.code === 'missing-task-runner-target').length, 1);
+
+    const wikiDir = path.join(dir, '.llmwiki', 'wiki');
+    const planFile = path.join(dir, '.llmwiki', 'plan.json');
+    await writeFile(planFile, JSON.stringify({ pages: [], modules: [] }), 'utf8');
+    await compileWiki({ scanDir, planFile, wikiDir });
+    const report = await readFile(path.join(wikiDir, 'Documentation-Debt-Report.md'), 'utf8');
+    assert.match(report, /\| `make build` \| ✅ validated \| Makefile \|/);
+    assert.match(report, /\| `make deploy` \| ❌ missing \| Makefile \|/);
+    assert.match(report, /\| `just docs` \| ✅ validated \| Task runner \|/);
+    assert.match(report, /\| `just release` \| ❌ missing \| Task runner \|/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

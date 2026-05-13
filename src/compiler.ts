@@ -651,7 +651,9 @@ function renderDocumentationDebtReport(manifest) {
   const allDocCommands: string[] = docs.flatMap((doc) => doc.validation?.commands || []);
   const uniqueDocCommands = [...new Set(allDocCommands)];
   const ciCommands: string[] = manifest.analysis?.ci_workflow_commands || [];
-  const classified = classifyDocumentedCommands(uniqueDocCommands, allPackageScripts, ciCommands);
+  const makeTargets: string[] = manifest.analysis?.make_targets || [];
+  const taskRunnerTargets: string[] = manifest.analysis?.task_runner_targets || [];
+  const classified = classifyDocumentedCommands(uniqueDocCommands, allPackageScripts, ciCommands, { makeTargets, taskRunnerTargets });
   const validatedCmds = classified.filter((c) => c.status === 'validated');
   const missingCmds = classified.filter((c) => c.status === 'missing');
   const unvalidatedCmds = classified.filter((c) => c.status === 'unvalidated');
@@ -686,7 +688,12 @@ function renderDocumentationDebtReport(manifest) {
   const contradictedFindings = docs.filter((doc) => doc.validation?.contradictions?.length).map((doc) => `- \`${doc.path}\` - ${doc.validation.contradictions.length} contradiction-review signals`);
   const unvalidatedFindings = [
     ...docs.filter((doc) => doc.claims?.length && doc.status === 'unvalidated').map((doc) => `- \`${doc.path}\` - documentation claims have no validation signal.`),
-    ...missingCmds.map((finding) => `- \`${redactSensitiveText(finding.command)}\` - package script not found.`),
+    ...missingCmds.map((finding) => {
+      if (finding.source === 'package_scripts') return `- \`${redactSensitiveText(finding.command)}\` - package script not found.`;
+      if (finding.source === 'makefile') return `- \`${redactSensitiveText(finding.command)}\` - Makefile target not found.`;
+      if (finding.source === 'task_runner') return `- \`${redactSensitiveText(finding.command)}\` - task-runner target not found.`;
+      return `- \`${redactSensitiveText(finding.command)}\` - command reference not found.`;
+    }),
     ...unvalidatedCmds.map((finding) => `- \`${redactSensitiveText(finding.command)}\` - command source unknown.`),
     ...unvalidatedEnvVars.map((finding) => `- \`${finding.doc}\` mentions \`${finding.name}\` without scanner/config validation.`),
     ...unvalidatedRouteClaims.map((finding) => {
@@ -698,7 +705,15 @@ function renderDocumentationDebtReport(manifest) {
 
   const commandRows = classified.map((c) => {
     const badge = c.status === 'validated' ? '✅ validated' : c.status === 'missing' ? '❌ missing' : '❓ unvalidated';
-    const source = c.source === 'package_scripts' ? 'package.json' : c.source === 'ci_workflow' ? 'CI workflow' : 'unknown';
+    const source = c.source === 'package_scripts'
+      ? 'package.json'
+      : c.source === 'ci_workflow'
+        ? 'CI workflow'
+        : c.source === 'makefile'
+          ? 'Makefile'
+          : c.source === 'task_runner'
+            ? 'Task runner'
+            : 'unknown';
     return tableRow([code(redactSensitiveText(c.command)), badge, source]);
   });
   const filePathRows = filePathFindings.slice(0, 200).map((finding) => {
@@ -762,7 +777,7 @@ ${rows.join('\n') || '| No documentation files scanned | | | | | | |'}
 Commands extracted from documentation code blocks, validated against \`package.json\` scripts and CI workflow commands captured in the scan manifest.
 
 - Validated: ${validatedCmds.length}
-- Missing (script not in package.json): ${missingCmds.length}
+- Missing (package script / Makefile / task-runner target): ${missingCmds.length}
 - Unvalidated (source unknown): ${unvalidatedCmds.length}
 
 ${commandRows.length > 0 ? `| Command | Status | Source |\n|---|---|---|\n${commandRows.join('\n')}` : '- No commands extracted from documentation.'}

@@ -18,6 +18,8 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
 
   // Collect merged package scripts from manifest analysis
   const allPackageScripts = mergePackageScripts(manifest);
+  const makeTargets = manifest.analysis?.make_targets || [];
+  const taskRunnerTargets = manifest.analysis?.task_runner_targets || [];
 
   // Collect CI commands from scan analysis and refresh workflow YAML files when available.
   const ciCommands = new Set<string>(manifest.analysis?.ci_workflow_commands || []);
@@ -53,7 +55,7 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
     // Validate documented commands against package scripts and CI workflows
     const docCommands: string[] = doc.validation?.commands || [];
     if (docCommands.length > 0) {
-      const classified = classifyDocumentedCommands(docCommands, allPackageScripts, [...ciCommands]);
+      const classified = classifyDocumentedCommands(docCommands, allPackageScripts, [...ciCommands], { makeTargets, taskRunnerTargets });
       for (const cls of classified) {
         if (cls.status === 'missing' && cls.source === 'package_scripts') {
           pushIssue(issues, issue(
@@ -62,6 +64,24 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
             'standard',
             'missing-package-script',
             `${doc.path} documents '${cls.command}' but script '${cls.script_name}' is not defined in package.json.`
+          ));
+        }
+        if (cls.status === 'missing' && cls.source === 'makefile') {
+          pushIssue(issues, issue(
+            undefined,
+            strictness,
+            'standard',
+            'missing-make-target',
+            `${doc.path} documents '${cls.command}' but Makefile target '${cls.target_name}' is not defined.`
+          ));
+        }
+        if (cls.status === 'missing' && cls.source === 'task_runner') {
+          pushIssue(issues, issue(
+            undefined,
+            strictness,
+            'standard',
+            'missing-task-runner-target',
+            `${doc.path} documents '${cls.command}' but task-runner target '${cls.target_name}' is not defined.`
           ));
         }
       }
