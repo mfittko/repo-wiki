@@ -652,8 +652,15 @@ function renderDocumentationDebtReport(manifest) {
   const uniqueDocCommands = [...new Set(allDocCommands)];
   const ciCommands: string[] = manifest.analysis?.ci_workflow_commands || [];
   const makeTargets: string[] = manifest.analysis?.make_targets || [];
-  const taskRunnerTargets: string[] = manifest.analysis?.task_runner_targets || [];
-  const classified = classifyDocumentedCommands(uniqueDocCommands, allPackageScripts, ciCommands, { makeTargets, taskRunnerTargets });
+  const taskRunnerTargetSources: Array<{ target: string; runner: 'just' | 'taskfile' }> = manifest.analysis?.task_runner_target_sources || [];
+  const taskRunnerTargetsByRunner = {
+    just: [...new Set(taskRunnerTargetSources.filter((entry) => entry.runner === 'just').map((entry) => entry.target))],
+    taskfile: [...new Set(taskRunnerTargetSources.filter((entry) => entry.runner === 'taskfile').map((entry) => entry.target))]
+  };
+  const classified = classifyDocumentedCommands(uniqueDocCommands, allPackageScripts, ciCommands, {
+    makeTargets,
+    taskRunnerTargetsByRunner
+  });
   const validatedCmds = classified.filter((c) => c.status === 'validated');
   const missingCmds = classified.filter((c) => c.status === 'missing');
   const unvalidatedCmds = classified.filter((c) => c.status === 'unvalidated');

@@ -19,7 +19,11 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
   // Collect merged package scripts from manifest analysis
   const allPackageScripts = mergePackageScripts(manifest);
   const makeTargets = manifest.analysis?.make_targets || [];
-  const taskRunnerTargets = manifest.analysis?.task_runner_targets || [];
+  const taskRunnerTargetSources: Array<{ target: string; runner: 'just' | 'taskfile' }> = manifest.analysis?.task_runner_target_sources || [];
+  const taskRunnerTargetsByRunner = {
+    just: [...new Set(taskRunnerTargetSources.filter((entry) => entry.runner === 'just').map((entry) => entry.target))],
+    taskfile: [...new Set(taskRunnerTargetSources.filter((entry) => entry.runner === 'taskfile').map((entry) => entry.target))]
+  };
 
   // Collect CI commands from scan analysis and refresh workflow YAML files when available.
   const ciCommands = new Set<string>(manifest.analysis?.ci_workflow_commands || []);
@@ -55,7 +59,10 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
     // Validate documented commands against package scripts and CI workflows
     const docCommands: string[] = doc.validation?.commands || [];
     if (docCommands.length > 0) {
-      const classified = classifyDocumentedCommands(docCommands, allPackageScripts, [...ciCommands], { makeTargets, taskRunnerTargets });
+      const classified = classifyDocumentedCommands(docCommands, allPackageScripts, [...ciCommands], {
+        makeTargets,
+        taskRunnerTargetsByRunner
+      });
       for (const cls of classified) {
         if (cls.status === 'missing' && cls.source === 'package_scripts') {
           pushIssue(issues, issue(

@@ -206,15 +206,25 @@ test('classifyDocumentedCommands validates known package scripts, flags missing 
   assert.equal(makeMissing[0].source, 'makefile');
   assert.equal(makeMissing[0].target_name, 'deploy');
 
-  const taskKnown = classifyDocumentedCommands(['just build'], packageScripts, [], { taskRunnerTargets: ['build'] });
+  const taskKnown = classifyDocumentedCommands(['just build'], packageScripts, [], {
+    taskRunnerTargetsByRunner: { just: ['build'] }
+  });
   assert.equal(taskKnown[0].status, 'validated');
   assert.equal(taskKnown[0].source, 'task_runner');
   assert.equal(taskKnown[0].target_name, 'build');
 
-  const taskfileKnown = classifyDocumentedCommands(['task build'], packageScripts, [], { taskRunnerTargets: ['build'] });
+  const taskfileKnown = classifyDocumentedCommands(['task build'], packageScripts, [], {
+    taskRunnerTargetsByRunner: { taskfile: ['build'] }
+  });
   assert.equal(taskfileKnown[0].status, 'validated');
   assert.equal(taskfileKnown[0].source, 'task_runner');
   assert.equal(taskfileKnown[0].target_name, 'build');
+
+  const crossRunnerMissing = classifyDocumentedCommands(['task build', 'just release'], packageScripts, [], {
+    taskRunnerTargetsByRunner: { just: ['build'], taskfile: ['release'] }
+  });
+  assert.equal(crossRunnerMissing[0].status, 'missing');
+  assert.equal(crossRunnerMissing[1].status, 'missing');
 
   // Separators inside quotes are not split into fake commands.
   const quoted = classifyDocumentedCommands(['npm run "build;prod" && npm run missing'], { 'build;prod': 'tsc' }, []);
@@ -423,16 +433,17 @@ test('lintDocs and Documentation Debt Report validate Makefile and task-runner t
         stale_after_days: 9999
       }
     }), 'utf8');
-    await writeFile(path.join(dir, 'README.md'), '# Demo\n\n```bash\nmake build\nmake deploy\njust docs\njust release\n```\n', 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n\n```bash\nmake build\nmake deploy\njust docs\njust release\ntask publish\ntask docs\n```\n', 'utf8');
     await writeFile(path.join(dir, 'Makefile'), 'build:\n\t@echo build\n', 'utf8');
     await writeFile(path.join(dir, 'justfile'), 'docs:\n  @echo docs\n', 'utf8');
+    await writeFile(path.join(dir, 'Taskfile.yml'), 'version: "3"\ntasks:\n  publish:\n    cmds:\n      - echo publish\n', 'utf8');
     await writeFile(path.join(dir, 'package.json'), JSON.stringify({ scripts: {} }), 'utf8');
 
     const scanDir = path.join(dir, '.llmwiki', 'run');
     await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
     const lint = await lintDocs({ scanDir, repoPath: dir });
     assert.equal(lint.issues.filter((i) => i.code === 'missing-make-target').length, 1);
-    assert.equal(lint.issues.filter((i) => i.code === 'missing-task-runner-target').length, 1);
+    assert.equal(lint.issues.filter((i) => i.code === 'missing-task-runner-target').length, 2);
 
     const wikiDir = path.join(dir, '.llmwiki', 'wiki');
     const planFile = path.join(dir, '.llmwiki', 'plan.json');
@@ -443,6 +454,8 @@ test('lintDocs and Documentation Debt Report validate Makefile and task-runner t
     assert.match(report, /\| `make deploy` \| ❌ missing \| Makefile \|/);
     assert.match(report, /\| `just docs` \| ✅ validated \| Task runner \|/);
     assert.match(report, /\| `just release` \| ❌ missing \| Task runner \|/);
+    assert.match(report, /\| `task publish` \| ✅ validated \| Task runner \|/);
+    assert.match(report, /\| `task docs` \| ❌ missing \| Task runner \|/);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

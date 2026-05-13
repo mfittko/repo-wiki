@@ -47,9 +47,11 @@ export type MakeTargetSource = {
   line?: number;
 };
 
+export type TaskRunnerName = 'just' | 'taskfile';
+
 export type TaskRunnerTargetSource = {
   target: string;
-  runner: 'just' | 'taskfile';
+  runner: TaskRunnerName;
   line?: number;
 };
 
@@ -205,7 +207,11 @@ export function classifyDocumentedCommands(
   commands: string[],
   packageScripts: Record<string, string>,
   ciCommands: string[],
-  options: { makeTargets?: string[]; taskRunnerTargets?: string[] } = {}
+  options: {
+    makeTargets?: string[];
+    taskRunnerTargets?: string[];
+    taskRunnerTargetsByRunner?: Partial<Record<TaskRunnerName, string[]>>;
+  } = {}
 ): CommandClassification[] {
   return commands.flatMap((command) => splitShellCommand(command).map((part) => classifyCommand(part, packageScripts, ciCommands, options)));
 }
@@ -214,7 +220,11 @@ function classifyCommand(
   command: string,
   packageScripts: Record<string, string>,
   ciCommands: string[],
-  options: { makeTargets?: string[]; taskRunnerTargets?: string[] }
+  options: {
+    makeTargets?: string[];
+    taskRunnerTargets?: string[];
+    taskRunnerTargetsByRunner?: Partial<Record<TaskRunnerName, string[]>>;
+  }
 ): CommandClassification {
   // A verbatim CI workflow match is authoritative for any supported command form,
   // including npm workspace invocations this best-effort parser cannot map safely.
@@ -266,12 +276,16 @@ function classifyCommand(
 
   const taskRunnerTarget = parseTaskRunnerTarget(command);
   if (taskRunnerTarget) {
-    const known = new Set(options.taskRunnerTargets || []);
+    const known = new Set(
+      options.taskRunnerTargetsByRunner?.[taskRunnerTarget.runner]
+      || options.taskRunnerTargets
+      || []
+    );
     return {
       command,
-      status: known.has(taskRunnerTarget) ? 'validated' : 'missing',
+      status: known.has(taskRunnerTarget.target) ? 'validated' : 'missing',
       source: 'task_runner',
-      target_name: taskRunnerTarget
+      target_name: taskRunnerTarget.target
     };
   }
 
@@ -584,10 +598,15 @@ function parseMakeTarget(command: string): string | undefined {
   return findFirstTaskToken(tokens.slice(1), makeOptionConsumesValue);
 }
 
-function parseTaskRunnerTarget(command: string): string | undefined {
+function parseTaskRunnerTarget(command: string): { runner: TaskRunnerName; target: string } | undefined {
   const tokens = tokenizeShellWords(command);
   if (tokens[0] !== 'just' && tokens[0] !== 'task') return undefined;
-  return findFirstTaskToken(tokens.slice(1));
+  const target = findFirstTaskToken(tokens.slice(1));
+  if (!target) return undefined;
+  return {
+    runner: tokens[0] === 'just' ? 'just' : 'taskfile',
+    target
+  };
 }
 
 function findFirstTaskToken(tokens: string[], optionConsumesValue: (option: string) => boolean = () => false): string | undefined {
