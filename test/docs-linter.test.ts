@@ -211,6 +211,11 @@ test('classifyDocumentedCommands validates known package scripts, flags missing 
   assert.equal(taskKnown[0].source, 'task_runner');
   assert.equal(taskKnown[0].target_name, 'build');
 
+  const taskfileKnown = classifyDocumentedCommands(['task build'], packageScripts, [], { taskRunnerTargets: ['build'] });
+  assert.equal(taskfileKnown[0].status, 'validated');
+  assert.equal(taskfileKnown[0].source, 'task_runner');
+  assert.equal(taskfileKnown[0].target_name, 'build');
+
   // Separators inside quotes are not split into fake commands.
   const quoted = classifyDocumentedCommands(['npm run "build;prod" && npm run missing'], { 'build;prod': 'tsc' }, []);
   assert.equal(quoted.length, 2);

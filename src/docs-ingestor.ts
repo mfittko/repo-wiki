@@ -12,6 +12,7 @@ const ROUTE_TABLE_PATH_PATTERN = new RegExp(`(?:^|[\\s|\`(])(${ROUTE_PATH_PATTER
 const NPM_LIFECYCLE_SCRIPTS = new Set(['test', 'start', 'stop', 'restart']);
 const SHELL_RESERVED_WORDS = new Set(['if', 'then', 'else', 'elif', 'fi', 'for', 'select', 'while', 'until', 'do', 'done', 'case', 'esac', '{', '}']);
 const COMMON_ENV_VAR_NAMES = new Set(['CI', 'HOME', 'PATH', 'PORT', 'SHELL', 'TERM', 'USER']);
+const RECOGNIZED_DOC_COMMAND_PREFIX = /^(npm|pnpm|yarn|node|npx|make|just|task|docker|git)\b/;
 
 export type CommandStatus = 'validated' | 'missing' | 'unvalidated';
 export type CommandSource = 'package_scripts' | 'ci_workflow' | 'makefile' | 'task_runner' | 'unknown';
@@ -166,9 +167,10 @@ export function extractTaskfileTargetSources(content: string): TaskRunnerTargetS
       index -= 1;
       continue;
     }
+    // Task names are direct children under `tasks:` in canonical Taskfile YAML.
     if (indent !== tasksIndent + 2) continue;
 
-    // Taskfile keys may be quoted. `\1` enforces a matching closing quote type.
+    // Taskfile keys may be quoted. `\1` matches the same quote char captured in group 1.
     const targetMatch = /^\s*(["']?)([A-Za-z0-9][A-Za-z0-9_./-]*)\1\s*:\s*(?:$|#)/.exec(rawLine);
     if (!targetMatch) continue;
     const target = targetMatch[2];
@@ -339,7 +341,7 @@ export function validateDocClaims({ claims, content, filePath }) {
     if (/^(bash|sh|shell|zsh|console)?$/i.test(block.language || '')) {
       for (const line of block.content.split('\n')) {
         const trimmed = line.trim().replace(/^[$>]\s*/, '');
-        if (/^(npm|pnpm|yarn|node|npx|make|just|task|docker|git)\b/.test(trimmed)) {
+        if (RECOGNIZED_DOC_COMMAND_PREFIX.test(trimmed)) {
           commands.push(...splitShellCommand(trimmed));
         }
       }
@@ -579,7 +581,7 @@ function tokenizeShellWords(command: string): string[] {
 function parseMakeTarget(command: string): string | undefined {
   const tokens = tokenizeShellWords(command);
   if (tokens[0] !== 'make') return undefined;
-  return findFirstTaskToken(tokens.slice(1));
+  return findFirstTaskToken(tokens.slice(1), makeOptionConsumesValue);
 }
 
 function parseTaskRunnerTarget(command: string): string | undefined {
@@ -588,14 +590,15 @@ function parseTaskRunnerTarget(command: string): string | undefined {
   return findFirstTaskToken(tokens.slice(1));
 }
 
-function findFirstTaskToken(tokens: string[]): string | undefined {
+function findFirstTaskToken(tokens: string[], optionConsumesValue: (option: string) => boolean = () => false): string | undefined {
   for (let index = 0; index < tokens.length; index += 1) {
     const token = tokens[index];
     if (!token) continue;
     if (token === '--') return tokens[index + 1];
+    // Skip assignment-style flags (`--flag=value`) and variable assignments (`FOO=bar`).
     if (token.includes('=')) continue;
     if (token.startsWith('-')) {
-      if (makeOrTaskOptionConsumesValue(token) && index + 1 < tokens.length) {
+      if (optionConsumesValue(token) && index + 1 < tokens.length) {
         index += 1;
       }
       continue;
@@ -605,7 +608,7 @@ function findFirstTaskToken(tokens: string[]): string | undefined {
   return undefined;
 }
 
-function makeOrTaskOptionConsumesValue(option: string) {
+function makeOptionConsumesValue(option: string) {
   return option === '-C'
     || option === '-f'
     || option === '--directory'
@@ -614,7 +617,7 @@ function makeOrTaskOptionConsumesValue(option: string) {
 }
 
 function isDeterministicTargetName(target: string) {
-  // Exclude Make special/pattern/expansion tokens to keep extraction line-oriented.
+  // Exclude special/pattern/expansion tokens to keep Make/task extraction deterministic.
   return Boolean(target)
     && !target.startsWith('.')
     && !target.includes('%')
@@ -656,7 +659,7 @@ function splitShellCommand(command: string, recognizedOnly = true): string[] {
   }
   parts.push(current.trim());
 
-  return parts.filter((part) => part && (!recognizedOnly || /^(npm|pnpm|yarn|node|npx|make|just|task|docker|git)\b/.test(part)));
+  return parts.filter((part) => part && (!recognizedOnly || RECOGNIZED_DOC_COMMAND_PREFIX.test(part)));
 }
 
 export function extractDocumentedFilePaths(content: string): DocumentedFilePath[] {

@@ -705,15 +705,13 @@ function renderDocumentationDebtReport(manifest) {
 
   const commandRows = classified.map((c) => {
     const badge = c.status === 'validated' ? '✅ validated' : c.status === 'missing' ? '❌ missing' : '❓ unvalidated';
-    const source = c.source === 'package_scripts'
-      ? 'package.json'
-      : c.source === 'ci_workflow'
-        ? 'CI workflow'
-        : c.source === 'makefile'
-          ? 'Makefile'
-          : c.source === 'task_runner'
-            ? 'Task runner'
-            : 'unknown';
+    const sourceLabels: Record<string, string> = {
+      package_scripts: 'package.json',
+      ci_workflow: 'CI workflow',
+      makefile: 'Makefile',
+      task_runner: 'Task runner'
+    };
+    const source = sourceLabels[c.source] || 'unknown';
     return tableRow([code(redactSensitiveText(c.command)), badge, source]);
   });
   const filePathRows = filePathFindings.slice(0, 200).map((finding) => {

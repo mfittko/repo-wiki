@@ -537,12 +537,8 @@ function compareTargetSourceEntries(
   left: { path: string; target: string; line?: number },
   right: { path: string; target: string; line?: number }
 ) {
-  if (left.path !== right.path) {
-    return left.path.localeCompare(right.path);
-  }
-  if ((left.line || 0) !== (right.line || 0)) {
-    return (left.line || 0) - (right.line || 0);
-  }
+  const pathLineOrder = comparePathAndLine(left, right);
+  if (pathLineOrder !== 0) return pathLineOrder;
   return left.target.localeCompare(right.target);
 }
 
@@ -550,16 +546,19 @@ function compareTaskRunnerTargetSourceEntries(
   left: { path: string; target: string; runner: 'just' | 'taskfile'; line?: number },
   right: { path: string; target: string; runner: 'just' | 'taskfile'; line?: number }
 ) {
-  if (left.path !== right.path) {
-    return left.path.localeCompare(right.path);
-  }
-  if ((left.line || 0) !== (right.line || 0)) {
-    return (left.line || 0) - (right.line || 0);
-  }
+  const pathLineOrder = comparePathAndLine(left, right);
+  if (pathLineOrder !== 0) return pathLineOrder;
   if (left.runner !== right.runner) {
     return left.runner.localeCompare(right.runner);
   }
   return left.target.localeCompare(right.target);
+}
+
+function comparePathAndLine(left: { path: string; line?: number }, right: { path: string; line?: number }) {
+  if (left.path !== right.path) {
+    return left.path.localeCompare(right.path);
+  }
+  return (left.line || 0) - (right.line || 0);
 }
 
 function isPackageEdge(edge) {
