@@ -459,6 +459,7 @@ function canonicalWikiPageReference(value: string): string {
 function extractLocalWikiLinks(content: string): string[] {
   const links = new Set<string>();
   const lines = content.replace(/\r\n?/g, '\n').split('\n');
+  const visibleLines: string[] = [];
   let fenceMarker: { char: '`' | '~'; length: number } | null = null;
   let inHtmlComment = false;
 
@@ -484,8 +485,12 @@ function extractLocalWikiLinks(content: string): string[] {
 
     const visibleLine = stripWikiLinkExtractionNoise(line, inHtmlComment);
     inHtmlComment = visibleLine.inHtmlComment;
+    visibleLines.push(visibleLine.text);
+  }
 
-    for (const href of extractMarkdownLinkTargets(visibleLine.text)) {
+  const referenceTargets = extractMarkdownReferenceDefinitions(visibleLines);
+  for (const line of visibleLines) {
+    for (const href of extractMarkdownLinkTargets(line, referenceTargets)) {
       const target = cleanDocumentedPathTarget(href);
       if (!target || /^(?:https?:|mailto:|ftp:|\/\/|#)/i.test(target) || /^(?:javascript:|data:|vbscript:|blob:|about:)/i.test(target)) {
         continue;
@@ -508,8 +513,50 @@ function extractLocalWikiLinks(content: string): string[] {
   return [...links];
 }
 
+
 function isIndentedMarkdownCodeBlockLine(line: string): boolean {
   return /^(?: {4,}|	)/.test(line);
+}
+
+function isEscapedMarkdownCharacter(line: string, index: number): boolean {
+  let backslashCount = 0;
+  for (let cursor = index - 1; cursor >= 0 && line[cursor] === '\\'; cursor -= 1) {
+    backslashCount += 1;
+  }
+  return backslashCount % 2 === 1;
+}
+
+function normalizeMarkdownReferenceLabel(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function extractMarkdownReferenceDefinitions(lines: string[]): Map<string, string> {
+  const definitions = new Map<string, string>();
+  for (const line of lines) {
+    const match = /^\s*\[([^\]]+)\]:\s*(.+)$/.exec(line);
+    if (!match) {
+      continue;
+    }
+    const label = normalizeMarkdownReferenceLabel(match[1]);
+    const target = extractMarkdownReferenceDefinitionTarget(match[2]);
+    if (label && target) {
+      definitions.set(label, target);
+    }
+  }
+  return definitions;
+}
+
+function extractMarkdownReferenceDefinitionTarget(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+  if (trimmed.startsWith('<')) {
+    const closeAngle = trimmed.indexOf('>');
+    return closeAngle === -1 ? '' : trimmed.slice(1, closeAngle).trim();
+  }
+  const match = /^([^\s]+)/.exec(trimmed);
+  return match ? match[1].trim() : '';
 }
 
 function stripWikiLinkExtractionNoise(line: string, initialInHtmlComment = false): { text: string; inHtmlComment: boolean } {
@@ -585,17 +632,47 @@ function consumeOptionalMarkdownLinkTitle(line: string, startIndex: number): num
   return -1;
 }
 
-function extractMarkdownLinkTargets(line: string): string[] {
+function extractMarkdownLinkTargets(line: string, referenceTargets = new Map<string, string>()): string[] {
   const targets: string[] = [];
+  const isReferenceDefinitionLine = /^\s*\[[^\]]+\]:/.test(line);
   for (let index = 0; index < line.length; index += 1) {
     const openBracket = line.indexOf('[', index);
     if (openBracket === -1) break;
-    if (openBracket > 0 && line[openBracket - 1] === '!') {
+    if ((openBracket > 0 && line[openBracket - 1] === '!') || isEscapedMarkdownCharacter(line, openBracket)) {
       index = openBracket;
       continue;
     }
     const closeBracket = line.indexOf(']', openBracket + 1);
-    if (closeBracket === -1 || line[closeBracket + 1] !== '(') {
+    if (closeBracket === -1 || isEscapedMarkdownCharacter(line, closeBracket)) {
+      index = openBracket;
+      continue;
+    }
+
+    const nextChar = line[closeBracket + 1];
+    if (nextChar !== '(') {
+      if (!isReferenceDefinitionLine) {
+        if (nextChar === '[') {
+          const closeReference = line.indexOf(']', closeBracket + 2);
+          if (closeReference !== -1 && !isEscapedMarkdownCharacter(line, closeReference)) {
+            const rawReference = line.slice(closeBracket + 2, closeReference).trim();
+            const label = normalizeMarkdownReferenceLabel(rawReference || line.slice(openBracket + 1, closeBracket));
+            const target = referenceTargets.get(label);
+            if (target) {
+              targets.push(target);
+            }
+            index = closeReference;
+            continue;
+          }
+        }
+
+        const label = normalizeMarkdownReferenceLabel(line.slice(openBracket + 1, closeBracket));
+        const target = referenceTargets.get(label);
+        if (target) {
+          targets.push(target);
+          index = closeBracket;
+          continue;
+        }
+      }
       index = openBracket;
       continue;
     }
@@ -652,6 +729,7 @@ function extractMarkdownLinkTargets(line: string): string[] {
   return targets;
 }
 
+
 function extractFrontmatterSourcePaths(content: string): string[] {
   const block = extractFrontmatterBlock(content);
   if (!block) {
@@ -677,17 +755,24 @@ function extractFrontmatterSourcePaths(content: string): string[] {
       continue;
     }
 
+    const sourcePathsIndent = lines[index].match(/^\s*/)?.[0].length ?? 0;
     for (let listIndex = index + 1; listIndex < lines.length; listIndex++) {
       const line = lines[listIndex];
-      if (!line.trim()) {
+      const trimmedLine = line.trim();
+      if (!trimmedLine || /^#/.test(trimmedLine)) {
         continue;
       }
       const listEntry = /^\s*-\s*(.*)$/.exec(line);
-      if (!listEntry) {
-        break;
+      if (listEntry) {
+        values.push(unquoteYamlScalar(listEntry[1].trim()));
+        index = listIndex;
+        continue;
       }
-      values.push(unquoteYamlScalar(listEntry[1].trim()));
-      index = listIndex;
+      const lineIndent = line.match(/^\s*/)?.[0].length ?? 0;
+      if (lineIndent > sourcePathsIndent) {
+        continue;
+      }
+      break;
     }
   }
 
@@ -695,6 +780,7 @@ function extractFrontmatterSourcePaths(content: string): string[] {
     .map((entry) => canonicalRepoRelativePath(unquoteYamlScalar(entry).trim()))
     .filter(Boolean)) as string[];
 }
+
 
 function parseInlineYamlSequence(value: string): string[] {
   try {

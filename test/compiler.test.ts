@@ -2594,7 +2594,8 @@ test('compileWiki graph enrichment normalizes page states, wiki links, and prove
       { path: 'Beta.md', phase: 'module', purpose: 'Beta' },
       { path: 'Delta.md', phase: 'module', purpose: 'Delta' },
       { path: 'Epsilon.md', phase: 'module', purpose: 'Epsilon' },
-      { path: 'Gamma.md', phase: 'module', purpose: 'Gamma' }
+      { path: 'Gamma.md', phase: 'module', purpose: 'Gamma' },
+      { path: 'Zeta.md', phase: 'module', purpose: 'Zeta' }
     ],
     modules: [],
     affected_page_graph: {
@@ -2634,6 +2635,8 @@ source_paths: ["src/a.ts", "", "./src/a.ts", "src/./a.ts"]
 [Beta 4](Beta.md#section)
 [Beta 5](Beta.md "details")
 [Epsilon](<Epsilon.md> "details")
+[Zeta][zeta-ref]
+\\[Escaped](Gamma.md)
 Inline code \`[Inline](Gamma.md)\` should not count.
 <!-- [Comment](Gamma.md) -->
 <!--
@@ -2648,7 +2651,9 @@ Inline code \`[Inline](Gamma.md)\` should not count.
 [Anchor](#local)
 [Asset](diagram.png)
 [Nested](nested/Beta.md)
+
     [Indented code link](Gamma.md)
+[zeta-ref]: Zeta.md
 `);
   await fs.writeFile(path.join(wikiDir, 'Beta.md'), `---
 title: "beta"
@@ -2674,6 +2679,7 @@ source_paths:
   - src/./gamma.ts
   - "./src/gamma.ts"
   - "src//gamma.ts"
+  # keep comments inside source_paths lists
   - ""
   - docs/readme.md
 ---
@@ -2697,11 +2703,16 @@ Needs review.
     assert.equal(pageStateByPath.get('Gamma.md'), 'mixed');
     assert.equal(pageStateByPath.get('Delta.md'), 'generated');
     assert.equal(pageStateByPath.get('Epsilon.md'), 'generated');
+    assert.equal(pageStateByPath.get('Zeta.md'), 'generated');
 
     const wikiLinks = graph.edges
       .filter((edge: any) => edge.type === 'wiki_link')
       .map((edge: any) => `${edge.from}->${edge.to}`);
-    assert.deepEqual(wikiLinks, ['page:Alpha.md->page:Beta.md', 'page:Alpha.md->page:Epsilon.md']);
+    assert.deepEqual(wikiLinks, [
+      'page:Alpha.md->page:Beta.md',
+      'page:Alpha.md->page:Epsilon.md',
+      'page:Alpha.md->page:Zeta.md'
+    ]);
 
     const provenanceEdges = graph.edges
       .filter((edge: any) => edge.type === 'provenance')
