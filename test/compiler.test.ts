@@ -1608,6 +1608,33 @@ test('compileWiki in deterministic mode renders Architecture.md without LLM synt
   }
 });
 
+test('compileWiki in LLM mode reports architecture_decision skipped for human-owned Architecture.md', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  const config = { compiler: { mode: 'llm' } };
+  const humanOwnedArch = [
+    '---',
+    'source_repo: "origin"',
+    'source_commit: "abc123"',
+    'page_state: "human-owned"',
+    'kind: "architecture"',
+    '---',
+    '# Architecture',
+    '',
+    'Human-owned architecture page.'
+  ].join('\n');
+
+  await fs.mkdir(wikiDir, { recursive: true });
+  await fs.writeFile(path.join(wikiDir, 'Architecture.md'), humanOwnedArch, 'utf8');
+
+  try {
+    const result = await compileWiki({ scanDir, planFile, wikiDir, config, _provider: new MockLLMProvider() });
+    assert.equal(result.summary.architecture_decision, 'skipped');
+    assert.equal(await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8'), humanOwnedArch);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('compileWiki in LLM mode skips human-owned Architecture.md without overwriting', async () => {
   const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
   const config = { compiler: { mode: 'llm' } };

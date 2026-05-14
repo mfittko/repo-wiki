@@ -175,6 +175,7 @@ export async function compileWiki({
       // at all (consistent with how LLM-handled module pages work). The existing
       // file is left intact; the write loop never sees it.
       pages.delete('Architecture.md');
+      archDecision = 'skipped';
       skipped++;
       skippedByState[archPageState] = (skippedByState[archPageState] || 0) + 1;
     } else {
@@ -268,6 +269,9 @@ export async function compileWiki({
       // Human-owned and unmanaged pages are never overwritten implicitly.
       // Adoption of pre-existing hand-written pages must be explicit.
       if (state === 'human-owned' || state === 'unmanaged') {
+        if (file === 'Architecture.md') {
+          archDecision = 'skipped';
+        }
         skipped++;
         skippedByState[state] = (skippedByState[state] || 0) + 1;
         continue;
@@ -283,7 +287,7 @@ export async function compileWiki({
         }
         if (decision === 'section-patched') {
           const patched = patchArchitectureSections(existingContent, newContent);
-          if (patched) {
+          if (patched && architectureUntouchedContent(patched) === architectureUntouchedContent(newContent)) {
             newContent = patched;
           } else {
             archDecision = 'full-regenerated';
@@ -476,6 +480,7 @@ function normalizeArchForComparison(content: string): string {
     .replace(/^(compiled_at: )"[^"]*"$/m, '$1""')
     .replace(/^page_state: "[^"]*"$/m, 'page_state: "generated"')
     .replace(/<!-- HUMAN_NOTES_START -->[\s\S]*?<!-- HUMAN_NOTES_END -->/g, '<!-- HUMAN_NOTES_START -->\n<!-- HUMAN_NOTES_END -->')
+    .replace(/\n{3,}/g, '\n\n')
     .replace(/\bRepository at [^\]]+\]/g, 'Repository at ]');
 }
 
@@ -580,6 +585,19 @@ function patchArchitectureSections(existingContent: string, newContent: string):
   patchedBody = replaceSection(patchedBody, 'Module groups', newModuleGroups);
   patchedBody = replaceSection(patchedBody, 'Architecture signals', newSignals);
   return `${newParts.frontmatter}${patchedBody}`;
+}
+
+function architectureUntouchedContent(content: string): string {
+  let normalized = normalizeArchForComparison(content);
+  const { frontmatter, body } = splitFrontmatterAndBody(normalized);
+  let remainder = body;
+  for (const heading of ['Structural map', 'Module groups', 'Architecture signals']) {
+    const section = extractSection(remainder, heading);
+    if (section) {
+      remainder = remainder.replace(section, '');
+    }
+  }
+  return `${frontmatter}${remainder}`.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 /**
