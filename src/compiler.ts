@@ -246,7 +246,8 @@ export async function compileWiki({
     throw new Error(`LLM compilation failed for ${llmErrors.length} page(s): ${llmErrors.map(formatLLMError).join('; ')}`);
   }
 
-  for (const [file, newContent] of pages) {
+  for (const [file, initialContent] of pages) {
+    let newContent = initialContent;
     const filePath = path.join(wikiDir, file);
     let existingContent: string | null = null;
 
@@ -278,7 +279,14 @@ export async function compileWiki({
         if (decision === 'skipped') {
           continue; // Preserve existing file byte-for-byte.
         }
-        // For 'section-patched' and 'full-regenerated', fall through to write.
+        if (decision === 'section-patched') {
+          const patched = patchArchitectureSections(existingContent, newContent);
+          if (patched) {
+            newContent = patched;
+          } else {
+            archDecision = 'full-regenerated';
+          }
+        }
       }
 
       // Preserve any human notes that exist in the current page.
@@ -513,6 +521,57 @@ export function computeArchDecision(newContent: string, existingContent: string 
   return sameModuleList ? 'section-patched' : 'full-regenerated';
 }
 
+function splitFrontmatterAndBody(content: string): { frontmatter: string; body: string } {
+  if (!content.startsWith('---\n')) {
+    return { frontmatter: '', body: content };
+  }
+  const end = content.indexOf('\n---\n', 4);
+  if (end === -1) {
+    return { frontmatter: '', body: content };
+  }
+  return { frontmatter: content.slice(0, end + 5), body: content.slice(end + 5) };
+}
+
+function sectionBounds(body: string, heading: string): { start: number; end: number } | null {
+  const marker = `## ${heading}\n`;
+  const start = body.indexOf(marker);
+  if (start === -1) {
+    return null;
+  }
+  const next = body.indexOf('\n## ', start + marker.length);
+  return { start, end: next === -1 ? body.length : next + 1 };
+}
+
+function extractSection(body: string, heading: string): string | null {
+  const bounds = sectionBounds(body, heading);
+  return bounds ? body.slice(bounds.start, bounds.end) : null;
+}
+
+function replaceSection(body: string, heading: string, replacement: string): string {
+  const bounds = sectionBounds(body, heading);
+  if (!bounds) {
+    return body;
+  }
+  return `${body.slice(0, bounds.start)}${replacement.trimEnd()}\n\n${body.slice(bounds.end)}`;
+}
+
+function patchArchitectureSections(existingContent: string, newContent: string): string | null {
+  const existingParts = splitFrontmatterAndBody(existingContent);
+  const newParts = splitFrontmatterAndBody(newContent);
+  const newModuleGroups = extractSection(newParts.body, 'Module groups');
+  const newSignals = extractSection(newParts.body, 'Architecture signals');
+  if (!newModuleGroups || !newSignals) {
+    return null;
+  }
+  let patchedBody = existingParts.body;
+  if (!extractSection(patchedBody, 'Module groups') || !extractSection(patchedBody, 'Architecture signals')) {
+    return null;
+  }
+  patchedBody = replaceSection(patchedBody, 'Module groups', newModuleGroups);
+  patchedBody = replaceSection(patchedBody, 'Architecture signals', newSignals);
+  return `${newParts.frontmatter}${patchedBody}`;
+}
+
 /**
  * Compute a short fingerprint of architecture inputs for LLM mode gating.
  * Derived from the deterministic Architecture.md body (excluding volatile fields and
@@ -722,11 +781,49 @@ function renderRepositoryOverview(manifest, plan) {
 }
 
 function renderArchitecture(manifest, plan) {
+  const dependencySummary = manifest.analysis?.dependency_graph?.summary || {};
+  const routeFiles = (manifest.files || []).filter((file) => (file.route_surfaces?.length ?? 0) > 0).length;
+  const configFiles = (manifest.files || []).filter((file) => (file.environment_variables?.length ?? 0) > 0).length;
+  const dataModelFiles = (manifest.files || []).filter((file) => (file.migration_surfaces?.length ?? 0) > 0 || (file.model_surfaces?.length ?? 0) > 0).length;
+  const securityFiles = (manifest.files || []).filter((file) => (file.reasons || []).some((reason) => ['auth', 'billing-or-payment'].includes(reason))).length;
+  const infrastructureFiles = (manifest.files || []).filter((file) => file.category === 'infra' || (file.runtime_hints || []).includes('deployment')).length;
+
   return `${frontmatter(manifest, {
     kind: 'architecture',
     claim_status: 'grounded',
     source_paths: collectPrimarySourcePaths(manifest).slice(0, 50)
-  })}# Architecture\n\nThis page is a first-pass architecture summary based on repository structure. The production compiler should replace this with an LLM-reviewed synthesis that uses source cards and targeted code excerpts.\n\n## Structural map\n\n\`\`\`mermaid\nflowchart TD\n  Repo[Repository at ${shortCommit(manifest.commit)}]\n${(plan.modules || []).slice(0, 12).map((module, index) => `  Repo --> M${index}[${escapeMermaid(module.name)}]`).join('\n')}\n\`\`\`\n\n## Module groups\n\n${(plan.modules || []).map((module) => `### ${module.name}\n\n- Files: ${module.files.length}\n- Dominant categories: ${Object.keys(module.categories).join(', ') || 'unknown'}\n- Dominant languages: ${Object.keys(module.languages).join(', ') || 'unknown'}\n- Important reasons: ${module.important_reasons.join(', ') || 'none detected'}\n`).join('\n')}\n`;
+  })}# Architecture
+
+This page is a first-pass architecture summary based on repository structure. The production compiler should replace this with an LLM-reviewed synthesis that uses source cards and targeted code excerpts.
+
+## Structural map
+
+\`\`\`mermaid
+flowchart TD
+  Repo[Repository at ${shortCommit(manifest.commit)}]
+${(plan.modules || []).slice(0, 12).map((module, index) => `  Repo --> M${index}[${escapeMermaid(module.name)}]`).join('\n')}
+\`\`\`
+
+## Module groups
+
+${(plan.modules || []).map((module) => `### ${module.name}
+
+- Files: ${module.files.length}
+- Dominant categories: ${Object.keys(module.categories).join(', ') || 'unknown'}
+- Dominant languages: ${Object.keys(module.languages).join(', ') || 'unknown'}
+- Important reasons: ${module.important_reasons.join(', ') || 'none detected'}
+`).join('\n')}
+
+## Architecture signals
+
+- Module groups: ${(plan.modules || []).length}
+- Dependency edges: ${dependencySummary.edges ?? 0}
+- Route-bearing files: ${routeFiles}
+- Config-bearing files: ${configFiles}
+- Data-model files: ${dataModelFiles}
+- Security-sensitive files: ${securityFiles}
+- Infrastructure files: ${infrastructureFiles}
+`;
 }
 
 function renderBuildTestAndRun(manifest) {

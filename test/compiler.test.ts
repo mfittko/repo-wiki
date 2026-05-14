@@ -1929,6 +1929,38 @@ test('compileWiki deterministic mode keeps Architecture.md byte-stable on re-com
   }
 });
 
+test('compileWiki deterministic mode updates Architecture signals for cross-cutting changes without full regeneration', async () => {
+  const manifest = buildArchManifest();
+  const plan = buildArchPlan();
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+
+    const updatedManifest = buildArchManifest({
+      totals: { languages: { TypeScript: 2 }, categories: { source: 2 }, runtime_hints: { 'http-route': 1 } },
+      files: [
+        { path: 'src/core.ts', category: 'source', language: 'TypeScript', imports: [], runtime_hints: ['http-route'], route_surfaces: [{ methods: ['GET'], path: '/health', handler: 'health' }], environment_variables: ['PORT'], reasons: ['auth'] },
+        { path: 'src/utils.ts', category: 'source', language: 'TypeScript', imports: [], runtime_hints: ['deployment'], reasons: ['source'] },
+        { path: 'db/schema.ts', category: 'source', language: 'TypeScript', imports: [], runtime_hints: [], migration_surfaces: [{ kind: 'migration', id: '001', name: 'init' }], reasons: ['source'] }
+      ],
+      analysis: { package_scripts: [], dependency_graph: { edges: [], summary: { edges: 0 } }, test_to_source: { mappings: [], summary: {} } }
+    });
+    await fs.writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify(updatedManifest, null, 2));
+
+    const result2 = await compileWiki({ scanDir, planFile, wikiDir });
+    const after2 = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+    assert.equal(result2.summary.architecture_decision, 'section-patched');
+    assert.match(after2, /Route-bearing files: 1/);
+    assert.match(after2, /Config-bearing files: 1/);
+    assert.match(after2, /Data-model files: 1/);
+    assert.match(after2, /Security-sensitive files: 1/);
+    assert.match(after2, /Infrastructure files: 1/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('compileWiki deterministic mode applies section-patched decision when module details change within same module list', async () => {
   const manifest = buildArchManifest();
   const plan = buildArchPlan();
