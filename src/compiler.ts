@@ -470,11 +470,12 @@ function extractLocalWikiLinks(content: string): string[] {
         char: fenceMatch[1][0] as '`' | '~',
         length: fenceMatch[1].length,
       };
+      const fenceRemainder = line.slice(fenceMatch[0].length);
       if (!fenceMarker) {
         fenceMarker = marker;
         continue;
       }
-      if (marker.char === fenceMarker.char && marker.length >= fenceMarker.length) {
+      if (marker.char === fenceMarker.char && marker.length >= fenceMarker.length && !fenceRemainder.trim()) {
         fenceMarker = null;
         continue;
       }
@@ -515,7 +516,7 @@ function extractLocalWikiLinks(content: string): string[] {
 
 
 function isIndentedMarkdownCodeBlockLine(line: string): boolean {
-  return /^(?: {4,}|	)/.test(line);
+  return /^(?: {4,}|	)(?![*+-]\s|\d+[.)]\s)/.test(line);
 }
 
 function isEscapedMarkdownCharacter(line: string, index: number): boolean {
@@ -582,7 +583,7 @@ function extractMarkdownReferenceDefinitions(lines: string[]): Map<string, strin
     }
     const label = normalizeMarkdownReferenceLabel(match[1]);
     const target = extractMarkdownReferenceDefinitionTarget(match[2]);
-    if (label && target) {
+    if (label && target && !definitions.has(label)) {
       definitions.set(label, target);
     }
   }
@@ -787,7 +788,7 @@ function extractFrontmatterSourcePaths(content: string): string[] {
       continue;
     }
 
-    const value = match[1].trim();
+    const value = stripYamlInlineComment(match[1]).trim();
     if (value.startsWith('[') && value.endsWith(']')) {
       values.push(...parseInlineYamlSequence(value));
       continue;
