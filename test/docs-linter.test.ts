@@ -729,7 +729,7 @@ test('scanRepository and lintDocs detect ADR recency/supersession conservatively
     await writeFile(path.join(dir, 'docs', 'adrs', '0002-superseded.md'), '---\nstatus: Superseded\nsuperseded_by: ADR-0003\n---\n\n# ADR-0002\n', 'utf8');
     await writeFile(path.join(dir, 'docs', 'adrs', '0000-legacy.md'), '# ADR-0000\n\nLegacy decision text without metadata.\n', 'utf8');
     await writeFile(path.join(dir, 'docs', 'architecture', 'overview.md'), '# Architecture Overview\n\nSystem design notes.\n', 'utf8');
-    await writeFile(path.join(dir, 'docs', 'notes.md'), '# Notes\n\nStatus updates for release operations.\n', 'utf8');
+    await writeFile(path.join(dir, 'docs', 'notes.md'), '# Notes\n\nStatus: Current\n\nRelease operations note, not an ADR.\n', 'utf8');
     await writeFile(path.join(dir, 'package.json'), JSON.stringify({ scripts: {} }), 'utf8');
     const oldDate = new Date(Date.now() - (10 * 86_400_000));
     await utimes(path.join(dir, 'docs', 'adrs', '0000-legacy.md'), oldDate, oldDate);
@@ -754,6 +754,7 @@ test('scanRepository and lintDocs detect ADR recency/supersession conservatively
     assert.equal(legacy.stale, true);
     assert.equal(architectureOverview.adr.detected, false);
     assert.equal(notes.adr.detected, false);
+    assert.equal(notes.adr.detection_source, 'none');
 
     const lint = await lintDocs({ scanDir, repoPath: dir });
     const supersededIssues = lint.issues.filter((issue) => issue.code === 'superseded-adr');

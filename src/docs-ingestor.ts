@@ -355,20 +355,20 @@ function detectAdrMetadata(filePath: string, content: string): AdrMetadata {
   const supersededByLine = readLabeledLine(content, 'Superseded by');
   const replacesLine = readLabeledLine(content, 'Replaces');
   const adrHeading = /^\s*#{1,6}\s*(?:ADR\s*:|ADR-\d+)\b/im.test(content) || /^\s*ADR-\d+\b/im.test(content);
-  const explicitMarkers = Boolean(
+  const statusMarker = Boolean(statusLine || frontmatterKeys.has('status'));
+  const strongMarkers = Boolean(
     adrHeading
-    || statusLine
     || supersededByLine
     || replacesLine
-    || frontmatterKeys.has('status')
     || frontmatterKeys.has('superseded_by')
     || frontmatterKeys.has('superseded-by')
     || frontmatterKeys.has('replaces')
   );
   const pathHint = lowerPath.startsWith('adr/') || lowerPath.startsWith('docs/adr/') || lowerPath.startsWith('docs/adrs/');
   const architectureHint = lowerPath.startsWith('docs/architecture/');
-  const detected = pathHint || (architectureHint ? explicitMarkers : explicitMarkers);
-  const detection_source = pathHint && explicitMarkers ? 'path+marker' : pathHint ? 'path' : explicitMarkers ? 'marker' : 'none';
+  const detectedByMarker = strongMarkers || (statusMarker && adrHeading);
+  const detected = pathHint || detectedByMarker;
+  const detection_source = pathHint && detectedByMarker ? 'path+marker' : pathHint ? 'path' : detectedByMarker ? 'marker' : 'none';
   const status = firstDefined(frontmatterStatus, statusLine);
   const supersededBy = firstDefined(frontmatterSupersededBy, supersededByLine);
   const replaces = firstDefined(frontmatterReplaces, replacesLine);
