@@ -265,6 +265,36 @@ function buildAffectedPageGraph(manifest: any, modules: any[], pages: any[]) {
     if (card.reasons?.some((r: string) => ['auth', 'billing-or-payment'].includes(r))) {
       addPage(source, 'Security-and-Secrets.md', 'cross_cutting_security');
     }
+
+    // Architecture-relevant signals → Architecture.md
+    // Module membership: file belongs to a tracked module (affects module list / structural map)
+    if (directSlug) {
+      addPage(source, 'Architecture.md', 'module_membership');
+    }
+    // Cross-module dependency: this file is imported by a file in a different module
+    for (const importer of reverseImports.get(source) || []) {
+      const importerSlug = fileToModuleSlug.get(importer);
+      if (importerSlug && importerSlug !== directSlug) {
+        addPage(source, 'Architecture.md', 'cross_module_dependency');
+        break; // One cross-module importer is sufficient to mark Architecture.md affected
+      }
+    }
+    // Route surfaces affect architecture-level API claims
+    if ((card.route_surfaces?.length ?? 0) > 0) {
+      addPage(source, 'Architecture.md', 'cross_cutting_routes');
+    }
+    // Data model / migration surfaces affect architecture-level data claims
+    if ((card.migration_surfaces?.length ?? 0) > 0 || (card.model_surfaces?.length ?? 0) > 0) {
+      addPage(source, 'Architecture.md', 'cross_cutting_data_model');
+    }
+    // Environment variables / config surfaces affect architecture-level config claims
+    if ((card.environment_variables?.length ?? 0) > 0) {
+      addPage(source, 'Architecture.md', 'cross_cutting_config');
+    }
+    // Auth / billing signals affect architecture-level security claims
+    if (card.reasons?.some((r: string) => ['auth', 'billing-or-payment'].includes(r))) {
+      addPage(source, 'Architecture.md', 'cross_cutting_security');
+    }
   }
 
   // Documentation cards → Documentation-Debt-Report.md (plus their direct module page if any)

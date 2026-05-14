@@ -396,6 +396,40 @@ test('createBootstrapPlan builds affected_page_graph mapping source files to wik
       assert.deepEqual(names, [...names].sort(),
         `pages for ${entry.source} must be sorted by page name`);
     }
+
+    // Architecture.md architecture-relevant signals:
+
+    // Module membership: files that are in modules should mark Architecture.md
+    const apiServerArch = pageReasons(apiServer, 'Architecture.md');
+    assert.ok(apiServerArch.includes('module_membership'),
+      'module_membership: apps/api/server.ts is in Service api → Architecture.md affected');
+
+    // Cross-module dependency: server.ts is imported by web/client.ts (different module)
+    assert.ok(apiServerArch.includes('cross_module_dependency'),
+      'cross_module_dependency: server.ts imported by client.ts (different module) → Architecture.md affected');
+
+    // Cross-cutting routes: routes.ts has route surfaces → Architecture.md affected
+    const apiRoutesArch = pageReasons(apiRoutes, 'Architecture.md');
+    assert.ok(apiRoutesArch.includes('cross_cutting_routes'),
+      'cross_cutting_routes: routes file has route surfaces → Architecture.md affected');
+
+    // Cross-cutting config: config.ts has env vars → Architecture.md affected
+    assert.ok(pageReasons(apiConfig, 'Architecture.md').includes('cross_cutting_config'),
+      'cross_cutting_config: config.ts has env vars → Architecture.md affected');
+
+    // Cross-cutting security: config.ts has auth reason → Architecture.md affected
+    assert.ok(pageReasons(apiConfig, 'Architecture.md').includes('cross_cutting_security'),
+      'cross_cutting_security: config.ts has auth reason → Architecture.md affected');
+
+    // Cross-cutting data model: schema.prisma has model surfaces → Architecture.md affected
+    assert.ok(pageReasons(schemaFile, 'Architecture.md').includes('cross_cutting_data_model'),
+      'cross_cutting_data_model: schema.prisma has model surfaces → Architecture.md affected');
+
+    // Architecture.md should appear for test files that have module membership
+    // (test/server.test.ts resolves to 'Repository Root' module in this fixture)
+    const testFileArchEntry = pageReasons(testFile, 'Architecture.md');
+    assert.ok(testFileArchEntry.includes('module_membership'),
+      'test file in Repository Root module should have module_membership for Architecture.md');
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

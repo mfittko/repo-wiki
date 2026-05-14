@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { assembleAllPageContexts, assemblePageContext } from './context-assembler.js';
 import { ensureDir, readJson, writeText } from './utils/fs.js';
@@ -77,6 +78,8 @@ export async function compileWiki({
   const llmGeneratedPages = new Set<string>();
   let skipped = 0;
   const skippedByState: Record<string, number> = {};
+  // Architecture.md handling decision for this compile run (reported in summary).
+  let archDecision: ArchDecision | null = null;
 
   if (isLLMMode) {
     // In LLM mode, synthesize module pages through the provider boundary.
@@ -172,45 +175,62 @@ export async function compileWiki({
       // at all (consistent with how LLM-handled module pages work). The existing
       // file is left intact; the write loop never sees it.
       pages.delete('Architecture.md');
+      archDecision = 'skipped';
       skipped++;
       skippedByState[archPageState] = (skippedByState[archPageState] || 0) + 1;
     } else {
-      // Resolve the architecture provider. If the architecture model override
-      // specifies a different model from the global resolved config, create a
-      // dedicated provider for the architecture page.
-      let archProvider: LLMProvider;
-      if (_provider !== null) {
-        archProvider = _provider;
+      // Gate the LLM architecture call using a fingerprint of the normalized
+      // architecture-input payload. If the fingerprint matches the one stored in
+      // the existing Architecture.md, the architecture inputs have not changed and
+      // we can skip the LLM call entirely (byte-stable, zero model cost).
+      const currentFingerprint = computeArchInputsFingerprint(manifest, plan);
+      const storedFingerprint = existingArchContent ? extractArchFingerprint(existingArchContent) : null;
+
+      const existingSourceCommit = existingArchContent ? extractFrontmatterString(existingArchContent, 'source_commit') : null;
+
+      if (storedFingerprint !== null && storedFingerprint === currentFingerprint && existingSourceCommit === manifest.commit) {
+        // Architecture inputs unchanged – skip LLM call, keep existing file byte-stable.
+        pages.delete('Architecture.md');
+        archDecision = 'skipped';
       } else {
-        archProvider = createProviderFromResolvedConfig({
-          ...resolvedLLMCfg!,
-          model: archOverrides.model ?? resolvedLLMCfg!.model,
-          timeoutMs: archOverrides.timeoutMs ?? resolvedLLMCfg!.timeoutMs,
-        });
-      }
-
-      const syntheticArchPage = { path: 'Architecture.md', phase: 'foundation' };
-      const archPageCtx = assemblePageContext({ manifest, plan, page: syntheticArchPage });
-      const archPromptCtx = buildArchitecturePromptContext(archPageCtx, manifest, existingArchContent);
-
-      const archRequest = buildRequest('architecture', archPromptCtx, {
-        maxOutputTokens: archOverrides.maxOutputTokens ?? resolvedLLMCfg!.maxOutputTokens,
-        temperature: resolvedLLMCfg!.temperature,
-        reasoningEffort: archOverrides.reasoningEffort ?? resolvedLLMCfg!.reasoningEffort,
-      });
-
-      try {
-        const patch = await synthesizeWikiPage(archProvider, archRequest, { maxRetries: validationRetries });
-        const normalized = normalizeLLMArchitectureContent(patch.content, manifest, archRequest.sourcePaths);
-        pages.set('Architecture.md', normalized);
-        llmGeneratedPages.add('Architecture.md');
-      } catch (err) {
-        if (err instanceof WikiPatchError) {
-          llmErrors.push({ file: 'Architecture.md', error: err.message, issues: err.issues });
-        } else if (err instanceof LLMProviderError) {
-          llmErrors.push({ file: 'Architecture.md', error: err.message });
+        // Resolve the architecture provider. If the architecture model override
+        // specifies a different model from the global resolved config, create a
+        // dedicated provider for the architecture page.
+        let archProvider: LLMProvider;
+        if (_provider !== null) {
+          archProvider = _provider;
         } else {
-          throw err;
+          archProvider = createProviderFromResolvedConfig({
+            ...resolvedLLMCfg!,
+            model: archOverrides.model ?? resolvedLLMCfg!.model,
+            timeoutMs: archOverrides.timeoutMs ?? resolvedLLMCfg!.timeoutMs,
+          });
+        }
+
+        const syntheticArchPage = { path: 'Architecture.md', phase: 'foundation' };
+        const archPageCtx = assemblePageContext({ manifest, plan, page: syntheticArchPage });
+        const archPromptCtx = buildArchitecturePromptContext(archPageCtx, manifest, existingArchContent);
+
+        const archRequest = buildRequest('architecture', archPromptCtx, {
+          maxOutputTokens: archOverrides.maxOutputTokens ?? resolvedLLMCfg!.maxOutputTokens,
+          temperature: resolvedLLMCfg!.temperature,
+          reasoningEffort: archOverrides.reasoningEffort ?? resolvedLLMCfg!.reasoningEffort,
+        });
+
+        try {
+          const patch = await synthesizeWikiPage(archProvider, archRequest, { maxRetries: validationRetries });
+          const normalized = normalizeLLMArchitectureContent(patch.content, manifest, archRequest.sourcePaths, currentFingerprint);
+          pages.set('Architecture.md', normalized);
+          llmGeneratedPages.add('Architecture.md');
+          archDecision = 'full-regenerated';
+        } catch (err) {
+          if (err instanceof WikiPatchError) {
+            llmErrors.push({ file: 'Architecture.md', error: err.message, issues: err.issues });
+          } else if (err instanceof LLMProviderError) {
+            llmErrors.push({ file: 'Architecture.md', error: err.message });
+          } else {
+            throw err;
+          }
         }
       }
     }
@@ -228,7 +248,8 @@ export async function compileWiki({
     throw new Error(`LLM compilation failed for ${llmErrors.length} page(s): ${llmErrors.map(formatLLMError).join('; ')}`);
   }
 
-  for (const [file, newContent] of pages) {
+  for (const [file, initialContent] of pages) {
+    let newContent = initialContent;
     const filePath = path.join(wikiDir, file);
     let existingContent: string | null = null;
 
@@ -247,9 +268,30 @@ export async function compileWiki({
       // Human-owned and unmanaged pages are never overwritten implicitly.
       // Adoption of pre-existing hand-written pages must be explicit.
       if (state === 'human-owned' || state === 'unmanaged') {
+        if (file === 'Architecture.md') {
+          archDecision = 'skipped';
+        }
         skipped++;
         skippedByState[state] = (skippedByState[state] || 0) + 1;
         continue;
+      }
+
+      // Architecture.md byte-stable skip (deterministic mode only).
+      // In LLM mode, the decision was already made before the LLM call.
+      if (file === 'Architecture.md' && !isLLMMode) {
+        const decision = computeArchDecision(newContent, existingContent);
+        archDecision = decision;
+        if (decision === 'skipped') {
+          continue; // Preserve existing file byte-for-byte.
+        }
+        if (decision === 'section-patched') {
+          const patched = patchArchitectureSections(existingContent, newContent);
+          if (patched && architectureUntouchedContent(patched) === architectureUntouchedContent(newContent)) {
+            newContent = patched;
+          } else {
+            archDecision = 'full-regenerated';
+          }
+        }
       }
 
       // Preserve any human notes that exist in the current page.
@@ -268,6 +310,10 @@ export async function compileWiki({
     }
 
     await writeText(filePath, newContent);
+    // Track first write of Architecture.md (no existing file).
+    if (file === 'Architecture.md' && archDecision === null) {
+      archDecision = 'full-regenerated';
+    }
   }
 
   return {
@@ -281,7 +327,8 @@ export async function compileWiki({
       skipped,
       skipped_by_state: skippedByState,
       commit: manifest.commit,
-      contexts: pageContexts.length
+      contexts: pageContexts.length,
+      architecture_decision: archDecision ?? 'full-regenerated'
     }
   };
 }
@@ -378,7 +425,7 @@ function buildArchitecturePromptContext(
  * source_paths) using the prompt context source paths that were actually
  * provided to the model.
  */
-function normalizeLLMArchitectureContent(content: string, manifest: any, requestSourcePaths: string[] = []): string {
+function normalizeLLMArchitectureContent(content: string, manifest: any, requestSourcePaths: string[] = [], archFingerprint?: string): string {
   if (!content.startsWith('---\n')) {
     return content;
   }
@@ -398,10 +445,230 @@ function normalizeLLMArchitectureContent(content: string, manifest: any, request
     `source_commit: ${JSON.stringify(manifest.commit)}`,
     'page_state: "generated"',
     `source_paths: ${JSON.stringify(sourcePaths)}`,
+    ...(archFingerprint ? [`${ARCH_FINGERPRINT_FIELD}: "${archFingerprint}"`] : []),
     ...withoutNormalized
   ];
 
   return `---\n${normalizedLines.join('\n')}${body}`;
+}
+
+// ---------------------------------------------------------------------------
+// Architecture page decision helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * The status vocabulary for Architecture.md handling in a compile run.
+ * - 'skipped': content is effectively unchanged; existing file preserved byte-for-byte.
+ * - 'section-patched': only module group sections changed within the same module list.
+ * - 'full-regenerated': module list or broader structure changed; full content written.
+ */
+export type ArchDecision = 'skipped' | 'section-patched' | 'full-regenerated';
+
+/**
+ * Frontmatter field used to store the architecture inputs fingerprint for LLM gating.
+ * The value is a 16-hex-char SHA-256 prefix of the normalized architecture-input payload.
+ */
+const ARCH_FINGERPRINT_FIELD = 'arch_inputs_fingerprint';
+
+/**
+ * Normalize volatile fields in Architecture.md content for structural comparison.
+ * Strips compiled_at timestamp and the short commit hash from the mermaid structural map.
+ */
+function normalizeArchForComparison(content: string): string {
+  return content
+    .replace(/^(compiled_at: )"[^"]*"$/m, '$1""')
+    .replace(/^page_state: "[^"]*"$/m, 'page_state: "generated"')
+    .replace(/<!-- HUMAN_NOTES_START -->[\s\S]*?<!-- HUMAN_NOTES_END -->/g, '<!-- HUMAN_NOTES_START -->\n<!-- HUMAN_NOTES_END -->')
+    .replace(/\n{3,}/g, '\n\n')
+    .replace(/\bRepository at [^\]]+\]/g, 'Repository at ]');
+}
+
+/**
+ * Extract the ordered list of module names from the `## Module groups` section.
+ * HUMAN_NOTES content is ignored so user-authored `###` headings do not affect
+ * architecture change detection.
+ */
+function extractArchitectureModuleNames(content: string): string[] {
+  const names: string[] = [];
+  const normalizedBody = splitFrontmatterAndBody(content).body
+    .replace(/<!-- HUMAN_NOTES_START -->[\s\S]*?<!-- HUMAN_NOTES_END -->/g, '<!-- HUMAN_NOTES_START -->\n<!-- HUMAN_NOTES_END -->');
+  const moduleGroups = extractSection(normalizedBody, 'Module groups') || normalizedBody;
+  const re = /^### (.+)$/gm;
+  let match;
+  while ((match = re.exec(moduleGroups)) !== null) {
+    names.push(match[1].trim());
+  }
+  return names;
+}
+
+/**
+ * Compute the Architecture.md handling decision by comparing new vs existing content.
+ *
+ * Returns:
+ * - 'skipped' if content is effectively unchanged after normalizing volatile fields.
+ * - 'section-patched' if only module group sections changed within the same module list.
+ * - 'full-regenerated' if the module list or broader structure changed.
+ */
+export function computeArchDecision(newContent: string, existingContent: string | null): ArchDecision {
+  if (!existingContent) {
+    return 'full-regenerated';
+  }
+
+  const normalizedNew = normalizeArchForComparison(newContent);
+  const normalizedExisting = normalizeArchForComparison(existingContent);
+
+  if (normalizedNew === normalizedExisting) {
+    return 'skipped';
+  }
+
+  // Check if the module list is unchanged – prerequisite for safe section patching.
+  const newModules = extractArchitectureModuleNames(newContent);
+  const existingModules = extractArchitectureModuleNames(existingContent);
+  const sameModuleList = (
+    newModules.length > 0 &&
+    newModules.length === existingModules.length &&
+    newModules.every((name, i) => name === existingModules[i])
+  );
+
+  return sameModuleList ? 'section-patched' : 'full-regenerated';
+}
+
+function splitFrontmatterAndBody(content: string): { frontmatter: string; body: string } {
+  if (!content.startsWith('---\n')) {
+    return { frontmatter: '', body: content };
+  }
+  const end = content.indexOf('\n---\n', 4);
+  if (end === -1) {
+    return { frontmatter: '', body: content };
+  }
+  return { frontmatter: content.slice(0, end + 5), body: content.slice(end + 5) };
+}
+
+function sectionBounds(body: string, heading: string): { start: number; end: number } | null {
+  const marker = `## ${heading}\n`;
+  const start = body.indexOf(marker);
+  if (start === -1) {
+    return null;
+  }
+  const next = body.indexOf('\n## ', start + marker.length);
+  return { start, end: next === -1 ? body.length : next + 1 };
+}
+
+function extractSection(body: string, heading: string): string | null {
+  const bounds = sectionBounds(body, heading);
+  return bounds ? body.slice(bounds.start, bounds.end) : null;
+}
+
+function replaceSection(body: string, heading: string, replacement: string): string {
+  const bounds = sectionBounds(body, heading);
+  if (!bounds) {
+    return body;
+  }
+  return `${body.slice(0, bounds.start)}${replacement.trimEnd()}\n\n${body.slice(bounds.end)}`;
+}
+
+function patchArchitectureSections(existingContent: string, newContent: string): string | null {
+  const existingParts = splitFrontmatterAndBody(existingContent);
+  const newParts = splitFrontmatterAndBody(newContent);
+  const newStructuralMap = extractSection(newParts.body, 'Structural map');
+  const newModuleGroups = extractSection(newParts.body, 'Module groups');
+  const newSignals = extractSection(newParts.body, 'Architecture signals');
+  if (!newStructuralMap || !newModuleGroups || !newSignals) {
+    return null;
+  }
+  let patchedBody = existingParts.body;
+  if (!extractSection(patchedBody, 'Structural map') || !extractSection(patchedBody, 'Module groups') || !extractSection(patchedBody, 'Architecture signals')) {
+    return null;
+  }
+  patchedBody = replaceSection(patchedBody, 'Structural map', newStructuralMap);
+  patchedBody = replaceSection(patchedBody, 'Module groups', newModuleGroups);
+  patchedBody = replaceSection(patchedBody, 'Architecture signals', newSignals);
+  return `${newParts.frontmatter}${patchedBody}`;
+}
+
+function architectureUntouchedContent(content: string): string {
+  let normalized = normalizeArchForComparison(content)
+    .replace(/<!-- HUMAN_NOTES_START -->[\s\S]*?<!-- HUMAN_NOTES_END -->/g, '');
+  const { frontmatter, body } = splitFrontmatterAndBody(normalized);
+  let remainder = body;
+  for (const heading of ['Structural map', 'Module groups', 'Architecture signals']) {
+    const section = extractSection(remainder, heading);
+    if (section) {
+      remainder = remainder.replace(section, '');
+    }
+  }
+  return `${frontmatter}${remainder}`.replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/**
+ * Compute a short fingerprint of architecture inputs for LLM mode gating.
+ * The fingerprint is derived from a normalized architecture-input payload built from the
+ * current manifest/plan slices that influence architecture synthesis.
+ */
+function computeArchInputsFingerprint(manifest: any, plan: any): string {
+  const modules = (plan?.modules || []).map((module: any) => ({
+    name: module.name,
+    slug: module.slug,
+    files: [...(module.files || [])].sort(),
+    important_reasons: [...(module.important_reasons || [])].sort()
+  }));
+
+  const dependencyEdges = (manifest?.analysis?.dependency_graph?.edges || [])
+    .filter((edge: any) => typeof edge?.from === 'string' && typeof edge?.to === 'string')
+    .map((edge: any) => ({ from: edge.from, to: edge.to, specifier: edge.specifier || null }))
+    .sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+  const routeSignals = (manifest?.files || [])
+    .flatMap((file: any) => (file.route_surfaces || []).map((route: any) => ({
+      path: file.path,
+      framework: route.framework || null,
+      methods: [...(route.methods || [])].sort(),
+      route_path: route.path || null,
+      handler: route.handler || null
+    })))
+    .sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+  const envSignals = (manifest?.files || [])
+    .filter((file: any) => (file.environment_variables || []).length > 0)
+    .map((file: any) => ({ path: file.path, env: [...(file.environment_variables || [])].sort() }))
+    .sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+  const dataSignals = (manifest?.files || [])
+    .filter((file: any) => (file.migration_surfaces || []).length > 0 || (file.model_surfaces || []).length > 0)
+    .map((file: any) => ({
+      path: file.path,
+      migrations: (file.migration_surfaces || []).map((entry: any) => ({ kind: entry.kind || null, id: entry.id || null, name: entry.name || null })),
+      models: (file.model_surfaces || []).map((entry: any) => ({ name: entry.name || null, kind: entry.kind || null, framework: entry.framework || null }))
+    }))
+    .sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+  const securitySignals = (manifest?.files || [])
+    .filter((file: any) => (file.reasons || []).some((reason: string) => ['auth', 'billing-or-payment'].includes(reason)))
+    .map((file: any) => ({ path: file.path, reasons: [...(file.reasons || [])].sort() }))
+    .sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+  const infrastructureSignals = (manifest?.files || [])
+    .filter((file: any) => file.category === 'infra' || (file.runtime_hints || []).includes('deployment'))
+    .map((file: any) => ({ path: file.path, category: file.category || null, runtime_hints: [...(file.runtime_hints || [])].sort() }))
+    .sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+  const payload = { modules, dependencyEdges, routeSignals, envSignals, dataSignals, securitySignals, infrastructureSignals };
+  return createHash('sha256').update(JSON.stringify(payload)).digest('hex').slice(0, 16);
+}
+
+/**
+ * Extract the stored arch_inputs_fingerprint from an Architecture.md frontmatter.
+ * Returns null when the field is absent (e.g. first run or deterministic render).
+ */
+function extractArchFingerprint(content: string): string | null {
+  const match = new RegExp(`^${ARCH_FINGERPRINT_FIELD}: "([^"]+)"$`, 'm').exec(content);
+  return match ? match[1] : null;
+}
+
+function extractFrontmatterString(content: string, key: string): string | null {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`^${escaped}: \"([^\"]+)\"$`, 'm').exec(content);
+  return match ? match[1] : null;
 }
 
 function isDocsOnlyModule(module: any) {
@@ -483,7 +750,7 @@ function hasSecondaryDocumentationLabel(content: string) {
 }
 
 function removeNormalizedFrontmatterFields(lines: string[], removeConservativeEvidenceFields = false): string[] {
-  const normalizedFields = new Set(['source_repo', 'source_commit', 'page_state', 'source_paths']);
+  const normalizedFields = new Set(['source_repo', 'source_commit', 'page_state', 'source_paths', ARCH_FINGERPRINT_FIELD]);
   if (removeConservativeEvidenceFields) {
     normalizedFields.add('claim_status');
     normalizedFields.add('confidence');
@@ -592,11 +859,49 @@ function renderRepositoryOverview(manifest, plan) {
 }
 
 function renderArchitecture(manifest, plan) {
+  const dependencySummary = manifest.analysis?.dependency_graph?.summary || {};
+  const routeFiles = (manifest.files || []).filter((file) => (file.route_surfaces?.length ?? 0) > 0).length;
+  const configFiles = (manifest.files || []).filter((file) => (file.environment_variables?.length ?? 0) > 0).length;
+  const dataModelFiles = (manifest.files || []).filter((file) => (file.migration_surfaces?.length ?? 0) > 0 || (file.model_surfaces?.length ?? 0) > 0).length;
+  const securityFiles = (manifest.files || []).filter((file) => (file.reasons || []).some((reason) => ['auth', 'billing-or-payment'].includes(reason))).length;
+  const infrastructureFiles = (manifest.files || []).filter((file) => file.category === 'infra' || (file.runtime_hints || []).includes('deployment')).length;
+
   return `${frontmatter(manifest, {
     kind: 'architecture',
     claim_status: 'grounded',
     source_paths: collectPrimarySourcePaths(manifest).slice(0, 50)
-  })}# Architecture\n\nThis page is a first-pass architecture summary based on repository structure. The production compiler should replace this with an LLM-reviewed synthesis that uses source cards and targeted code excerpts.\n\n## Structural map\n\n\`\`\`mermaid\nflowchart TD\n  Repo[Repository at ${shortCommit(manifest.commit)}]\n${(plan.modules || []).slice(0, 12).map((module, index) => `  Repo --> M${index}[${escapeMermaid(module.name)}]`).join('\n')}\n\`\`\`\n\n## Module groups\n\n${(plan.modules || []).map((module) => `### ${module.name}\n\n- Files: ${module.files.length}\n- Dominant categories: ${Object.keys(module.categories).join(', ') || 'unknown'}\n- Dominant languages: ${Object.keys(module.languages).join(', ') || 'unknown'}\n- Important reasons: ${module.important_reasons.join(', ') || 'none detected'}\n`).join('\n')}\n`;
+  })}# Architecture
+
+This page is a first-pass architecture summary based on repository structure. The production compiler should replace this with an LLM-reviewed synthesis that uses source cards and targeted code excerpts.
+
+## Structural map
+
+\`\`\`mermaid
+flowchart TD
+  Repo[Repository at ${shortCommit(manifest.commit)}]
+${(plan.modules || []).slice(0, 12).map((module, index) => `  Repo --> M${index}[${escapeMermaid(module.name)}]`).join('\n')}
+\`\`\`
+
+## Module groups
+
+${(plan.modules || []).map((module) => `### ${module.name}
+
+- Files: ${module.files.length}
+- Dominant categories: ${Object.keys(module.categories).join(', ') || 'unknown'}
+- Dominant languages: ${Object.keys(module.languages).join(', ') || 'unknown'}
+- Important reasons: ${module.important_reasons.join(', ') || 'none detected'}
+`).join('\n')}
+
+## Architecture signals
+
+- Module groups: ${(plan.modules || []).length}
+- Dependency edges: ${dependencySummary.edges ?? 0}
+- Route-bearing files: ${routeFiles}
+- Config-bearing files: ${configFiles}
+- Data-model files: ${dataModelFiles}
+- Security-sensitive files: ${securityFiles}
+- Infrastructure files: ${infrastructureFiles}
+`;
 }
 
 function renderBuildTestAndRun(manifest) {
