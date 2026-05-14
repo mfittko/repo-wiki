@@ -2400,7 +2400,7 @@ test('compileWiki in LLM mode embeds arch_inputs_fingerprint in Architecture.md 
   }
 });
 
-test('compileWiki writes deterministic graph.json skeleton with source→page affects parity', async () => {
+test('compileWiki writes deterministic enriched graph.json while preserving source→page affects parity', async () => {
   const manifest = {
     remote: 'origin',
     commit: 'graph-test-commit',
@@ -2485,7 +2485,7 @@ test('compileWiki writes deterministic graph.json skeleton with source→page af
     const firstBytes = await fs.readFile(graphPath, 'utf8');
     const graph = JSON.parse(firstBytes);
 
-    assert.deepEqual(Object.keys(graph).sort(), ['edges', 'nodes', 'schema_version']);
+    assert.deepEqual(Object.keys(graph), ['schema_version', 'nodes', 'edges']);
     assert.equal(graph.schema_version, 1);
 
     const expectedPagePaths = [...new Set(plan.pages.map((page: any) => page.path))]
@@ -2500,21 +2500,35 @@ test('compileWiki writes deterministic graph.json skeleton with source→page af
     assert.equal(docsNode?.kind, 'documentation');
     assert.equal(sourceNode?.kind, 'source');
 
-    const nodeIds = graph.nodes.map((node: any) => node.id);
+    const pageNodes = graph.nodes.filter((node: any) => node.kind === 'page');
+    const sourceNodes = graph.nodes.filter((node: any) => node.kind !== 'page');
     assert.deepEqual(
-      nodeIds,
-      [...nodeIds].sort((left, right) => left.localeCompare(right)),
-      'nodes must be sorted deterministically by id'
+      pageNodes.map((node: any) => node.path),
+      [...pageNodes.map((node: any) => node.path)].sort((left: string, right: string) => left.localeCompare(right)),
+      'page nodes must be sorted deterministically by canonical path'
+    );
+    assert.deepEqual(
+      sourceNodes.map((node: any) => node.path),
+      [...sourceNodes.map((node: any) => node.path)].sort((left: string, right: string) => left.localeCompare(right)),
+      'source nodes must be sorted deterministically by canonical path'
     );
 
     const expectedPairs = (plan.affected_page_graph.source_to_pages as any[])
       .flatMap((entry: any) => (entry.pages || []).map((pageEntry: any) => `source:${entry.source}→page:${pageEntry.page}`))
       .sort();
-    const actualPairs = graph.edges.map((edge: any) => `${edge.from}→${edge.to}`).sort();
+    const actualPairs = graph.edges
+      .filter((edge: any) => edge.type === 'affects')
+      .map((edge: any) => `${edge.from}→${edge.to}`)
+      .sort();
     assert.deepEqual(actualPairs, expectedPairs, 'edge pairs must exactly match plan.affected_page_graph.source_to_pages');
 
-    const serializedEdges = graph.edges.map((edge: any) => `${edge.from}|${edge.to}`);
-    assert.deepEqual(serializedEdges, [...serializedEdges].sort(), 'edges must be sorted deterministically');
+    const serializedEdges = graph.edges.map((edge: any) => `${edge.type}|${edge.from}|${edge.to}`);
+    assert.deepEqual(
+      serializedEdges,
+      [...serializedEdges].sort((left: string, right: string) => left.localeCompare(right)),
+      'edges must be sorted deterministically by (kind, from, to)'
+    );
+    assert.equal(new Set(serializedEdges).size, serializedEdges.length, 'edges must be deduplicated');
 
     const graphNodeIdSet = new Set(graph.nodes.map((node: any) => node.id));
     for (const edge of graph.edges) {
@@ -2527,6 +2541,167 @@ test('compileWiki writes deterministic graph.json skeleton with source→page af
     await compileWiki({ scanDir, planFile, wikiDir });
     const secondBytes = await fs.readFile(graphPath, 'utf8');
     assert.equal(secondBytes, firstBytes, 'graph.json must be byte-identical across repeated compile runs with unchanged inputs');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki graph enrichment normalizes page states, wiki links, and provenance edges', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'graph-enrichment-commit',
+    mode: 'bootstrap',
+    totals: {
+      languages: { TypeScript: 1, Markdown: 1 },
+      categories: { source: 1, docs: 1 },
+      runtime_hints: {}
+    },
+    files: [
+      {
+        path: 'src/a.ts',
+        category: 'source',
+        language: 'TypeScript',
+        imports: [],
+        runtime_hints: [],
+        reasons: ['source']
+      },
+      {
+        path: 'docs/readme.md',
+        category: 'docs',
+        language: 'Markdown',
+        imports: [],
+        runtime_hints: [],
+        reasons: ['docs']
+      }
+    ],
+    documentation: {
+      files: [
+        {
+          kind: 'documentation_card',
+          path: 'docs/readme.md',
+          authority: 'secondary',
+          status: 'unvalidated',
+          stale: false,
+          claims: [],
+          validation: { contradictions: [], validated: [], commands: [], env_vars: [] }
+        }
+      ]
+    }
+  };
+  const plan = {
+    pages: [
+      { path: 'Alpha.md', phase: 'module', purpose: 'Alpha' },
+      { path: 'Beta.md', phase: 'module', purpose: 'Beta' },
+      { path: 'Delta.md', phase: 'module', purpose: 'Delta' },
+      { path: 'Gamma.md', phase: 'module', purpose: 'Gamma' }
+    ],
+    modules: [],
+    affected_page_graph: {
+      source_to_pages: [
+        {
+          source: 'src/a.ts',
+          pages: [
+            { page: 'Alpha.md', reasons: ['module_membership'] },
+            { page: 'Beta.md', reasons: ['api_change'] }
+          ]
+        }
+      ],
+      summary: {
+        mapped_sources: 1,
+        total_page_references: 2
+      }
+    }
+  };
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-graph-enrichment-'));
+  const llmwikiDir = path.join(dir, '.llmwiki');
+  const scanDir = path.join(llmwikiDir, 'run');
+  const wikiDir = path.join(dir, 'wiki');
+  const planFile = path.join(llmwikiDir, 'bootstrap-plan.json');
+
+  await fs.mkdir(scanDir, { recursive: true });
+  await fs.mkdir(wikiDir, { recursive: true });
+  await fs.writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+  await fs.writeFile(planFile, JSON.stringify(plan, null, 2));
+  await fs.writeFile(path.join(wikiDir, 'Alpha.md'), `\uFEFF---\r
+owned_by: "human"\r
+source_paths: ["src/a.ts", "", "./src/a.ts", "src/a.ts"]\r
+---\r
+\r
+[Beta](Beta)\r
+[Beta 2](Beta.md)\r
+[Beta 3](./Beta.md)\r
+[Beta 4](Beta.md#section)\r
+[External](https://example.com)\r
+[Anchor](#local)\r
+[Asset](diagram.png)\r
+[Nested](nested/Beta.md)\r
+`);
+  await fs.writeFile(path.join(wikiDir, 'Beta.md'), `---
+title: "beta"
+source_paths:
+  - "src/a.ts"
+---
+
+no source commit keeps this unmanaged
+`);
+  await fs.writeFile(path.join(wikiDir, 'Delta.md'), `---
+source_repo: "origin"
+source_commit: "graph-enrichment-commit"
+source_paths: ["src/a.ts", "", "./src/a.ts", "src/a.ts"]
+---
+
+<!-- HUMAN_NOTES_START -->
+   
+<!-- HUMAN_NOTES_END -->
+`);
+  await fs.writeFile(path.join(wikiDir, 'Gamma.md'), `---
+source_repo: "origin"
+source_commit: "graph-enrichment-commit"
+source_paths:
+  - src/gamma.ts
+  - "./src/gamma.ts"
+  - ""
+  - docs/readme.md
+---
+
+<!-- HUMAN_NOTES_START -->
+Needs review.
+<!-- HUMAN_NOTES_END -->
+`);
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+    const graphPath = path.join(llmwikiDir, 'graph.json');
+    const graphBytes = await fs.readFile(graphPath, 'utf8');
+    const graph = JSON.parse(graphBytes);
+
+    const pageStateByPath = new Map(graph.nodes
+      .filter((node: any) => node.kind === 'page')
+      .map((node: any) => [node.path, node.page_state]));
+    assert.equal(pageStateByPath.get('Alpha.md'), 'human-owned');
+    assert.equal(pageStateByPath.get('Beta.md'), 'unmanaged');
+    assert.equal(pageStateByPath.get('Gamma.md'), 'mixed');
+    assert.equal(pageStateByPath.get('Delta.md'), 'generated');
+
+    const wikiLinks = graph.edges
+      .filter((edge: any) => edge.type === 'wiki_link')
+      .map((edge: any) => `${edge.from}->${edge.to}`);
+    assert.deepEqual(wikiLinks, ['page:Alpha.md->page:Beta.md']);
+
+    const provenanceEdges = graph.edges
+      .filter((edge: any) => edge.type === 'provenance')
+      .map((edge: any) => `${edge.from}->${edge.to}`)
+      .sort();
+    assert.deepEqual(provenanceEdges, [
+      'page:Beta.md->source:src/a.ts',
+      'page:Delta.md->source:src/a.ts',
+      'page:Gamma.md->source:docs/readme.md',
+      'page:Gamma.md->source:src/gamma.ts'
+    ]);
+
+    const sourceNodes = graph.nodes.filter((node: any) => node.kind !== 'page');
+    const sourcePaths = sourceNodes.map((node: any) => node.path);
+    assert.deepEqual(sourcePaths, [...sourcePaths].sort((left: string, right: string) => left.localeCompare(right)));
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }

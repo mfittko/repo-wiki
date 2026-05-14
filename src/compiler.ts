@@ -6,6 +6,7 @@ import { assembleAllPageContexts, assemblePageContext } from './context-assemble
 import { ensureDir, readJson, writeJson, writeText } from './utils/fs.js';
 import { buildRouteSurfaceIndex, collectKnownEnvironmentVariables, collectManifestDirectories, dedupeRouteValidationFindings, normalizeRepoPath, resolveDocumentedPathFromManifest, validateRouteClaims } from './docs-validation.js';
 import { classifyDocumentedCommands, extractRouteClaims, mergePackageScripts } from './docs-ingestor.js';
+import { extractFrontmatterBlock } from './frontmatter.js';
 import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-ownership.js';
 import { buildRequest, createProvider, createProviderFromResolvedConfig, LLMProviderError, resolveArchitectureOverrides, resolveProviderConfig } from './llm-provider.js';
 import type { LLMProvider } from './llm-provider.js';
@@ -318,7 +319,7 @@ export async function compileWiki({
 
   // Keep the graph artifact rooted in the local .llmwiki workspace rather than the configurable wikiDir.
   // This preserves the fixed `.llmwiki/graph.json` contract even when callers override `--wiki`.
-  await writeJson(path.join(path.dirname(scanDir), 'graph.json'), buildWikiGraphSkeleton(manifest, plan));
+  await writeJson(path.join(path.dirname(scanDir), 'graph.json'), await buildWikiGraphSkeleton(manifest, plan, wikiDir));
 
   return {
     contexts: pageContexts,
@@ -343,40 +344,44 @@ type WikiGraphNode = {
   id: string;
   kind: WikiGraphNodeKind;
   path: string;
+  page_state?: 'generated' | 'mixed' | 'human-owned' | 'unmanaged';
 };
 
 type WikiGraphEdge = {
-  type: 'affects';
+  type: 'affects' | 'wiki_link' | 'provenance';
   from: string;
   to: string;
 };
 
-function buildWikiGraphSkeleton(manifest: any, plan: any): {
+async function buildWikiGraphSkeleton(manifest: any, plan: any, wikiDir: string): Promise<{
   schema_version: number;
   nodes: WikiGraphNode[];
   edges: WikiGraphEdge[];
-} {
+}> {
   const plannedPagePaths = uniqueSorted((plan?.pages || []).map((page: any) => String(page?.path || '')).filter(Boolean)) as string[];
   const sourceToPages = Array.isArray(plan?.affected_page_graph?.source_to_pages) ? plan.affected_page_graph.source_to_pages : [];
   const documentationPaths = new Set<string>([
     ...(manifest?.documentation?.files || []).map((file: any) => String(file?.path || '')).filter(Boolean),
     ...(manifest?.files || []).filter((file: any) => file?.category === 'docs').map((file: any) => String(file?.path || '')).filter(Boolean),
   ]);
+  const pageContentByPath = new Map<string, string>();
+  const pageBodyByPath = new Map<string, string>();
+  const pageStateByPath = new Map<string, 'generated' | 'mixed' | 'human-owned' | 'unmanaged'>();
+  for (const pagePath of plannedPagePaths) {
+    try {
+      const content = await fs.readFile(path.join(wikiDir, pagePath), 'utf8');
+      pageContentByPath.set(pagePath, content);
+      pageBodyByPath.set(pagePath, stripLeadingFrontmatter(content));
+      pageStateByPath.set(pagePath, detectPageState(content));
+    } catch (error) {
+      if (!isNodeError(error) || error.code !== 'ENOENT') {
+        throw error;
+      }
+      pageStateByPath.set(pagePath, 'generated');
+    }
+  }
 
-  const sourcePaths = uniqueSorted(sourceToPages.map((entry: any) => String(entry?.source || '')).filter(Boolean)) as string[];
-  const nodes: WikiGraphNode[] = [
-    ...plannedPagePaths.map((pagePath) => ({
-      id: `page:${pagePath}`,
-      kind: 'page' as const,
-      path: pagePath,
-    })),
-    ...sourcePaths.map((sourcePath) => ({
-      id: `source:${sourcePath}`,
-      kind: (documentationPaths.has(sourcePath) || isDocumentationPath(sourcePath) ? 'documentation' : 'source') as WikiGraphNodeKind,
-      path: sourcePath,
-    })),
-  ].sort((left, right) => left.id.localeCompare(right.id));
-
+  const sourcePathSet = new Set<string>(sourceToPages.map((entry: any) => String(entry?.source || '')).filter(Boolean));
   const edgeSet = new Set<string>();
   for (const entry of sourceToPages) {
     const sourcePath = String(entry?.source || '');
@@ -388,26 +393,164 @@ function buildWikiGraphSkeleton(manifest: any, plan: any): {
       if (!pagePath) {
         continue;
       }
-      edgeSet.add(`${sourcePath}\u0000${pagePath}`);
+      edgeSet.add(`affects\u0000source:${sourcePath}\u0000page:${pagePath}`);
     }
   }
 
-  const edges: WikiGraphEdge[] = [...edgeSet]
-    .map((pair) => {
-      const [sourcePath, pagePath] = pair.split('\u0000');
-      return {
-        type: 'affects' as const,
-        from: `source:${sourcePath}`,
-        to: `page:${pagePath}`,
-      };
-    })
-    .sort((left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
+  const pageTargetByReference = new Map<string, string>();
+  for (const pagePath of plannedPagePaths) {
+    pageTargetByReference.set(canonicalWikiPageReference(pagePath), pagePath);
+  }
+  for (const [fromPagePath, pageBody] of pageBodyByPath.entries()) {
+    for (const targetReference of extractLocalWikiLinks(pageBody)) {
+      const toPagePath = pageTargetByReference.get(targetReference);
+      if (toPagePath) {
+        edgeSet.add(`wiki_link\u0000page:${fromPagePath}\u0000page:${toPagePath}`);
+      }
+    }
+  }
+
+  for (const [pagePath, pageContent] of pageContentByPath.entries()) {
+    const sourcePaths = extractFrontmatterSourcePaths(pageContent);
+    for (const sourcePath of sourcePaths) {
+      sourcePathSet.add(sourcePath);
+      edgeSet.add(`provenance\u0000page:${pagePath}\u0000source:${sourcePath}`);
+    }
+  }
+
+  const sourcePaths = uniqueSorted([...sourcePathSet]) as string[];
+  const pageNodes: WikiGraphNode[] = plannedPagePaths.map((pagePath) => ({
+    id: `page:${pagePath}`,
+    kind: 'page',
+    path: pagePath,
+    page_state: pageStateByPath.get(pagePath) || 'generated',
+  }));
+  const sourceNodes: WikiGraphNode[] = sourcePaths.map((sourcePath) => ({
+    id: `source:${sourcePath}`,
+    kind: (documentationPaths.has(sourcePath) || isDocumentationPath(sourcePath) ? 'documentation' : 'source') as WikiGraphNodeKind,
+    path: sourcePath,
+  }));
+
+  const nodes: WikiGraphNode[] = [...pageNodes, ...sourceNodes];
+  const edges: WikiGraphEdge[] = [...edgeSet].map((entry) => {
+    const [type, from, to] = entry.split('\u0000');
+    return {
+      type: type as WikiGraphEdge['type'],
+      from,
+      to,
+    };
+  }).sort((left, right) => left.type.localeCompare(right.type) || left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
 
   return {
     schema_version: 1,
     nodes,
     edges,
   };
+}
+
+function stripLeadingFrontmatter(content: string): string {
+  return extractFrontmatterBlock(content)?.body ?? content;
+}
+
+function canonicalWikiPageReference(value: string): string {
+  return String(value || '').trim().replace(/^\.\//, '').replace(/#.*$/, '').replace(/\.md$/i, '');
+}
+
+function extractLocalWikiLinks(content: string): string[] {
+  const links = new Set<string>();
+  const re = /\[([^\]\n]{0,2048})\]\(([^)\n]{1,2048})\)/g;
+  for (const match of content.matchAll(re)) {
+    const href = String(match[2] || '').trim();
+    const offset = match.index ?? -1;
+    if (offset > 0 && content[offset - 1] === '!') {
+      continue;
+    }
+    if (!href || /^(?:https?:|mailto:|ftp:|\/\/|#)/i.test(href) || /^(?:javascript:|data:|vbscript:|blob:|about:)/i.test(href)) {
+      continue;
+    }
+    const noFragment = href.replace(/#.*$/, '');
+    const normalized = noFragment.replace(/^\.\//, '');
+    if (!normalized || normalized.includes('/')) {
+      continue;
+    }
+    const extension = path.extname(normalized).toLowerCase();
+    if (extension && extension !== '.md') {
+      continue;
+    }
+    const canonical = canonicalWikiPageReference(normalized);
+    if (canonical) {
+      links.add(canonical);
+    }
+  }
+  return [...links];
+}
+
+function extractFrontmatterSourcePaths(content: string): string[] {
+  const block = extractFrontmatterBlock(content);
+  if (!block) {
+    return [];
+  }
+
+  const lines = block.yaml.replace(/\r\n/g, '\n').split('\n');
+  const values: string[] = [];
+  for (let index = 0; index < lines.length; index++) {
+    const match = /^source_paths:\s*(.*)$/.exec(lines[index]);
+    if (!match) {
+      continue;
+    }
+
+    const value = match[1].trim();
+    if (value.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(value);
+        if (Array.isArray(parsed)) {
+          for (const entry of parsed) {
+            if (typeof entry === 'string') {
+              values.push(entry);
+            }
+          }
+        }
+      } catch {
+        // Ignore malformed inline JSON arrays.
+      }
+      continue;
+    }
+
+    if (value !== '') {
+      continue;
+    }
+
+    for (let listIndex = index + 1; listIndex < lines.length; listIndex++) {
+      const line = lines[listIndex];
+      if (!line.trim()) {
+        continue;
+      }
+      const listEntry = /^\s*-\s*(.*)$/.exec(line);
+      if (!listEntry) {
+        break;
+      }
+      values.push(unquoteYamlScalar(listEntry[1].trim()));
+      index = listIndex;
+    }
+  }
+
+  return uniqueSorted(values
+    .map((entry) => normalizeRepoPath(unquoteYamlScalar(entry).trim()).replace(/^\.\//, ''))
+    .filter(Boolean)) as string[];
+}
+
+function unquoteYamlScalar(value: string): string {
+  if (value.startsWith('"') && value.endsWith('"') && value.length >= 2) {
+    try {
+      return String(JSON.parse(value));
+    } catch {
+      return value.slice(1, -1);
+    }
+  }
+  if (value.startsWith('\'') && value.endsWith('\'') && value.length >= 2) {
+    return value.slice(1, -1).replace(/''/g, '\'');
+  }
+  return value;
 }
 
 /**
