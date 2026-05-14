@@ -2282,6 +2282,66 @@ test('compileWiki in LLM mode does not skip architecture when commit changed but
   }
 });
 
+test('compileWiki in LLM mode reruns architecture when route details change without changing route-bearing file count', async () => {
+  const manifest = {
+    ...defaultLLMManifest,
+    totals: { languages: { TypeScript: 1 }, categories: { source: 1 }, runtime_hints: { 'http-route': 1 } },
+    files: [
+      {
+        path: 'src/auth.ts',
+        category: 'source',
+        language: 'TypeScript',
+        imports: [],
+        route_surfaces: [{ framework: 'express', methods: ['GET'], path: '/health', handler: 'health' }],
+        runtime_hints: ['http-route'],
+        reasons: ['source']
+      }
+    ],
+    analysis: { package_scripts: [], dependency_graph: { edges: [], summary: {} }, test_to_source: { mappings: [], summary: {} } }
+  };
+  const plan = {
+    ...createLLMPlan(),
+    modules: [
+      { slug: 'Module-Auth', name: 'Auth', files: ['src/auth.ts'], categories: { source: 1 }, languages: { TypeScript: 1 }, runtime_hints: {}, important_reasons: ['source'] }
+    ]
+  };
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+  const config = { compiler: { mode: 'llm' } };
+  let archCallCount = 0;
+
+  const countingProvider: LLMProvider = {
+    name: 'counting-mock-routes',
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      if (req.archetype === 'architecture') {
+        archCallCount++;
+      }
+      return { provider: 'counting-mock-routes', content: validLLMTestContent(req) };
+    }
+  };
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir, config, _provider: countingProvider });
+    assert.equal(archCallCount, 1);
+
+    const updatedManifest = {
+      ...manifest,
+      files: [
+        {
+          ...manifest.files[0],
+          route_surfaces: [{ framework: 'express', methods: ['POST'], path: '/status', handler: 'status' }]
+        }
+      ]
+    };
+    await fs.writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify(updatedManifest, null, 2));
+
+    const result2 = await compileWiki({ scanDir, planFile, wikiDir, config, _provider: countingProvider });
+    assert.equal(archCallCount, 2, 'architecture provider should rerun when route details change');
+    assert.equal(result2.summary.architecture_decision, 'full-regenerated');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('compileWiki in LLM mode embeds arch_inputs_fingerprint in Architecture.md frontmatter', async () => {
   const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
   const config = { compiler: { mode: 'llm' } };

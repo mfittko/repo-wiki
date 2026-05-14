@@ -183,8 +183,7 @@ export async function compileWiki({
       // rendering. If the fingerprint matches the one stored in the existing
       // Architecture.md, the architecture inputs have not changed and we can
       // skip the LLM call entirely (byte-stable, zero model cost).
-      const deterministicArchContent = pages.get('Architecture.md')!;
-      const currentFingerprint = computeArchInputsFingerprint(deterministicArchContent);
+      const currentFingerprint = computeArchInputsFingerprint(manifest, plan);
       const storedFingerprint = existingArchContent ? extractArchFingerprint(existingArchContent) : null;
 
       const existingSourceCommit = existingArchContent ? extractFrontmatterString(existingArchContent, 'source_commit') : null;
@@ -605,11 +604,55 @@ function architectureUntouchedContent(content: string): string {
  * Derived from the deterministic Architecture.md body (excluding volatile fields and
  * the short-commit reference), so it only changes when architecture structure changes.
  */
-function computeArchInputsFingerprint(deterministicArchContent: string): string {
-  const frontmatterEnd = deterministicArchContent.indexOf('\n---\n', 4);
-  const body = frontmatterEnd !== -1 ? deterministicArchContent.slice(frontmatterEnd + 5) : deterministicArchContent;
-  const normalized = body.replace(/\bRepository at [^\]]+\]/g, 'Repository at ]');
-  return createHash('sha256').update(normalized).digest('hex').slice(0, 16);
+function computeArchInputsFingerprint(manifest: any, plan: any): string {
+  const modules = (plan?.modules || []).map((module: any) => ({
+    name: module.name,
+    slug: module.slug,
+    files: [...(module.files || [])].sort(),
+    important_reasons: [...(module.important_reasons || [])].sort()
+  }));
+
+  const dependencyEdges = (manifest?.analysis?.dependency_graph?.edges || [])
+    .filter((edge: any) => typeof edge?.from === 'string' && typeof edge?.to === 'string')
+    .map((edge: any) => ({ from: edge.from, to: edge.to, specifier: edge.specifier || null }))
+    .sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+  const routeSignals = (manifest?.files || [])
+    .flatMap((file: any) => (file.route_surfaces || []).map((route: any) => ({
+      path: file.path,
+      framework: route.framework || null,
+      methods: [...(route.methods || [])].sort(),
+      route_path: route.path || null,
+      handler: route.handler || null
+    })))
+    .sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+  const envSignals = (manifest?.files || [])
+    .filter((file: any) => (file.environment_variables || []).length > 0)
+    .map((file: any) => ({ path: file.path, env: [...(file.environment_variables || [])].sort() }))
+    .sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+  const dataSignals = (manifest?.files || [])
+    .filter((file: any) => (file.migration_surfaces || []).length > 0 || (file.model_surfaces || []).length > 0)
+    .map((file: any) => ({
+      path: file.path,
+      migrations: (file.migration_surfaces || []).map((entry: any) => ({ kind: entry.kind || null, id: entry.id || null, name: entry.name || null })),
+      models: (file.model_surfaces || []).map((entry: any) => ({ name: entry.name || null, kind: entry.kind || null, framework: entry.framework || null }))
+    }))
+    .sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+  const securitySignals = (manifest?.files || [])
+    .filter((file: any) => (file.reasons || []).some((reason: string) => ['auth', 'billing-or-payment'].includes(reason)))
+    .map((file: any) => ({ path: file.path, reasons: [...(file.reasons || [])].sort() }))
+    .sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+  const infrastructureSignals = (manifest?.files || [])
+    .filter((file: any) => file.category === 'infra' || (file.runtime_hints || []).includes('deployment'))
+    .map((file: any) => ({ path: file.path, category: file.category || null, runtime_hints: [...(file.runtime_hints || [])].sort() }))
+    .sort((a: any, b: any) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+
+  const payload = { modules, dependencyEdges, routeSignals, envSignals, dataSignals, securitySignals, infrastructureSignals };
+  return createHash('sha256').update(JSON.stringify(payload)).digest('hex').slice(0, 16);
 }
 
 /**
@@ -617,7 +660,7 @@ function computeArchInputsFingerprint(deterministicArchContent: string): string 
  * Returns null when the field is absent (e.g. first run or deterministic render).
  */
 function extractArchFingerprint(content: string): string | null {
-  const match = /^arch_inputs_fingerprint: "([^"]+)"$/m.exec(content);
+  const match = new RegExp(`^${ARCH_FINGERPRINT_FIELD}: "([^"]+)"$`, 'm').exec(content);
   return match ? match[1] : null;
 }
 
