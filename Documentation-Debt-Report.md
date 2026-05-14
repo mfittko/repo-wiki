@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "db3dd5c6e2bdb430282661ff44b002d22af0bade"
-compiled_at: "2026-05-14T01:16:43.915Z"
+source_commit: "fcd0cab90b26fc622c67172972b85e39ed7ab703"
+compiled_at: "2026-05-14T06:45:40.379Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 claim_status: "review-needed"
@@ -208,6 +208,16 @@ Route and API claims from documentation prose are validated against scanner-extr
 
 - No route/API claims extracted from documentation.
 
+## ADR validation
+
+Conservative ADR detection uses deterministic path hints (`ADR/**`, `docs/adr/**`, `docs/adrs/**`) and explicit markers (e.g. `Status:`, `Superseded by:`, `Replaces:`, or ADR heading/title markers).
+
+- ADR files detected: 0
+- Superseded ADRs: 0
+- Old ADRs missing status metadata: 0
+
+- No ADR-like documentation files detected.
+
 ## Findings by category
 
 ### Stale
@@ -267,6 +277,10 @@ Route and API claims from documentation prose are validated against scanner-extr
 - `docs/WHY.md:18` references `Index.md` (missing).
 - `docs/WHY.md:19` references `Log.md` (missing).
 - `README.md:119` references `smoke/pr-N` (missing).
+
+### ADR-specific
+
+- None detected.
 
 ## Compiler policy
 
