@@ -44,6 +44,23 @@ async function writeFixture({ manifest, plan }) {
   return { dir, scanDir, wikiDir, planFile };
 }
 
+function assertNoWallClockFields(value: unknown) {
+  const forbidden = new Set(['generated_at', 'compiled_at', 'timestamp']);
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      assertNoWallClockFields(entry);
+    }
+    return;
+  }
+  if (!value || typeof value !== 'object') {
+    return;
+  }
+  for (const [key, nested] of Object.entries(value)) {
+    assert.ok(!forbidden.has(key), `unexpected wall-clock field "${key}" in graph artifact`);
+    assertNoWallClockFields(nested);
+  }
+}
+
 test('compileWiki renders richer scanner analysis into wiki pages', async () => {
   const manifest = {
     remote: 'origin',
@@ -2378,6 +2395,128 @@ test('compileWiki in LLM mode embeds arch_inputs_fingerprint in Architecture.md 
 
     const archPage = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
     assert.match(archPage, /^arch_inputs_fingerprint: "[a-f0-9]{16}"$/m);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki writes deterministic graph.json skeleton with source→page affects parity', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'graph-test-commit',
+    mode: 'bootstrap',
+    totals: {
+      languages: { TypeScript: 1, Markdown: 1 },
+      categories: { source: 1, docs: 1 },
+      runtime_hints: {}
+    },
+    files: [
+      {
+        path: 'src/server.ts',
+        category: 'source',
+        language: 'TypeScript',
+        imports: [],
+        runtime_hints: [],
+        reasons: ['source']
+      },
+      {
+        path: 'docs/guide.md',
+        category: 'docs',
+        language: 'Markdown',
+        imports: [],
+        runtime_hints: [],
+        reasons: ['docs']
+      }
+    ],
+    documentation: {
+      files: [
+        {
+          kind: 'documentation_card',
+          path: 'docs/guide.md',
+          authority: 'secondary',
+          status: 'unvalidated',
+          stale: false,
+          claims: [],
+          validation: { contradictions: [], validated: [], commands: [], env_vars: [] }
+        }
+      ]
+    }
+  };
+  const plan = {
+    ...createPlan(),
+    affected_page_graph: {
+      source_to_pages: [
+        {
+          source: 'src/server.ts',
+          pages: [
+            { page: 'Architecture.md', reasons: ['module_membership'] },
+            { page: 'Dependency-Map.md', reasons: ['dependency_change'] }
+          ]
+        },
+        {
+          source: 'docs/guide.md',
+          pages: [
+            { page: 'Documentation-Debt-Report.md', reasons: ['docs_debt'] },
+            { page: 'Architecture.md', reasons: ['context'] }
+          ]
+        }
+      ],
+      summary: {
+        mapped_sources: 2,
+        total_page_references: 4
+      }
+    }
+  };
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+    const graphPath = path.join(dir, 'graph.json');
+    const firstBytes = await fs.readFile(graphPath, 'utf8');
+    const graph = JSON.parse(firstBytes);
+
+    assert.deepEqual(Object.keys(graph).sort(), ['edges', 'nodes', 'schema_version']);
+    assert.equal(graph.schema_version, 1);
+
+    const expectedPagePaths = [...new Set(plan.pages.map((page: any) => page.path))]
+      .sort((left, right) => left.localeCompare(right));
+    const actualPagePaths = graph.nodes
+      .filter((node: any) => node.kind === 'page')
+      .map((node: any) => node.path);
+    assert.deepEqual(actualPagePaths, expectedPagePaths);
+
+    const docsNode = graph.nodes.find((node: any) => node.id === 'source:docs/guide.md');
+    const sourceNode = graph.nodes.find((node: any) => node.id === 'source:src/server.ts');
+    assert.equal(docsNode?.kind, 'documentation');
+    assert.equal(sourceNode?.kind, 'source');
+
+    const nodeIds = graph.nodes.map((node: any) => node.id);
+    assert.deepEqual(
+      nodeIds,
+      [...nodeIds].sort((left, right) => left.localeCompare(right)),
+      'nodes must be sorted deterministically by id'
+    );
+
+    const expectedPairs = (plan.affected_page_graph.source_to_pages as any[])
+      .flatMap((entry: any) => (entry.pages || []).map((pageEntry: any) => `source:${entry.source}→page:${pageEntry.page}`))
+      .sort();
+    const actualPairs = graph.edges.map((edge: any) => `${edge.from}→${edge.to}`).sort();
+    assert.deepEqual(actualPairs, expectedPairs, 'edge pairs must exactly match plan.affected_page_graph.source_to_pages');
+
+    const serializedEdges = graph.edges.map((edge: any) => `${edge.from}|${edge.to}`);
+    assert.deepEqual(serializedEdges, [...serializedEdges].sort(), 'edges must be sorted deterministically');
+
+    const graphNodeIdSet = new Set(graph.nodes.map((node: any) => node.id));
+    for (const edge of graph.edges) {
+      assert.ok(graphNodeIdSet.has(edge.from), `missing from-node for ${edge.from} -> ${edge.to}`);
+      assert.ok(graphNodeIdSet.has(edge.to), `missing to-node for ${edge.from} -> ${edge.to}`);
+    }
+
+    assertNoWallClockFields(graph);
+
+    await compileWiki({ scanDir, planFile, wikiDir });
+    const secondBytes = await fs.readFile(graphPath, 'utf8');
+    assert.equal(secondBytes, firstBytes, 'graph.json must be byte-identical across repeated compile runs with unchanged inputs');
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
