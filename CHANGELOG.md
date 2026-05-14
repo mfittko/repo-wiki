@@ -53,7 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Omit temperature for GPT-5 chat compatibility.
 - Tune architecture LLM timeout and reasoning.
 - Tighten repo-local reading guidance.
-- Extend docs command validation to Makefile and deterministic task-runner targets.
 
 ### Fixed
 - Complete deterministic scanner coverage for NestJS, Koa, tRPC, GraphQL, and OpenAPI API surfaces (including GraphQL field-config resolver mapping).
