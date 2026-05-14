@@ -3,7 +3,7 @@ import { promises as fs } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { assembleAllPageContexts, assemblePageContext } from './context-assembler.js';
-import { ensureDir, readJson, writeText } from './utils/fs.js';
+import { ensureDir, readJson, writeJson, writeText } from './utils/fs.js';
 import { buildRouteSurfaceIndex, collectKnownEnvironmentVariables, collectManifestDirectories, dedupeRouteValidationFindings, normalizeRepoPath, resolveDocumentedPathFromManifest, validateRouteClaims } from './docs-validation.js';
 import { classifyDocumentedCommands, extractRouteClaims, mergePackageScripts } from './docs-ingestor.js';
 import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-ownership.js';
@@ -316,6 +316,10 @@ export async function compileWiki({
     }
   }
 
+  // Keep the graph artifact rooted in the local .llmwiki workspace rather than the configurable wikiDir.
+  // This preserves the fixed `.llmwiki/graph.json` contract even when callers override `--wiki`.
+  await writeJson(path.join(path.dirname(scanDir), 'graph.json'), buildWikiGraphSkeleton(manifest, plan));
+
   return {
     contexts: pageContexts,
     summary: {
@@ -330,6 +334,79 @@ export async function compileWiki({
       contexts: pageContexts.length,
       architecture_decision: archDecision ?? 'full-regenerated'
     }
+  };
+}
+
+type WikiGraphNodeKind = 'page' | 'source' | 'documentation';
+
+type WikiGraphNode = {
+  id: string;
+  kind: WikiGraphNodeKind;
+  path: string;
+};
+
+type WikiGraphEdge = {
+  type: 'affects';
+  from: string;
+  to: string;
+};
+
+function buildWikiGraphSkeleton(manifest: any, plan: any): {
+  schema_version: number;
+  nodes: WikiGraphNode[];
+  edges: WikiGraphEdge[];
+} {
+  const plannedPagePaths = uniqueSorted((plan?.pages || []).map((page: any) => String(page?.path || '')).filter(Boolean)) as string[];
+  const sourceToPages = Array.isArray(plan?.affected_page_graph?.source_to_pages) ? plan.affected_page_graph.source_to_pages : [];
+  const documentationPaths = new Set<string>([
+    ...(manifest?.documentation?.files || []).map((file: any) => String(file?.path || '')).filter(Boolean),
+    ...(manifest?.files || []).filter((file: any) => file?.category === 'docs').map((file: any) => String(file?.path || '')).filter(Boolean),
+  ]);
+
+  const sourcePaths = uniqueSorted(sourceToPages.map((entry: any) => String(entry?.source || '')).filter(Boolean)) as string[];
+  const nodes: WikiGraphNode[] = [
+    ...plannedPagePaths.map((pagePath) => ({
+      id: `page:${pagePath}`,
+      kind: 'page' as const,
+      path: pagePath,
+    })),
+    ...sourcePaths.map((sourcePath) => ({
+      id: `source:${sourcePath}`,
+      kind: (documentationPaths.has(sourcePath) || isDocumentationPath(sourcePath) ? 'documentation' : 'source') as WikiGraphNodeKind,
+      path: sourcePath,
+    })),
+  ].sort((left, right) => left.id.localeCompare(right.id));
+
+  const edgeSet = new Set<string>();
+  for (const entry of sourceToPages) {
+    const sourcePath = String(entry?.source || '');
+    if (!sourcePath) {
+      continue;
+    }
+    for (const page of entry?.pages || []) {
+      const pagePath = String(page?.page || '');
+      if (!pagePath) {
+        continue;
+      }
+      edgeSet.add(`${sourcePath}\u0000${pagePath}`);
+    }
+  }
+
+  const edges: WikiGraphEdge[] = [...edgeSet]
+    .map((pair) => {
+      const [sourcePath, pagePath] = pair.split('\u0000');
+      return {
+        type: 'affects' as const,
+        from: `source:${sourcePath}`,
+        to: `page:${pagePath}`,
+      };
+    })
+    .sort((left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
+
+  return {
+    schema_version: 1,
+    nodes,
+    edges,
   };
 }
 
