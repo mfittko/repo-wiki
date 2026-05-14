@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { compileWiki } from '../src/compiler.js';
+import { compileWiki, computeArchDecision } from '../src/compiler.js';
 import { lintWiki } from '../src/linter.js';
 import { extractHumanNotes } from '../src/page-ownership.js';
 import { MockLLMProvider } from '../src/llm-provider.js';
@@ -1844,3 +1844,256 @@ test('compileWiki in LLM mode preserves human notes on Architecture.md synthesis
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
+
+// ---------------------------------------------------------------------------
+// Architecture.md incremental gating – deterministic mode
+// ---------------------------------------------------------------------------
+
+function buildArchManifest(extra: Partial<any> = {}) {
+  return {
+    remote: 'origin',
+    commit: 'arch-test-abc1234',
+    mode: 'bootstrap',
+    totals: { languages: { TypeScript: 2 }, categories: { source: 2 }, runtime_hints: {} },
+    files: [
+      { path: 'src/core.ts', category: 'source', language: 'TypeScript', imports: [], runtime_hints: [], reasons: ['source'] },
+      { path: 'src/utils.ts', category: 'source', language: 'TypeScript', imports: [], runtime_hints: [], reasons: ['source'] }
+    ],
+    analysis: { package_scripts: [], dependency_graph: { edges: [], summary: {} }, test_to_source: { mappings: [], summary: {} } },
+    ...extra
+  };
+}
+
+function buildArchPlan(modules: any[] = []) {
+  return {
+    pages: createPlan().pages,
+    modules: modules.length > 0 ? modules : [
+      { slug: 'Module-Core', name: 'Core', files: ['src/core.ts'], categories: { source: 1 }, languages: { TypeScript: 1 }, runtime_hints: {}, important_reasons: ['source'] },
+      { slug: 'Module-Utils', name: 'Utils', files: ['src/utils.ts'], categories: { source: 1 }, languages: { TypeScript: 1 }, runtime_hints: {}, important_reasons: ['source'] }
+    ]
+  };
+}
+
+test('computeArchDecision returns full-regenerated when no existing content', () => {
+  const newContent = '---\nsource_commit: "abc"\ncompiled_at: "T"\n---\n# Architecture\n\n## Structural map\n\n```mermaid\nflowchart TD\n  Repo[Repository at abc1234]\n  Repo --> M0[Core]\n```\n\n## Module groups\n\n### Core\n\n- Files: 1\n';
+  assert.equal(computeArchDecision(newContent, null), 'full-regenerated');
+});
+
+test('computeArchDecision returns skipped when content unchanged after normalizing volatile fields', () => {
+  const body = '# Architecture\n\n## Structural map\n\n```mermaid\nflowchart TD\n  Repo[Repository at abc1234]\n  Repo --> M0[Core]\n```\n\n## Module groups\n\n### Core\n\n- Files: 1\n- Dominant categories: source\n- Dominant languages: TypeScript\n- Important reasons: source\n';
+  const existing = `---\nsource_commit: "abc"\ncompiled_at: "2025-01-01T00:00:00Z"\n---\n${body}`;
+  // New content has a different compiled_at (timestamp) but same source_commit and same body
+  const newContent = `---\nsource_commit: "abc"\ncompiled_at: "2025-02-01T00:00:00Z"\n---\n${body}`;
+  assert.equal(computeArchDecision(newContent, existing), 'skipped');
+});
+
+test('computeArchDecision returns section-patched when module list unchanged but details changed', () => {
+  const existing = '---\ncompiled_at: "T1"\n---\n# Architecture\n\n## Structural map\n\n```mermaid\nflowchart TD\n  Repo[Repository at abc1234]\n  Repo --> M0[Core]\n```\n\n## Module groups\n\n### Core\n\n- Files: 1\n- Dominant categories: source\n';
+  const newContent = '---\ncompiled_at: "T2"\n---\n# Architecture\n\n## Structural map\n\n```mermaid\nflowchart TD\n  Repo[Repository at def5678]\n  Repo --> M0[Core]\n```\n\n## Module groups\n\n### Core\n\n- Files: 5\n- Dominant categories: source\n';
+  assert.equal(computeArchDecision(newContent, existing), 'section-patched');
+});
+
+test('computeArchDecision returns full-regenerated when module list changes', () => {
+  const existing = '---\ncompiled_at: "T1"\n---\n# Architecture\n\n## Structural map\n\n```mermaid\nflowchart TD\n  Repo[Repository at abc1234]\n  Repo --> M0[Core]\n```\n\n## Module groups\n\n### Core\n\n- Files: 1\n';
+  // New content adds a second module
+  const newContent = '---\ncompiled_at: "T2"\n---\n# Architecture\n\n## Structural map\n\n```mermaid\nflowchart TD\n  Repo[Repository at def5678]\n  Repo --> M0[Core]\n  Repo --> M1[Utils]\n```\n\n## Module groups\n\n### Core\n\n- Files: 1\n\n### Utils\n\n- Files: 2\n';
+  assert.equal(computeArchDecision(newContent, existing), 'full-regenerated');
+});
+
+test('computeArchDecision returns full-regenerated when existing has no module list', () => {
+  const existing = '---\ncompiled_at: "T1"\n---\n# Architecture\n\nSome content without structural map.\n';
+  const newContent = '---\ncompiled_at: "T2"\n---\n# Architecture\n\n## Structural map\n\n```mermaid\nflowchart TD\n  Repo[Repository at abc1234]\n  Repo --> M0[Core]\n```\n';
+  assert.equal(computeArchDecision(newContent, existing), 'full-regenerated');
+});
+
+test('compileWiki deterministic mode keeps Architecture.md byte-stable on re-compile with unchanged manifest', async () => {
+  const manifest = buildArchManifest();
+  const plan = buildArchPlan();
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    // First compile – creates Architecture.md
+    const result1 = await compileWiki({ scanDir, planFile, wikiDir });
+    const after1 = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+    assert.equal(result1.summary.architecture_decision, 'full-regenerated');
+
+    // Second compile – same manifest, same plan: should skip writing
+    const result2 = await compileWiki({ scanDir, planFile, wikiDir });
+    const after2 = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+
+    // File must be byte-stable (not rewritten)
+    assert.equal(after2, after1, 'Architecture.md must be byte-stable when inputs are unchanged');
+    assert.equal(result2.summary.architecture_decision, 'skipped');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki deterministic mode applies section-patched decision when module details change within same module list', async () => {
+  const manifest = buildArchManifest();
+  const plan = buildArchPlan();
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    // First compile
+    const result1 = await compileWiki({ scanDir, planFile, wikiDir });
+    assert.equal(result1.summary.architecture_decision, 'full-regenerated');
+
+    // Simulate a change that alters module details (more files in Core) but NOT the module list
+    const planWithMoreFiles = {
+      ...plan,
+      modules: [
+        { ...plan.modules[0], files: ['src/core.ts', 'src/extra.ts'] },
+        plan.modules[1]
+      ]
+    };
+    await fs.writeFile(planFile, JSON.stringify(planWithMoreFiles, null, 2));
+
+    const result2 = await compileWiki({ scanDir, planFile, wikiDir });
+    const after2 = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+    assert.equal(result2.summary.architecture_decision, 'section-patched');
+    // Content must reflect the new file count
+    assert.match(after2, /Files: 2/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki deterministic mode applies full-regenerated when module list changes', async () => {
+  const manifest = buildArchManifest();
+  const plan = buildArchPlan();
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    // First compile
+    await compileWiki({ scanDir, planFile, wikiDir });
+
+    // Add a new module (changes the module list)
+    const planWithExtraModule = {
+      ...plan,
+      modules: [
+        ...plan.modules,
+        { slug: 'Module-Api', name: 'Api', files: ['src/api.ts'], categories: { source: 1 }, languages: { TypeScript: 1 }, runtime_hints: {}, important_reasons: ['api-surface'] }
+      ]
+    };
+    await fs.writeFile(planFile, JSON.stringify(planWithExtraModule, null, 2));
+
+    const result2 = await compileWiki({ scanDir, planFile, wikiDir });
+    assert.equal(result2.summary.architecture_decision, 'full-regenerated');
+    const after2 = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+    assert.match(after2, /### Api/);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki summary includes architecture_decision field', async () => {
+  const manifest = buildArchManifest();
+  const plan = buildArchPlan();
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    const result = await compileWiki({ scanDir, planFile, wikiDir });
+    assert.ok('architecture_decision' in result.summary, 'summary must have architecture_decision');
+    assert.ok(
+      ['skipped', 'section-patched', 'full-regenerated'].includes(result.summary.architecture_decision),
+      'architecture_decision must be a valid status'
+    );
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Architecture.md incremental gating – LLM mode
+// ---------------------------------------------------------------------------
+
+test('compileWiki in LLM mode skips Architecture.md LLM call when fingerprint unchanged', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  const config = { compiler: { mode: 'llm' } };
+  let archCallCount = 0;
+
+  const countingProvider: LLMProvider = {
+    name: 'counting-mock',
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      if (req.archetype === 'architecture') {
+        archCallCount++;
+      }
+      return { provider: 'counting-mock', content: validLLMTestContent(req) };
+    }
+  };
+
+  try {
+    // First compile – architecture LLM call expected
+    const result1 = await compileWiki({ scanDir, planFile, wikiDir, config, _provider: countingProvider });
+    assert.equal(archCallCount, 1, 'Architecture LLM call expected on first compile');
+    assert.equal(result1.summary.architecture_decision, 'full-regenerated');
+    const archAfter1 = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+    assert.match(archAfter1, /arch_inputs_fingerprint: "[a-f0-9]{16}"/);
+
+    // Second compile – same manifest/plan: fingerprint matches, LLM call should be skipped
+    const result2 = await compileWiki({ scanDir, planFile, wikiDir, config, _provider: countingProvider });
+    assert.equal(archCallCount, 1, 'Architecture LLM call must NOT be made when fingerprint matches');
+    assert.equal(result2.summary.architecture_decision, 'skipped');
+
+    // Existing LLM-generated Architecture.md must remain unchanged (byte-stable)
+    const archAfter2 = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+    assert.equal(archAfter2, archAfter1, 'Architecture.md must be byte-stable when fingerprint matches');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki in LLM mode makes Architecture.md LLM call when fingerprint changes', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  const config = { compiler: { mode: 'llm' } };
+  let archCallCount = 0;
+
+  const countingProvider: LLMProvider = {
+    name: 'counting-mock-2',
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      if (req.archetype === 'architecture') {
+        archCallCount++;
+      }
+      return { provider: 'counting-mock-2', content: validLLMTestContent(req) };
+    }
+  };
+
+  try {
+    // First compile
+    await compileWiki({ scanDir, planFile, wikiDir, config, _provider: countingProvider });
+    assert.equal(archCallCount, 1);
+
+    // Change the plan by adding a new module (changes architecture fingerprint)
+    const updatedPlan = {
+      ...createLLMPlan(),
+      modules: [
+        ...createLLMPlan().modules,
+        { slug: 'Module-Extra', name: 'Extra', files: ['src/extra.ts'], categories: { source: 1 }, languages: { TypeScript: 1 }, runtime_hints: {}, important_reasons: ['source'] }
+      ]
+    };
+    await fs.writeFile(planFile, JSON.stringify(updatedPlan, null, 2));
+
+    // Second compile – fingerprint changed, LLM call expected
+    const result2 = await compileWiki({ scanDir, planFile, wikiDir, config, _provider: countingProvider });
+    assert.equal(archCallCount, 2, 'Architecture LLM call expected when fingerprint changes');
+    assert.equal(result2.summary.architecture_decision, 'full-regenerated');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki in LLM mode embeds arch_inputs_fingerprint in Architecture.md frontmatter', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  const config = { compiler: { mode: 'llm' } };
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir, config, _provider: new MockLLMProvider() });
+
+    const archPage = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+    assert.match(archPage, /^arch_inputs_fingerprint: "[a-f0-9]{16}"$/m);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+

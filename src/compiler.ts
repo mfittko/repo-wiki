@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { assembleAllPageContexts, assemblePageContext } from './context-assembler.js';
 import { ensureDir, readJson, writeText } from './utils/fs.js';
@@ -77,6 +78,8 @@ export async function compileWiki({
   const llmGeneratedPages = new Set<string>();
   let skipped = 0;
   const skippedByState: Record<string, number> = {};
+  // Architecture.md handling decision for this compile run (reported in summary).
+  let archDecision: ArchDecision | null = null;
 
   if (isLLMMode) {
     // In LLM mode, synthesize module pages through the provider boundary.
@@ -175,42 +178,57 @@ export async function compileWiki({
       skipped++;
       skippedByState[archPageState] = (skippedByState[archPageState] || 0) + 1;
     } else {
-      // Resolve the architecture provider. If the architecture model override
-      // specifies a different model from the global resolved config, create a
-      // dedicated provider for the architecture page.
-      let archProvider: LLMProvider;
-      if (_provider !== null) {
-        archProvider = _provider;
+      // Gate the LLM architecture call using a fingerprint of the deterministic
+      // rendering. If the fingerprint matches the one stored in the existing
+      // Architecture.md, the architecture inputs have not changed and we can
+      // skip the LLM call entirely (byte-stable, zero model cost).
+      const deterministicArchContent = pages.get('Architecture.md')!;
+      const currentFingerprint = computeArchInputsFingerprint(deterministicArchContent);
+      const storedFingerprint = existingArchContent ? extractArchFingerprint(existingArchContent) : null;
+
+      if (storedFingerprint !== null && storedFingerprint === currentFingerprint) {
+        // Architecture inputs unchanged – skip LLM call, keep existing file byte-stable.
+        pages.delete('Architecture.md');
+        archDecision = 'skipped';
       } else {
-        archProvider = createProviderFromResolvedConfig({
-          ...resolvedLLMCfg!,
-          model: archOverrides.model ?? resolvedLLMCfg!.model,
-          timeoutMs: archOverrides.timeoutMs ?? resolvedLLMCfg!.timeoutMs,
-        });
-      }
-
-      const syntheticArchPage = { path: 'Architecture.md', phase: 'foundation' };
-      const archPageCtx = assemblePageContext({ manifest, plan, page: syntheticArchPage });
-      const archPromptCtx = buildArchitecturePromptContext(archPageCtx, manifest, existingArchContent);
-
-      const archRequest = buildRequest('architecture', archPromptCtx, {
-        maxOutputTokens: archOverrides.maxOutputTokens ?? resolvedLLMCfg!.maxOutputTokens,
-        temperature: resolvedLLMCfg!.temperature,
-        reasoningEffort: archOverrides.reasoningEffort ?? resolvedLLMCfg!.reasoningEffort,
-      });
-
-      try {
-        const patch = await synthesizeWikiPage(archProvider, archRequest, { maxRetries: validationRetries });
-        const normalized = normalizeLLMArchitectureContent(patch.content, manifest, archRequest.sourcePaths);
-        pages.set('Architecture.md', normalized);
-        llmGeneratedPages.add('Architecture.md');
-      } catch (err) {
-        if (err instanceof WikiPatchError) {
-          llmErrors.push({ file: 'Architecture.md', error: err.message, issues: err.issues });
-        } else if (err instanceof LLMProviderError) {
-          llmErrors.push({ file: 'Architecture.md', error: err.message });
+        // Resolve the architecture provider. If the architecture model override
+        // specifies a different model from the global resolved config, create a
+        // dedicated provider for the architecture page.
+        let archProvider: LLMProvider;
+        if (_provider !== null) {
+          archProvider = _provider;
         } else {
-          throw err;
+          archProvider = createProviderFromResolvedConfig({
+            ...resolvedLLMCfg!,
+            model: archOverrides.model ?? resolvedLLMCfg!.model,
+            timeoutMs: archOverrides.timeoutMs ?? resolvedLLMCfg!.timeoutMs,
+          });
+        }
+
+        const syntheticArchPage = { path: 'Architecture.md', phase: 'foundation' };
+        const archPageCtx = assemblePageContext({ manifest, plan, page: syntheticArchPage });
+        const archPromptCtx = buildArchitecturePromptContext(archPageCtx, manifest, existingArchContent);
+
+        const archRequest = buildRequest('architecture', archPromptCtx, {
+          maxOutputTokens: archOverrides.maxOutputTokens ?? resolvedLLMCfg!.maxOutputTokens,
+          temperature: resolvedLLMCfg!.temperature,
+          reasoningEffort: archOverrides.reasoningEffort ?? resolvedLLMCfg!.reasoningEffort,
+        });
+
+        try {
+          const patch = await synthesizeWikiPage(archProvider, archRequest, { maxRetries: validationRetries });
+          const normalized = normalizeLLMArchitectureContent(patch.content, manifest, archRequest.sourcePaths, currentFingerprint);
+          pages.set('Architecture.md', normalized);
+          llmGeneratedPages.add('Architecture.md');
+          archDecision = 'full-regenerated';
+        } catch (err) {
+          if (err instanceof WikiPatchError) {
+            llmErrors.push({ file: 'Architecture.md', error: err.message, issues: err.issues });
+          } else if (err instanceof LLMProviderError) {
+            llmErrors.push({ file: 'Architecture.md', error: err.message });
+          } else {
+            throw err;
+          }
         }
       }
     }
@@ -252,6 +270,17 @@ export async function compileWiki({
         continue;
       }
 
+      // Architecture.md byte-stable skip (deterministic mode only).
+      // In LLM mode, the decision was already made before the LLM call.
+      if (file === 'Architecture.md' && !isLLMMode) {
+        const decision = computeArchDecision(newContent, existingContent);
+        archDecision = decision;
+        if (decision === 'skipped') {
+          continue; // Preserve existing file byte-for-byte.
+        }
+        // For 'section-patched' and 'full-regenerated', fall through to write.
+      }
+
       // Preserve any human notes that exist in the current page.
       const notes = extractHumanNotes(existingContent);
       if (notes.length > 0) {
@@ -268,6 +297,10 @@ export async function compileWiki({
     }
 
     await writeText(filePath, newContent);
+    // Track first write of Architecture.md (no existing file).
+    if (file === 'Architecture.md' && archDecision === null) {
+      archDecision = 'full-regenerated';
+    }
   }
 
   return {
@@ -281,7 +314,8 @@ export async function compileWiki({
       skipped,
       skipped_by_state: skippedByState,
       commit: manifest.commit,
-      contexts: pageContexts.length
+      contexts: pageContexts.length,
+      architecture_decision: archDecision ?? 'full-regenerated'
     }
   };
 }
@@ -378,7 +412,7 @@ function buildArchitecturePromptContext(
  * source_paths) using the prompt context source paths that were actually
  * provided to the model.
  */
-function normalizeLLMArchitectureContent(content: string, manifest: any, requestSourcePaths: string[] = []): string {
+function normalizeLLMArchitectureContent(content: string, manifest: any, requestSourcePaths: string[] = [], archFingerprint?: string): string {
   if (!content.startsWith('---\n')) {
     return content;
   }
@@ -398,10 +432,106 @@ function normalizeLLMArchitectureContent(content: string, manifest: any, request
     `source_commit: ${JSON.stringify(manifest.commit)}`,
     'page_state: "generated"',
     `source_paths: ${JSON.stringify(sourcePaths)}`,
+    ...(archFingerprint ? [`${ARCH_FINGERPRINT_FIELD}: "${archFingerprint}"`] : []),
     ...withoutNormalized
   ];
 
   return `---\n${normalizedLines.join('\n')}${body}`;
+}
+
+// ---------------------------------------------------------------------------
+// Architecture page decision helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * The status vocabulary for Architecture.md handling in a compile run.
+ * - 'skipped': content is effectively unchanged; existing file preserved byte-for-byte.
+ * - 'section-patched': only module group sections changed within the same module list.
+ * - 'full-regenerated': module list or broader structure changed; full content written.
+ */
+export type ArchDecision = 'skipped' | 'section-patched' | 'full-regenerated';
+
+/**
+ * Frontmatter field used to store the architecture inputs fingerprint for LLM gating.
+ * The value is a 16-hex-char SHA-256 prefix of the deterministic Architecture.md body.
+ */
+const ARCH_FINGERPRINT_FIELD = 'arch_inputs_fingerprint';
+
+/**
+ * Normalize volatile fields in Architecture.md content for structural comparison.
+ * Strips compiled_at timestamp and the short commit hash from the mermaid structural map.
+ */
+function normalizeArchForComparison(content: string): string {
+  return content
+    .replace(/^(compiled_at: )"[^"]*"$/m, '$1""')
+    .replace(/\bRepository at [^\]]+\]/g, 'Repository at ]');
+}
+
+/**
+ * Extract the ordered list of module names from the structural map mermaid diagram.
+ * Returns the names in the order they appear (Repo --> M0[Name] pattern).
+ */
+function extractMermaidModuleNames(content: string): string[] {
+  const names: string[] = [];
+  const re = /\bRepo --> M\d+\[([^\]]+)\]/g;
+  let match;
+  while ((match = re.exec(content)) !== null) {
+    names.push(match[1]);
+  }
+  return names;
+}
+
+/**
+ * Compute the Architecture.md handling decision by comparing new vs existing content.
+ *
+ * Returns:
+ * - 'skipped' if content is effectively unchanged after normalizing volatile fields.
+ * - 'section-patched' if only module group sections changed within the same module list.
+ * - 'full-regenerated' if the module list or broader structure changed.
+ */
+export function computeArchDecision(newContent: string, existingContent: string | null): ArchDecision {
+  if (!existingContent) {
+    return 'full-regenerated';
+  }
+
+  const normalizedNew = normalizeArchForComparison(newContent);
+  const normalizedExisting = normalizeArchForComparison(existingContent);
+
+  if (normalizedNew === normalizedExisting) {
+    return 'skipped';
+  }
+
+  // Check if the module list is unchanged – prerequisite for safe section patching.
+  const newModules = extractMermaidModuleNames(newContent);
+  const existingModules = extractMermaidModuleNames(existingContent);
+  const sameModuleList = (
+    newModules.length > 0 &&
+    newModules.length === existingModules.length &&
+    newModules.every((name, i) => name === existingModules[i])
+  );
+
+  return sameModuleList ? 'section-patched' : 'full-regenerated';
+}
+
+/**
+ * Compute a short fingerprint of architecture inputs for LLM mode gating.
+ * Derived from the deterministic Architecture.md body (excluding volatile fields and
+ * the short-commit reference), so it only changes when architecture structure changes.
+ */
+function computeArchInputsFingerprint(deterministicArchContent: string): string {
+  const frontmatterEnd = deterministicArchContent.indexOf('\n---\n', 4);
+  const body = frontmatterEnd !== -1 ? deterministicArchContent.slice(frontmatterEnd + 5) : deterministicArchContent;
+  const normalized = body.replace(/\bRepository at [^\]]+\]/g, 'Repository at ]');
+  return createHash('sha256').update(normalized).digest('hex').slice(0, 16);
+}
+
+/**
+ * Extract the stored arch_inputs_fingerprint from an Architecture.md frontmatter.
+ * Returns null when the field is absent (e.g. first run or deterministic render).
+ */
+function extractArchFingerprint(content: string): string | null {
+  const match = /^arch_inputs_fingerprint: "([^"]+)"$/m.exec(content);
+  return match ? match[1] : null;
 }
 
 function isDocsOnlyModule(module: any) {
@@ -483,7 +613,7 @@ function hasSecondaryDocumentationLabel(content: string) {
 }
 
 function removeNormalizedFrontmatterFields(lines: string[], removeConservativeEvidenceFields = false): string[] {
-  const normalizedFields = new Set(['source_repo', 'source_commit', 'page_state', 'source_paths']);
+  const normalizedFields = new Set(['source_repo', 'source_commit', 'page_state', 'source_paths', ARCH_FINGERPRINT_FIELD]);
   if (removeConservativeEvidenceFields) {
     normalizedFields.add('claim_status');
     normalizedFields.add('confidence');
