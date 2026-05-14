@@ -1,0 +1,7 @@
+{
+  "name": "docs-only-fixture",
+  "private": true,
+  "scripts": {
+    "test": "echo docs"
+  }
+}

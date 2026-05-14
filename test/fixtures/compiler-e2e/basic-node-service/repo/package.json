@@ -1,0 +1,9 @@
+{
+  "name": "basic-node-service-fixture",
+  "private": true,
+  "scripts": {
+    "build": "node ./infra/deploy.js",
+    "test": "node --test"
+  },
+  "type": "module"
+}
