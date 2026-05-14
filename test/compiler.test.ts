@@ -2595,6 +2595,7 @@ test('compileWiki graph enrichment normalizes page states, wiki links, and prove
       { path: 'Delta.md', phase: 'module', purpose: 'Delta' },
       { path: 'Epsilon.md', phase: 'module', purpose: 'Epsilon' },
       { path: 'Gamma.md', phase: 'module', purpose: 'Gamma' },
+      { path: 'Theta.md', phase: 'module', purpose: 'Theta' },
       { path: 'Zeta.md', phase: 'module', purpose: 'Zeta' }
     ],
     modules: [],
@@ -2636,6 +2637,7 @@ source_paths: ["src/a.ts", "", "./src/a.ts", "src/./a.ts"]
 [Beta 5](Beta.md "details")
 [Epsilon](<Epsilon.md> "details")
 [Zeta][zeta-ref]
+[See [Theta] details](Theta.md)
 \\[Escaped](Gamma.md)
 Inline code \`[Inline](Gamma.md)\` should not count.
 <!-- [Comment](Gamma.md) -->
@@ -2676,7 +2678,7 @@ source_paths: [src/a.ts, "", ./src/a.ts, docs/readme.md, src//a.ts]
 source_repo: "origin"
 source_commit: "graph-enrichment-commit"
 source_paths:
-  - src/./gamma.ts
+  - src/./gamma.ts # primary
   - "./src/gamma.ts"
   - "src//gamma.ts"
   # keep comments inside source_paths lists
@@ -2703,6 +2705,7 @@ Needs review.
     assert.equal(pageStateByPath.get('Gamma.md'), 'mixed');
     assert.equal(pageStateByPath.get('Delta.md'), 'generated');
     assert.equal(pageStateByPath.get('Epsilon.md'), 'generated');
+    assert.equal(pageStateByPath.get('Theta.md'), 'generated');
     assert.equal(pageStateByPath.get('Zeta.md'), 'generated');
 
     const wikiLinks = graph.edges
@@ -2711,6 +2714,7 @@ Needs review.
     assert.deepEqual(wikiLinks, [
       'page:Alpha.md->page:Beta.md',
       'page:Alpha.md->page:Epsilon.md',
+      'page:Alpha.md->page:Theta.md',
       'page:Alpha.md->page:Zeta.md'
     ]);
 

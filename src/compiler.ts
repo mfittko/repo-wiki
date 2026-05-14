@@ -530,6 +530,49 @@ function normalizeMarkdownReferenceLabel(value: string): string {
   return value.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+function findClosingMarkdownBracket(line: string, openBracket: number): number {
+  let depth = 0;
+  for (let index = openBracket + 1; index < line.length; index += 1) {
+    const char = line[index];
+    if (isEscapedMarkdownCharacter(line, index)) {
+      continue;
+    }
+    if (char === '[') {
+      depth += 1;
+      continue;
+    }
+    if (char === ']') {
+      if (depth === 0) {
+        return index;
+      }
+      depth -= 1;
+    }
+  }
+  return -1;
+}
+
+function stripYamlInlineComment(value: string): string {
+  let result = '';
+  let quote: '"' | "'" | '' = '';
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+    if ((char === '"' || char === "'") && !isEscapedMarkdownCharacter(value, index)) {
+      quote = quote === char ? '' : (quote || char);
+      result += char;
+      continue;
+    }
+    if (!quote && char === '#' && (index === 0 || /\s/.test(value[index - 1] || ''))) {
+      break;
+    }
+    result += char;
+  }
+  return result.trimEnd();
+}
+
+function normalizeYamlPathScalar(value: string): string {
+  return unquoteYamlScalar(stripYamlInlineComment(value).trim());
+}
+
 function extractMarkdownReferenceDefinitions(lines: string[]): Map<string, string> {
   const definitions = new Map<string, string>();
   for (const line of lines) {
@@ -642,7 +685,7 @@ function extractMarkdownLinkTargets(line: string, referenceTargets = new Map<str
       index = openBracket;
       continue;
     }
-    const closeBracket = line.indexOf(']', openBracket + 1);
+    const closeBracket = findClosingMarkdownBracket(line, openBracket);
     if (closeBracket === -1 || isEscapedMarkdownCharacter(line, closeBracket)) {
       index = openBracket;
       continue;
@@ -751,7 +794,7 @@ function extractFrontmatterSourcePaths(content: string): string[] {
     }
 
     if (value !== '') {
-      values.push(unquoteYamlScalar(value));
+      values.push(normalizeYamlPathScalar(value));
       continue;
     }
 
@@ -764,7 +807,7 @@ function extractFrontmatterSourcePaths(content: string): string[] {
       }
       const listEntry = /^\s*-\s*(.*)$/.exec(line);
       if (listEntry) {
-        values.push(unquoteYamlScalar(listEntry[1].trim()));
+        values.push(normalizeYamlPathScalar(listEntry[1].trim()));
         index = listIndex;
         continue;
       }
@@ -777,7 +820,7 @@ function extractFrontmatterSourcePaths(content: string): string[] {
   }
 
   return uniqueSorted(values
-    .map((entry) => canonicalRepoRelativePath(unquoteYamlScalar(entry).trim()))
+    .map((entry) => canonicalRepoRelativePath(normalizeYamlPathScalar(entry).trim()))
     .filter(Boolean)) as string[];
 }
 
