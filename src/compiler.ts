@@ -179,10 +179,10 @@ export async function compileWiki({
       skipped++;
       skippedByState[archPageState] = (skippedByState[archPageState] || 0) + 1;
     } else {
-      // Gate the LLM architecture call using a fingerprint of the deterministic
-      // rendering. If the fingerprint matches the one stored in the existing
-      // Architecture.md, the architecture inputs have not changed and we can
-      // skip the LLM call entirely (byte-stable, zero model cost).
+      // Gate the LLM architecture call using a fingerprint of the normalized
+      // architecture-input payload. If the fingerprint matches the one stored in
+      // the existing Architecture.md, the architecture inputs have not changed and
+      // we can skip the LLM call entirely (byte-stable, zero model cost).
       const currentFingerprint = computeArchInputsFingerprint(manifest, plan);
       const storedFingerprint = existingArchContent ? extractArchFingerprint(existingArchContent) : null;
 
@@ -466,7 +466,7 @@ export type ArchDecision = 'skipped' | 'section-patched' | 'full-regenerated';
 
 /**
  * Frontmatter field used to store the architecture inputs fingerprint for LLM gating.
- * The value is a 16-hex-char SHA-256 prefix of the deterministic Architecture.md body.
+ * The value is a 16-hex-char SHA-256 prefix of the normalized architecture-input payload.
  */
 const ARCH_FINGERPRINT_FIELD = 'arch_inputs_fingerprint';
 
@@ -601,8 +601,8 @@ function architectureUntouchedContent(content: string): string {
 
 /**
  * Compute a short fingerprint of architecture inputs for LLM mode gating.
- * Derived from the deterministic Architecture.md body (excluding volatile fields and
- * the short-commit reference), so it only changes when architecture structure changes.
+ * The fingerprint is derived from a normalized architecture-input payload built from the
+ * current manifest/plan slices that influence architecture synthesis.
  */
 function computeArchInputsFingerprint(manifest: any, plan: any): string {
   const modules = (plan?.modules || []).map((module: any) => ({
