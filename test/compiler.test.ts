@@ -2624,13 +2624,17 @@ test('compileWiki graph enrichment normalizes page states, wiki links, and prove
   await fs.writeFile(planFile, JSON.stringify(plan, null, 2));
   await fs.writeFile(path.join(wikiDir, 'Alpha.md'), `\uFEFF---\r
 owned_by: "human"\r
-source_paths: ["src/a.ts", "", "./src/a.ts", "src/a.ts"]\r
+source_paths: ["src/a.ts", "", "./src/a.ts", "src/./a.ts"]\r
 ---\r
 \r
 [Beta](Beta)\r
 [Beta 2](Beta.md)\r
 [Beta 3](./Beta.md)\r
 [Beta 4](Beta.md#section)\r
+[Beta 5](Beta.md "details")\r
+~~~md\r
+[Code sample](Gamma.md)\r
+~~~\r
 [External](https://example.com)\r
 [Anchor](#local)\r
 [Asset](diagram.png)\r
@@ -2647,7 +2651,7 @@ no source commit keeps this unmanaged
   await fs.writeFile(path.join(wikiDir, 'Delta.md'), `---
 source_repo: "origin"
 source_commit: "graph-enrichment-commit"
-source_paths: ["src/a.ts", "", "./src/a.ts", "src/a.ts"]
+source_paths: ["src/a.ts", "", "./src/a.ts", "src//a.ts"]
 ---
 
 <!-- HUMAN_NOTES_START -->
@@ -2658,8 +2662,9 @@ source_paths: ["src/a.ts", "", "./src/a.ts", "src/a.ts"]
 source_repo: "origin"
 source_commit: "graph-enrichment-commit"
 source_paths:
-  - src/gamma.ts
+  - src/./gamma.ts
   - "./src/gamma.ts"
+  - "src//gamma.ts"
   - ""
   - docs/readme.md
 ---
@@ -2693,6 +2698,7 @@ Needs review.
       .map((edge: any) => `${edge.from}->${edge.to}`)
       .sort();
     assert.deepEqual(provenanceEdges, [
+      'page:Alpha.md->source:src/a.ts',
       'page:Beta.md->source:src/a.ts',
       'page:Delta.md->source:src/a.ts',
       'page:Gamma.md->source:docs/readme.md',

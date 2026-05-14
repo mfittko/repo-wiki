@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { assembleAllPageContexts, assemblePageContext } from './context-assembler.js';
 import { ensureDir, readJson, writeJson, writeText } from './utils/fs.js';
-import { buildRouteSurfaceIndex, collectKnownEnvironmentVariables, collectManifestDirectories, dedupeRouteValidationFindings, normalizeRepoPath, resolveDocumentedPathFromManifest, validateRouteClaims } from './docs-validation.js';
+import { buildRouteSurfaceIndex, cleanDocumentedPathTarget, collectKnownEnvironmentVariables, collectManifestDirectories, dedupeRouteValidationFindings, normalizeRepoPath, resolveDocumentedPathFromManifest, validateRouteClaims } from './docs-validation.js';
 import { classifyDocumentedCommands, extractRouteClaims, mergePackageScripts } from './docs-ingestor.js';
 import { extractFrontmatterBlock } from './frontmatter.js';
 import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-ownership.js';
@@ -319,7 +319,7 @@ export async function compileWiki({
 
   // Keep the graph artifact rooted in the local .llmwiki workspace rather than the configurable wikiDir.
   // This preserves the fixed `.llmwiki/graph.json` contract even when callers override `--wiki`.
-  await writeJson(path.join(path.dirname(scanDir), 'graph.json'), await buildWikiGraphSkeleton(manifest, plan, wikiDir));
+  await writeJson(path.join(path.dirname(scanDir), 'graph.json'), await buildWikiGraph(manifest, plan, wikiDir));
 
   return {
     contexts: pageContexts,
@@ -353,7 +353,7 @@ type WikiGraphEdge = {
   to: string;
 };
 
-async function buildWikiGraphSkeleton(manifest: any, plan: any, wikiDir: string): Promise<{
+async function buildWikiGraph(manifest: any, plan: any, wikiDir: string): Promise<{
   schema_version: number;
   nodes: WikiGraphNode[];
   edges: WikiGraphEdge[];
@@ -458,31 +458,108 @@ function canonicalWikiPageReference(value: string): string {
 
 function extractLocalWikiLinks(content: string): string[] {
   const links = new Set<string>();
-  const re = /\[([^\]\n]{0,2048})\]\(([^)\n]{1,2048})\)/g;
-  for (const match of content.matchAll(re)) {
-    const href = String(match[2] || '').trim();
-    const offset = match.index ?? -1;
-    if (offset > 0 && content[offset - 1] === '!') {
+  const lines = content.replace(/\r\n?/g, '\n').split('\n');
+  let fenceMarker: '`' | '~' | '' = '';
+
+  for (const line of lines) {
+    const fenceMatch = /^\s*(```+|~~~+)/.exec(line);
+    if (fenceMatch && (!fenceMarker || fenceMatch[1][0] === fenceMarker)) {
+      fenceMarker = fenceMarker ? '' : fenceMatch[1][0] as '`' | '~';
       continue;
     }
-    if (!href || /^(?:https?:|mailto:|ftp:|\/\/|#)/i.test(href) || /^(?:javascript:|data:|vbscript:|blob:|about:)/i.test(href)) {
+    if (fenceMarker) {
       continue;
     }
-    const noFragment = href.replace(/#.*$/, '');
-    const normalized = noFragment.replace(/^\.\//, '');
-    if (!normalized || normalized.includes('/')) {
-      continue;
-    }
-    const extension = path.extname(normalized).toLowerCase();
-    if (extension && extension !== '.md') {
-      continue;
-    }
-    const canonical = canonicalWikiPageReference(normalized);
-    if (canonical) {
-      links.add(canonical);
+
+    for (const href of extractMarkdownLinkTargets(line)) {
+      const target = cleanDocumentedPathTarget(href);
+      if (!target || /^(?:https?:|mailto:|ftp:|\/\/|#)/i.test(target) || /^(?:javascript:|data:|vbscript:|blob:|about:)/i.test(target)) {
+        continue;
+      }
+      const normalized = target.replace(/^\.\//, '');
+      if (!normalized || normalized.includes('/')) {
+        continue;
+      }
+      const extension = path.extname(normalized).toLowerCase();
+      if (extension && extension !== '.md') {
+        continue;
+      }
+      const canonical = canonicalWikiPageReference(normalized);
+      if (canonical) {
+        links.add(canonical);
+      }
     }
   }
+
   return [...links];
+}
+
+function extractMarkdownLinkTargets(line: string): string[] {
+  const targets: string[] = [];
+  for (let index = 0; index < line.length; index += 1) {
+    const openBracket = line.indexOf('[', index);
+    if (openBracket === -1) break;
+    if (openBracket > 0 && line[openBracket - 1] === '!') {
+      index = openBracket;
+      continue;
+    }
+    const closeBracket = line.indexOf(']', openBracket + 1);
+    if (closeBracket === -1 || line[closeBracket + 1] !== '(') {
+      index = openBracket;
+      continue;
+    }
+
+    let cursor = closeBracket + 2;
+    let target = '';
+    if (line[cursor] === '<') {
+      cursor += 1;
+      const closeAngle = line.indexOf('>', cursor);
+      if (closeAngle === -1) {
+        index = cursor;
+        continue;
+      }
+      target = line.slice(cursor, closeAngle);
+      cursor = closeAngle + 1;
+      while (line[cursor] && /\s/.test(line[cursor])) cursor += 1;
+      if (line[cursor] !== ')') {
+        index = cursor;
+        continue;
+      }
+      targets.push(target);
+      index = cursor;
+      continue;
+    }
+
+    let depth = 0;
+    let quote: '"' | "'" | '' = '';
+    for (; cursor < line.length; cursor += 1) {
+      const char = line[cursor];
+      if ((char === '"' || char === "'") && !quote) {
+        quote = char;
+        continue;
+      }
+      if (quote) {
+        if (char === quote && line[cursor - 1] !== '\\') {
+          quote = '';
+        }
+        continue;
+      }
+      if (char === '(') {
+        depth += 1;
+        continue;
+      }
+      if (char === ')') {
+        if (depth === 0) {
+          target = line.slice(closeBracket + 2, cursor).trim();
+          targets.push(target);
+          index = cursor;
+          break;
+        }
+        depth -= 1;
+      }
+    }
+  }
+  return targets;
 }
 
 function extractFrontmatterSourcePaths(content: string): string[] {
@@ -491,7 +568,7 @@ function extractFrontmatterSourcePaths(content: string): string[] {
     return [];
   }
 
-  const lines = block.yaml.replace(/\r\n/g, '\n').split('\n');
+  const lines = block.yaml.replace(/\r\n?/g, '\n').split('\n');
   const values: string[] = [];
   for (let index = 0; index < lines.length; index++) {
     const match = /^source_paths:\s*(.*)$/.exec(lines[index]);
@@ -535,8 +612,16 @@ function extractFrontmatterSourcePaths(content: string): string[] {
   }
 
   return uniqueSorted(values
-    .map((entry) => normalizeRepoPath(unquoteYamlScalar(entry).trim()).replace(/^\.\//, ''))
+    .map((entry) => canonicalRepoRelativePath(unquoteYamlScalar(entry).trim()))
     .filter(Boolean)) as string[];
+}
+
+function canonicalRepoRelativePath(value: string): string {
+  const normalized = path.posix.normalize(normalizeRepoPath(String(value || '').trim()).replace(/^\.\//, ''));
+  if (!normalized || normalized === '.' || normalized === '..' || normalized.startsWith('../')) {
+    return '';
+  }
+  return normalized.replace(/^\.\//, '');
 }
 
 function unquoteYamlScalar(value: string): string {
