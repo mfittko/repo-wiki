@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add docs-debt strictness and markdown route/API validation with wildcard method matching, source evidence, and conservative path normalization.
 - Add provenance frontmatter rendering for published wiki pages.
 - Add navigation layout for GitHub Pages wiki export.
+- Add ADR recency and supersession validation.
 
 ### Changed
 - Node.js engine requirement raised to `>=24`; removed unsafe incremental cache from scanner
