@@ -186,7 +186,9 @@ export async function compileWiki({
       const currentFingerprint = computeArchInputsFingerprint(deterministicArchContent);
       const storedFingerprint = existingArchContent ? extractArchFingerprint(existingArchContent) : null;
 
-      if (storedFingerprint !== null && storedFingerprint === currentFingerprint) {
+      const existingSourceCommit = existingArchContent ? extractFrontmatterString(existingArchContent, 'source_commit') : null;
+
+      if (storedFingerprint !== null && storedFingerprint === currentFingerprint && existingSourceCommit === manifest.commit) {
         // Architecture inputs unchanged – skip LLM call, keep existing file byte-stable.
         pages.delete('Architecture.md');
         archDecision = 'skipped';
@@ -472,6 +474,8 @@ const ARCH_FINGERPRINT_FIELD = 'arch_inputs_fingerprint';
 function normalizeArchForComparison(content: string): string {
   return content
     .replace(/^(compiled_at: )"[^"]*"$/m, '$1""')
+    .replace(/^page_state: "[^"]*"$/m, 'page_state: "generated"')
+    .replace(/<!-- HUMAN_NOTES_START -->[\s\S]*?<!-- HUMAN_NOTES_END -->/g, '<!-- HUMAN_NOTES_START -->\n<!-- HUMAN_NOTES_END -->')
     .replace(/\bRepository at [^\]]+\]/g, 'Repository at ]');
 }
 
@@ -479,12 +483,12 @@ function normalizeArchForComparison(content: string): string {
  * Extract the ordered list of module names from the structural map mermaid diagram.
  * Returns the names in the order they appear (Repo --> M0[Name] pattern).
  */
-function extractMermaidModuleNames(content: string): string[] {
+function extractArchitectureModuleNames(content: string): string[] {
   const names: string[] = [];
-  const re = /\bRepo --> M\d+\[([^\]]+)\]/g;
+  const re = /^### (.+)$/gm;
   let match;
   while ((match = re.exec(content)) !== null) {
-    names.push(match[1]);
+    names.push(match[1].trim());
   }
   return names;
 }
@@ -510,8 +514,8 @@ export function computeArchDecision(newContent: string, existingContent: string 
   }
 
   // Check if the module list is unchanged – prerequisite for safe section patching.
-  const newModules = extractMermaidModuleNames(newContent);
-  const existingModules = extractMermaidModuleNames(existingContent);
+  const newModules = extractArchitectureModuleNames(newContent);
+  const existingModules = extractArchitectureModuleNames(existingContent);
   const sameModuleList = (
     newModules.length > 0 &&
     newModules.length === existingModules.length &&
@@ -558,15 +562,17 @@ function replaceSection(body: string, heading: string, replacement: string): str
 function patchArchitectureSections(existingContent: string, newContent: string): string | null {
   const existingParts = splitFrontmatterAndBody(existingContent);
   const newParts = splitFrontmatterAndBody(newContent);
+  const newStructuralMap = extractSection(newParts.body, 'Structural map');
   const newModuleGroups = extractSection(newParts.body, 'Module groups');
   const newSignals = extractSection(newParts.body, 'Architecture signals');
-  if (!newModuleGroups || !newSignals) {
+  if (!newStructuralMap || !newModuleGroups || !newSignals) {
     return null;
   }
   let patchedBody = existingParts.body;
-  if (!extractSection(patchedBody, 'Module groups') || !extractSection(patchedBody, 'Architecture signals')) {
+  if (!extractSection(patchedBody, 'Structural map') || !extractSection(patchedBody, 'Module groups') || !extractSection(patchedBody, 'Architecture signals')) {
     return null;
   }
+  patchedBody = replaceSection(patchedBody, 'Structural map', newStructuralMap);
   patchedBody = replaceSection(patchedBody, 'Module groups', newModuleGroups);
   patchedBody = replaceSection(patchedBody, 'Architecture signals', newSignals);
   return `${newParts.frontmatter}${patchedBody}`;
@@ -590,6 +596,12 @@ function computeArchInputsFingerprint(deterministicArchContent: string): string 
  */
 function extractArchFingerprint(content: string): string | null {
   const match = /^arch_inputs_fingerprint: "([^"]+)"$/m.exec(content);
+  return match ? match[1] : null;
+}
+
+function extractFrontmatterString(content: string, key: string): string | null {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`^${escaped}: \"([^\"]+)\"$`, 'm').exec(content);
   return match ? match[1] : null;
 }
 

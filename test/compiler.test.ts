@@ -1900,6 +1900,86 @@ test('computeArchDecision returns full-regenerated when module list changes', ()
   assert.equal(computeArchDecision(newContent, existing), 'full-regenerated');
 });
 
+test('computeArchDecision ignores HUMAN_NOTES and mixed page_state when generated portions are unchanged', () => {
+  const generated = `---
+page_state: "generated"
+compiled_at: "T1"
+---
+# Architecture
+
+## Structural map
+
+	dummy
+
+## Module groups
+
+### Core
+
+- Files: 1
+
+## Architecture signals
+
+- Module groups: 1
+
+<!-- HUMAN_NOTES_START -->
+<!-- HUMAN_NOTES_END -->
+`.replace('\tdummy', '```mermaid\nflowchart TD\n  Repo[Repository at abc1234]\n  Repo --> M0[Core]\n```');
+  const mixed = generated
+    .replace('page_state: "generated"', 'page_state: "mixed"')
+    .replace('<!-- HUMAN_NOTES_START -->\n<!-- HUMAN_NOTES_END -->', '<!-- HUMAN_NOTES_START -->\nCustom note\n<!-- HUMAN_NOTES_END -->');
+  assert.equal(computeArchDecision(generated.replace('compiled_at: "T1"', 'compiled_at: "T2"'), mixed), 'skipped');
+});
+
+test('computeArchDecision treats module heading changes beyond structural-map truncation as full regeneration', () => {
+  const existing = `---
+compiled_at: "T1"
+---
+# Architecture
+
+## Structural map
+
+	dummy
+
+## Module groups
+
+### Core
+
+- Files: 1
+
+### Extra
+
+- Files: 1
+
+## Architecture signals
+
+- Module groups: 2
+`.replace('\tdummy', '```mermaid\nflowchart TD\n  Repo[Repository at abc1234]\n  Repo --> M0[Core]\n```');
+  const newer = `---
+compiled_at: "T2"
+---
+# Architecture
+
+## Structural map
+
+	dummy
+
+## Module groups
+
+### Core
+
+- Files: 1
+
+### Changed
+
+- Files: 1
+
+## Architecture signals
+
+- Module groups: 2
+`.replace('\tdummy', '```mermaid\nflowchart TD\n  Repo[Repository at abc1234]\n  Repo --> M0[Core]\n```');
+  assert.equal(computeArchDecision(newer, existing), 'full-regenerated');
+});
+
 test('computeArchDecision returns full-regenerated when existing has no module list', () => {
   const existing = '---\ncompiled_at: "T1"\n---\n# Architecture\n\nSome content without structural map.\n';
   const newContent = '---\ncompiled_at: "T2"\n---\n# Architecture\n\n## Structural map\n\n```mermaid\nflowchart TD\n  Repo[Repository at abc1234]\n  Repo --> M0[Core]\n```\n';
@@ -2110,6 +2190,38 @@ test('compileWiki in LLM mode makes Architecture.md LLM call when fingerprint ch
     const result2 = await compileWiki({ scanDir, planFile, wikiDir, config, _provider: countingProvider });
     assert.equal(archCallCount, 2, 'Architecture LLM call expected when fingerprint changes');
     assert.equal(result2.summary.architecture_decision, 'full-regenerated');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('compileWiki in LLM mode does not skip architecture when commit changed but fingerprint stayed stable', async () => {
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest: defaultLLMManifest, plan: createLLMPlan() });
+  const config = { compiler: { mode: 'llm' } };
+  let archCallCount = 0;
+
+  const countingProvider: LLMProvider = {
+    name: 'counting-mock-commit',
+    async complete(req: LLMRequest): Promise<LLMResponse> {
+      if (req.archetype === 'architecture') {
+        archCallCount++;
+      }
+      return { provider: 'counting-mock-commit', content: validLLMTestContent(req) };
+    }
+  };
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir, config, _provider: countingProvider });
+    assert.equal(archCallCount, 1);
+
+    const updatedManifest = { ...defaultLLMManifest, commit: 'new-commit-222' };
+    await fs.writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify(updatedManifest, null, 2));
+
+    const result2 = await compileWiki({ scanDir, planFile, wikiDir, config, _provider: countingProvider });
+    assert.equal(archCallCount, 2, 'architecture provider should rerun when source_commit changes');
+    assert.equal(result2.summary.architecture_decision, 'full-regenerated');
+    const archPage = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+    assert.match(archPage, /source_commit: "new-commit-222"/);
   } finally {
     await fs.rm(dir, { recursive: true, force: true });
   }
