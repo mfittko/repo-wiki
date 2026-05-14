@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "ab4f4401735f73fb39983b8f7af41b5ed76b37f7"
+source_commit: "db3dd5c6e2bdb430282661ff44b002d22af0bade"
 page_state: "generated"
 source_paths: ["src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -31,29 +31,29 @@ The `utils` module provides a collection of utility functions and types implemen
 
 ## Key symbols and entry points
 
-- **Argument parsing**  
-  - `parseArgs` (function)  
-  - `ParsedArgs` (type)
+- **Argument Parsing**  
+  - `parseArgs` — Parses command-line arguments.  
+  - `ParsedArgs` — Type representing parsed arguments.
 
-- **Environment variable management**  
-  - `loadDotEnv` (function)  
-  - `parseDotEnv` (function)  
-  - `DotEnvLoadResult` (type)
+- **Environment Variable Handling**  
+  - `loadDotEnv` — Loads environment variables from `.env` files.  
+  - `parseDotEnv` — Parses `.env` file content.  
+  - `DotEnvLoadResult` — Type representing the result of loading `.env` files.
 
-- **Filesystem utilities**  
-  - `ensureDir` (function)  
-  - `fileExists` (function)  
-  - `readJson` (function)  
-  - `writeJson` (function)  
-  - `writeText` (function)  
-  - `walkFiles` (function)  
-  - `DEFAULT_WALK_EXCLUDES` (constant)
+- **Filesystem Utilities**  
+  - `ensureDir` — Ensures a directory exists, creating it if necessary.  
+  - `fileExists` — Checks if a file exists.  
+  - `readJson` — Reads and parses a JSON file.  
+  - `writeJson` — Writes JSON data to a file.  
+  - `writeText` — Writes text data to a file.  
+  - `walkFiles` — Recursively walks files in a directory.  
+  - `DEFAULT_WALK_EXCLUDES` — Default patterns to exclude during file walking.
 
-- **Git utilities**  
-  - `runGit` (function)  
-  - `getGitCommit` (function)  
-  - `getGitRemote` (function)  
-  - `getGitStatus` (function)
+- **Git Utilities**  
+  - `runGit` — Runs arbitrary Git commands.  
+  - `getGitCommit` — Retrieves the current Git commit hash.  
+  - `getGitRemote` — Retrieves the Git remote URL.  
+  - `getGitStatus` — Retrieves the current Git status.
 
 ## Dependencies and imports
 
@@ -67,18 +67,18 @@ The `utils` module provides a collection of utility functions and types implemen
 - `src/utils/git.ts` imports:  
   - Node.js built-in modules: `child_process`, `util`
 
-- `src/utils/args.ts` has no imports
+- `src/utils/args.ts` has no imports.
 
 ## Related tests
 
-No test files or test-related documentation cards were found associated with this module.
+No test files or test-related documentation cards were identified for this module in the provided source data.
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or test coverage information available for this module.
-- The exact behavior and usage details of the exported functions and types are not described beyond their symbol names and source file context.
-- The repository remote URL and commit SHA are unspecified, limiting traceability.
-- The module does not indicate any runtime environment assumptions or constraints.
+- There is no explicit documentation or test coverage information available for this module, which may limit understanding of edge cases or intended usage patterns.
+- The exact repository remote URL and commit SHA are unknown, which restricts traceability to the source code version.
+- The module does not include any runtime environment dependencies or hints, so assumptions about environment compatibility or constraints are not documented.
+- No information on error handling strategies or performance considerations is provided.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

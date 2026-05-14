@@ -1,10 +1,10 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "ab4f4401735f73fb39983b8f7af41b5ed76b37f7"
-compiled_at: "2026-05-13T23:59:59.238Z"
+source_commit: "db3dd5c6e2bdb430282661ff44b002d22af0bade"
+compiled_at: "2026-05-14T01:16:43.917Z"
 kind: "runbook"
 claim_status: "grounded"
-source_paths: [".env.example",".github/ISSUE_TEMPLATE/config.yml",".github/ISSUE_TEMPLATE/epic.yml",".github/ISSUE_TEMPLATE/task.yml",".github/workflows/changelog-on-merge.yml",".github/workflows/changelog-release.yml",".github/workflows/ci.yml",".github/workflows/wiki.yml",".gitignore",".pi/settings.json",".tsbuildinfo","bin/repo-wiki.ts","LICENSE","package-lock.json","package.json","scripts/update-changelog.mjs","src/cli.ts","src/compiler.ts","src/config.ts","src/context-assembler.ts","src/data-model-signals.ts","src/docs-ingestor.ts","src/docs-linter.ts","src/docs-validation.ts","src/extractors.ts","src/frontmatter.ts","src/index.ts","src/init.ts","src/language.ts","src/linter.ts","src/llm-provider.ts","src/page-ownership.ts","src/planner.ts","src/prompts.ts","src/publisher.ts","src/repository-analysis.ts","src/scanner.ts","src/secret-patterns.ts","src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts","src/wiki-patch.ts","test/cli.test.ts","test/compiler.test.ts","test/context-assembler.test.ts","test/docs-linter.test.ts","test/dotenv.test.ts","test/extractors-go.test.ts","test/extractors-rust.test.ts"]
+source_paths: ["test/fixtures/compiler-e2e/basic-node-service/repo/infra/deploy.js"]
 confidence: "medium"
 page_state: "generated"
 ---
@@ -12,7 +12,7 @@ page_state: "generated"
 
 ## Deployment and operations files
 
-- No deployment or operations files detected by the sketch scanner.
+- [test/fixtures/compiler-e2e/basic-node-service/repo/infra/deploy.js](https://github.com/mfittko/repo-wiki/blob/db3dd5c6e2bdb430282661ff44b002d22af0bade/test/fixtures/compiler-e2e/basic-node-service/repo/infra/deploy.js)
 
 ## Next refinement
 

@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "ab4f4401735f73fb39983b8f7af41b5ed76b37f7"
+source_commit: "db3dd5c6e2bdb430282661ff44b002d22af0bade"
 page_state: "generated"
 source_paths: ["src/docs-ingestor.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality for ingesting and processing documentation related to CI workflow commands. It includes utilities to extract, classify, and create structured representations of documented commands from source files. The module supports the generation of documentation cards and the classification of commands based on their source and status, facilitating automated documentation workflows.
+This module provides functionality for ingesting and processing documentation related to CI workflow commands. It includes utilities to extract, classify, and create structured representations of documented commands from source files. The module supports the analysis and validation of documentation claims, facilitating the generation of documentation cards that summarize command information.
 
 ## Source file list
 
@@ -26,19 +26,19 @@ This module provides functionality for ingesting and processing documentation re
 - **CommandClassification**: Enum or type defining possible classifications for commands.
 - **CommandSource**: Represents the origin or source context of a command.
 - **CommandStatus**: Enum or type indicating the status of a command.
-- **createDocumentationCard**: Function to create a structured documentation card for commands.
+- **createDocumentationCard**: Function to create a structured documentation card summarizing command details.
 - **DocumentedFilePath**: Type or interface representing file paths of documented sources.
 - **extractCiCommands**: Function to extract CI commands from source files.
 - **extractCiCommandSources**: Function to extract sources of CI commands.
-- **extractDocumentationClaims**: Function to extract claims or assertions from documentation.
+- **extractDocumentationClaims**: Function to extract claims made in documentation about commands.
 
 ## Dependencies and imports
 
 - Internal:
-  - `./docs-validation.js` — likely used for validating documentation or extracted data.
+  - `./docs-validation.js`: Likely provides validation utilities related to documentation.
 - Node.js built-in modules:
-  - `node:fs` — for filesystem operations.
-  - `node:path` — for path manipulations.
+  - `fs` (file system operations)
+  - `path` (file path utilities)
 
 ## Related tests
 
@@ -46,10 +46,10 @@ No explicit test files or test-related symbols are indicated in the source cards
 
 ## Known gaps or open questions
 
-- The module does not list any associated documentation cards or test coverage in the provided metadata.
-- The exact nature and structure of some types (e.g., `CommandClassification`, `CommandStatus`) are not detailed here.
-- The relationship between extracted commands and their usage in CI workflows could be further clarified with additional context or documentation.
-- No information on error handling or edge cases in command extraction and classification is provided.
+- The exact nature and structure of the documentation cards created by `createDocumentationCard` are not detailed here.
+- The relationship between command classifications and their usage context could be further clarified.
+- No direct references to testing or example usage are present in the source metadata.
+- The module's integration with other parts of the system, such as how extracted commands are consumed or validated downstream, is not described.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

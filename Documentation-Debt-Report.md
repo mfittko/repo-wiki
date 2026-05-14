@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "ab4f4401735f73fb39983b8f7af41b5ed76b37f7"
-compiled_at: "2026-05-13T23:59:59.236Z"
+source_commit: "db3dd5c6e2bdb430282661ff44b002d22af0bade"
+compiled_at: "2026-05-14T01:16:43.915Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 claim_status: "review-needed"
@@ -101,7 +101,7 @@ Commands extracted from documentation code blocks, validated against `package.js
 | `npm run lint:local` | ✅ validated | package.json |
 | `npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --remote https://github.com/OWNER/repo-wiki.git --branch gh-pages --pages-path .` | ❓ unvalidated | unknown |
 | `npm run build` | ✅ validated | CI workflow |
-| `npm test` | ✅ validated | package.json |
+| `npm test` | ✅ validated | CI workflow |
 | `npm run check` | ✅ validated | CI workflow |
 | `npm run coverage` | ✅ validated | CI workflow |
 | `npm run changelog:ensure` | ✅ validated | package.json |
