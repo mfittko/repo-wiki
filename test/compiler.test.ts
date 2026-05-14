@@ -1849,7 +1849,7 @@ test('compileWiki in LLM mode preserves human notes on Architecture.md synthesis
 // Architecture.md incremental gating – deterministic mode
 // ---------------------------------------------------------------------------
 
-function buildArchManifest(extra: Partial<any> = {}) {
+function buildArchManifest(extra: Record<string, unknown> = {}) {
   return {
     remote: 'origin',
     commit: 'arch-test-abc1234',
@@ -1864,7 +1864,7 @@ function buildArchManifest(extra: Partial<any> = {}) {
   };
 }
 
-function buildArchPlan(modules: any[] = []) {
+function buildArchPlan(modules: Array<Record<string, unknown>> = []) {
   return {
     pages: createPlan().pages,
     modules: modules.length > 0 ? modules : [
