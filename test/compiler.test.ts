@@ -2622,28 +2622,34 @@ test('compileWiki graph enrichment normalizes page states, wiki links, and prove
   await fs.mkdir(wikiDir, { recursive: true });
   await fs.writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
   await fs.writeFile(planFile, JSON.stringify(plan, null, 2));
-  await fs.writeFile(path.join(wikiDir, 'Alpha.md'), `\uFEFF---\r
-owned_by: "human"\r
-source_paths: ["src/a.ts", "", "./src/a.ts", "src/./a.ts"]\r
----\r
-\r
-[Beta](Beta)\r
-[Beta 2](Beta.md)\r
-[Beta 3](./Beta.md)\r
-[Beta 4](Beta.md#section)\r
-[Beta 5](Beta.md "details")\r
-~~~md\r
-[Code sample](Gamma.md)\r
-~~~\r
-[External](https://example.com)\r
-[Anchor](#local)\r
-[Asset](diagram.png)\r
-[Nested](nested/Beta.md)\r
+  await fs.writeFile(path.join(wikiDir, 'Alpha.md'), `﻿---
+owned_by: "human"
+source_paths: ["src/a.ts", "", "./src/a.ts", "src/./a.ts"]
+---
+
+[Beta](Beta)
+[Beta 2](Beta.md)
+[Beta 3](./Beta.md)
+[Beta 4](Beta.md#section)
+[Beta 5](Beta.md "details")
+Inline code \`[Inline](Gamma.md)\` should not count.
+<!-- [Comment](Gamma.md) -->
+<!--
+[Hidden](Gamma.md)
+-->
+\`\`\`\`md
+\`\`\`ts
+[Code sample](Gamma.md)
+\`\`\`
+\`\`\`\`
+[External](https://example.com)
+[Anchor](#local)
+[Asset](diagram.png)
+[Nested](nested/Beta.md)
 `);
   await fs.writeFile(path.join(wikiDir, 'Beta.md'), `---
 title: "beta"
-source_paths:
-  - "src/a.ts"
+source_paths: src/a.ts
 ---
 
 no source commit keeps this unmanaged
@@ -2651,7 +2657,7 @@ no source commit keeps this unmanaged
   await fs.writeFile(path.join(wikiDir, 'Delta.md'), `---
 source_repo: "origin"
 source_commit: "graph-enrichment-commit"
-source_paths: ["src/a.ts", "", "./src/a.ts", "src//a.ts"]
+source_paths: [src/a.ts, "", ./src/a.ts, docs/readme.md, src//a.ts]
 ---
 
 <!-- HUMAN_NOTES_START -->
@@ -2700,6 +2706,7 @@ Needs review.
     assert.deepEqual(provenanceEdges, [
       'page:Alpha.md->source:src/a.ts',
       'page:Beta.md->source:src/a.ts',
+      'page:Delta.md->source:docs/readme.md',
       'page:Delta.md->source:src/a.ts',
       'page:Gamma.md->source:docs/readme.md',
       'page:Gamma.md->source:src/gamma.ts'

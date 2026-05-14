@@ -459,19 +459,33 @@ function canonicalWikiPageReference(value: string): string {
 function extractLocalWikiLinks(content: string): string[] {
   const links = new Set<string>();
   const lines = content.replace(/\r\n?/g, '\n').split('\n');
-  let fenceMarker: '`' | '~' | '' = '';
+  let fenceMarker: { char: '`' | '~'; length: number } | null = null;
+  let inHtmlComment = false;
 
   for (const line of lines) {
-    const fenceMatch = /^\s*(```+|~~~+)/.exec(line);
-    if (fenceMatch && (!fenceMarker || fenceMatch[1][0] === fenceMarker)) {
-      fenceMarker = fenceMarker ? '' : fenceMatch[1][0] as '`' | '~';
-      continue;
+    const fenceMatch = /^\s*(`{3,}|~{3,})/.exec(line);
+    if (fenceMatch) {
+      const marker = {
+        char: fenceMatch[1][0] as '`' | '~',
+        length: fenceMatch[1].length,
+      };
+      if (!fenceMarker) {
+        fenceMarker = marker;
+        continue;
+      }
+      if (marker.char === fenceMarker.char && marker.length >= fenceMarker.length) {
+        fenceMarker = null;
+        continue;
+      }
     }
     if (fenceMarker) {
       continue;
     }
 
-    for (const href of extractMarkdownLinkTargets(line)) {
+    const visibleLine = stripWikiLinkExtractionNoise(line, inHtmlComment);
+    inHtmlComment = visibleLine.inHtmlComment;
+
+    for (const href of extractMarkdownLinkTargets(visibleLine.text)) {
       const target = cleanDocumentedPathTarget(href);
       if (!target || /^(?:https?:|mailto:|ftp:|\/\/|#)/i.test(target) || /^(?:javascript:|data:|vbscript:|blob:|about:)/i.test(target)) {
         continue;
@@ -492,6 +506,54 @@ function extractLocalWikiLinks(content: string): string[] {
   }
 
   return [...links];
+}
+
+function stripWikiLinkExtractionNoise(line: string, initialInHtmlComment = false): { text: string; inHtmlComment: boolean } {
+  let text = '';
+  let index = 0;
+  let inHtmlComment = initialInHtmlComment;
+
+  while (index < line.length) {
+    if (inHtmlComment) {
+      const commentEnd = line.indexOf('-->', index);
+      if (commentEnd === -1) {
+        return { text, inHtmlComment: true };
+      }
+      inHtmlComment = false;
+      index = commentEnd + 3;
+      continue;
+    }
+
+    const commentStart = line.indexOf('<!--', index);
+    const codeStart = line.indexOf('`', index);
+    const nextStop = [commentStart, codeStart].filter((value) => value !== -1).sort((left, right) => left - right)[0] ?? -1;
+    if (nextStop === -1) {
+      text += line.slice(index);
+      break;
+    }
+
+    text += line.slice(index, nextStop);
+
+    if (nextStop === commentStart) {
+      inHtmlComment = true;
+      index = commentStart + 4;
+      continue;
+    }
+
+    let tickCount = 1;
+    while (line[nextStop + tickCount] === '`') {
+      tickCount += 1;
+    }
+    const closingTicks = '`'.repeat(tickCount);
+    const closingIndex = line.indexOf(closingTicks, nextStop + tickCount);
+    if (closingIndex === -1) {
+      text += line.slice(nextStop);
+      break;
+    }
+    index = closingIndex + tickCount;
+  }
+
+  return { text, inHtmlComment };
 }
 
 function extractMarkdownLinkTargets(line: string): string[] {
@@ -577,23 +639,13 @@ function extractFrontmatterSourcePaths(content: string): string[] {
     }
 
     const value = match[1].trim();
-    if (value.startsWith('[')) {
-      try {
-        const parsed = JSON.parse(value);
-        if (Array.isArray(parsed)) {
-          for (const entry of parsed) {
-            if (typeof entry === 'string') {
-              values.push(entry);
-            }
-          }
-        }
-      } catch {
-        // Ignore malformed inline JSON arrays.
-      }
+    if (value.startsWith('[') && value.endsWith(']')) {
+      values.push(...parseInlineYamlSequence(value));
       continue;
     }
 
     if (value !== '') {
+      values.push(unquoteYamlScalar(value));
       continue;
     }
 
@@ -614,6 +666,56 @@ function extractFrontmatterSourcePaths(content: string): string[] {
   return uniqueSorted(values
     .map((entry) => canonicalRepoRelativePath(unquoteYamlScalar(entry).trim()))
     .filter(Boolean)) as string[];
+}
+
+function parseInlineYamlSequence(value: string): string[] {
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((entry): entry is string => typeof entry === 'string');
+    }
+  } catch {
+    // Fall through to permissive YAML-style parsing.
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
+    return [];
+  }
+
+  const entries: string[] = [];
+  let current = '';
+  let quote: '"' | "'" | '' = '';
+
+  for (const char of trimmed.slice(1, -1)) {
+    if (quote) {
+      current += char;
+      if (char === quote) {
+        quote = '';
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === ',') {
+      if (current.trim()) {
+        entries.push(unquoteYamlScalar(current.trim()));
+      }
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+
+  if (current.trim()) {
+    entries.push(unquoteYamlScalar(current.trim()));
+  }
+
+  return entries;
 }
 
 function canonicalRepoRelativePath(value: string): string {
