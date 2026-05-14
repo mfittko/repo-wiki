@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "eda9d272e7c9de7e891622628d448f396d033b3f"
+source_commit: "a507ef561fb391da37a72f94377f63339998865a"
 page_state: "generated"
 source_paths: ["src/scanner.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-The `scanner.ts` module provides functionality related to scanning repositories. It exports the primary symbol `scanRepository`, which likely orchestrates or performs the scanning process on a code repository. This module is implemented in TypeScript and serves as a core source component within the codebase.
+The `scanner.ts` module provides functionality to scan a repository. It is a source module written in TypeScript and serves as a core component for repository analysis workflows. The main exported symbol is `scanRepository`, which likely orchestrates scanning operations by leveraging various utilities and extractors.
 
 ## Source file list
 
@@ -21,35 +21,33 @@ The `scanner.ts` module provides functionality related to scanning repositories.
 
 ## Key symbols and entry points
 
-- `scanRepository`: The main exported function or symbol from this module, responsible for scanning repository contents.
+- **`scanRepository`**: The primary function exported by this module, responsible for scanning repositories. Details on its implementation and usage are contained within `src/scanner.ts`.
 
 ## Dependencies and imports
 
-The module imports several other internal modules and Node.js built-in modules, indicating its integration with various parts of the system:
+The module imports several internal dependencies and Node.js built-in modules, indicating its integration with configuration, documentation ingestion, extraction logic, language processing, and repository analysis:
 
-- Internal imports:
-  - `./config.js`
-  - `./docs-ingestor.js`
-  - `./extractors.js`
-  - `./language.js`
-  - `./repository-analysis.js`
-  - `./utils/fs.js`
-  - `./utils/git.js`
-- Node.js built-in module:
-  - `node:crypto`
+- `./config.js`
+- `./docs-ingestor.js`
+- `./extractors.js`
+- `./language.js`
+- `./repository-analysis.js`
+- `./utils/fs.js`
+- `./utils/git.js`
+- `node:crypto`
 
-These dependencies suggest that `scanner.ts` interacts with configuration settings, documentation ingestion, code extraction, language processing, repository analysis, filesystem utilities, Git operations, and cryptographic functions.
+These dependencies suggest that `scanner.ts` coordinates multiple aspects of repository scanning, including configuration management, documentation processing, code extraction, language-specific handling, and repository state analysis.
 
 ## Related tests
 
-No documentation or test cards were found associated with this module. It is currently unknown if there are dedicated tests for `scanner.ts`.
+No explicit test files or test-related documentation cards are associated with this module in the current source data.
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or test coverage information available for this module.
-- The detailed behavior and implementation of `scanRepository` are not described here.
-- The exact role of each imported module in the scanning process is not detailed.
-- The repository source and commit SHA are unknown, limiting traceability.
+- There is no documentation or test coverage information available for this module.
+- The detailed behavior and API of `scanRepository` are not described beyond its symbol presence.
+- The exact role and interaction of imported modules within `scanRepository` remain unspecified.
+- The source repository URL and commit SHA are unknown, limiting traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "eda9d272e7c9de7e891622628d448f396d033b3f"
+source_commit: "a507ef561fb391da37a72f94377f63339998865a"
 page_state: "generated"
 source_paths: ["src/page-ownership.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -22,9 +22,9 @@ This module provides functionality related to managing and preserving human-gene
 ## Key symbols and entry points
 
 - **detectPageState**: Function to determine the current state of a page, likely analyzing its content or metadata.
-- **extractHumanNotes**: Function to extract notes or annotations made by humans from the page content.
-- **injectHumanNotes**: Function to insert or re-insert human notes into the page content.
-- **preserveHumanNotes**: Function to maintain or safeguard human notes during page transformations or updates.
+- **extractHumanNotes**: Function to extract human-authored notes from a page or content source.
+- **injectHumanNotes**: Function to insert or re-insert human notes into a page or content.
+- **preserveHumanNotes**: Function to maintain or safeguard human notes during page updates or transformations.
 - **PageState**: A type or interface representing the state of a page, used in conjunction with the above functions.
 
 ## Dependencies and imports
@@ -33,13 +33,13 @@ This module provides functionality related to managing and preserving human-gene
 
 ## Related tests
 
-- No documentation or source cards indicate the presence of related tests for this module.
+- No documentation or source cards indicate the presence of related test files or test cases for this module.
 
 ## Known gaps or open questions
 
 - There is no explicit documentation or test coverage information available.
 - The exact implementation details and usage scenarios of the exported functions and types are not described.
-- The module's integration context within a larger system is not provided.
+- The module's integration context within a larger system is not specified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

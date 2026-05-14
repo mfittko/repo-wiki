@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "eda9d272e7c9de7e891622628d448f396d033b3f"
+source_commit: "a507ef561fb391da37a72f94377f63339998865a"
 page_state: "generated"
 source_paths: ["src/index.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "<ISO-8601 timestamp>"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,15 +13,13 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module serves as the central entry point for the source code located in `src/index.ts`. It consolidates and exposes key functions, types, and utilities related to assembling page contexts, building prompts, and applying policies within the system. The module orchestrates various aspects of prompt construction and context assembly, likely supporting a larger framework or application that involves document processing, linting, and CLI interactions.
+This module serves as the main entry point aggregating core functionalities related to page context assembly, prompt building, and request construction within the codebase. It exports key symbols that facilitate the assembly of page contexts, application of frontmatter policies, and construction of various prompts and requests. The module consolidates these capabilities by importing and re-exporting from several internal components, effectively centralizing the source-level API for these operations.
 
 ## Source file list
 
 - `src/index.ts`
 
 ## Key symbols and entry points
-
-The module exports or defines the following important symbols:
 
 - `applyFrontmatterPolicy`
 - `assembleAllPageContexts`
@@ -34,40 +32,33 @@ The module exports or defines the following important symbols:
 - `buildRequest`
 - `BuildRequestOptions` (type/interface)
 
-These symbols suggest functionality around:
-
-- Applying policies to frontmatter metadata
-- Assembling page contexts individually or collectively
-- Building various types of prompts (foundation, module-specific, cross-cutting)
-- Constructing requests with configurable options
+These symbols represent the primary interfaces and functions exposed by the module, enabling consumers to assemble page contexts and build prompts and requests in a structured manner.
 
 ## Dependencies and imports
 
-The module imports from several internal modules, indicating a modular architecture:
+The module imports from the following internal modules:
 
 - `./cli.js`
 - `./compiler.js`
 - `./config.js`
 - `./context-assembler.js`
 - `./docs-linter.js`
-- Additionally, the excerpt mentions imports from:
-  - `./frontmatter.js`
-  - `./init.js`
-  - `./linter.js`
+- `./frontmatter.js`
+- `./init.js`
+- `./linter.js`
 
-These dependencies suggest integration with command-line interface utilities, compilation processes, configuration management, context assembly logic, and documentation linting.
+These dependencies indicate that the module integrates CLI utilities, compilation logic, configuration management, context assembly, documentation linting, frontmatter processing, initialization routines, and linting capabilities.
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are listed for this module. It is unclear if tests exist or are located elsewhere.
+No explicit test files or test-related documentation cards are referenced in the source metadata for this module. Further investigation into the repository's test directories may be required to identify relevant test coverage.
 
 ## Known gaps or open questions
 
-- The exact behavior and implementation details of the exported functions and types are not described here.
-- No documentation cards or usage examples are provided, limiting understanding of how to use the module effectively.
-- The source repository and commit SHA are unknown, which restricts traceability.
-- The presence and location of tests related to this module are not identified.
-- The role of some imported modules (e.g., `./init.js`, `./linter.js`) in relation to this module is not fully clear from the available data.
+- The module's documentation does not specify detailed behavioral descriptions or usage examples for the exported symbols.
+- There is no direct reference to associated test coverage or test cases in the provided metadata.
+- The exact relationships and interactions between the imported modules and the exported symbols are not fully detailed in the source excerpt.
+- Additional context on how this module fits into the larger application architecture is not provided.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
