@@ -3,15 +3,13 @@ import assert from 'node:assert/strict';
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { scanRepository } from '../src/scanner.js';
 import { createBootstrapPlan } from '../src/planner.js';
 import { compileWiki } from '../src/compiler.js';
 import { runGit } from '../src/utils/git.js';
 import type { LLMRequest } from '../src/llm-provider.js';
 
-const currentDir = path.dirname(fileURLToPath(import.meta.url));
-const fixtureRoot = path.resolve(currentDir, '..', '..', 'test', 'fixtures', 'compiler-e2e');
+const fixtureRoot = path.resolve(process.cwd(), 'test', 'fixtures', 'compiler-e2e');
 
 async function prepareFixtureRepo(fixtureName: string) {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), `repo-wiki-compiler-e2e-${fixtureName}-`));
