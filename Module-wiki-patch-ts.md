@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "fcd0cab90b26fc622c67172972b85e39ed7ab703"
+source_commit: "eda9d272e7c9de7e891622628d448f396d033b3f"
 page_state: "generated"
 source_paths: ["src/wiki-patch.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -9,11 +9,11 @@ confidence: "medium"
 claim_status: "source-grounded"
 ---
 
-# Module `wiki-patch.ts`
+# Module wiki-patch.ts
 
 ## Purpose
 
-This module provides functionality related to parsing, validating, and synthesizing patches for GitHub Wiki pages. It defines types and functions to handle wiki patch data structures, including error handling and frontmatter processing. The module is implemented in TypeScript and serves as a source component for managing wiki content programmatically.
+This module provides functionality for parsing, validating, and synthesizing patches to wiki pages. It defines types and functions to handle wiki patch data structures, including error handling and frontmatter processing. The module is implemented in TypeScript and serves as a source component for managing wiki page modifications programmatically.
 
 ## Source file list
 
@@ -23,12 +23,12 @@ This module provides functionality related to parsing, validating, and synthesiz
 
 - **parseWikiPatch**: Function to parse a wiki patch from a given input.
 - **validateWikiPatch**: Function to validate the structure and content of a wiki patch.
-- **synthesizeWikiPage**: Function to synthesize or generate a wiki page from patch data.
+- **synthesizeWikiPage**: Function to synthesize or generate a wiki page based on patch data and options.
 - **WikiPatch**: Type representing the structure of a wiki patch.
 - **WikiPatchError**: Error class for handling wiki patch related errors.
 - **WikiPatchFrontmatter**: Type representing the frontmatter metadata of a wiki patch.
-- **WikiPatchIssue**: Type or interface representing issues found in a wiki patch.
-- **SynthesizeOptions**: Options type for controlling the synthesis process.
+- **WikiPatchIssue**: Type representing issues or problems found in a wiki patch.
+- **SynthesizeOptions**: Type defining options for the synthesis process.
 
 ## Dependencies and imports
 
@@ -41,10 +41,10 @@ No explicit test files or test-related documentation cards are listed for this m
 
 ## Known gaps or open questions
 
-- No documentation or usage examples are currently available.
-- The exact behavior and API details of the key functions are not described beyond symbol names.
-- The relationship between the imported modules and the wiki patch functionality is not detailed.
-- No test coverage information or references to test suites are provided.
+- No documentation cards or detailed usage examples are currently available.
+- The exact behavior and implementation details of the imported modules (`llm-provider.js` and `secret-patterns.js`) are not described here.
+- Test coverage and integration with other modules are not documented.
+- The repository remote URL and commit SHA are unknown, limiting traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

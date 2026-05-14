@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "fcd0cab90b26fc622c67172972b85e39ed7ab703"
+source_commit: "eda9d272e7c9de7e891622628d448f396d033b3f"
 page_state: "generated"
 source_paths: ["src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-The `utils` module provides a collection of utility functions and types implemented in TypeScript to support various common tasks related to argument parsing, environment variable loading, filesystem operations, and Git command interactions. This module consolidates reusable source code that facilitates handling command-line arguments, reading and parsing `.env` files, performing file system manipulations, and executing Git commands programmatically.
+The `utils` module provides a collection of utility functions and types implemented in TypeScript to support various common tasks related to argument parsing, environment variable loading, filesystem operations, and Git command interactions. This module serves as foundational source code to facilitate handling command-line arguments, managing `.env` files, performing file system manipulations, and executing Git commands programmatically.
 
 ## Source file list
 
@@ -29,24 +29,24 @@ The `utils` module provides a collection of utility functions and types implemen
 - `ParsedArgs` — Type representing the structure of parsed arguments.
 
 ### `src/utils/dotenv.ts`
-- `DotEnvLoadResult` — Type representing the result of loading environment variables.
 - `loadDotEnv` — Function to load environment variables from `.env` files.
-- `parseDotEnv` — Function to parse the contents of `.env` files.
+- `parseDotEnv` — Function to parse `.env` file content.
+- `DotEnvLoadResult` — Type representing the result of loading `.env` files.
 
 ### `src/utils/fs.ts`
 - `DEFAULT_WALK_EXCLUDES` — Default patterns to exclude when walking directories.
 - `ensureDir` — Function to ensure a directory exists, creating it if necessary.
 - `fileExists` — Function to check if a file exists.
-- `readJson` — Function to read and parse a JSON file.
+- `readJson` — Function to read and parse JSON files.
 - `walkFiles` — Function to recursively walk files in a directory.
 - `writeJson` — Function to write JSON data to a file.
 - `writeText` — Function to write text data to a file.
 
 ### `src/utils/git.ts`
+- `runGit` — Function to run arbitrary Git commands.
 - `getGitCommit` — Function to retrieve the current Git commit hash.
 - `getGitRemote` — Function to get the Git remote URL.
 - `getGitStatus` — Function to get the current Git status.
-- `runGit` — Function to run arbitrary Git commands.
 
 ## Dependencies and imports
 
@@ -64,14 +64,14 @@ The `utils` module provides a collection of utility functions and types implemen
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are present in the source data for this module.
+No test files or test-related documentation cards are present in the current source data for this module.
 
 ## Known gaps or open questions
 
-- There is no information about test coverage or test files related to this module.
-- The repository remote URL and commit SHA are unknown, limiting traceability.
-- No documentation or usage examples are provided for the exported symbols.
-- The exact runtime environment or integration context for these utilities is not specified.
+- There is no explicit documentation or test coverage information available for this module.
+- The exact repository remote URL and commit SHA are not provided.
+- The usage context or higher-level integration of these utilities is not described.
+- No information on error handling strategies or performance considerations is available.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

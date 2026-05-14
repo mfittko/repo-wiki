@@ -1,423 +1,396 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "fcd0cab90b26fc622c67172972b85e39ed7ab703"
+source_commit: "eda9d272e7c9de7e891622628d448f396d033b3f"
 page_state: "generated"
 source_paths: [".env.example",".github/agents/coordinator.agent.md",".github/agents/developer.agent.md",".github/agents/docs.agent.md",".github/agents/fixer.agent.md",".github/agents/quality.agent.md",".github/agents/review.agent.md",".github/copilot-review-instructions.md",".github/ISSUE_TEMPLATE/config.yml",".github/ISSUE_TEMPLATE/epic.yml",".github/ISSUE_TEMPLATE/task.yml",".github/pull_request_template.md",".github/skills/keep-a-changelog/SKILL.md",".github/skills/repo-wiki-navigation/SKILL.md",".github/workflows/changelog-on-merge.yml",".github/workflows/changelog-release.yml",".github/workflows/ci.yml",".github/workflows/wiki.yml",".gitignore",".llmwiki/schema.md"]
-compiled_at: "2026-05-14"
+compiled_at: "2026-05-14T00:00:00Z"
 kind: "architecture"
-confidence: "medium-low"
-claim_status: "partially_supported_by_source_cards_and_partially_validated_docs"
+confidence: "low_to_medium"
+claim_status: "partially_validated_from_configuration_and_docs"
 ---
 
 # Architecture
 
 ## Executive Architecture Summary
 
-`repo-wiki` is documented as a dual-role package: a local CLI and a GitHub Action for compiling repository sources into a GitHub Wiki-style knowledge base, with package verification running against compiled output in `dist/` according to the partially validated `README.md` documentation card. The repository evidence supplied for this page is strongest for operational and governance surfaces: CI workflows, wiki publishing workflow configuration, issue templates, agent instructions, changelog skills, environment configuration, and the `.llmwiki` schema documentation. Source-code module boundaries for the compiler itself are not present in the supplied source cards, so runtime internals are described conservatively and flagged where they rely on documentation cards rather than directly scanned imports or implementation files.
+`repo-wiki` is documented as a tool/package for compiling repository knowledge into a persistent wiki, inspired by an “LLM Wiki” pattern where raw repository sources remain authoritative and generated wiki pages become a maintained knowledge artifact. This product intent is described in the implementation plan and rationale documentation, but the source cards available for this page contain mostly configuration, workflow, schema, issue-template, and agent-instruction files rather than application source files. Therefore, this architecture page treats runtime internals as partially validated and focuses on the repository surfaces that are directly evidenced. [docs/PLAN.md], [docs/WHY.md], [.llmwiki/schema.md]
 
-Major architectural surfaces supported by the provided source cards are:
+The repository architecture visible from the available evidence has these major areas:
 
-| Surface | Responsibility | Evidence |
-|---|---|---|
-| Environment configuration | Local/GitHub runtime configuration for repository target, GitHub authentication, compiler mode, and LLM API key. | `.env.example` |
-| Wiki CI workflow | Background automation for wiki generation/publishing, configured with `LLMWIKI_COMPILER_MODE` and `LLMWIKI_PUBLISH_REMOTE`. | `.github/workflows/wiki.yml` |
-| General CI workflow | Background continuous-integration surface. | `.github/workflows/ci.yml` |
-| Changelog automation | Background workflows and skill guidance for changelog maintenance/release flow. | `.github/workflows/changelog-on-merge.yml`, `.github/workflows/changelog-release.yml`, `.github/skills/keep-a-changelog/SKILL.md` |
-| Project governance and human/agent workflow | Issue templates, pull request template, Copilot review instructions, and agent role instructions. | `.github/ISSUE_TEMPLATE/*.yml`, `.github/pull_request_template.md`, `.github/copilot-review-instructions.md`, `.github/agents/*.agent.md`, `AGENTS.md`, `.pi/AGENTS.md`, `.pi/settings.json` |
-| Wiki data model/schema | Schema documentation for generated wiki artifacts. | `.llmwiki/schema.md` |
-| Product intent and planned compiler modules | LLM Wiki pattern, LLM compiler, GitHub Action, CI publishing, search index, and incremental mode. These are secondary documentation-card claims, not fully validated by source cards in this input. | `docs/PLAN.md` documentation card, `docs/WHY.md` documentation card, `docs/plans/*.md` documentation cards |
+| Area | Responsibility | Evidence |
+| --- | --- | --- |
+| Wiki compilation / schema contract | Defines the generated wiki knowledge-base model and compilation expectations. | [.llmwiki/schema.md], [docs/PLAN.md] |
+| Local and package execution | README describes a dual-role package/CLI model and compiled `dist/` verification flow, but no package manifest or TypeScript source cards were provided for this page. | [README.md] |
+| CI validation | A CI workflow exists and is a high-authority source for automated checks, though detailed job steps are not included in the source-card excerpt. | [.github/workflows/ci.yml] |
+| Wiki publishing workflow | A dedicated wiki workflow is configured and references `LLMWIKI_COMPILER_MODE` and `LLMWIKI_PUBLISH_REMOTE`, indicating an operational surface for generating and/or publishing wiki content. | [.github/workflows/wiki.yml] |
+| Changelog automation | Two changelog workflows and a keep-a-changelog skill indicate automation and repository conventions around release/change documentation. | [.github/workflows/changelog-on-merge.yml], [.github/workflows/changelog-release.yml], [.github/skills/keep-a-changelog/SKILL.md] |
+| GitHub collaboration surfaces | Issue templates, pull request template, Copilot review instructions, and agent files define human/AI contribution workflows. | [.github/ISSUE_TEMPLATE/epic.yml], [.github/ISSUE_TEMPLATE/task.yml], [.github/pull_request_template.md], [.github/copilot-review-instructions.md], [.github/agents/coordinator.agent.md] |
 
-Key design decisions visible from the evidence:
+Key design decisions supported by available evidence:
 
-1. The repository has an explicit wiki-generation operational mode exposed through environment variables and a dedicated wiki workflow. `.env.example` lists `GITHUB_REPOSITORY`, `GITHUB_TOKEN`, `LLMWIKI_COMPILER_MODE`, and `LLMWIKI_LLM_API_KEY`; `.github/workflows/wiki.yml` references `LLMWIKI_COMPILER_MODE` and `LLMWIKI_PUBLISH_REMOTE`.
-2. GitHub is a primary integration boundary: issue templates, PR templates, Copilot review instructions, GitHub Actions workflows, GitHub token usage, and repository/wiki configuration are all present under `.github/` and `.env.example`.
-3. LLM usage is an intended integration boundary because `.env.example` includes `LLMWIKI_LLM_API_KEY`, and the partially validated `docs/plans/llm-compiler.md` documentation card describes a provider-agnostic OpenAI-style chat completions boundary.
-4. The project treats generated wiki content as structured artifacts: `.llmwiki/schema.md` is identified as data-model documentation, and partially validated planning docs describe source cards, documentation cards, generated pages, search indexing, and publishing flows.
+1. **Repository sources are intended to remain the authoritative input to generated wiki pages.** This is supported by the schema-oriented `.llmwiki` area and the product plan/rationale. [.llmwiki/schema.md], [docs/PLAN.md], [docs/WHY.md]
+2. **The project has both local and CI-operated modes.** Environment examples include local variables such as `GITHUB_REPOSITORY`, `GITHUB_TOKEN`, `LLMWIKI_COMPILER_MODE`, and `LLMWIKI_LLM_API_KEY`; the wiki workflow also references `LLMWIKI_COMPILER_MODE` and `LLMWIKI_PUBLISH_REMOTE`. [.env.example], [.github/workflows/wiki.yml]
+3. **Automation is centered on GitHub workflows.** CI, wiki generation/publishing, and changelog workflows are present. [.github/workflows/ci.yml], [.github/workflows/wiki.yml], [.github/workflows/changelog-on-merge.yml], [.github/workflows/changelog-release.yml]
+4. **Documentation and process automation are first-class repository assets.** Agent instructions, skills, issue templates, and PR/review guidance are present under `.github/` and `.pi/`. [.github/agents/docs.agent.md], [.github/skills/repo-wiki-navigation/SKILL.md], [.pi/AGENTS.md], [.pi/settings.json]
 
 ## System and Repository Context
 
-The supplied source-card set shows a repository organized around GitHub-hosted automation, wiki generation configuration, and contributor/agent workflow documentation.
+The available repository evidence shows a tool-oriented repository with GitHub as the main external platform surface. The tool is documented as a CLI/package that can run locally or under automation, and the CI/wiki workflows show GitHub Actions as an operational control plane. [README.md], [.github/workflows/ci.yml], [.github/workflows/wiki.yml]
 
-### Repository boundaries and external surfaces
+External surfaces and boundaries visible from source cards:
 
-| Boundary / External actor | Interaction with repository | Evidence | Confidence |
-|---|---|---|---|
-| Local user / CLI runner | Provides local environment variables such as repository target, GitHub token, compiler mode, and LLM API key. The `README.md` documentation card states the package has a local CLI role. | `.env.example`; `README.md` documentation card | Medium |
-| GitHub Actions | Executes CI, wiki, changelog-on-merge, and changelog-release workflows as background automation. | `.github/workflows/ci.yml`, `.github/workflows/wiki.yml`, `.github/workflows/changelog-on-merge.yml`, `.github/workflows/changelog-release.yml` | Medium |
-| GitHub repository and wiki remotes | Target repository is configured via `GITHUB_REPOSITORY`; wiki publishing remote is configured in the wiki workflow through `LLMWIKI_PUBLISH_REMOTE`. | `.env.example`, `.github/workflows/wiki.yml` | Medium |
-| GitHub API / authentication | GitHub token variables are present: `GITHUB_TOKEN` in local example configuration and `GH_TOKEN` in changelog-on-merge workflow. | `.env.example`, `.github/workflows/changelog-on-merge.yml` | Medium |
-| LLM provider | LLM API key variable is present; planning docs describe a provider-agnostic OpenAI-style chat-completion boundary. | `.env.example`; `docs/plans/llm-compiler.md` documentation card | Medium-low |
-| Contributors and AI coding agents | Issue templates, PR template, Copilot review instructions, agent role files, and PI settings govern project work. | `.github/ISSUE_TEMPLATE/config.yml`, `.github/ISSUE_TEMPLATE/epic.yml`, `.github/ISSUE_TEMPLATE/task.yml`, `.github/pull_request_template.md`, `.github/copilot-review-instructions.md`, `.github/agents/*.agent.md`, `AGENTS.md`, `.pi/AGENTS.md`, `.pi/settings.json` | Medium |
+| Surface | Direction | Architectural role | Evidence |
+| --- | --- | --- | --- |
+| Local environment configuration | Input | Supplies repository identity, GitHub token, compiler mode, and LLM API key variable names. Values are not included here. | [.env.example] |
+| GitHub Actions | Control plane | Runs CI, wiki generation/publishing, and changelog automation. | [.github/workflows/ci.yml], [.github/workflows/wiki.yml], [.github/workflows/changelog-on-merge.yml], [.github/workflows/changelog-release.yml] |
+| GitHub repository / wiki remote | Input/output | The wiki workflow references publishing remote configuration; docs describe generated wiki artifacts. | [.github/workflows/wiki.yml], [docs/plans/ci-publishing.md], [docs/plans/github-action.md] |
+| LLM provider API | External dependency, partially validated | An LLM API key variable is present; LLM compiler planning describes provider-agnostic OpenAI-style chat completions, but implementation details are not validated by source-code cards in this page. | [.env.example], [docs/plans/llm-compiler.md] |
+| Generated wiki schema | Internal contract/output | `.llmwiki/schema.md` documents the knowledge-base/page schema contract used by generated pages. | [.llmwiki/schema.md] |
+| GitHub issue and PR UI | Collaboration input | Issue templates and PR templates structure work intake and review. | [.github/ISSUE_TEMPLATE/epic.yml], [.github/ISSUE_TEMPLATE/task.yml], [.github/pull_request_template.md] |
 
-### Context diagram
-
-The following diagram is limited to repository boundaries and operational surfaces directly supported by the provided source cards. It does not show unverified internal source-code modules.
+The following context diagram is supported by workflow/configuration files and documentation cards. Runtime internals are intentionally shown as a single “repo-wiki compiler / package” box because application source files were not included in the source-card set for this page.
 
 ```mermaid
 flowchart LR
-  User["Local user / CLI runner<br/>(README docs card)"]
-  Actions["GitHub Actions<br/>ci, wiki, changelog workflows"]
-  Repo["repo-wiki repository<br/>source, docs, workflow config"]
-  Wiki["GitHub Wiki / publish remote<br/>LLMWIKI_PUBLISH_REMOTE"]
-  GitHub["GitHub API / repository<br/>GITHUB_REPOSITORY, GITHUB_TOKEN, GH_TOKEN"]
-  LLM["LLM provider<br/>LLMWIKI_LLM_API_KEY"]
-  Governance["Contributor and agent workflow<br/>issues, PR template, agents, skills"]
+    Dev["Developer / maintainer"] --> LocalEnv["Local environment<br/>.env variables"]
+    LocalEnv --> Tool["repo-wiki compiler / package<br/>(internals not validated from source cards)"]
 
-  User --> Repo
-  User --> GitHub
-  User --> LLM
-  Actions --> Repo
-  Actions --> GitHub
-  Actions --> Wiki
-  Repo --> Governance
+    Repo["Git repository sources"] --> Tool
+    Schema[".llmwiki schema"] --> Tool
+    Tool --> Wiki["Generated wiki pages"]
+
+    GH["GitHub Actions"] --> CI["CI workflow"]
+    GH --> WikiWorkflow["Wiki workflow"]
+    GH --> Changelog["Changelog workflows"]
+
+    CI --> Tool
+    WikiWorkflow --> Tool
+    WikiWorkflow --> WikiRemote["Wiki publish remote<br/>(configured via env)"]
+
+    Tool -. "LLM API key variable present;<br/>provider interaction partially validated" .-> LLM["External LLM provider"]
+
+    Issues["Issues / PRs / review instructions"] --> Dev
 ```
 
-Evidence: `.env.example`, `.github/workflows/ci.yml`, `.github/workflows/wiki.yml`, `.github/workflows/changelog-on-merge.yml`, `.github/workflows/changelog-release.yml`, `.github/ISSUE_TEMPLATE/config.yml`, `.github/ISSUE_TEMPLATE/epic.yml`, `.github/ISSUE_TEMPLATE/task.yml`, `.github/pull_request_template.md`, `.github/copilot-review-instructions.md`, `.github/agents/*.agent.md`, `.github/skills/*.md`, `AGENTS.md`, `.pi/AGENTS.md`, `.pi/settings.json`, and the `README.md` documentation card.
+Evidence for this diagram: local variables are named in `.env.example`; CI/wiki/changelog workflows exist under `.github/workflows`; `.llmwiki/schema.md` defines schema documentation; issue/PR/review files exist under `.github`; the LLM provider relationship is only partially validated by `.env.example` and LLM compiler planning documentation. [.env.example], [.github/workflows/ci.yml], [.github/workflows/wiki.yml], [.github/workflows/changelog-on-merge.yml], [.github/workflows/changelog-release.yml], [.llmwiki/schema.md], [.github/ISSUE_TEMPLATE/epic.yml], [.github/ISSUE_TEMPLATE/task.yml], [.github/pull_request_template.md], [.github/copilot-review-instructions.md], [docs/plans/llm-compiler.md]
 
 ## Major Modules and Responsibilities
 
-Because implementation source files are not included among the supplied source cards, the modules below are grouped by repository surfaces and partially validated plan modules rather than by confirmed import graphs.
+### Wiki Schema and Knowledge-Base Contract
 
-### Wiki Compiler and Generated Knowledge Base
-
-The project’s primary intended module is the wiki compiler/generator. The partially validated `README.md` documentation card describes the package as a local CLI and GitHub Action, and the partially validated `docs/PLAN.md` and `docs/WHY.md` documentation cards describe the product as an implementation of an “LLM Wiki” pattern for software repositories. `.llmwiki/schema.md` is identified as data-model documentation for generated wiki artifacts.
-
-Responsibilities inferred from documentation cards and configuration:
-
-- Compile repository evidence into wiki pages. Evidence: `README.md` documentation card, `docs/PLAN.md` documentation card, `.llmwiki/schema.md`.
-- Use a schema to structure generated wiki artifacts. Evidence: `.llmwiki/schema.md`, `docs/PLAN.md` documentation card.
-- Support local and CI execution modes. Evidence: `.env.example`, `.github/workflows/wiki.yml`, `README.md` documentation card.
-- Potentially publish generated pages to a wiki remote. Evidence: `.github/workflows/wiki.yml`, `docs/plans/ci-publishing.md` documentation card, `docs/plans/github-action.md` documentation card.
-
-Claim status: **partially supported**. The architecture intent is clear from docs and workflow/environment surfaces, but implementation files for the compiler are not present in the supplied source-card set.
-
-### GitHub Action and Wiki Publishing Workflow
-
-The repository includes a dedicated `.github/workflows/wiki.yml` workflow. The workflow source card is classified as CI/configuration and references `LLMWIKI_COMPILER_MODE` and `LLMWIKI_PUBLISH_REMOTE`, indicating an operational path for wiki compilation and optional/targeted publishing behavior.
+The `.llmwiki` area contains schema documentation and is the clearest repository-local architectural contract in the available source cards. It documents the data model for generated wiki knowledge-base content. [.llmwiki/schema.md]
 
 Responsibilities:
 
-- Run wiki-generation automation in GitHub Actions. Evidence: `.github/workflows/wiki.yml`.
-- Configure compiler mode through `LLMWIKI_COMPILER_MODE`. Evidence: `.github/workflows/wiki.yml`, `.env.example`.
-- Configure a publishing destination through `LLMWIKI_PUBLISH_REMOTE`. Evidence: `.github/workflows/wiki.yml`.
-- Align with planned GitHub Action behavior described by the partially validated `docs/plans/github-action.md` documentation card.
+- Define the expected structure and metadata for generated wiki pages. [.llmwiki/schema.md]
+- Support the product goal that repository sources are compiled into persistent wiki content. [docs/PLAN.md], [docs/WHY.md]
+- Provide a basis for future or existing compiler behavior, though specific parser/compiler source files are not included in the available cards. [.llmwiki/schema.md]
 
-Claim status: **supported for workflow existence and environment surface; partially supported for detailed behavior**.
+### CLI / Package Runtime
 
-### CI and Quality Workflow
+The README describes the package as dual-role and states that local CLI and package verification flow run against compiled output in `dist/`. It also states that `npm test`, `npm run check`, and `npm run coverage` require a successful TypeScript build. These are documentation-card claims rather than direct package-script evidence in the provided source cards, so they are treated as partially validated. [README.md]
 
-The repository has a CI workflow at `.github/workflows/ci.yml`, classified as CI and background work. The `README.md` documentation card states that `npm test`, `npm run check`, and `npm run coverage` require successful TypeScript compilation into `dist/`, but the corresponding `package.json` script definitions are not present in the provided source cards.
+Responsibilities inferred from docs:
 
-Responsibilities:
+- Run locally, including via package/CLI usage. [README.md]
+- Compile or verify generated output from TypeScript-built artifacts in `dist/`. [README.md]
+- Support test, check, and coverage workflows after build. [README.md]
 
-- Run repository validation in CI. Evidence: `.github/workflows/ci.yml`.
-- Validate compiled/package output according to documented intent. Evidence: `README.md` documentation card.
-- Support background automation for repository health. Evidence: `.github/workflows/ci.yml`.
+Open validation gap: no `package.json`, TypeScript source files, CLI entrypoint, or `dist/` files were included in the source-card set for this page, so exact commands, module boundaries, imports, and runtime entrypoints are not confirmed here. [README.md]
 
-Claim status: **supported for CI workflow presence; partially supported for exact commands**.
+### GitHub Actions: CI
 
-### Changelog and Release Automation
-
-Two workflows and one skill file define a changelog/release maintenance surface:
-
-- `.github/workflows/changelog-on-merge.yml`
-- `.github/workflows/changelog-release.yml`
-- `.github/skills/keep-a-changelog/SKILL.md`
-
-The changelog-on-merge workflow references `GH_TOKEN`, indicating GitHub-authenticated automation. The skill file provides human/agent guidance for changelog conventions.
+A CI workflow exists at `.github/workflows/ci.yml`. The source-card metadata identifies it as CI and notes background-work hints. [.github/workflows/ci.yml]
 
 Responsibilities:
 
-- Maintain changelog updates around merges. Evidence: `.github/workflows/changelog-on-merge.yml`, `.github/skills/keep-a-changelog/SKILL.md`.
-- Support release-related changelog automation. Evidence: `.github/workflows/changelog-release.yml`.
-- Use GitHub authentication for changelog automation where needed. Evidence: `.github/workflows/changelog-on-merge.yml`.
+- Provide automated repository validation. [.github/workflows/ci.yml]
+- Potentially run build/test/check steps, but the exact job graph and commands are not visible in the provided excerpt; README claims local verification uses `npm test`, `npm run check`, and `npm run coverage`. [.github/workflows/ci.yml], [README.md]
 
-Claim status: **supported for workflow/configuration existence; detailed release semantics not verified**.
+### GitHub Actions: Wiki Generation and Publishing
 
-### Contributor, Review, and Agent Operating Model
-
-The repository includes a substantial governance layer under `.github/` and root-level agent instructions:
-
-- Issue templates: `.github/ISSUE_TEMPLATE/config.yml`, `.github/ISSUE_TEMPLATE/epic.yml`, `.github/ISSUE_TEMPLATE/task.yml`
-- Pull request template: `.github/pull_request_template.md`
-- Copilot review instructions: `.github/copilot-review-instructions.md`
-- Agent roles: `.github/agents/coordinator.agent.md`, `.github/agents/developer.agent.md`, `.github/agents/docs.agent.md`, `.github/agents/fixer.agent.md`, `.github/agents/quality.agent.md`, `.github/agents/review.agent.md`
-- Repo-level agent guidance: `AGENTS.md`, `.pi/AGENTS.md`
-- PI settings: `.pi/settings.json`
-- Navigation skill: `.github/skills/repo-wiki-navigation/SKILL.md`
+A wiki workflow exists at `.github/workflows/wiki.yml`. The source-card metadata identifies it as CI/configuration and records environment variables `LLMWIKI_COMPILER_MODE` and `LLMWIKI_PUBLISH_REMOTE`. [.github/workflows/wiki.yml]
 
 Responsibilities:
 
-- Standardize issue intake for epics and tasks. Evidence: `.github/ISSUE_TEMPLATE/*.yml`.
-- Standardize pull request review input. Evidence: `.github/pull_request_template.md`.
-- Provide review expectations for Copilot. Evidence: `.github/copilot-review-instructions.md`.
-- Define agent roles for coordination, development, documentation, fixing, quality, and review. Evidence: `.github/agents/*.agent.md`.
-- Support wiki navigation and changelog conventions through skills. Evidence: `.github/skills/repo-wiki-navigation/SKILL.md`, `.github/skills/keep-a-changelog/SKILL.md`.
+- Operate wiki compilation and/or publishing as a background workflow. [.github/workflows/wiki.yml]
+- Use compiler-mode configuration to control behavior. [.github/workflows/wiki.yml], [.env.example]
+- Use a publish-remote configuration surface for wiki publishing. [.github/workflows/wiki.yml]
 
-Claim status: **supported for governance artifacts; role behavior depends on external agent runtime**.
+Related plan documentation describes CI publishing and GitHub Action architecture, including fetching existing wiki state and uploading/publishing local wiki artifacts. These are partially validated by the existence of the workflow, but exact implemented steps require workflow-body review beyond the source-card excerpt. [docs/plans/ci-publishing.md], [docs/plans/github-action.md], [.github/workflows/wiki.yml]
 
-### Configuration and Environment Module
+### GitHub Actions: Changelog Automation
 
-`.env.example` defines four environment variables:
+Two workflows exist for changelog automation:
 
-| Variable | Architectural role | Evidence |
-|---|---|---|
-| `GITHUB_REPOSITORY` | Identifies the target GitHub repository. | `.env.example` |
-| `GITHUB_TOKEN` | Provides GitHub authentication for local or configured runs. | `.env.example` |
-| `LLMWIKI_COMPILER_MODE` | Selects compiler mode; also referenced by wiki workflow. | `.env.example`, `.github/workflows/wiki.yml` |
-| `LLMWIKI_LLM_API_KEY` | Provides LLM provider authentication. | `.env.example` |
+- `.github/workflows/changelog-on-merge.yml`, with `GH_TOKEN` noted in source-card metadata. [.github/workflows/changelog-on-merge.yml]
+- `.github/workflows/changelog-release.yml`. [.github/workflows/changelog-release.yml]
 
-Additional workflow-only variables:
+The repository also includes a `keep-a-changelog` skill document under `.github/skills`, indicating process documentation for maintaining changelog format or behavior. [.github/skills/keep-a-changelog/SKILL.md]
 
-| Variable | Architectural role | Evidence |
-|---|---|---|
-| `LLMWIKI_PUBLISH_REMOTE` | Configures wiki publishing destination in CI. | `.github/workflows/wiki.yml` |
-| `GH_TOKEN` | Provides GitHub authentication in changelog-on-merge automation. | `.github/workflows/changelog-on-merge.yml` |
+Responsibilities:
 
-Claim status: **supported for variable names and broad purpose; actual value semantics not verified from implementation**.
+- Update or validate changelog state around merges. [.github/workflows/changelog-on-merge.yml]
+- Support release-related changelog automation. [.github/workflows/changelog-release.yml]
+- Provide maintainer/agent guidance for changelog conventions. [.github/skills/keep-a-changelog/SKILL.md]
 
-### Planned / Documented Compiler Subsystems
+### LLM Compiler Boundary
 
-The following modules appear in partially validated planning documentation but are not directly verified by implementation source cards in this input:
+The `.env.example` file includes `LLMWIKI_LLM_API_KEY`, and the LLM compiler plan says the first production LLM boundary should be provider-agnostic and compatible with OpenAI-style chat completions. This indicates an intended external LLM-provider boundary, but implementation-level details are not confirmed by source-code cards in the current evidence set. [.env.example], [docs/plans/llm-compiler.md]
 
-| Planned subsystem | Documented responsibility | Evidence | Status |
-|---|---|---|---|
-| LLM compiler boundary | Provider-agnostic OpenAI-style chat-completions-compatible boundary for GitHub Actions and local runs. | `docs/plans/llm-compiler.md` documentation card; `.env.example` | Partially validated |
-| CI publishing | Fetch existing wiki state, test, and publish wiki content. | `docs/plans/ci-publishing.md` documentation card; `.github/workflows/wiki.yml` | Partially validated |
-| GitHub Action | Run wiki generation, upload local wiki artifacts, and optionally publish when credentials are configured. | `docs/plans/github-action.md` documentation card; `.github/workflows/wiki.yml` | Partially validated |
-| Search index | Build local search index over generated wiki pages, source cards, and documentation cards for `repo-wiki search` and `repo-wiki query`. | `docs/plans/search-index.md` documentation card | Partially validated |
-| Incremental mode | Incremental generation/testing strategy. | `docs/plans/incremental-mode.md` documentation card | Stale |
+Responsibilities, partially validated:
 
-Claim status: **documentation-derived only unless paired with source evidence above**.
+- Provide an LLM-backed compilation mode or capability. [.env.example], [docs/plans/llm-compiler.md]
+- Keep provider details configurable rather than hard-coded, according to planning documentation. [docs/plans/llm-compiler.md]
+- Support local and CI use with API credentials supplied through environment variables. [.env.example], [.github/workflows/wiki.yml]
 
-### Component/module diagram
+### Search and Query Index
 
-This diagram is inferred from repository structure and documented module intent. It intentionally separates verified operational surfaces from documentation-derived planned/compiler internals.
+Search-index planning documentation describes building a local search index over generated wiki pages, source cards, and documentation cards so that `repo-wiki search` and `repo-wiki query` can route questions efficiently without external services. This is a plan-level, partially validated architectural module; no implementation source cards were provided for this page. [docs/plans/search-index.md]
+
+Responsibilities, plan-level:
+
+- Index generated wiki pages. [docs/plans/search-index.md]
+- Index source and documentation cards. [docs/plans/search-index.md]
+- Support search/query CLI behavior without requiring external services. [docs/plans/search-index.md]
+
+### GitHub Collaboration and Agent Guidance
+
+The repository includes structured collaboration files:
+
+| Module/group | Responsibility | Evidence |
+| --- | --- | --- |
+| Issue templates | Standardize epic and task intake. | [.github/ISSUE_TEMPLATE/epic.yml], [.github/ISSUE_TEMPLATE/task.yml], [.github/ISSUE_TEMPLATE/config.yml] |
+| Pull request template | Standardize PR descriptions and review checklists. | [.github/pull_request_template.md] |
+| Copilot review instructions | Guide automated or assisted code review expectations. | [.github/copilot-review-instructions.md] |
+| Agent instructions | Define role-specific guidance for coordinator, developer, docs, fixer, quality, and review agents. | [.github/agents/coordinator.agent.md], [.github/agents/developer.agent.md], [.github/agents/docs.agent.md], [.github/agents/fixer.agent.md], [.github/agents/quality.agent.md], [.github/agents/review.agent.md] |
+| Skills | Provide reusable procedural guidance for changelog and repo-wiki navigation. | [.github/skills/keep-a-changelog/SKILL.md], [.github/skills/repo-wiki-navigation/SKILL.md] |
+| `.pi` configuration/guidance | Additional project-agent guidance/settings. | [.pi/AGENTS.md], [.pi/settings.json] |
+
+These are not runtime modules of the CLI unless consumed by tooling, but they are architectural process surfaces for how the repository is maintained. [.github/agents/coordinator.agent.md], [.pi/AGENTS.md]
+
+### Component Diagram
+
+This diagram is inferred from repository structure and workflow/config evidence rather than direct import graphs. It avoids source-code-level dependencies because no application source files/imports were included in the available cards.
 
 ```mermaid
 flowchart TB
-  subgraph VerifiedRepoSurfaces["Verified repository surfaces"]
-    Env["Environment config<br/>.env.example"]
-    WikiWorkflow["Wiki workflow<br/>.github/workflows/wiki.yml"]
-    CI["CI workflow<br/>.github/workflows/ci.yml"]
-    Changelog["Changelog workflows<br/>changelog-on-merge / changelog-release"]
-    Governance["Governance and agents<br/>issues, PR template, agents, skills"]
-    Schema["Wiki schema docs<br/>.llmwiki/schema.md"]
-  end
+    subgraph Inputs["Inputs and contracts"]
+        Src["Repository source files"]
+        Docs["Documentation cards / plans"]
+        Schema[".llmwiki schema"]
+        Env["Environment variables"]
+    end
 
-  subgraph DocumentedIntent["Documentation-derived intent"]
-    Compiler["Wiki compiler / CLI / action<br/>README and PLAN docs cards"]
-    LLMBoundary["LLM compiler boundary<br/>llm-compiler plan"]
-    Publish["Wiki publishing<br/>ci-publishing and action plans"]
-    Search["Search/query index<br/>search-index plan"]
-  end
+    subgraph Runtime["repo-wiki runtime modules<br/>(partially validated)"]
+        CLI["CLI / package entrypoint<br/>(documented, not source-verified)"]
+        Compiler["Wiki compiler<br/>(intent documented)"]
+        LLMBoundary["LLM provider boundary<br/>(partially validated)"]
+        Search["Search/query index<br/>(plan-level)"]
+    end
 
-  Env --> WikiWorkflow
-  Env --> Compiler
-  WikiWorkflow --> Compiler
-  WikiWorkflow --> Publish
-  Compiler --> Schema
-  Compiler --> LLMBoundary
-  Compiler --> Search
-  CI --> Compiler
-  Changelog --> Governance
-  Governance --> Compiler
+    subgraph Automation["Automation"]
+        CI["CI workflow"]
+        WikiWF["Wiki workflow"]
+        ChangelogWF["Changelog workflows"]
+    end
+
+    subgraph Process["Repository process assets"]
+        Issues["Issue templates"]
+        PR["PR template"]
+        Agents["Agent and skill instructions"]
+    end
+
+    Src --> Compiler
+    Docs --> Compiler
+    Schema --> Compiler
+    Env --> CLI
+    CLI --> Compiler
+    Compiler -.-> LLMBoundary
+    Compiler --> Search
+    CI --> CLI
+    WikiWF --> CLI
+    WikiWF --> PublishedWiki["Generated/published wiki"]
+    ChangelogWF --> ChangeDocs["Changelog/release docs"]
+    Issues --> Process
+    PR --> Process
+    Agents --> Process
 ```
 
-Evidence: `.env.example`, `.github/workflows/wiki.yml`, `.github/workflows/ci.yml`, `.github/workflows/changelog-on-merge.yml`, `.github/workflows/changelog-release.yml`, `.github/ISSUE_TEMPLATE/*.yml`, `.github/pull_request_template.md`, `.github/copilot-review-instructions.md`, `.github/agents/*.agent.md`, `.github/skills/*.md`, `.llmwiki/schema.md`, `README.md` documentation card, and `docs/plans/*.md` documentation cards.
+Evidence: schema and environment files exist; workflows exist; README and plans describe CLI/package, compiler, search, and LLM boundaries; process assets are present under `.github` and `.pi`. [.llmwiki/schema.md], [.env.example], [.github/workflows/ci.yml], [.github/workflows/wiki.yml], [.github/workflows/changelog-on-merge.yml], [.github/workflows/changelog-release.yml], [README.md], [docs/plans/search-index.md], [docs/plans/llm-compiler.md], [.github/ISSUE_TEMPLATE/epic.yml], [.github/pull_request_template.md], [.github/agents/coordinator.agent.md], [.pi/AGENTS.md]
 
 ## Runtime, Data, and Control-Flow Relationships
 
-The supplied source cards do not include implementation imports, CLI entry points, package metadata, or runtime source files. Therefore, runtime relationships are limited to environment-driven and workflow-driven control paths visible from configuration.
+Because no application source files or import graphs were included in the source-card set, runtime interactions are described at a coarse-grained level using configuration, workflow metadata, and partially validated documentation.
 
-### Environment-driven runtime configuration
+### Local Execution Flow
 
-The main runtime configuration flow is:
+A conservative local execution model is:
 
-1. A local or CI runner supplies environment variables.
-2. `GITHUB_REPOSITORY` and GitHub token variables identify/authenticate against GitHub.
-3. `LLMWIKI_COMPILER_MODE` selects the compiler mode.
-4. `LLMWIKI_LLM_API_KEY` enables LLM-backed compilation.
-5. In CI wiki publishing, `LLMWIKI_PUBLISH_REMOTE` configures the publish destination.
+1. A user configures environment variables, with names documented in `.env.example`: `GITHUB_REPOSITORY`, `GITHUB_TOKEN`, `LLMWIKI_COMPILER_MODE`, and `LLMWIKI_LLM_API_KEY`. [.env.example]
+2. The user runs the package/CLI. The README describes install or `npx` usage and local development flows, but specific command implementation is not validated here. [README.md]
+3. The compiler reads repository sources and documentation inputs and emits generated wiki pages following the `.llmwiki` schema contract. [.llmwiki/schema.md], [docs/PLAN.md]
+4. If an LLM-backed compiler mode is used, an external LLM provider may be called using API credentials from the environment. This is partially validated by `LLMWIKI_LLM_API_KEY` and the LLM compiler plan, not by implementation source. [.env.example], [docs/plans/llm-compiler.md]
 
-Evidence: `.env.example`, `.github/workflows/wiki.yml`, `.github/workflows/changelog-on-merge.yml`.
+### CI / Wiki Workflow Flow
 
-```mermaid
-flowchart LR
-  EnvFile[".env.example<br/>GITHUB_REPOSITORY<br/>GITHUB_TOKEN<br/>LLMWIKI_COMPILER_MODE<br/>LLMWIKI_LLM_API_KEY"]
-  WikiEnv["wiki workflow env<br/>LLMWIKI_COMPILER_MODE<br/>LLMWIKI_PUBLISH_REMOTE"]
-  ChangelogEnv["changelog workflow env<br/>GH_TOKEN"]
-  Runtime["repo-wiki runtime<br/>(compiler/CLI/action documented)"]
-  GitHub["GitHub repository/API"]
-  LLM["LLM provider"]
-  WikiRemote["Wiki publish remote"]
+A conservative CI/wiki workflow model is:
 
-  EnvFile --> Runtime
-  WikiEnv --> Runtime
-  ChangelogEnv --> GitHub
-  Runtime --> GitHub
-  Runtime --> LLM
-  Runtime --> WikiRemote
-```
+1. GitHub Actions starts CI or wiki workflow jobs. [.github/workflows/ci.yml], [.github/workflows/wiki.yml]
+2. The CI workflow validates the repository. Exact job steps are not available from the source-card excerpt. [.github/workflows/ci.yml]
+3. The wiki workflow runs with wiki-related environment configuration, including `LLMWIKI_COMPILER_MODE` and `LLMWIKI_PUBLISH_REMOTE`. [.github/workflows/wiki.yml]
+4. The wiki workflow may publish generated wiki output to a remote, based on the `LLMWIKI_PUBLISH_REMOTE` environment surface and CI-publishing plan. [.github/workflows/wiki.yml], [docs/plans/ci-publishing.md]
 
-Claim status: **supported for configuration edges; internal runtime calls are not verified by imports**.
+### Changelog Automation Flow
 
-### Documentation/data artifact flow
+A conservative changelog flow is:
 
-Based on `.llmwiki/schema.md` and the planning documentation cards, the intended data model involves repository inputs being converted into structured source/documentation cards and then into generated wiki pages. The current page-generation prompt itself supplied “Source cards” and “Documentation cards,” and `.llmwiki/schema.md` is the repository evidence for schema/data-model documentation.
+1. Merge or release events trigger changelog workflows. This trigger behavior is implied by workflow names and the keep-a-changelog skill, but exact event triggers require full workflow-body inspection. [.github/workflows/changelog-on-merge.yml], [.github/workflows/changelog-release.yml], [.github/skills/keep-a-changelog/SKILL.md]
+2. The merge changelog workflow uses a GitHub token environment surface named `GH_TOKEN`. [.github/workflows/changelog-on-merge.yml]
+3. Changelog release workflow handles release-oriented automation. [.github/workflows/changelog-release.yml]
 
-High-level documented flow:
+### Data Model Relationships
 
-| Stage | Description | Evidence |
-|---|---|---|
-| Repository evidence | Source code, configuration, CI, markdown docs, and schemas are collected as evidence. | `.llmwiki/schema.md`; current source-card list |
-| Cards | Evidence is represented as source cards and documentation cards. | `.llmwiki/schema.md`; `docs/PLAN.md` documentation card |
-| Wiki pages | Pages are generated from cards, with source code/configuration treated as higher authority than markdown documentation. | `.llmwiki/schema.md`; `docs/PLAN.md` documentation card |
-| Publishing/search | Generated wiki pages may be published and/or indexed for search/query workflows. | `.github/workflows/wiki.yml`; `docs/plans/ci-publishing.md` documentation card; `docs/plans/search-index.md` documentation card |
+The data model evidence available here is primarily the `.llmwiki/schema.md` documentation. It should be treated as the generated wiki contract, while source-code enforcement is not validated by this page’s evidence set. [.llmwiki/schema.md]
 
-Claim status: **partially supported by schema/planning docs; implementation not verified**.
+Likely data categories described or referenced across docs:
+
+| Data category | Role | Evidence |
+| --- | --- | --- |
+| Source cards | Structured observations about repository source files used as compiler input. | [.llmwiki/schema.md], [docs/PLAN.md] |
+| Documentation cards | Structured observations about documentation files with validation status. | [.llmwiki/schema.md], [docs/PLAN.md] |
+| Wiki pages | Generated persistent knowledge-base pages. | [.llmwiki/schema.md], [docs/WHY.md] |
+| Search index | Planned local index over generated pages and cards. | [docs/plans/search-index.md] |
+| Human notes | Preserved human-maintained regions in generated wiki pages, required by generation contract. | [.llmwiki/schema.md] |
 
 ## Build, Test, Deployment, and Operational Surfaces
 
-### CI workflows
+### Build and Test
 
-The repository has four CI/workflow files in the supplied source cards:
+The README states that local CLI/package verification runs against compiled output in `dist/`, and that `npm test`, `npm run check`, and `npm run coverage` require a successful TypeScript build. This is treated as partially validated because the source-card set did not include `package.json`, `tsconfig.json`, or TypeScript source files. [README.md]
 
-| Workflow | Operational role | Environment variables surfaced | Evidence |
-|---|---|---|---|
-| `.github/workflows/ci.yml` | General CI/background validation. | None surfaced in the source-card excerpt. | `.github/workflows/ci.yml` |
-| `.github/workflows/wiki.yml` | Wiki-generation and/or publishing automation. | `LLMWIKI_COMPILER_MODE`, `LLMWIKI_PUBLISH_REMOTE` | `.github/workflows/wiki.yml` |
-| `.github/workflows/changelog-on-merge.yml` | Changelog automation on merge. | `GH_TOKEN` | `.github/workflows/changelog-on-merge.yml` |
-| `.github/workflows/changelog-release.yml` | Release/changelog automation. | None surfaced in the source-card excerpt. | `.github/workflows/changelog-release.yml` |
+The presence of `.tsbuildinfo` indicates TypeScript incremental build metadata exists in the repository snapshot or working tree evidence, but it is not sufficient to reconstruct the build graph. [.tsbuildinfo]
 
-### Package scripts and compiled output
+A CI workflow exists and likely provides automated validation, but exact job steps are not available in the source-card excerpt. [.github/workflows/ci.yml]
 
-The partially validated `README.md` documentation card states:
+### Wiki Deployment / Publishing
 
-- The package is dual-role: local CLI and GitHub Action.
-- Local CLI and package verification run against compiled output in `dist/`.
-- `npm test`, `npm run check`, and `npm run coverage` require successful TypeScript compilation.
+The wiki workflow is the primary deployment/publishing surface visible in source cards. It is tagged as both CI and configuration evidence and includes environment variables:
 
-The supplied source cards include `.tsbuildinfo`, which suggests TypeScript build metadata exists, but no `package.json`, `tsconfig.json`, or source files were provided as source cards. Therefore, the exact build scripts and TypeScript configuration cannot be verified from the available source-card evidence.
+- `LLMWIKI_COMPILER_MODE`
+- `LLMWIKI_PUBLISH_REMOTE`
 
-Evidence: `README.md` documentation card, `.tsbuildinfo`.
+These indicate configurable compiler behavior and a configurable publish target. [.github/workflows/wiki.yml]
 
-Claim status: **partially supported; script definitions not verified**.
+Plan documentation for CI publishing and GitHub Action support describes architecture involving existing wiki state, local wiki artifacts, and conditional publishing credentials. These claims are partially validated by the existence of the wiki workflow and its environment surface, but exact implemented behavior must be verified from the full workflow file and runtime code. [docs/plans/ci-publishing.md], [docs/plans/github-action.md], [.github/workflows/wiki.yml]
 
-### Build/test/deploy flow diagram
+### Changelog Operations
 
-This diagram is based on workflow presence and partially validated documentation-card claims. Exact workflow steps and package scripts are not shown because the source-card excerpts do not include their contents.
+Changelog automation is represented by two workflows and a skill document. The merge workflow uses a `GH_TOKEN` variable according to source-card metadata. [.github/workflows/changelog-on-merge.yml], [.github/workflows/changelog-release.yml], [.github/skills/keep-a-changelog/SKILL.md]
+
+### Operational Configuration
+
+Environment variable names present in source cards:
+
+| Variable | Surface | Purpose as evidenced | Evidence |
+| --- | --- | --- | --- |
+| `GITHUB_REPOSITORY` | Local `.env.example` | Repository identity/configuration input. | [.env.example] |
+| `GITHUB_TOKEN` | Local `.env.example` | GitHub API/authentication token surface. | [.env.example] |
+| `GH_TOKEN` | Changelog workflow | GitHub token surface for changelog automation. | [.github/workflows/changelog-on-merge.yml] |
+| `LLMWIKI_COMPILER_MODE` | Local and wiki workflow | Controls compiler mode. | [.env.example], [.github/workflows/wiki.yml] |
+| `LLMWIKI_LLM_API_KEY` | Local `.env.example` | LLM provider API credential surface. | [.env.example] |
+| `LLMWIKI_PUBLISH_REMOTE` | Wiki workflow | Wiki publishing remote configuration. | [.github/workflows/wiki.yml] |
+
+No secret values are included here. Only variable names are documented. [.env.example], [.github/workflows/wiki.yml], [.github/workflows/changelog-on-merge.yml]
+
+### Build/Test/Deploy Flow Diagram
+
+This diagram is supported by the presence of workflow files and README claims, but exact internal command names and job steps are not validated from source-code/package-script evidence.
 
 ```mermaid
-flowchart TB
-  PushPR["Push / Pull Request<br/>(trigger details not verified)"]
-  CI["CI workflow<br/>.github/workflows/ci.yml"]
-  Build["TypeScript build / dist output<br/>(README docs card, .tsbuildinfo)"]
-  Test["npm test / check / coverage<br/>(README docs card)"]
+flowchart LR
+    Push["Push / PR / maintainer action"] --> CI["CI workflow<br/>.github/workflows/ci.yml"]
+    Push --> WikiWF["Wiki workflow<br/>.github/workflows/wiki.yml"]
+    MergeOrRelease["Merge / release activity"] --> ChangeWF["Changelog workflows"]
 
-  WikiTrigger["Wiki workflow trigger<br/>(trigger details not verified)"]
-  WikiRun["Wiki generation run<br/>LLMWIKI_COMPILER_MODE"]
-  PublishDecision["Publishing configuration<br/>LLMWIKI_PUBLISH_REMOTE"]
-  WikiRemote["GitHub Wiki / publish remote"]
+    CI --> BuildTest["Build / test / check<br/>(README documented; commands not source-verified here)"]
 
-  Merge["Merge event<br/>(specific trigger not verified)"]
-  ChangelogMerge["Changelog-on-merge workflow<br/>GH_TOKEN"]
-  ChangelogRelease["Changelog release workflow"]
+    WikiWF --> Mode["Compiler mode<br/>LLMWIKI_COMPILER_MODE"]
+    Mode --> Generate["Generate local wiki output"]
+    Generate --> PublishDecision{"Publish remote configured?"}
+    PublishDecision -->|LLMWIKI_PUBLISH_REMOTE| Publish["Publish wiki"]
+    PublishDecision -->|not configured / local mode| Artifact["Local/generated wiki artifact<br/>(plan-level)"]
 
-  PushPR --> CI
-  CI --> Build
-  Build --> Test
-
-  WikiTrigger --> WikiRun
-  WikiRun --> PublishDecision
-  PublishDecision --> WikiRemote
-
-  Merge --> ChangelogMerge
-  ChangelogMerge --> ChangelogRelease
+    ChangeWF --> Changelog["Changelog update/release automation"]
 ```
 
-Evidence: `.github/workflows/ci.yml`, `.github/workflows/wiki.yml`, `.github/workflows/changelog-on-merge.yml`, `.github/workflows/changelog-release.yml`, `.env.example`, `.tsbuildinfo`, `README.md` documentation card.
+Evidence: workflow files exist for CI, wiki, and changelog automation; README documents build/test/check/coverage expectations; wiki workflow exposes compiler mode and publish remote variables; GitHub Action/publishing plans describe local artifact and publish behavior. [.github/workflows/ci.yml], [.github/workflows/wiki.yml], [.github/workflows/changelog-on-merge.yml], [.github/workflows/changelog-release.yml], [README.md], [docs/plans/github-action.md], [docs/plans/ci-publishing.md]
 
 ## Cross-Cutting Concerns
 
-### Configuration management
+### Configuration
 
-Configuration is primarily exposed through environment variables:
+Configuration is primarily environment-variable based for local execution and GitHub Actions. `.env.example` documents local variable names for GitHub repository/authentication and LLM/wiki compiler behavior. The wiki workflow documents wiki compiler and publish remote variables, and the changelog merge workflow documents a GitHub token variable. [.env.example], [.github/workflows/wiki.yml], [.github/workflows/changelog-on-merge.yml]
 
-- Local/example configuration: `GITHUB_REPOSITORY`, `GITHUB_TOKEN`, `LLMWIKI_COMPILER_MODE`, `LLMWIKI_LLM_API_KEY` in `.env.example`.
-- Wiki workflow configuration: `LLMWIKI_COMPILER_MODE`, `LLMWIKI_PUBLISH_REMOTE` in `.github/workflows/wiki.yml`.
-- Changelog automation token: `GH_TOKEN` in `.github/workflows/changelog-on-merge.yml`.
+Configuration claims should be interpreted conservatively because the available evidence provides variable names but not the code paths that read them. [.env.example]
 
-No environment variable values are reproduced here. Evidence: `.env.example`, `.github/workflows/wiki.yml`, `.github/workflows/changelog-on-merge.yml`.
+### Security and Secret Handling
 
-### Security and secret handling
+The repository uses token/API-key variable names for GitHub and LLM provider access. No secret values are present in this architecture page. [.env.example], [.github/workflows/changelog-on-merge.yml]
 
-The repository architecture requires secret-bearing integrations:
+Security-relevant surfaces:
 
-| Secret-like input | Purpose | Evidence | Security note |
-|---|---|---|---|
-| `GITHUB_TOKEN` | GitHub authentication for local/configured runs. | `.env.example` | Should be provided via local secret management or CI secrets, not committed. |
-| `GH_TOKEN` | GitHub authentication in changelog automation. | `.github/workflows/changelog-on-merge.yml` | Should be scoped to required GitHub operations. |
-| `LLMWIKI_LLM_API_KEY` | LLM provider authentication. | `.env.example` | Should be treated as a provider secret. |
+| Surface | Risk | Evidence |
+| --- | --- | --- |
+| `GITHUB_TOKEN` / `GH_TOKEN` | GitHub API permissions and write operations, especially changelog or wiki publishing. | [.env.example], [.github/workflows/changelog-on-merge.yml] |
+| `LLMWIKI_LLM_API_KEY` | External LLM provider credential. | [.env.example] |
+| `LLMWIKI_PUBLISH_REMOTE` | Determines wiki publishing destination; misconfiguration could publish to an unintended remote. | [.github/workflows/wiki.yml] |
+| Generated wiki output | May expose repository-derived content if compiled/published broadly. | [.llmwiki/schema.md], [.github/workflows/wiki.yml] |
 
-`.gitignore` is present as a source card, but its contents were not provided in the card excerpt, so this page cannot verify whether `.env` or other secret files are ignored. Evidence: `.gitignore`, `.env.example`.
+### APIs and External Dependencies
 
-### API and external service boundaries
+The strongest external dependency evidence is GitHub Actions and GitHub repository/wiki publishing configuration. [.github/workflows/ci.yml], [.github/workflows/wiki.yml]
 
-The confirmed or documented external boundaries are:
+An external LLM API boundary is indicated by `LLMWIKI_LLM_API_KEY` and the LLM compiler plan, which describes OpenAI-style chat completions compatibility. This remains partially validated until implementation source is inspected. [.env.example], [docs/plans/llm-compiler.md]
 
-- GitHub repository/API boundary through `GITHUB_REPOSITORY`, `GITHUB_TOKEN`, and `GH_TOKEN`. Evidence: `.env.example`, `.github/workflows/changelog-on-merge.yml`.
-- Wiki publishing remote boundary through `LLMWIKI_PUBLISH_REMOTE`. Evidence: `.github/workflows/wiki.yml`.
-- LLM provider boundary through `LLMWIKI_LLM_API_KEY` and the LLM compiler plan. Evidence: `.env.example`, `docs/plans/llm-compiler.md` documentation card.
+### Data Model and Schema Governance
 
-The exact HTTP APIs, SDKs, or provider libraries are not verified because implementation source files and dependency manifests were not included in the supplied source cards.
+`.llmwiki/schema.md` is the central schema/data-model artifact. It should be treated as the contract for generated wiki pages and related metadata unless contradicted by implementation source in future evidence. [.llmwiki/schema.md]
 
-### Data model and schema
+The product documentation frames the wiki as a persistent compounding artifact generated from raw sources. That architectural intent should be validated against code before asserting exact current runtime behavior. [docs/PLAN.md], [docs/WHY.md]
 
-`.llmwiki/schema.md` is identified as data-model documentation. The documentation cards describe source cards, documentation cards, generated pages, and search indexing as part of the intended architecture. This page treats schema and planning docs as secondary evidence for data-model intent because the supplied source cards do not include the compiler implementation.
+### Documentation Trust Model
 
-Evidence: `.llmwiki/schema.md`, `docs/PLAN.md` documentation card, `docs/plans/search-index.md` documentation card.
+This page follows a conservative trust model:
 
-### Documentation trust model
+1. Configuration/workflow/schema files are treated as high-authority evidence for surfaces and operational configuration. [.github/workflows/ci.yml], [.github/workflows/wiki.yml], [.llmwiki/schema.md], [.env.example]
+2. README and plan docs are used for intent and terminology but are marked partially validated where application source or package scripts are not present. [README.md], [docs/PLAN.md], [docs/plans/llm-compiler.md]
+3. Stale documentation, such as the incremental-mode plan, is not used as current behavior evidence. [docs/plans/incremental-mode.md]
 
-The generated architecture follows the repository evidence hierarchy:
+### Repository Process and AI-Assisted Maintenance
 
-1. CI/configuration/source cards are treated as high authority for operational surfaces. Evidence: `.github/workflows/*.yml`, `.env.example`, `.llmwiki/schema.md`.
-2. Markdown documentation cards are used for intent and module naming, but operational claims from docs are marked partially supported unless source/config evidence also exists. Evidence: `README.md`, `docs/PLAN.md`, `docs/WHY.md`, `docs/plans/*.md` documentation cards.
-3. The stale `docs/plans/incremental-mode.md` documentation card is not treated as current behavior.
-
-### Contributor and agent workflow
-
-The architecture includes a strong process layer:
-
-- Issue templates for epics and tasks. Evidence: `.github/ISSUE_TEMPLATE/epic.yml`, `.github/ISSUE_TEMPLATE/task.yml`, `.github/ISSUE_TEMPLATE/config.yml`.
-- PR structure and review instructions. Evidence: `.github/pull_request_template.md`, `.github/copilot-review-instructions.md`.
-- Specialized agent roles for coordination, development, documentation, fixes, quality, and review. Evidence: `.github/agents/coordinator.agent.md`, `.github/agents/developer.agent.md`, `.github/agents/docs.agent.md`, `.github/agents/fixer.agent.md`, `.github/agents/quality.agent.md`, `.github/agents/review.agent.md`.
-- Skills for changelog and repo-wiki navigation. Evidence: `.github/skills/keep-a-changelog/SKILL.md`, `.github/skills/repo-wiki-navigation/SKILL.md`.
-
-These artifacts shape how work is performed but do not by themselves prove runtime behavior.
+The repository includes multiple agent instruction files and skills, indicating that AI-assisted or role-based maintenance is part of the repository workflow. These files guide contributors or agents but do not by themselves prove runtime behavior. [.github/agents/coordinator.agent.md], [.github/agents/developer.agent.md], [.github/agents/docs.agent.md], [.github/agents/fixer.agent.md], [.github/agents/quality.agent.md], [.github/agents/review.agent.md], [.github/skills/repo-wiki-navigation/SKILL.md], [.pi/AGENTS.md]
 
 ## Caveats and Open Questions
 
 ### Caveats
 
-1. **Implementation source files were not included in the supplied source cards.** This page cannot verify actual CLI entry points, package exports, class/function boundaries, imports, dependency graph, or internal compiler control flow. Evidence gap: no implementation files listed in source cards.
-2. **Package metadata was not included.** The `README.md` documentation card mentions `npm test`, `npm run check`, `npm run coverage`, TypeScript compilation, and `dist/`, but no `package.json` or `tsconfig.json` source card was supplied. Evidence: `README.md` documentation card, `.tsbuildinfo`.
-3. **Workflow step details are not visible in the excerpts.** Workflow files are present and classified as CI/configuration, but this page only knows their names, category, runtime hints, and surfaced environment variables from the source cards. Evidence: `.github/workflows/*.yml`.
-4. **The component diagram includes documentation-derived modules.** The diagram labels the wiki compiler, LLM boundary, publishing, and search index as documented intent where implementation evidence is absent. Evidence: `docs/plans/llm-compiler.md`, `docs/plans/ci-publishing.md`, `docs/plans/github-action.md`, `docs/plans/search-index.md` documentation cards.
-5. **Incremental mode is stale documentation.** The `docs/plans/incremental-mode.md` documentation card is explicitly marked stale, so this page does not present incremental mode as current behavior.
-6. **Secret ignore behavior is not verified.** `.gitignore` exists, but its contents were not provided in the source-card excerpt, so whether `.env` or other secret files are ignored remains unverified. Evidence: `.gitignore`.
+- **Application source code was not included in the source-card set.** This page cannot verify exact CLI entrypoints, TypeScript modules, imports, compiler classes, provider adapters, or search-index implementation. [README.md]
+- **Package scripts were not directly available.** README claims about `npm test`, `npm run check`, `npm run coverage`, TypeScript build requirements, and `dist/` verification are treated as partially validated documentation claims. [README.md]
+- **Workflow internals are only partially visible from source-card metadata.** The existence of CI/wiki/changelog workflows and their recorded environment variables is high-confidence, but exact triggers, permissions, job steps, and artifact handling require inspecting the full YAML contents. [.github/workflows/ci.yml], [.github/workflows/wiki.yml], [.github/workflows/changelog-on-merge.yml], [.github/workflows/changelog-release.yml]
+- **The LLM provider boundary is not implementation-verified here.** It is supported by `LLMWIKI_LLM_API_KEY` and LLM compiler planning documentation, but no provider adapter code was included. [.env.example], [docs/plans/llm-compiler.md]
+- **The search/query index is plan-level in this evidence set.** The search-index plan describes intended architecture, but implementation is not validated by source cards. [docs/plans/search-index.md]
+- **Diagrams in this page are coarse-grained.** They are based on repository structure, workflow/config evidence, and partially validated documentation, not on direct import graphs or runtime traces. [.github/workflows/wiki.yml], [.llmwiki/schema.md], [README.md]
 
-### Open questions
+### Open Questions
 
-1. What are the actual CLI entry points and exported APIs for the local package and GitHub Action?
-2. Which source modules implement source-card extraction, documentation-card validation, wiki page generation, LLM calls, search indexing, and publishing?
-3. What exact commands are run by `.github/workflows/ci.yml` and `.github/workflows/wiki.yml`?
-4. Does the current implementation support all planned modules described in `docs/plans/*.md`, especially search/query and incremental mode?
-5. How is `LLMWIKI_COMPILER_MODE` interpreted at runtime, and what valid mode values exist?
-6. What schema entities and invariants are defined in `.llmwiki/schema.md`, and how are they enforced by tests or code?
-7. What permissions are required for `GITHUB_TOKEN`, `GH_TOKEN`, and `LLMWIKI_PUBLISH_REMOTE` publishing?
-8. Are generated wiki pages written only locally, uploaded as workflow artifacts, pushed to a wiki remote, or all of these depending on configuration?
+1. What are the actual CLI entrypoints, exported APIs, and package scripts in `package.json`? [README.md]
+2. Which TypeScript modules implement source-card extraction, documentation-card validation, wiki-page generation, publishing, search, and LLM compilation? [docs/PLAN.md], [docs/plans/llm-compiler.md], [docs/plans/search-index.md]
+3. Does the current wiki workflow publish directly to a GitHub Wiki remote, upload artifacts, open pull requests, or support multiple modes? [.github/workflows/wiki.yml], [docs/plans/github-action.md], [docs/plans/ci-publishing.md]
+4. How is `.llmwiki/schema.md` enforced: by runtime validation, tests, generated types, or documentation-only convention? [.llmwiki/schema.md]
+5. What permissions are granted to GitHub Actions workflows, especially those using GitHub tokens or publishing remotes? [.github/workflows/wiki.yml], [.github/workflows/changelog-on-merge.yml]
+6. Is incremental mode implemented, planned, or stale-only? The incremental-mode plan is marked stale and should not be treated as current behavior without code/workflow evidence. [docs/plans/incremental-mode.md]
+7. Are agent and skill files consumed by automation, or are they purely human/AI-contributor guidance? [.github/agents/coordinator.agent.md], [.github/skills/repo-wiki-navigation/SKILL.md], [.pi/AGENTS.md]
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

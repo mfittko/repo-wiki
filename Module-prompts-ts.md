@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "fcd0cab90b26fc622c67172972b85e39ed7ab703"
+source_commit: "eda9d272e7c9de7e891622628d448f396d033b3f"
 page_state: "generated"
 source_paths: ["src/prompts.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides a collection of functions and types related to building and managing prompts within the codebase. It includes utilities to construct various specialized prompts such as architecture, cross-cutting concerns, foundation, and module-specific prompts. The module also defines context and metadata types that support prompt construction and usage.
+This module provides a collection of functions and types related to building and managing prompts within the system. It includes utilities to construct various specialized prompts such as architecture, cross-cutting concerns, foundation, and module-specific prompts. The module also defines contexts and metadata structures that support prompt construction and usage.
 
 ## Source file list
 
@@ -22,22 +22,24 @@ This module provides a collection of functions and types related to building and
 ## Key symbols and entry points
 
 - **Functions:**
-  - `buildArchitecturePrompt` — Constructs prompts related to architectural aspects.
-  - `buildCrossCuttingPrompt` — Builds prompts addressing cross-cutting concerns.
-  - `buildFoundationPrompt` — Creates prompts focused on foundational elements.
-  - `buildModulePrompt` — Generates prompts specific to modules.
-  - `buildPrompt` — A general-purpose prompt builder function.
+  - `buildArchitecturePrompt`
+  - `buildCrossCuttingPrompt`
+  - `buildFoundationPrompt`
+  - `buildModulePrompt`
+  - `buildPrompt`
 
 - **Types and Interfaces:**
-  - `BuiltPrompt` — Represents a constructed prompt object.
-  - `DocCardContext` — Contextual information for documentation cards.
-  - `MigrationContext` — Context related to migration processes.
-  - `ModelContext` — Context for model-related prompt construction.
-  - `ModuleInfo` — Metadata describing a module.
+  - `BuiltPrompt`
+  - `DocCardContext`
+  - `MigrationContext`
+  - `ModelContext`
+  - `ModuleInfo`
+
+These symbols represent the core API for creating and handling prompts, as well as the contextual information required during prompt construction.
 
 ## Dependencies and imports
 
-- The source card for `src/prompts.ts` indicates no imports, suggesting this module is self-contained or relies on ambient/global types and functions.
+- The source card indicates that `src/prompts.ts` does not import any external modules or dependencies.
 
 ## Related tests
 
@@ -45,10 +47,10 @@ This module provides a collection of functions and types related to building and
 
 ## Known gaps or open questions
 
-- The module does not list any imports, which may imply it is either standalone or incomplete in terms of external dependencies.
 - There is no explicit documentation or test coverage information available.
 - The exact behavior and implementation details of the prompt-building functions are not described here.
 - The relationships and usage scenarios for the context types (`DocCardContext`, `MigrationContext`, `ModelContext`) and `ModuleInfo` are not detailed.
+- The module's integration with other parts of the system is not specified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

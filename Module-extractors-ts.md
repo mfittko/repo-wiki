@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "fcd0cab90b26fc622c67172972b85e39ed7ab703"
+source_commit: "eda9d272e7c9de7e891622628d448f396d033b3f"
 page_state: "generated"
 source_paths: ["src/extractors.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides a collection of functions designed to analyze and extract various elements from source code and runtime environments. It focuses on identifying runtime hints, environment variables, exported symbols, Go package information, imports, and different types of surfaces such as migration, model, and route surfaces. The module serves as a foundational source component for code analysis and extraction tasks within the project.
+The `extractors.ts` module provides a collection of functions designed to analyze and extract various elements from source code and runtime environments. It focuses on identifying runtime hints, environment variables, exported symbols, Go package information, imports, and different types of surfaces such as migration, model, and route surfaces. This module serves as a foundational source component for code analysis and extraction tasks within the project.
 
 ## Source file list
 
@@ -21,10 +21,10 @@ This module provides a collection of functions designed to analyze and extract v
 
 ## Key symbols and entry points
 
-- `detectRuntimeHints` — Detects hints related to runtime behavior or configuration.
-- `extractEnvironmentVariables` — Extracts environment variables from the source or runtime context.
-- `extractExportedSymbols` — Retrieves symbols that are exported from a module or package.
-- `extractGoPackage` — Extracts information specific to Go packages.
+- `detectRuntimeHints` — Function to identify runtime-specific hints within the source.
+- `extractEnvironmentVariables` — Extracts environment variables from the code or environment.
+- `extractExportedSymbols` — Retrieves symbols that are exported from modules or packages.
+- `extractGoPackage` — Extracts Go package information from source files.
 - `extractImports` — Parses and extracts import statements.
 - `extractMigrationSurfaces` — Identifies migration-related surfaces in the codebase.
 - `extractModelSurfaces` — Extracts model-related surfaces.
@@ -38,14 +38,13 @@ This module provides a collection of functions designed to analyze and extract v
 
 ## Related tests
 
-No documentation or test files are currently linked or documented for this module.
+No documentation or test cards are currently associated with this module. It is recommended to verify the presence of tests in the codebase or add tests to cover the extraction functions.
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or test coverage referenced for this module, which may limit understanding of edge cases or intended usage.
-- The exact nature and format of the "surfaces" (migration, model, route) extracted by the module are not detailed in the source cards.
-- The runtime environment assumptions or constraints for `detectRuntimeHints` and `extractEnvironmentVariables` are not specified.
-- The module's integration points or consumers within the larger project are not identified.
+- There is no explicit documentation or test coverage information available for this module.
+- The exact implementation details and usage contexts of the extraction functions are not described here.
+- The module's interaction with other parts of the system or its role in the larger architecture is not detailed.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

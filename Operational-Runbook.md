@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "fcd0cab90b26fc622c67172972b85e39ed7ab703"
-compiled_at: "2026-05-14T06:45:40.381Z"
+source_commit: "eda9d272e7c9de7e891622628d448f396d033b3f"
+compiled_at: "2026-05-14T06:47:52.348Z"
 kind: "runbook"
 claim_status: "grounded"
 source_paths: ["test/fixtures/compiler-e2e/basic-node-service/repo/infra/deploy.js"]
@@ -12,7 +12,7 @@ page_state: "generated"
 
 ## Deployment and operations files
 
-- [test/fixtures/compiler-e2e/basic-node-service/repo/infra/deploy.js](https://github.com/mfittko/repo-wiki/blob/fcd0cab90b26fc622c67172972b85e39ed7ab703/test/fixtures/compiler-e2e/basic-node-service/repo/infra/deploy.js)
+- [test/fixtures/compiler-e2e/basic-node-service/repo/infra/deploy.js](https://github.com/mfittko/repo-wiki/blob/eda9d272e7c9de7e891622628d448f396d033b3f/test/fixtures/compiler-e2e/basic-node-service/repo/infra/deploy.js)
 
 ## Next refinement
 
