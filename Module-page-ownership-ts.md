@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "a507ef561fb391da37a72f94377f63339998865a"
+source_commit: "64636a87dfde6c5a3055391035a1bb4598fc5c10"
 page_state: "generated"
 source_paths: ["src/page-ownership.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -21,11 +21,11 @@ This module provides functionality related to managing and preserving human-gene
 
 ## Key symbols and entry points
 
-- **detectPageState**: Function to determine the current state of a page, likely analyzing its content or metadata.
-- **extractHumanNotes**: Function to extract human-authored notes from a page or content source.
-- **injectHumanNotes**: Function to insert or re-insert human notes into a page or content.
-- **preserveHumanNotes**: Function to maintain or safeguard human notes during page updates or transformations.
-- **PageState**: A type or interface representing the state of a page, used in conjunction with the above functions.
+- **detectPageState**: Function to determine the current state of a page.
+- **extractHumanNotes**: Function to extract human-authored notes from page content.
+- **injectHumanNotes**: Function to insert or re-insert human notes into page content.
+- **preserveHumanNotes**: Function to maintain human notes intact during page updates or transformations.
+- **PageState**: Likely a type or interface representing the state of a page.
 
 ## Dependencies and imports
 
@@ -37,9 +37,10 @@ This module provides functionality related to managing and preserving human-gene
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or test coverage information available.
-- The exact implementation details and usage scenarios of the exported functions and types are not described.
-- The module's integration context within a larger system is not specified.
+- The module documentation and source cards do not provide detailed descriptions or usage examples for the exported symbols.
+- There is no information about how the page state is represented or manipulated beyond the symbol names.
+- The absence of related tests or documentation leaves open questions about the module's integration and coverage.
+- The source repository and commit information are unknown, limiting traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

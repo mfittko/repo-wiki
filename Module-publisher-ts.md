@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "a507ef561fb391da37a72f94377f63339998865a"
+source_commit: "64636a87dfde6c5a3055391035a1bb4598fc5c10"
 page_state: "generated"
 source_paths: ["src/publisher.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "2024-06-05T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to publishing content to GitHub Wikis. It includes configuration for different publishing targets, policies for frontmatter handling, and utilities to rewrite internal wiki links. The main entry point is a function to publish wiki content, supporting environment-variable-driven configuration for remote repositories and Git user information.
+The `publisher.ts` module provides core functionality for publishing content to GitHub Wikis. It includes configuration and source code to manage publishing targets, policies for frontmatter handling, and utilities to rewrite internal wiki links. The module supports environment-variable-driven configuration to customize publishing behavior, making it suitable for automated or CI-driven wiki publishing workflows.
 
 ## Source file list
 
@@ -21,36 +21,36 @@ This module provides functionality related to publishing content to GitHub Wikis
 
 ## Key symbols and entry points
 
-- `defaultFrontmatterPolicyForTarget` — Default policy for handling frontmatter metadata depending on the publish target.
-- `PUBLISH_TARGETS` — Enumeration or collection of supported publishing targets.
-- `PublishTarget` — Type or interface defining a publish target.
-- `publishWiki` — Primary function to publish wiki content to a specified target.
-- `PublishWikiOptions` — Options interface/type for configuring the `publishWiki` function.
-- `rewriteInternalWikiLinks` — Utility function to adjust internal wiki links during publishing.
+- **defaultFrontmatterPolicyForTarget**: Defines default policies for handling frontmatter metadata based on the publishing target.
+- **PUBLISH_TARGETS**: A collection or enumeration of supported publishing targets.
+- **PublishTarget**: Type or interface representing a publishing target.
+- **publishWiki**: Main function to execute the publishing process of a wiki.
+- **PublishWikiOptions**: Options interface/type for configuring the `publishWiki` function.
+- **rewriteInternalWikiLinks**: Utility function to adjust internal wiki links during publishing.
 
 ## Dependencies and imports
 
 - Local modules:
-  - `./frontmatter.js` — Likely handles frontmatter metadata parsing and policies.
-  - `./utils/fs.js` — Filesystem utilities.
-  - `./utils/git.js` — Git-related utilities.
+  - `./frontmatter.js`
+  - `./utils/fs.js`
+  - `./utils/git.js`
 - External modules:
-  - `https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs` — Mermaid diagram rendering library.
+  - `https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs` (Mermaid diagram rendering)
 - Node.js built-in modules:
-  - `fs` — Filesystem access.
-  - `os` — Operating system utilities.
-  - `path` — Path utilities.
+  - `fs`
+  - `os`
+  - `path`
 
 ## Related tests
 
-No documentation or source cards indicate the presence of related tests for this module.
+No explicit test files or test-related documentation cards are listed for this module.
 
 ## Known gaps or open questions
 
-- No explicit test coverage or test files are documented.
-- The exact behavior and configuration details of `publishWiki` and frontmatter policies are not described in detail.
-- The source repository and commit SHA are unknown, limiting traceability.
-- The environment variables `GITHUB_WIKI_REMOTE`, `LLMWIKI_GIT_USER_EMAIL`, `LLMWIKI_GIT_USER_NAME`, and `LLMWIKI_PUBLISH_REMOTE` suggest runtime configuration but their exact usage and defaults are not detailed.
+- No documentation cards or detailed usage examples are currently available.
+- The exact behavior and configuration details of `defaultFrontmatterPolicyForTarget` and `PUBLISH_TARGETS` are not fully described.
+- The integration and usage of environment variables such as `GITHUB_WIKI_REMOTE`, `LLMWIKI_GIT_USER_EMAIL`, `LLMWIKI_GIT_USER_NAME`, and `LLMWIKI_PUBLISH_REMOTE` could benefit from further elaboration.
+- No information on error handling or edge cases during publishing is provided.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

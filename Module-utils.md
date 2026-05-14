@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "a507ef561fb391da37a72f94377f63339998865a"
+source_commit: "64636a87dfde6c5a3055391035a1bb4598fc5c10"
 page_state: "generated"
 source_paths: ["src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -25,18 +25,15 @@ The `utils` module provides a collection of utility functions and types implemen
 ## Key symbols and entry points
 
 ### `src/utils/args.ts`
-
 - `parseArgs` — Function to parse command-line arguments.
 - `ParsedArgs` — Type representing the structure of parsed arguments.
 
 ### `src/utils/dotenv.ts`
-
 - `loadDotEnv` — Function to load environment variables from `.env` files.
 - `parseDotEnv` — Function to parse `.env` file content.
 - `DotEnvLoadResult` — Type representing the result of loading `.env` files.
 
 ### `src/utils/fs.ts`
-
 - `DEFAULT_WALK_EXCLUDES` — Default patterns to exclude when walking directories.
 - `ensureDir` — Function to ensure a directory exists, creating it if necessary.
 - `fileExists` — Function to check if a file exists.
@@ -46,7 +43,6 @@ The `utils` module provides a collection of utility functions and types implemen
 - `writeText` — Function to write text data to a file.
 
 ### `src/utils/git.ts`
-
 - `runGit` — Function to run arbitrary Git commands.
 - `getGitCommit` — Function to retrieve the current Git commit hash.
 - `getGitRemote` — Function to get the Git remote URL.
@@ -68,14 +64,14 @@ The `utils` module provides a collection of utility functions and types implemen
 
 ## Related tests
 
-No test files or test-related documentation cards are present in the current source data for this module.
+No explicit test files or test-related documentation cards are present in the source data for this module.
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or test coverage information available for this module.
-- The exact repository remote URL and commit SHA are not provided.
-- The usage context or higher-level integration of these utilities is not described.
-- No information on error handling strategies or edge cases in these utilities is available.
+- There is no information about test coverage or test files related to this module.
+- The repository remote URL and commit SHA are unspecified, limiting traceability.
+- The exact runtime environment or usage context for these utilities is not detailed.
+- No documentation or usage examples are provided for the exported symbols.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
