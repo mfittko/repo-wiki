@@ -47,23 +47,28 @@ async function initializeGitRepository(repoPath: string, fixtureName: string) {
 async function runFixturePipeline(fixtureName: string, compileOptions: Record<string, unknown> = {}) {
   const prepared = await prepareFixtureRepo(fixtureName);
 
-  const scan = await scanRepository({
-    mode: 'bootstrap',
-    repoPath: prepared.repoPath,
-    outDir: prepared.scanDir
-  });
-  const plan = await createBootstrapPlan({
-    scanDir: prepared.scanDir,
-    outFile: prepared.planFile
-  });
-  const compile = await compileWiki({
-    scanDir: prepared.scanDir,
-    planFile: prepared.planFile,
-    wikiDir: prepared.wikiDir,
-    ...compileOptions
-  });
+  try {
+    const scan = await scanRepository({
+      mode: 'bootstrap',
+      repoPath: prepared.repoPath,
+      outDir: prepared.scanDir
+    });
+    const plan = await createBootstrapPlan({
+      scanDir: prepared.scanDir,
+      outFile: prepared.planFile
+    });
+    const compile = await compileWiki({
+      scanDir: prepared.scanDir,
+      planFile: prepared.planFile,
+      wikiDir: prepared.wikiDir,
+      ...compileOptions
+    });
 
-  return { ...prepared, scan, plan, compile };
+    return { ...prepared, scan, plan, compile };
+  } catch (error) {
+    await fs.rm(prepared.tempDir, { recursive: true, force: true });
+    throw error;
+  }
 }
 
 async function readWikiPage(wikiDir: string, pageName: string) {

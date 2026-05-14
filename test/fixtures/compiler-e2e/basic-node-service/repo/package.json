@@ -4,5 +4,6 @@
   "scripts": {
     "build": "node ./infra/deploy.ts",
     "test": "node --test"
-  }
+  },
+  "type": "module"
 }
