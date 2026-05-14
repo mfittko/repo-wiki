@@ -478,7 +478,7 @@ function extractLocalWikiLinks(content: string): string[] {
         continue;
       }
     }
-    if (fenceMarker) {
+    if (fenceMarker || isIndentedMarkdownCodeBlockLine(line)) {
       continue;
     }
 
@@ -506,6 +506,10 @@ function extractLocalWikiLinks(content: string): string[] {
   }
 
   return [...links];
+}
+
+function isIndentedMarkdownCodeBlockLine(line: string): boolean {
+  return /^(?: {4,}|	)/.test(line);
 }
 
 function stripWikiLinkExtractionNoise(line: string, initialInHtmlComment = false): { text: string; inHtmlComment: boolean } {
@@ -556,6 +560,31 @@ function stripWikiLinkExtractionNoise(line: string, initialInHtmlComment = false
   return { text, inHtmlComment };
 }
 
+function consumeOptionalMarkdownLinkTitle(line: string, startIndex: number): number {
+  let cursor = startIndex;
+  while (line[cursor] && /\s/.test(line[cursor])) cursor += 1;
+  if (line[cursor] === ')') {
+    return cursor;
+  }
+
+  const opener = line[cursor];
+  if (!opener || !['"', "'", '('].includes(opener)) {
+    return -1;
+  }
+  const closer = opener === '(' ? ')' : opener;
+  cursor += 1;
+  while (cursor < line.length) {
+    const char = line[cursor];
+    if (char === closer && line[cursor - 1] !== '\\') {
+      cursor += 1;
+      while (line[cursor] && /\s/.test(line[cursor])) cursor += 1;
+      return line[cursor] === ')' ? cursor : -1;
+    }
+    cursor += 1;
+  }
+  return -1;
+}
+
 function extractMarkdownLinkTargets(line: string): string[] {
   const targets: string[] = [];
   for (let index = 0; index < line.length; index += 1) {
@@ -581,10 +610,9 @@ function extractMarkdownLinkTargets(line: string): string[] {
         continue;
       }
       target = line.slice(cursor, closeAngle);
-      cursor = closeAngle + 1;
-      while (line[cursor] && /\s/.test(line[cursor])) cursor += 1;
-      if (line[cursor] !== ')') {
-        index = cursor;
+      cursor = consumeOptionalMarkdownLinkTitle(line, closeAngle + 1);
+      if (cursor === -1) {
+        index = closeAngle + 1;
         continue;
       }
       targets.push(target);

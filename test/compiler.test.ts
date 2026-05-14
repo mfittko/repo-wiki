@@ -2593,6 +2593,7 @@ test('compileWiki graph enrichment normalizes page states, wiki links, and prove
       { path: 'Alpha.md', phase: 'module', purpose: 'Alpha' },
       { path: 'Beta.md', phase: 'module', purpose: 'Beta' },
       { path: 'Delta.md', phase: 'module', purpose: 'Delta' },
+      { path: 'Epsilon.md', phase: 'module', purpose: 'Epsilon' },
       { path: 'Gamma.md', phase: 'module', purpose: 'Gamma' }
     ],
     modules: [],
@@ -2632,6 +2633,7 @@ source_paths: ["src/a.ts", "", "./src/a.ts", "src/./a.ts"]
 [Beta 3](./Beta.md)
 [Beta 4](Beta.md#section)
 [Beta 5](Beta.md "details")
+[Epsilon](<Epsilon.md> "details")
 Inline code \`[Inline](Gamma.md)\` should not count.
 <!-- [Comment](Gamma.md) -->
 <!--
@@ -2646,6 +2648,7 @@ Inline code \`[Inline](Gamma.md)\` should not count.
 [Anchor](#local)
 [Asset](diagram.png)
 [Nested](nested/Beta.md)
+    [Indented code link](Gamma.md)
 `);
   await fs.writeFile(path.join(wikiDir, 'Beta.md'), `---
 title: "beta"
@@ -2693,11 +2696,12 @@ Needs review.
     assert.equal(pageStateByPath.get('Beta.md'), 'unmanaged');
     assert.equal(pageStateByPath.get('Gamma.md'), 'mixed');
     assert.equal(pageStateByPath.get('Delta.md'), 'generated');
+    assert.equal(pageStateByPath.get('Epsilon.md'), 'generated');
 
     const wikiLinks = graph.edges
       .filter((edge: any) => edge.type === 'wiki_link')
       .map((edge: any) => `${edge.from}->${edge.to}`);
-    assert.deepEqual(wikiLinks, ['page:Alpha.md->page:Beta.md']);
+    assert.deepEqual(wikiLinks, ['page:Alpha.md->page:Beta.md', 'page:Alpha.md->page:Epsilon.md']);
 
     const provenanceEdges = graph.edges
       .filter((edge: any) => edge.type === 'provenance')
