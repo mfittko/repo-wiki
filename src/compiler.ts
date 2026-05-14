@@ -316,7 +316,9 @@ export async function compileWiki({
     }
   }
 
-  await writeJson(path.join(path.dirname(wikiDir), 'graph.json'), buildWikiGraphSkeleton(manifest, plan));
+  // Keep the graph artifact rooted in the local .llmwiki workspace rather than the configurable wikiDir.
+  // This preserves the fixed `.llmwiki/graph.json` contract even when callers override `--wiki`.
+  await writeJson(path.join(path.dirname(scanDir), 'graph.json'), buildWikiGraphSkeleton(manifest, plan));
 
   return {
     contexts: pageContexts,

@@ -2467,11 +2467,21 @@ test('compileWiki writes deterministic graph.json skeleton with source→page af
       }
     }
   };
-  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-graph-'));
+  const llmwikiDir = path.join(dir, '.llmwiki');
+  const scanDir = path.join(llmwikiDir, 'run');
+  const wikiDir = path.join(dir, 'custom-wiki');
+  const planFile = path.join(llmwikiDir, 'bootstrap-plan.json');
+
+  await fs.mkdir(scanDir, { recursive: true });
+  await fs.writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify(manifest, null, 2));
+  await fs.writeFile(planFile, JSON.stringify(plan, null, 2));
 
   try {
     await compileWiki({ scanDir, planFile, wikiDir });
-    const graphPath = path.join(dir, 'graph.json');
+    const graphPath = path.join(llmwikiDir, 'graph.json');
+    await assert.doesNotReject(fs.access(graphPath), 'graph.json should be written to the fixed .llmwiki artifact path');
+    await assert.rejects(fs.access(path.join(dir, 'graph.json')));
     const firstBytes = await fs.readFile(graphPath, 'utf8');
     const graph = JSON.parse(firstBytes);
 
