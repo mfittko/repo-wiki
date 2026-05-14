@@ -2128,4 +2128,3 @@ test('compileWiki in LLM mode embeds arch_inputs_fingerprint in Architecture.md 
     await fs.rm(dir, { recursive: true, force: true });
   }
 });
-
