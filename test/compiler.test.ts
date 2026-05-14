@@ -2096,6 +2096,33 @@ test('compileWiki deterministic mode updates Architecture signals for cross-cutt
   }
 });
 
+test('compileWiki deterministic mode still section-patches when Architecture.md contains human notes', async () => {
+  const manifest = buildArchManifest();
+  const plan = buildArchPlan();
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+    const firstPage = await fs.readFile(path.join(wikiDir, 'Architecture.md'), 'utf8');
+    const pageWithNotes = `${firstPage}\n<!-- HUMAN_NOTES_START -->\n### Operator note\nKeep this context.\n<!-- HUMAN_NOTES_END -->\n`;
+    await fs.writeFile(path.join(wikiDir, 'Architecture.md'), pageWithNotes, 'utf8');
+
+    const planWithMoreFiles = {
+      ...plan,
+      modules: [
+        { ...plan.modules[0], files: ['src/core.ts', 'src/extra.ts'] },
+        plan.modules[1]
+      ]
+    };
+    await fs.writeFile(planFile, JSON.stringify(planWithMoreFiles, null, 2));
+
+    const result2 = await compileWiki({ scanDir, planFile, wikiDir });
+    assert.equal(result2.summary.architecture_decision, 'section-patched');
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('compileWiki deterministic mode applies section-patched decision when module details change within same module list', async () => {
   const manifest = buildArchManifest();
   const plan = buildArchPlan();

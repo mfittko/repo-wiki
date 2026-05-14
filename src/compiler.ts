@@ -587,7 +587,8 @@ function patchArchitectureSections(existingContent: string, newContent: string):
 }
 
 function architectureUntouchedContent(content: string): string {
-  let normalized = normalizeArchForComparison(content);
+  let normalized = normalizeArchForComparison(content)
+    .replace(/<!-- HUMAN_NOTES_START -->[\s\S]*?<!-- HUMAN_NOTES_END -->/g, '');
   const { frontmatter, body } = splitFrontmatterAndBody(normalized);
   let remainder = body;
   for (const heading of ['Structural map', 'Module groups', 'Architecture signals']) {
