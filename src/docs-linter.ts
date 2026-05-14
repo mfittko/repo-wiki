@@ -55,6 +55,13 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
     if (doc.claims?.length && doc.status === 'unvalidated') {
       pushIssue(issues, issue(config.lint?.unvalidated_doc_claims, strictness, 'standard', 'unvalidated-documentation-claims', `${doc.path} has documentation claims with no validation signal.`));
     }
+    if (doc.adr?.detected && doc.adr?.superseded) {
+      const supersededBy = doc.adr?.superseded_by ? ` superseded by ${doc.adr.superseded_by}.` : ' marked superseded.';
+      pushIssue(issues, issue(undefined, strictness, 'standard', 'superseded-adr', `${doc.path} is a superseded ADR and should not be treated as current decision context.${supersededBy}`));
+    }
+    if (doc.adr?.detected && doc.stale && !doc.adr?.has_status_metadata) {
+      pushIssue(issues, issue(undefined, strictness, 'standard', 'adr-without-status-metadata', `${doc.path} appears to be an older ADR without explicit status metadata. Add Status/Superseded by/Replaces metadata for recency review.`));
+    }
 
     // Validate documented commands against package scripts and CI workflows
     const docCommands: string[] = doc.validation?.commands || [];

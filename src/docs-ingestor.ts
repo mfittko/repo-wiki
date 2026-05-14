@@ -55,6 +55,16 @@ export type TaskRunnerTargetSource = {
   line?: number;
 };
 
+type AdrMetadata = {
+  detected: boolean;
+  detection_source: 'path' | 'marker' | 'path+marker' | 'none';
+  status: string | null;
+  superseded_by: string | null;
+  replaces: string | null;
+  has_status_metadata: boolean;
+  superseded: boolean;
+};
+
 type CommandClassificationOptions = {
   makeTargets?: string[];
   taskRunnerTargets?: string[];
@@ -309,6 +319,7 @@ export async function createDocumentationCard({ file, content, config, repoPath 
   const filePaths = extractDocumentedFilePaths(content);
   const claims = extractDocumentationClaims(content);
   const validation = validateDocClaims({ claims, content, filePath: file.relative });
+  const adr = detectAdrMetadata(file.relative, content);
   const ageDays = Math.floor((Date.now() - stats.mtimeMs) / 86_400_000);
   const staleAfterDays = config.documentation?.stale_after_days ?? 180;
   const stale = ageDays > staleAfterDays || /\b(deprecated|obsolete|archived|outdated|legacy only)\b/i.test(content);
@@ -327,8 +338,92 @@ export async function createDocumentationCard({ file, content, config, repoPath 
     file_paths: filePaths,
     claims,
     validation,
+    adr,
     status: stale ? 'stale' : validation.contradictions.length ? 'contradicted' : validation.validated.length ? 'partially_validated' : 'unvalidated'
   };
+}
+
+function detectAdrMetadata(filePath: string, content: string): AdrMetadata {
+  const normalizedPath = String(filePath || '').replaceAll('\\', '/');
+  const lowerPath = normalizedPath.toLowerCase();
+  const frontmatter = parseMarkdownFrontmatter(content);
+  const frontmatterKeys = new Set(Object.keys(frontmatter));
+  const frontmatterStatus = readFrontmatterValue(frontmatter, ['status']);
+  const frontmatterSupersededBy = readFrontmatterValue(frontmatter, ['superseded_by', 'superseded-by']);
+  const frontmatterReplaces = readFrontmatterValue(frontmatter, ['replaces']);
+  const statusLine = readLabeledLine(content, 'Status');
+  const supersededByLine = readLabeledLine(content, 'Superseded by');
+  const replacesLine = readLabeledLine(content, 'Replaces');
+  const adrHeading = /^\s*#{1,6}\s*(?:ADR\s*:|ADR-\d+)\b/im.test(content) || /^\s*ADR-\d+\b/im.test(content);
+  const statusMarker = Boolean(statusLine || frontmatterKeys.has('status'));
+  const strongMarkers = Boolean(
+    adrHeading
+    || supersededByLine
+    || replacesLine
+    || frontmatterKeys.has('superseded_by')
+    || frontmatterKeys.has('superseded-by')
+    || frontmatterKeys.has('replaces')
+  );
+  const pathHint = lowerPath.startsWith('adr/') || lowerPath.startsWith('docs/adr/') || lowerPath.startsWith('docs/adrs/');
+  const architectureHint = lowerPath.startsWith('docs/architecture/');
+  const detectedByMarker = strongMarkers || (statusMarker && adrHeading);
+  const detected = pathHint || detectedByMarker;
+  const detection_source = pathHint && detectedByMarker ? 'path+marker' : pathHint ? 'path' : detectedByMarker ? 'marker' : 'none';
+  const status = firstDefined(frontmatterStatus, statusLine);
+  const supersededBy = firstDefined(frontmatterSupersededBy, supersededByLine);
+  const replaces = firstDefined(frontmatterReplaces, replacesLine);
+  const normalizedStatus = status ? status.toLowerCase() : '';
+  const superseded = Boolean(supersededBy || /\bsupersed(?:ed|ing)\b/.test(normalizedStatus) || /\breplaced\b/.test(normalizedStatus));
+  const hasStatusMetadata = Boolean(status || supersededBy || replaces);
+  return {
+    detected,
+    detection_source,
+    status: status || null,
+    superseded_by: supersededBy || null,
+    replaces: replaces || null,
+    has_status_metadata: hasStatusMetadata,
+    superseded
+  };
+}
+
+function parseMarkdownFrontmatter(content: string): Record<string, string> {
+  const text = String(content || '');
+  if (!text.startsWith('---\n')) return {};
+  const closingOffset = text.indexOf('\n---', 4);
+  if (closingOffset < 0) return {};
+  const block = text.slice(4, closingOffset);
+  const values: Record<string, string> = {};
+  for (const line of block.split('\n')) {
+    const match = /^\s*([A-Za-z0-9_-]+)\s*:\s*(.+?)\s*$/.exec(line);
+    if (!match) continue;
+    const key = match[1].toLowerCase();
+    const value = match[2].replace(/^['"]|['"]$/g, '').trim();
+    if (!value) continue;
+    values[key] = value;
+  }
+  return values;
+}
+
+function readFrontmatterValue(frontmatter: Record<string, string>, keys: string[]) {
+  for (const key of keys) {
+    const value = frontmatter[key];
+    if (value) return value;
+  }
+  return '';
+}
+
+function readLabeledLine(content: string, label: string) {
+  const escapedLabel = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+  const match = new RegExp(`^\\s*${escapedLabel}\\s*:\\s*(.+?)\\s*$`, 'im').exec(content);
+  if (!match) return '';
+  return match[1].trim().replace(/^['"]|['"]$/g, '');
+}
+
+function firstDefined(...values: string[]) {
+  for (const value of values) {
+    if (value) return value;
+  }
+  return '';
 }
 
 export function extractDocumentationClaims(content) {

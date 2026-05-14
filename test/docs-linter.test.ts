@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, writeFile, mkdir, rm, readFile } from 'node:fs/promises';
+import { mkdtemp, writeFile, mkdir, rm, readFile, utimes } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import { scanRepository } from '../src/scanner.js';
@@ -704,6 +704,68 @@ test('lintDocs applies documentation validation strictness levels predictably', 
       assert.equal(lint.summary.errors, expected.errors);
       assert.equal(lint.summary.warnings, expected.warnings);
     }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('scanRepository and lintDocs detect ADR recency/supersession conservatively', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-adr-docs-'));
+  try {
+    await mkdir(path.join(dir, '.llmwiki'), { recursive: true });
+    await mkdir(path.join(dir, 'ADR'), { recursive: true });
+    await mkdir(path.join(dir, 'docs', 'adrs'), { recursive: true });
+    await mkdir(path.join(dir, 'docs', 'architecture'), { recursive: true });
+    await writeFile(path.join(dir, '.llmwiki', 'config.json'), JSON.stringify({
+      documentation: {
+        ingest: true,
+        include: ['README.md', 'docs/**/*.md', 'ADR/**/*.md'],
+        exclude: [],
+        stale_after_days: 2
+      }
+    }), 'utf8');
+    await writeFile(path.join(dir, 'README.md'), '# Demo\n', 'utf8');
+    await writeFile(path.join(dir, 'ADR', '0001-accepted.md'), '# ADR-0001\n\nStatus: Accepted\n', 'utf8');
+    await writeFile(path.join(dir, 'docs', 'adrs', '0002-superseded.md'), '---\nstatus: Superseded\nsuperseded_by: ADR-0003\n---\n\n# ADR-0002\n', 'utf8');
+    await writeFile(path.join(dir, 'docs', 'adrs', '0000-legacy.md'), '# ADR-0000\n\nLegacy decision text without metadata.\n', 'utf8');
+    await writeFile(path.join(dir, 'docs', 'architecture', 'overview.md'), '# Architecture Overview\n\nSystem design notes.\n', 'utf8');
+    await writeFile(path.join(dir, 'docs', 'notes.md'), '# Notes\n\nStatus: Current\n\nRelease operations note, not an ADR.\n', 'utf8');
+    await writeFile(path.join(dir, 'package.json'), JSON.stringify({ scripts: {} }), 'utf8');
+    const oldDate = new Date(Date.now() - (10 * 86_400_000));
+    await utimes(path.join(dir, 'docs', 'adrs', '0000-legacy.md'), oldDate, oldDate);
+
+    const scanDir = path.join(dir, '.llmwiki', 'run');
+    const scan = await scanRepository({ mode: 'bootstrap', repoPath: dir, outDir: scanDir });
+    const docs = scan.manifest.documentation.files;
+    const accepted = docs.find((doc) => doc.path === 'ADR/0001-accepted.md');
+    const superseded = docs.find((doc) => doc.path === 'docs/adrs/0002-superseded.md');
+    const legacy = docs.find((doc) => doc.path === 'docs/adrs/0000-legacy.md');
+    const architectureOverview = docs.find((doc) => doc.path === 'docs/architecture/overview.md');
+    const notes = docs.find((doc) => doc.path === 'docs/notes.md');
+
+    assert.equal(accepted.adr.detected, true);
+    assert.equal(accepted.adr.status, 'Accepted');
+    assert.equal(accepted.adr.superseded, false);
+    assert.equal(superseded.adr.detected, true);
+    assert.equal(superseded.adr.superseded, true);
+    assert.equal(superseded.adr.superseded_by, 'ADR-0003');
+    assert.equal(legacy.adr.detected, true);
+    assert.equal(legacy.adr.has_status_metadata, false);
+    assert.equal(legacy.stale, true);
+    assert.equal(architectureOverview.adr.detected, false);
+    assert.equal(notes.adr.detected, false);
+    assert.equal(notes.adr.detection_source, 'none');
+
+    const lint = await lintDocs({ scanDir, repoPath: dir });
+    const supersededIssues = lint.issues.filter((issue) => issue.code === 'superseded-adr');
+    const missingStatusIssues = lint.issues.filter((issue) => issue.code === 'adr-without-status-metadata');
+    assert.equal(supersededIssues.length, 1);
+    assert.match(supersededIssues[0].message, /0002-superseded\.md/);
+    assert.equal(missingStatusIssues.length, 1);
+    assert.match(missingStatusIssues[0].message, /0000-legacy\.md/);
+    assert.ok(!lint.issues.some((issue) => issue.code === 'superseded-adr' && issue.message.includes('0001-accepted')));
+    assert.ok(!lint.issues.some((issue) => issue.message.includes('docs/architecture/overview.md') && issue.code.startsWith('adr-')));
+    assert.ok(!lint.issues.some((issue) => issue.message.includes('docs/notes.md') && issue.code.startsWith('adr-')));
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

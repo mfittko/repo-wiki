@@ -615,6 +615,82 @@ test('compileWiki routes stale, contradicted, and unvalidated documentation card
   }
 });
 
+test('compileWiki Documentation Debt Report surfaces ADR-specific findings', async () => {
+  const manifest = {
+    remote: 'origin',
+    commit: 'abc123',
+    mode: 'bootstrap',
+    totals: { languages: { Markdown: 4 }, categories: { docs: 4 }, runtime_hints: {} },
+    files: [],
+    documentation: {
+      enabled: true,
+      authority: 'secondary',
+      summary: { files: 4, claims: 0, stale: 1, commands: 0, env_vars: 0, file_paths: 0 },
+      files: [
+        {
+          path: 'ADR/0001-current.md',
+          status: 'unvalidated',
+          authority: 'secondary',
+          stale: false,
+          age_days: 1,
+          claims: [],
+          validation: { contradictions: [] },
+          adr: { detected: true, status: 'Accepted', superseded: false, superseded_by: null, replaces: null, has_status_metadata: true }
+        },
+        {
+          path: 'docs/adrs/0002-superseded.md',
+          status: 'stale',
+          authority: 'secondary',
+          stale: true,
+          age_days: 300,
+          claims: [],
+          validation: { contradictions: [] },
+          adr: { detected: true, status: 'Superseded', superseded: true, superseded_by: 'ADR-0003', replaces: null, has_status_metadata: true }
+        },
+        {
+          path: 'docs/adrs/0000-legacy.md',
+          status: 'stale',
+          authority: 'secondary',
+          stale: true,
+          age_days: 400,
+          claims: [],
+          validation: { contradictions: [] },
+          adr: { detected: true, status: null, superseded: false, superseded_by: null, replaces: null, has_status_metadata: false }
+        },
+        {
+          path: 'docs/guide.md',
+          status: 'unvalidated',
+          authority: 'secondary',
+          stale: false,
+          age_days: 1,
+          claims: [],
+          validation: { contradictions: [] },
+          adr: { detected: false, status: null, superseded: false, superseded_by: null, replaces: null, has_status_metadata: false }
+        }
+      ]
+    },
+    analysis: { package_scripts: [], dependency_graph: { edges: [], summary: {} }, test_to_source: { mappings: [], summary: {} } }
+  };
+
+  const { dir, scanDir, wikiDir, planFile } = await writeFixture({ manifest, plan: createPlan() });
+
+  try {
+    await compileWiki({ scanDir, planFile, wikiDir });
+    const debtReport = await fs.readFile(path.join(wikiDir, 'Documentation-Debt-Report.md'), 'utf8');
+    assert.match(debtReport, /## ADR validation/);
+    assert.match(debtReport, /ADR files detected: 3/);
+    assert.match(debtReport, /Superseded ADRs: 1/);
+    assert.match(debtReport, /Old ADRs missing status metadata: 1/);
+    assert.match(debtReport, /\| `docs\/adrs\/0002-superseded\.md` \| `Superseded` \| `ADR-0003` \| 300 \| ⚠ superseded \|/);
+    assert.match(debtReport, /\| `docs\/adrs\/0000-legacy\.md` \| `unknown` \| `-` \| 400 \| ⚠ old without status metadata \|/);
+    assert.match(debtReport, /### ADR-specific/);
+    assert.match(debtReport, /`docs\/adrs\/0002-superseded\.md` - superseded ADR \(superseded by ADR-0003\)\./);
+    assert.match(debtReport, /`docs\/adrs\/0000-legacy\.md` - stale ADR missing explicit status metadata\./);
+  } finally {
+    await fs.rm(dir, { recursive: true, force: true });
+  }
+});
+
 // ---------------------------------------------------------------------------
 // Human-notes preservation
 // ---------------------------------------------------------------------------

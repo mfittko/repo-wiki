@@ -693,6 +693,9 @@ function renderDocumentationDebtReport(manifest) {
   const unvalidatedRouteClaims = routeFindings.filter((finding) => !finding.valid);
   const staleFindings = docs.filter((doc) => doc.stale).map((doc) => `- \`${doc.path}\` - age ${doc.age_days} days, status ${doc.status}`);
   const contradictedFindings = docs.filter((doc) => doc.validation?.contradictions?.length).map((doc) => `- \`${doc.path}\` - ${doc.validation.contradictions.length} contradiction-review signals`);
+  const adrDocs = docs.filter((doc) => doc.adr?.detected);
+  const supersededAdrDocs = adrDocs.filter((doc) => doc.adr?.superseded);
+  const oldUnknownAdrDocs = adrDocs.filter((doc) => doc.stale && !doc.adr?.has_status_metadata);
   const unvalidatedFindings = [
     ...docs.filter((doc) => doc.claims?.length && doc.status === 'unvalidated').map((doc) => `- \`${doc.path}\` - documentation claims have no validation signal.`),
     ...missingCmds.map((finding) => {
@@ -709,6 +712,10 @@ function renderDocumentationDebtReport(manifest) {
     })
   ];
   const brokenReferenceFindings = brokenFilePaths.map((finding) => `- \`${finding.doc}:${finding.line}\` references \`${finding.reference_path}\` (missing).`);
+  const adrFindings = [
+    ...supersededAdrDocs.map((doc) => `- \`${doc.path}\` - superseded ADR${doc.adr?.superseded_by ? ` (superseded by ${doc.adr.superseded_by})` : ''}.`),
+    ...oldUnknownAdrDocs.map((doc) => `- \`${doc.path}\` - stale ADR missing explicit status metadata.`)
+  ];
 
   const commandRows = classified.map((c) => {
     const badge = c.status === 'validated' ? '✅ validated' : c.status === 'missing' ? '❌ missing' : '❓ unvalidated';
@@ -743,6 +750,16 @@ function renderDocumentationDebtReport(manifest) {
       ? formatRouteEvidence(manifest, finding.evidence || [])
       : finding.reason;
     return tableRow([code(location), code(`${method} ${routePath}`), badge, evidence]);
+  });
+  const adrRows = adrDocs.slice(0, 200).map((doc) => {
+    const status = doc.adr?.status || 'unknown';
+    const supersession = doc.adr?.superseded_by || doc.adr?.replaces || '-';
+    const review = doc.adr?.superseded
+      ? '⚠ superseded'
+      : doc.stale && !doc.adr?.has_status_metadata
+        ? '⚠ old without status metadata'
+        : '✅ current/explicit';
+    return tableRow([code(doc.path), code(status), code(supersession), String(doc.age_days ?? '-'), review]);
   });
 
   return `${frontmatter(manifest, {
@@ -814,6 +831,16 @@ Route and API claims from documentation prose are validated against scanner-extr
 
 ${routeRows.length > 0 ? `| Claim location | Route claim | Status | Evidence / reason |\n|---|---|---|---|\n${routeRows.join('\n')}${routeFindings.length > routeRows.length ? `\n\n_Showing first ${routeRows.length} of ${routeFindings.length} route claim findings._` : ''}` : '- No route/API claims extracted from documentation.'}
 
+## ADR validation
+
+Conservative ADR detection uses deterministic path hints (\`ADR/**\`, \`docs/adr/**\`, \`docs/adrs/**\`) and explicit markers (e.g. \`Status:\`, \`Superseded by:\`, \`Replaces:\`, or ADR heading/title markers).
+
+- ADR files detected: ${adrDocs.length}
+- Superseded ADRs: ${supersededAdrDocs.length}
+- Old ADRs missing status metadata: ${oldUnknownAdrDocs.length}
+
+${adrRows.length > 0 ? `| ADR file | Status | Superseded by / Replaces | Age days | Review signal |\n|---|---|---|---:|---|\n${adrRows.join('\n')}${adrDocs.length > adrRows.length ? `\n\n_Showing first ${adrRows.length} of ${adrDocs.length} ADR findings._` : ''}` : '- No ADR-like documentation files detected.'}
+
 ## Findings by category
 
 ### Stale
@@ -831,6 +858,10 @@ ${unvalidatedFindings.join('\n') || '- None detected.'}
 ### Broken-reference
 
 ${brokenReferenceFindings.join('\n') || '- None detected.'}
+
+### ADR-specific
+
+${adrFindings.join('\n') || '- None detected.'}
 
 ## Compiler policy
 
