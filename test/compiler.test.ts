@@ -1900,6 +1900,34 @@ test('computeArchDecision returns full-regenerated when module list changes', ()
   assert.equal(computeArchDecision(newContent, existing), 'full-regenerated');
 });
 
+test('computeArchDecision ignores HUMAN_NOTES headings when comparing module lists', () => {
+  const base = `---
+compiled_at: "T1"
+---
+# Architecture
+
+## Structural map
+
+	dummy
+
+## Module groups
+
+### Core
+
+- Files: 1
+
+## Architecture signals
+
+- Module groups: 1
+
+<!-- HUMAN_NOTES_START -->
+### Human heading
+<!-- HUMAN_NOTES_END -->
+`.replace('\tdummy', '```mermaid\nflowchart TD\n  Repo[Repository at abc1234]\n  Repo --> M0[Core]\n```');
+  const updated = base.replace('compiled_at: "T1"', 'compiled_at: "T2"');
+  assert.equal(computeArchDecision(updated, base), 'skipped');
+});
+
 test('computeArchDecision ignores HUMAN_NOTES and mixed page_state when generated portions are unchanged', () => {
   const generated = `---
 page_state: "generated"

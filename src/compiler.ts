@@ -480,14 +480,18 @@ function normalizeArchForComparison(content: string): string {
 }
 
 /**
- * Extract the ordered list of module names from the structural map mermaid diagram.
- * Returns the names in the order they appear (Repo --> M0[Name] pattern).
+ * Extract the ordered list of module names from the `## Module groups` section.
+ * HUMAN_NOTES content is ignored so user-authored `###` headings do not affect
+ * architecture change detection.
  */
 function extractArchitectureModuleNames(content: string): string[] {
   const names: string[] = [];
+  const normalizedBody = splitFrontmatterAndBody(content).body
+    .replace(/<!-- HUMAN_NOTES_START -->[\s\S]*?<!-- HUMAN_NOTES_END -->/g, '<!-- HUMAN_NOTES_START -->\n<!-- HUMAN_NOTES_END -->');
+  const moduleGroups = extractSection(normalizedBody, 'Module groups') || normalizedBody;
   const re = /^### (.+)$/gm;
   let match;
-  while ((match = re.exec(content)) !== null) {
+  while ((match = re.exec(moduleGroups)) !== null) {
     names.push(match[1].trim());
   }
   return names;
