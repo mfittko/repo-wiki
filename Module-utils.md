@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "73d2678ea962143138b0ea2c5c2afd3eb79dd847"
+source_commit: "ab4f4401735f73fb39983b8f7af41b5ed76b37f7"
 page_state: "generated"
 source_paths: ["src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -21,39 +21,39 @@ The `utils` module provides a collection of utility functions and types implemen
   Implements argument parsing utilities including the `parseArgs` function and the `ParsedArgs` type.
 
 - `src/utils/dotenv.ts`  
-  Provides functionality to load and parse `.env` files with symbols such as `loadDotEnv`, `parseDotEnv`, and the `DotEnvLoadResult` type.
+  Provides functionality to load and parse `.env` files with exports such as `loadDotEnv`, `parseDotEnv`, and the `DotEnvLoadResult` type.
 
 - `src/utils/fs.ts`  
-  Contains filesystem-related utilities including directory creation, file existence checks, JSON reading/writing, file walking, and text writing. Key symbols include `ensureDir`, `fileExists`, `readJson`, `writeJson`, `writeText`, `walkFiles`, and the constant `DEFAULT_WALK_EXCLUDES`.
+  Contains filesystem-related utilities such as directory creation, file existence checks, JSON reading/writing, file walking, and text writing. Key exports include `ensureDir`, `fileExists`, `readJson`, `writeJson`, `writeText`, `walkFiles`, and the constant `DEFAULT_WALK_EXCLUDES`.
 
 - `src/utils/git.ts`  
-  Offers Git-related utilities to run Git commands and retrieve information such as the current commit, remote URL, and status. Exposed symbols include `runGit`, `getGitCommit`, `getGitRemote`, and `getGitStatus`.
+  Offers Git-related utilities to run Git commands and retrieve information such as the current commit, remote URL, and status. Exports include `runGit`, `getGitCommit`, `getGitRemote`, and `getGitStatus`.
 
 ## Key symbols and entry points
 
-- **Argument Parsing**  
-  - `parseArgs`  
-  - `ParsedArgs`
+- **Argument parsing**  
+  - `parseArgs` (function)  
+  - `ParsedArgs` (type)
 
-- **Environment Variable Handling**  
-  - `loadDotEnv`  
-  - `parseDotEnv`  
-  - `DotEnvLoadResult`
+- **Environment variable management**  
+  - `loadDotEnv` (function)  
+  - `parseDotEnv` (function)  
+  - `DotEnvLoadResult` (type)
 
-- **Filesystem Utilities**  
-  - `DEFAULT_WALK_EXCLUDES`  
-  - `ensureDir`  
-  - `fileExists`  
-  - `readJson`  
-  - `writeJson`  
-  - `writeText`  
-  - `walkFiles`
+- **Filesystem utilities**  
+  - `ensureDir` (function)  
+  - `fileExists` (function)  
+  - `readJson` (function)  
+  - `writeJson` (function)  
+  - `writeText` (function)  
+  - `walkFiles` (function)  
+  - `DEFAULT_WALK_EXCLUDES` (constant)
 
-- **Git Utilities**  
-  - `runGit`  
-  - `getGitCommit`  
-  - `getGitRemote`  
-  - `getGitStatus`
+- **Git utilities**  
+  - `runGit` (function)  
+  - `getGitCommit` (function)  
+  - `getGitRemote` (function)  
+  - `getGitStatus` (function)
 
 ## Dependencies and imports
 
@@ -71,14 +71,14 @@ The `utils` module provides a collection of utility functions and types implemen
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are present in the source data for this module.
+No test files or test-related documentation cards were found associated with this module.
 
 ## Known gaps or open questions
 
-- There is no information about test coverage or existing test suites for the utilities in this module.
+- There is no explicit documentation or test coverage information available for this module.
+- The exact behavior and usage details of the exported functions and types are not described beyond their symbol names and source file context.
 - The repository remote URL and commit SHA are unspecified, limiting traceability.
-- The exact runtime environment or usage context for these utilities is not described.
-- No documentation or usage examples are provided for the exported symbols.
+- The module does not indicate any runtime environment assumptions or constraints.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

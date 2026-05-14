@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "73d2678ea962143138b0ea2c5c2afd3eb79dd847"
+source_commit: "ab4f4401735f73fb39983b8f7af41b5ed76b37f7"
 page_state: "generated"
 source_paths: ["src/frontmatter.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides utilities and types for handling frontmatter in source files. It includes functionality to extract, parse, apply policies to, and strip frontmatter blocks. The module defines policies and types related to frontmatter processing, enabling controlled manipulation and validation of frontmatter content.
+This module provides utilities and types for handling frontmatter blocks within source files. It includes functionality to extract, parse, apply policies to, and strip frontmatter content. The module is designed to work with frontmatter policies, enabling controlled processing of frontmatter metadata.
 
 ## Source file list
 
@@ -22,7 +22,7 @@ This module provides utilities and types for handling frontmatter in source file
 ## Key symbols and entry points
 
 - **applyFrontmatterPolicy**: Applies a specified frontmatter policy to a frontmatter block.
-- **extractFrontmatterBlock**: Extracts the frontmatter block from a source text.
+- **extractFrontmatterBlock**: Extracts the frontmatter block from a given source text.
 - **FRONTMATTER_POLICIES**: A collection of predefined frontmatter policies.
 - **FrontmatterBlock**: Type representing a frontmatter block.
 - **FrontmatterPolicy**: Type defining the structure of a frontmatter policy.
@@ -36,13 +36,13 @@ This module provides utilities and types for handling frontmatter in source file
 
 ## Related tests
 
-No documentation or test files are listed for this module in the provided source cards.
+No documentation or test files are listed for this module.
 
 ## Known gaps or open questions
 
-- The exact nature and implementation details of the imported `./secret-patterns.js` module are not described.
-- No explicit test coverage or documentation is available, which may limit understanding of edge cases or usage examples.
-- The module's integration context or how it interacts with other parts of the system is not detailed.
+- No explicit documentation or test coverage is indicated.
+- The exact nature and structure of `FRONTMATTER_POLICIES` and the imported `secret-patterns.js` are not detailed.
+- The module's integration context or usage examples are not provided.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

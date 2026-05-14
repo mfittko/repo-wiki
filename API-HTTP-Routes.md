@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "73d2678ea962143138b0ea2c5c2afd3eb79dd847"
-compiled_at: "2026-05-13T17:29:32.096Z"
+source_commit: "ab4f4401735f73fb39983b8f7af41b5ed76b37f7"
+compiled_at: "2026-05-13T23:59:59.238Z"
 kind: "api_http_routes"
 claim_status: "grounded"
 source_paths: ["src/compiler.ts","test/docs-linter.test.ts","test/extractors-utils.test.ts","test/init-planner.test.ts","test/scanner.test.ts"]
@@ -16,46 +16,46 @@ page_state: "generated"
 
 | Source file | Framework | Target | Methods | Path | Handler |
 | --- | --- | --- | --- | --- | --- |
-| [src/compiler.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/src/compiler.ts) | unknown | `pages` | DELETE | `Architecture.md` | `unknown` |
-| [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/docs-linter.test.ts) | http-server | `napp` | GET | `/health` | `handler` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | trpc | `router` | MUTATION | `/addItem` | `addItem` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | nestjs | `ApiController` | DELETE | `/api/item` | `remove` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | nestjs | `ApiController` | PATCH | `/api/item` | `patch` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | nestjs | `ApiController` | PUT | `/api/item` | `update` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | nestjs | `ApiController` | GET | `/api/list` | `list` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | openapi | `reg` | POST | `/api/upload` | `uploadFile` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | trpc | `router` | MUTATION | `/createUser` | `createUser` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | fastify | `fastifyApi` | GET | `/fast` | `fastHandler` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | trpc | `router` | QUERY | `/getItems` | `getItems` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | graphql | `Mutation` | MUTATION | `/graphql` | `createPost` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | graphql | `Query` | QUERY | `/graphql` | `health` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | graphql | `Query` | QUERY | `/graphql` | `user` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | express | `app` | GET | `/health` | `healthCheck` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | koa | `r` | GET | `/health` | `healthCheck` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | koa | `router` | GET | `/health` | `healthCheck` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | trpc | `router` | QUERY | `/hello` | `hello` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | hono | `honoApp` | PUT | `/hono` | `honoHandler` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | fastify | `api` | GET, POST | `/items` | `handleItems` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | koa | `r` | POST | `/items` | `unknown` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | koa | `router` | POST | `/jobs` | `createJob` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | koa | `koaRouter` | GET | `/koa-health` | `koaHealth` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | koa | `koaApp` | USE | `/koa-middleware` | `koaMiddleware` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | express | `app` | USE | `/middleware` | `unknown` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | openapi | `registry` | GET | `/openapi/pets` | `listPets` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | unknown | `custom` | PATCH | `/patch` | `unknown` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | fastify | `fastify` | GET | `/ready` | `readyHandler` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | http-server | `server` | POST | `/server-post` | `unknown` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | nestjs | `UsersController` | POST | `/users` | `createUser` |
-| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts) | nestjs | `UsersController` | GET | `/users/profile` | `getProfile` |
-| [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/init-planner.test.ts) | unknown | `bySource` | GET | `apps/api/config.ts` | `unknown` |
-| [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/init-planner.test.ts) | unknown | `bySource` | GET | `apps/api/routes.ts` | `unknown` |
-| [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/init-planner.test.ts) | unknown | `bySource` | GET | `apps/api/server.ts` | `unknown` |
-| [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/init-planner.test.ts) | unknown | `bySource` | GET | `apps/web/client.ts` | `unknown` |
-| [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/init-planner.test.ts) | unknown | `bySource` | GET | `docs/guide.md` | `unknown` |
-| [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/init-planner.test.ts) | unknown | `bySource` | GET | `prisma/schema.prisma` | `unknown` |
-| [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/init-planner.test.ts) | unknown | `bySource` | GET | `test/server.test.ts` | `unknown` |
-| [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/scanner.test.ts) | http-server | `napp` | GET | `/health` | `healthCheck` |
-| [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/scanner.test.ts) | router | `nrouter` | POST | `/users` | `createUser` |
+| [src/compiler.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/src/compiler.ts) | unknown | `pages` | DELETE | `Architecture.md` | `unknown` |
+| [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/docs-linter.test.ts) | http-server | `napp` | GET | `/health` | `handler` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | trpc | `router` | MUTATION | `/addItem` | `addItem` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | nestjs | `ApiController` | DELETE | `/api/item` | `remove` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | nestjs | `ApiController` | PATCH | `/api/item` | `patch` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | nestjs | `ApiController` | PUT | `/api/item` | `update` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | nestjs | `ApiController` | GET | `/api/list` | `list` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | openapi | `reg` | POST | `/api/upload` | `uploadFile` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | trpc | `router` | MUTATION | `/createUser` | `createUser` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | fastify | `fastifyApi` | GET | `/fast` | `fastHandler` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | trpc | `router` | QUERY | `/getItems` | `getItems` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | graphql | `Mutation` | MUTATION | `/graphql` | `createPost` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | graphql | `Query` | QUERY | `/graphql` | `health` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | graphql | `Query` | QUERY | `/graphql` | `user` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | express | `app` | GET | `/health` | `healthCheck` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | koa | `r` | GET | `/health` | `healthCheck` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | koa | `router` | GET | `/health` | `healthCheck` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | trpc | `router` | QUERY | `/hello` | `hello` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | hono | `honoApp` | PUT | `/hono` | `honoHandler` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | fastify | `api` | GET, POST | `/items` | `handleItems` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | koa | `r` | POST | `/items` | `unknown` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | koa | `router` | POST | `/jobs` | `createJob` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | koa | `koaRouter` | GET | `/koa-health` | `koaHealth` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | koa | `koaApp` | USE | `/koa-middleware` | `koaMiddleware` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | express | `app` | USE | `/middleware` | `unknown` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | openapi | `registry` | GET | `/openapi/pets` | `listPets` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | unknown | `custom` | PATCH | `/patch` | `unknown` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | fastify | `fastify` | GET | `/ready` | `readyHandler` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | http-server | `server` | POST | `/server-post` | `unknown` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | nestjs | `UsersController` | POST | `/users` | `createUser` |
+| [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts) | nestjs | `UsersController` | GET | `/users/profile` | `getProfile` |
+| [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/init-planner.test.ts) | unknown | `bySource` | GET | `apps/api/config.ts` | `unknown` |
+| [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/init-planner.test.ts) | unknown | `bySource` | GET | `apps/api/routes.ts` | `unknown` |
+| [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/init-planner.test.ts) | unknown | `bySource` | GET | `apps/api/server.ts` | `unknown` |
+| [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/init-planner.test.ts) | unknown | `bySource` | GET | `apps/web/client.ts` | `unknown` |
+| [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/init-planner.test.ts) | unknown | `bySource` | GET | `docs/guide.md` | `unknown` |
+| [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/init-planner.test.ts) | unknown | `bySource` | GET | `prisma/schema.prisma` | `unknown` |
+| [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/init-planner.test.ts) | unknown | `bySource` | GET | `test/server.test.ts` | `unknown` |
+| [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/scanner.test.ts) | http-server | `napp` | GET | `/health` | `healthCheck` |
+| [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/scanner.test.ts) | router | `nrouter` | POST | `/users` | `createUser` |
 
 ## Next refinement
 

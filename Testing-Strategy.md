@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "73d2678ea962143138b0ea2c5c2afd3eb79dd847"
-compiled_at: "2026-05-13T17:29:32.094Z"
+source_commit: "ab4f4401735f73fb39983b8f7af41b5ed76b37f7"
+compiled_at: "2026-05-13T23:59:59.237Z"
 kind: "testing_strategy"
 claim_status: "grounded"
 source_paths: ["src/cli.ts","src/compiler.ts","src/context-assembler.ts","src/docs-linter.ts","src/frontmatter.ts","src/linter.ts","src/llm-provider.ts","src/page-ownership.ts","src/publisher.ts","src/repository-analysis.ts","src/scanner.ts","src/wiki-patch.ts","test/cli.test.ts","test/compiler.test.ts","test/context-assembler.test.ts","test/docs-linter.test.ts","test/dotenv.test.ts","test/extractors-go.test.ts","test/extractors-rust.test.ts","test/extractors-utils.test.ts","test/frontmatter.test.ts","test/init-planner.test.ts","test/linter.test.ts","test/llm-provider.test.ts","test/page-ownership.test.ts","test/publisher.test.ts","test/repository-analysis.test.ts","test/scanner.test.ts","test/update-changelog.test.ts","test/wiki-patch.test.ts"]
@@ -12,24 +12,24 @@ page_state: "generated"
 
 ## Detected test files
 
-- [test/cli.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/cli.test.ts)
-- [test/compiler.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/compiler.test.ts)
-- [test/context-assembler.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/context-assembler.test.ts)
-- [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/docs-linter.test.ts)
-- [test/dotenv.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/dotenv.test.ts)
-- [test/extractors-go.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-go.test.ts)
-- [test/extractors-rust.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-rust.test.ts)
-- [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/extractors-utils.test.ts)
-- [test/frontmatter.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/frontmatter.test.ts)
-- [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/init-planner.test.ts)
-- [test/linter.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/linter.test.ts)
-- [test/llm-provider.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/llm-provider.test.ts)
-- [test/page-ownership.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/page-ownership.test.ts)
-- [test/publisher.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/publisher.test.ts)
-- [test/repository-analysis.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/repository-analysis.test.ts)
-- [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/scanner.test.ts)
-- [test/update-changelog.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/update-changelog.test.ts)
-- [test/wiki-patch.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/wiki-patch.test.ts)
+- [test/cli.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/cli.test.ts)
+- [test/compiler.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/compiler.test.ts)
+- [test/context-assembler.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/context-assembler.test.ts)
+- [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/docs-linter.test.ts)
+- [test/dotenv.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/dotenv.test.ts)
+- [test/extractors-go.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-go.test.ts)
+- [test/extractors-rust.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-rust.test.ts)
+- [test/extractors-utils.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/extractors-utils.test.ts)
+- [test/frontmatter.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/frontmatter.test.ts)
+- [test/init-planner.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/init-planner.test.ts)
+- [test/linter.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/linter.test.ts)
+- [test/llm-provider.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/llm-provider.test.ts)
+- [test/page-ownership.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/page-ownership.test.ts)
+- [test/publisher.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/publisher.test.ts)
+- [test/repository-analysis.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/repository-analysis.test.ts)
+- [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/scanner.test.ts)
+- [test/update-changelog.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/update-changelog.test.ts)
+- [test/wiki-patch.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/wiki-patch.test.ts)
 
 ## Test-to-source mappings
 
@@ -38,15 +38,15 @@ page_state: "generated"
 
 | Test | Source files | Heuristics |
 | --- | --- | --- |
-| [test/cli.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/cli.test.ts) | [src/cli.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/src/cli.ts) | filename_affinity |
-| [test/compiler.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/compiler.test.ts) | [src/compiler.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/src/compiler.ts) | filename_affinity |
-| [test/context-assembler.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/context-assembler.test.ts) | [src/context-assembler.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/src/context-assembler.ts) | filename_affinity |
-| [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/docs-linter.test.ts) | [src/docs-linter.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/src/docs-linter.ts) | filename_affinity |
-| [test/frontmatter.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/frontmatter.test.ts) | [src/frontmatter.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/src/frontmatter.ts) | filename_affinity |
-| [test/linter.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/linter.test.ts) | [src/linter.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/src/linter.ts) | filename_affinity |
-| [test/llm-provider.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/llm-provider.test.ts) | [src/llm-provider.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/src/llm-provider.ts) | filename_affinity |
-| [test/page-ownership.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/page-ownership.test.ts) | [src/page-ownership.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/src/page-ownership.ts) | filename_affinity |
-| [test/publisher.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/publisher.test.ts) | [src/publisher.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/src/publisher.ts) | filename_affinity |
-| [test/repository-analysis.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/repository-analysis.test.ts) | [src/repository-analysis.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/src/repository-analysis.ts) | filename_affinity |
-| [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/scanner.test.ts) | [src/scanner.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/src/scanner.ts) | filename_affinity |
-| [test/wiki-patch.test.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/test/wiki-patch.test.ts) | [src/wiki-patch.ts](https://github.com/mfittko/repo-wiki/blob/73d2678ea962143138b0ea2c5c2afd3eb79dd847/src/wiki-patch.ts) | filename_affinity |
+| [test/cli.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/cli.test.ts) | [src/cli.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/src/cli.ts) | filename_affinity |
+| [test/compiler.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/compiler.test.ts) | [src/compiler.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/src/compiler.ts) | filename_affinity |
+| [test/context-assembler.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/context-assembler.test.ts) | [src/context-assembler.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/src/context-assembler.ts) | filename_affinity |
+| [test/docs-linter.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/docs-linter.test.ts) | [src/docs-linter.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/src/docs-linter.ts) | filename_affinity |
+| [test/frontmatter.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/frontmatter.test.ts) | [src/frontmatter.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/src/frontmatter.ts) | filename_affinity |
+| [test/linter.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/linter.test.ts) | [src/linter.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/src/linter.ts) | filename_affinity |
+| [test/llm-provider.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/llm-provider.test.ts) | [src/llm-provider.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/src/llm-provider.ts) | filename_affinity |
+| [test/page-ownership.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/page-ownership.test.ts) | [src/page-ownership.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/src/page-ownership.ts) | filename_affinity |
+| [test/publisher.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/publisher.test.ts) | [src/publisher.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/src/publisher.ts) | filename_affinity |
+| [test/repository-analysis.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/repository-analysis.test.ts) | [src/repository-analysis.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/src/repository-analysis.ts) | filename_affinity |
+| [test/scanner.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/scanner.test.ts) | [src/scanner.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/src/scanner.ts) | filename_affinity |
+| [test/wiki-patch.test.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/test/wiki-patch.test.ts) | [src/wiki-patch.ts](https://github.com/mfittko/repo-wiki/blob/ab4f4401735f73fb39983b8f7af41b5ed76b37f7/src/wiki-patch.ts) | filename_affinity |

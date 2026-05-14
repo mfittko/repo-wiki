@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "73d2678ea962143138b0ea2c5c2afd3eb79dd847"
-compiled_at: "2026-05-13T17:29:32.094Z"
+source_commit: "ab4f4401735f73fb39983b8f7af41b5ed76b37f7"
+compiled_at: "2026-05-13T23:59:59.236Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 claim_status: "review-needed"
@@ -84,7 +84,7 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
 Commands extracted from documentation code blocks, validated against `package.json` scripts and CI workflow commands captured in the scan manifest.
 
 - Validated: 9
-- Missing (script not in package.json): 0
+- Missing (package script / Makefile / task-runner target): 0
 - Unvalidated (source unknown): 7
 
 | Command | Status | Source |

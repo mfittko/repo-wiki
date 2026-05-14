@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "73d2678ea962143138b0ea2c5c2afd3eb79dd847"
+source_commit: "ab4f4401735f73fb39983b8f7af41b5ed76b37f7"
 page_state: "generated"
 source_paths: ["src/docs-ingestor.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -34,21 +34,22 @@ This module provides functionality for ingesting and processing documentation re
 
 ## Dependencies and imports
 
-- Local module: `./docs-validation.js`
+- Internal:
+  - `./docs-validation.js` — likely used for validating documentation or extracted data.
 - Node.js built-in modules:
-  - `fs` (file system operations)
-  - `path` (file path utilities)
+  - `node:fs` — for filesystem operations.
+  - `node:path` — for path manipulations.
 
 ## Related tests
 
-No explicit test files or test-related symbols are indicated in the source cards for this module.
+No explicit test files or test-related symbols are indicated in the source cards or module metadata. Further investigation in the repository may be required to locate tests related to this module.
 
 ## Known gaps or open questions
 
-- There is no documentation or test coverage explicitly referenced for this module.
+- The module does not list any associated documentation cards or test coverage in the provided metadata.
 - The exact nature and structure of some types (e.g., `CommandClassification`, `CommandStatus`) are not detailed here.
-- The integration points with other modules or the broader system context are not described.
-- The module's error handling and edge case management are not evident from the source card excerpt.
+- The relationship between extracted commands and their usage in CI workflows could be further clarified with additional context or documentation.
+- No information on error handling or edge cases in command extraction and classification is provided.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
