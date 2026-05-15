@@ -417,3 +417,50 @@ test('CLI run --publish blocks publish when wiki lint reports errors', async () 
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test('CLI lint prints graph-health findings to stderr and returns machine-readable JSON', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-cli-test-'));
+  const scanDir = path.join(tempDir, 'scan');
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  const requiredPage = (title: string) => ['---', 'source_commit: "abc123"', 'page_state: "generated"', '---', '', `# ${title}`].join('\n');
+
+  try {
+    await mkdir(scanDir, { recursive: true });
+    await mkdir(wikiDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({ commit: 'abc123', files: [] }), 'utf8');
+    await writeFile(path.join(wikiDir, 'Home.md'), requiredPage('Home'), 'utf8');
+    await writeFile(path.join(wikiDir, '_Sidebar.md'), requiredPage('Navigation'), 'utf8');
+    await writeFile(path.join(wikiDir, 'Index.md'), requiredPage('Index'), 'utf8');
+    await writeFile(path.join(wikiDir, 'Log.md'), requiredPage('Log'), 'utf8');
+    await writeFile(path.join(wikiDir, 'Agent-Context-Pack.md'), requiredPage('Agent Context Pack'), 'utf8');
+    await writeFile(path.join(wikiDir, 'Repository-Overview.md'), requiredPage('Repository Overview'), 'utf8');
+    await writeFile(path.join(wikiDir, 'Architecture.md'), requiredPage('Architecture'), 'utf8');
+    await writeFile(path.join(wikiDir, 'Build-Test-and-Run.md'), requiredPage('Build Test and Run'), 'utf8');
+    await writeFile(path.join(wikiDir, 'Open-Questions.md'), requiredPage('Open Questions'), 'utf8');
+    await writeFile(path.join(tempDir, 'graph.json'), JSON.stringify({
+      schema_version: 1,
+      nodes: [
+        { id: 'page:Home.md', kind: 'page', path: 'Home.md', page_state: 'generated' },
+        { id: 'page:Repository-Overview.md', kind: 'page', path: 'Repository-Overview.md', page_state: 'generated' },
+        { id: 'source:src/index.ts', kind: 'source', path: 'src/index.ts' }
+      ],
+      edges: [
+        { type: 'provenance', from: 'page:Repository-Overview.md', to: 'source:src/index.ts' }
+      ]
+    }), 'utf8');
+
+    const { stdout, stderr } = await captureCli(['lint', '--wiki', wikiDir, '--scan', scanDir], tempDir);
+    const summary = JSON.parse(stdout);
+
+    assert.equal(Array.isArray(summary.graph_health.findings), true);
+    assert.equal(summary.graph_health.findings.length, 1);
+    assert.equal(summary.graph_health.findings[0].code, 'GRAPH001');
+    assert.match(summary.graph_health.findings[0].message, /graph\.json/);
+    assert.doesNotMatch(summary.graph_health.findings[0].message, /\.llmwiki\/graph\.json/);
+    assert.match(stderr, /GRAPH001/);
+    assert.match(stderr, /graph\.json/);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});

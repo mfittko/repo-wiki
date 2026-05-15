@@ -152,6 +152,9 @@ export async function runCli(argv: string[]) {
         wikiDir: getStringOption(options, 'wiki') || '.llmwiki/wiki',
         scanDir: getStringOption(options, 'scan') || '.llmwiki/run'
       });
+      for (const finding of result.summary.graph_health?.findings || []) {
+        console.error(`${finding.severity.toUpperCase()} ${finding.code} ${finding.message}`);
+      }
       console.log(JSON.stringify(result.summary, null, 2));
       if (result.summary.errors > 0) {
         process.exitCode = 1;
