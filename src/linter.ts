@@ -74,6 +74,7 @@ type GraphEdge = {
 };
 
 type GraphData = {
+  schema_version?: unknown;
   nodes?: unknown[];
   edges?: unknown[];
 };
@@ -370,6 +371,7 @@ function warning(code: string, message: string): LintIssue {
 
 async function collectGraphHealthFindings(scanDir: string): Promise<GraphHealthFinding[]> {
   const graphPath = path.join(path.dirname(scanDir), 'graph.json');
+  const graphLabel = path.basename(graphPath);
   let graphData: GraphData;
   try {
     graphData = await readJson(graphPath);
@@ -378,6 +380,10 @@ async function collectGraphHealthFindings(scanDir: string): Promise<GraphHealthF
       return [];
     }
     throw error;
+  }
+
+  if (graphData?.schema_version !== 1) {
+    return [];
   }
 
   const nodes = Array.isArray(graphData?.nodes) ? graphData.nodes : [];
@@ -425,7 +431,7 @@ async function collectGraphHealthFindings(scanDir: string): Promise<GraphHealthF
         severity: 'warning',
         page_or_path: page.path,
         target: null,
-        message: `${page.path} has no inbound wiki links in .llmwiki/graph.json.`
+        message: `${page.path} has no inbound wiki links in ${graphLabel}.`
       });
     }
   }
@@ -449,7 +455,7 @@ async function collectGraphHealthFindings(scanDir: string): Promise<GraphHealthF
       severity: 'warning',
       page_or_path: fromPath,
       target: missingTarget,
-      message: `${fromPath} links to missing page ${missingTarget} in .llmwiki/graph.json.`
+      message: `${fromPath} links to missing page ${missingTarget} in ${graphLabel}.`
     });
   }
 
@@ -468,7 +474,7 @@ async function collectGraphHealthFindings(scanDir: string): Promise<GraphHealthF
       severity: 'warning',
       page_or_path: page.path,
       target: null,
-      message: `${page.path} is managed but has no provenance edges in .llmwiki/graph.json.`
+      message: `${page.path} is managed but has no provenance edges in ${graphLabel}.`
     });
   }
 
@@ -491,7 +497,7 @@ async function collectGraphHealthFindings(scanDir: string): Promise<GraphHealthF
       severity: 'warning',
       page_or_path: fromPath,
       target: danglingTarget,
-      message: `${fromPath} references missing provenance target ${danglingTarget} in .llmwiki/graph.json.`
+      message: `${fromPath} references missing provenance target ${danglingTarget} in ${graphLabel}.`
     });
   }
 

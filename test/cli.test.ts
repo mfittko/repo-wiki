@@ -456,7 +456,10 @@ test('CLI lint prints graph-health findings to stderr and returns machine-readab
     assert.equal(Array.isArray(summary.graph_health.findings), true);
     assert.equal(summary.graph_health.findings.length, 1);
     assert.equal(summary.graph_health.findings[0].code, 'GRAPH001');
+    assert.match(summary.graph_health.findings[0].message, /graph\.json/);
+    assert.doesNotMatch(summary.graph_health.findings[0].message, /\.llmwiki\/graph\.json/);
     assert.match(stderr, /GRAPH001/);
+    assert.match(stderr, /graph\.json/);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

@@ -451,6 +451,8 @@ test('lintWiki emits deterministic graph-health findings for GRAPH001-GRAPH004 w
       null,
       'src/missing.ts'
     ]);
+    assert.ok(first.summary.graph_health.findings.every((item: any) => item.message.includes('graph.json')));
+    assert.ok(first.summary.graph_health.findings.every((item: any) => !item.message.includes('.llmwiki/graph.json')));
 
     const graphIssueCodes = first.issues.filter((issue) => issue.code.startsWith('GRAPH')).map((issue) => issue.code);
     assert.deepEqual(graphIssueCodes, ['GRAPH001', 'GRAPH002', 'GRAPH003', 'GRAPH004']);
@@ -458,6 +460,30 @@ test('lintWiki emits deterministic graph-health findings for GRAPH001-GRAPH004 w
     assert.equal(first.issues.some((issue) => issue.message.includes('Agent-Context-Pack.md has no inbound wiki links')), false);
     assert.equal(first.issues.some((issue) => issue.message.includes('Home.md is managed but has no provenance edges')), false);
     assert.equal(first.issues.some((issue) => issue.message.includes('Agent-Context-Pack.md is managed but has no provenance edges')), false);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+
+test('lintWiki skips graph-health findings for unsupported graph schema versions', async () => {
+  const graph = {
+    schema_version: 2,
+    nodes: [
+      { id: 'page:Home.md', kind: 'page', path: 'Home.md', page_state: 'generated' },
+      { id: 'page:Repository-Overview.md', kind: 'page', path: 'Repository-Overview.md', page_state: 'generated' }
+    ],
+    edges: []
+  };
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages
+  }, graph);
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+
+    assert.deepEqual(result.summary.graph_health.findings, []);
+    assert.equal(result.issues.some((issue) => issue.code.startsWith('GRAPH')), false);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
