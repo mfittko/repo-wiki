@@ -521,6 +521,97 @@ test('createBootstrapPlan incremental mode selects affected pages from graph and
   }
 });
 
+test('createBootstrapPlan incremental mode supports documentation graph node IDs', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-plan-incremental-doc-node-'));
+  const llmwikiDir = path.join(dir, '.llmwiki');
+  const scanDir = path.join(llmwikiDir, 'run');
+  const outFile = path.join(llmwikiDir, 'incremental-plan.json');
+
+  try {
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      mode: 'incremental',
+      repo_path: dir,
+      remote: 'origin',
+      commit: 'abc123',
+      changed_paths: ['docs/guide.md'],
+      totals: {
+        runtime_hints: {},
+        categories: { docs: 1 }
+      },
+      files: [
+        { path: 'docs/guide.md', category: 'docs', language: 'Markdown', runtime_hints: [], reasons: ['docs'], bytes: 100 }
+      ],
+      documentation: {
+        files: [
+          {
+            kind: 'documentation_card',
+            path: 'docs/guide.md',
+            authority: 'secondary',
+            status: 'unvalidated',
+            stale: false,
+            claims: [],
+            validation: { contradictions: [], validated: [], commands: [], env_vars: [] }
+          }
+        ]
+      }
+    }, null, 2), 'utf8');
+
+    await writeFile(path.join(llmwikiDir, 'graph.json'), JSON.stringify({
+      schema_version: 1,
+      nodes: [
+        { id: 'page:Documentation-Debt-Report.md', kind: 'page', path: 'Documentation-Debt-Report.md', page_state: 'generated' },
+        { id: 'documentation:docs/guide.md', kind: 'documentation', path: 'docs/guide.md' }
+      ],
+      edges: [
+        { type: 'affects', from: 'documentation:docs/guide.md', to: 'page:Documentation-Debt-Report.md' }
+      ]
+    }, null, 2), 'utf8');
+
+    await createBootstrapPlan({ scanDir, outFile });
+    const plan = await readJson(outFile);
+    const selectedByPage = new Map<string, any>(plan.incremental_selection.selected_pages.map((entry: any) => [entry.page, entry]));
+
+    assert.ok(selectedByPage.has('Documentation-Debt-Report.md'), 'documentation node ids should resolve docs changes to affected pages');
+    assert.deepEqual(selectedByPage.get('Documentation-Debt-Report.md').changed_paths, ['docs/guide.md']);
+    assert.ok(selectedByPage.get('Documentation-Debt-Report.md').reasons.includes('graph_affects'));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('createBootstrapPlan incremental mode rejects malformed graph artifacts', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-plan-incremental-bad-graph-'));
+  const llmwikiDir = path.join(dir, '.llmwiki');
+  const scanDir = path.join(llmwikiDir, 'run');
+  const outFile = path.join(llmwikiDir, 'incremental-plan.json');
+
+  try {
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      mode: 'incremental',
+      repo_path: dir,
+      remote: 'origin',
+      commit: 'abc123',
+      changed_paths: ['apps/api/server.ts'],
+      totals: {
+        runtime_hints: {},
+        categories: { source: 1 }
+      },
+      files: [
+        { path: 'apps/api/server.ts', category: 'source', language: 'TypeScript', runtime_hints: [], reasons: ['source'], bytes: 100 }
+      ],
+      documentation: { files: [] }
+    }, null, 2), 'utf8');
+
+    await writeFile(path.join(llmwikiDir, 'graph.json'), '{ not valid json\n', 'utf8');
+
+    await assert.rejects(createBootstrapPlan({ scanDir, outFile }), SyntaxError);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('createBootstrapPlan incremental mode falls back deterministically when graph artifact is missing', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-plan-incremental-fallback-'));
   const llmwikiDir = path.join(dir, '.llmwiki');

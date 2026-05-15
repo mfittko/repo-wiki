@@ -110,7 +110,10 @@ async function buildIncrementalSelection(manifest: any, pages: any[], scanDir: s
         }
       }
     }
-  } catch {
+  } catch (error) {
+    if (!isNodeError(error) || error.code !== 'ENOENT') {
+      throw error;
+    }
     fallbackReason = 'fallback_missing_graph';
   }
 
@@ -198,6 +201,10 @@ function normalizeRelativePath(value: string): string {
     .replace(/\\/g, '/')
     .replace(/^\.\//, '')
     .trim();
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error;
 }
 
 function groupIntoModules(files) {
