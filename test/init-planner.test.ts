@@ -580,6 +580,66 @@ test('createBootstrapPlan incremental mode supports documentation graph node IDs
   }
 });
 
+test('createBootstrapPlan incremental mode falls back when graph is present but changed-path attribution is absent', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-plan-incremental-missing-changed-paths-'));
+  const llmwikiDir = path.join(dir, '.llmwiki');
+  const scanDir = path.join(llmwikiDir, 'run');
+  const outFile = path.join(llmwikiDir, 'incremental-plan.json');
+
+  try {
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      mode: 'incremental',
+      repo_path: dir,
+      remote: 'origin',
+      commit: 'abc123',
+      totals: {
+        runtime_hints: {},
+        categories: { source: 1 }
+      },
+      files: [
+        { path: 'apps/api/server.ts', category: 'source', language: 'TypeScript', runtime_hints: [], reasons: ['source'], bytes: 100 }
+      ],
+      documentation: { files: [] }
+    }, null, 2), 'utf8');
+
+    await writeFile(path.join(llmwikiDir, 'graph.json'), JSON.stringify({
+      schema_version: 1,
+      nodes: [
+        { id: 'page:Service-api.md', kind: 'page', path: 'Service-api.md', page_state: 'generated' },
+        { id: 'source:apps/api/server.ts', kind: 'source', path: 'apps/api/server.ts' }
+      ],
+      edges: [
+        { type: 'affects', from: 'source:apps/api/server.ts', to: 'page:Service-api.md' }
+      ]
+    }, null, 2), 'utf8');
+
+    await createBootstrapPlan({ scanDir, outFile });
+    const plan = await readJson(outFile);
+
+    assert.ok(plan.incremental_selection, 'incremental plan should include incremental_selection');
+    assert.equal(plan.incremental_selection.summary.graph_available, true);
+    assert.equal(plan.incremental_selection.summary.graph_used, false);
+    assert.equal(plan.incremental_selection.summary.changed_paths_available, false);
+    assert.equal(plan.incremental_selection.summary.fallback_reason, 'fallback_missing_changed_paths');
+    assert.deepEqual(plan.incremental_selection.changed_paths, []);
+
+    const selectedByPage = new Map<string, any>(plan.incremental_selection.selected_pages.map((entry: any) => [entry.page, entry]));
+    for (const plannedPage of plan.pages.map((page: any) => page.path)) {
+      assert.ok(selectedByPage.has(plannedPage), `fallback must include planned page ${plannedPage}`);
+      assert.ok(selectedByPage.get(plannedPage).reasons.includes('fallback_missing_changed_paths'));
+    }
+
+    for (const page of ['Index.md', '_Sidebar.md', 'Log.md', 'Agent-Context-Pack.md']) {
+      const selected: any = selectedByPage.get(page);
+      assert.ok(selected, `${page} must always be selected when changed-path attribution is absent`);
+      assert.ok(selected.reasons.includes('always_affected_global'));
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 test('createBootstrapPlan incremental mode rejects malformed graph artifacts', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-plan-incremental-bad-graph-'));
   const llmwikiDir = path.join(dir, '.llmwiki');

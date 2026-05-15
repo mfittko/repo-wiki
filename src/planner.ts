@@ -64,7 +64,8 @@ async function buildIncrementalSelection(manifest: any, pages: any[], scanDir: s
   }
 
   const plannedPages = new Set((pages || []).map((page: any) => String(page?.path || '')).filter(Boolean));
-  const changedPaths = extractChangedPaths(manifest);
+  const changedPathAttribution = extractChangedPaths(manifest);
+  const changedPaths = changedPathAttribution.paths;
   const selected = new Map<string, { reasons: Set<string>; changedPaths: Set<string> }>();
 
   function markSelected(pagePath: string, reason: string, changedPath?: string) {
@@ -96,17 +97,19 @@ async function buildIncrementalSelection(manifest: any, pages: any[], scanDir: s
       .filter((edge: any) => edge?.type === 'affects')
       .map((edge: any) => ({ from: String(edge?.from || ''), to: String(edge?.to || '') }));
 
-    for (const changedPath of changedPaths) {
-      const sourceNodeIds = new Set([`source:${changedPath}`, `documentation:${changedPath}`]);
-      for (const edge of affectsEdges) {
-        if (!sourceNodeIds.has(edge.from) || !edge.to.startsWith('page:')) {
-          continue;
-        }
-        const pagePath = edge.to.slice('page:'.length);
-        const isAlwaysAffected = ALWAYS_AFFECTED_INCREMENTAL_PAGES.includes(pagePath);
-        if (managedPages.has(pagePath) || isAlwaysAffected) {
-          markSelected(pagePath, 'graph_affects', changedPath);
-          graphUsed = true;
+    if (changedPathAttribution.available) {
+      for (const changedPath of changedPaths) {
+        const sourceNodeIds = new Set([`source:${changedPath}`, `documentation:${changedPath}`]);
+        for (const edge of affectsEdges) {
+          if (!sourceNodeIds.has(edge.from) || !edge.to.startsWith('page:')) {
+            continue;
+          }
+          const pagePath = edge.to.slice('page:'.length);
+          const isAlwaysAffected = ALWAYS_AFFECTED_INCREMENTAL_PAGES.includes(pagePath);
+          if (managedPages.has(pagePath) || isAlwaysAffected) {
+            markSelected(pagePath, 'graph_affects', changedPath);
+            graphUsed = true;
+          }
         }
       }
     }
@@ -117,9 +120,13 @@ async function buildIncrementalSelection(manifest: any, pages: any[], scanDir: s
     fallbackReason = 'fallback_missing_graph';
   }
 
-  if (!graphAvailable) {
+  if (graphAvailable && !changedPathAttribution.available) {
+    fallbackReason = 'fallback_missing_changed_paths';
+  }
+
+  if (fallbackReason) {
     for (const pagePath of [...plannedPages].sort()) {
-      markSelected(pagePath, 'fallback_missing_graph');
+      markSelected(pagePath, fallbackReason);
     }
   }
 
@@ -144,12 +151,13 @@ async function buildIncrementalSelection(manifest: any, pages: any[], scanDir: s
       selected_pages: selectedPages.length,
       graph_available: graphAvailable,
       graph_used: graphUsed,
+      changed_paths_available: changedPathAttribution.available,
       fallback_reason: fallbackReason
     }
   };
 }
 
-function extractChangedPaths(manifest: any): string[] {
+function extractChangedPaths(manifest: any): { available: boolean; paths: string[] } {
   const raw = [
     manifest?.changed_paths,
     manifest?.changedPaths,
@@ -159,11 +167,13 @@ function extractChangedPaths(manifest: any): string[] {
     manifest?.incremental?.changedPaths
   ];
 
+  let available = false;
   const changed = new Set<string>();
   for (const candidate of raw) {
     if (!Array.isArray(candidate)) {
       continue;
     }
+    available = true;
     for (const item of candidate) {
       const value = typeof item === 'string'
         ? item
@@ -175,7 +185,10 @@ function extractChangedPaths(manifest: any): string[] {
     }
   }
 
-  return [...changed].sort();
+  return {
+    available,
+    paths: [...changed].sort()
+  };
 }
 
 function getManagedPagePathsFromGraph(graph: any): Set<string> {
