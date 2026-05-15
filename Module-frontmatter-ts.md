@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "e8e50cf58d4fe0b1575ca9d2f73e98541cc2c545"
+source_commit: "171111a1609e1e510e20bfa1989ecfcee1993eb2"
 page_state: "generated"
 source_paths: ["src/frontmatter.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides utilities and types for handling frontmatter in source files. It includes functionality to extract, parse, apply policies to, and strip frontmatter blocks. The module defines policies and types related to frontmatter processing, enabling controlled manipulation and validation of frontmatter content.
+This module provides utilities and types for handling frontmatter blocks within source files. It includes functionality to extract, parse, apply policies to, and strip frontmatter sections. The module is designed to work with frontmatter policies, enabling controlled processing of frontmatter content.
 
 ## Source file list
 
@@ -26,9 +26,9 @@ This module provides utilities and types for handling frontmatter in source file
 - **FRONTMATTER_POLICIES**: A collection of predefined frontmatter policies.
 - **FrontmatterBlock**: Type representing a frontmatter block.
 - **FrontmatterPolicy**: Type defining the structure of a frontmatter policy.
-- **isFrontmatterPolicy**: Type guard to check if a value is a frontmatter policy.
+- **isFrontmatterPolicy**: Type guard to check if an object is a frontmatter policy.
 - **parseFrontmatterPolicy**: Parses a frontmatter policy from a given input.
-- **stripFrontmatter**: Removes the frontmatter block from a source text.
+- **stripFrontmatter**: Removes the frontmatter block from source text.
 
 ## Dependencies and imports
 
@@ -36,13 +36,13 @@ This module provides utilities and types for handling frontmatter in source file
 
 ## Related tests
 
-No documentation or test cards are available for this module, so related tests are not identified.
+- No documentation or test files are listed for this module.
 
 ## Known gaps or open questions
 
-- The exact nature and implementation details of the imported `./secret-patterns.js` module are not described.
-- No explicit documentation or test coverage information is available.
-- The specific frontmatter formats supported and the policies defined in `FRONTMATTER_POLICIES` are not detailed here.
+- There is no explicit documentation or test coverage information available.
+- The exact nature and structure of `FRONTMATTER_POLICIES` and the imported `./secret-patterns.js` are not detailed.
+- The module's integration context or usage examples are not provided.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

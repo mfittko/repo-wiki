@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "e8e50cf58d4fe0b1575ca9d2f73e98541cc2c545"
+source_commit: "171111a1609e1e510e20bfa1989ecfcee1993eb2"
 page_state: "generated"
 source_paths: ["src/page-ownership.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to managing and preserving human-generated notes and page state within a system. It includes utilities to detect the current state of a page, extract human notes embedded in the content, inject such notes back into the page, and preserve these notes across operations. The module is implemented in TypeScript and serves as a source-level component for handling page ownership concerns.
+This module provides functionality related to managing and preserving human-generated notes and page state within a system. It includes utilities to detect the current state of a page, extract human notes embedded in the page, inject new human notes, and preserve existing notes. The module is implemented in TypeScript and serves as a source-level component for handling page ownership concerns.
 
 ## Source file list
 
@@ -22,9 +22,9 @@ This module provides functionality related to managing and preserving human-gene
 ## Key symbols and entry points
 
 - **detectPageState**: Function to determine the current state of a page.
-- **extractHumanNotes**: Function to extract human-authored notes from page content.
-- **injectHumanNotes**: Function to insert or re-insert human notes into page content.
-- **preserveHumanNotes**: Function to maintain human notes intact during page updates or transformations.
+- **extractHumanNotes**: Function to extract human-authored notes from a page.
+- **injectHumanNotes**: Function to insert or update human notes within a page.
+- **preserveHumanNotes**: Function to maintain existing human notes during page updates.
 - **PageState**: Likely a type or interface representing the state of a page.
 
 ## Dependencies and imports
@@ -37,9 +37,10 @@ This module provides functionality related to managing and preserving human-gene
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or test coverage information available.
-- The exact structure and usage patterns of the exported functions and types are not detailed.
-- The module's integration context or how it interacts with other parts of the system is not described.
+- The module lacks explicit documentation and test coverage references.
+- The exact structure and usage of `PageState` are not detailed.
+- The mechanisms by which human notes are identified, extracted, and preserved are not described beyond symbol names.
+- No information on integration with other modules or systems is provided.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

@@ -1,11 +1,11 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "e8e50cf58d4fe0b1575ca9d2f73e98541cc2c545"
+source_commit: "171111a1609e1e510e20bfa1989ecfcee1993eb2"
 page_state: "generated"
 source_paths: ["docs/PLAN.md","docs/WHY.md","docs/plans/agent-integration.md","docs/plans/ci-publishing.md","docs/plans/doc-validation.md","docs/plans/github-action.md","docs/plans/incremental-mode.md","docs/plans/karpathy-llm-wiki-alignment.md","docs/plans/llm-compiler.md","docs/plans/production-scanner.md","docs/plans/query-and-file-back.md","docs/plans/search-index.md","docs/plans/trust-hardening.md","docs/plans/wiki-graph.md","docs/plans/wiki-health.md"]
 claim_status: "review-needed"
 confidence: "low"
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 ---
 
@@ -13,60 +13,70 @@ kind: "module"
 
 ## Purpose
 
-This module consolidates the documentation and planning materials for the repository, primarily authored in Markdown format. It serves as a secondary source of information describing the design, goals, and planned features of the project. The documentation explicitly references inspirations such as Andrej Karpathy's LLM Wiki concept and outlines implementation plans, architectural summaries, and various epics related to the repository's wiki and LLM integration.
+This module comprises the documentation files for the project, primarily authored in Markdown format. The documentation serves as secondary evidence describing the design, plans, and rationale behind various aspects of the repository-wiki system. It includes high-level implementation plans, architectural summaries, and conceptual explanations inspired by Andrej Karpathy's LLM Wiki pattern.
 
-The documentation files provide insight into the product vision, rationale, and detailed plans for components like agent integration, CI publishing, documentation validation, GitHub Actions, incremental modes, and search indexing. However, these Markdown files represent secondary evidence and should not be solely relied upon for asserting current runtime behavior or operational details.
+The documentation aims to provide:
+
+- A product vision and goals for the repo-wiki system (`docs/PLAN.md`).
+- Motivations and conceptual background for maintaining a wiki alongside search and retrieval-augmented generation (RAG) (`docs/WHY.md`).
+- Detailed plans for key features and epics such as agent integration, CI publishing, documentation validation, GitHub Actions, incremental mode, LLM compiler, production scanning, query workflows, search indexing, trust hardening, and wiki health and graph management (files under `docs/plans/`).
+
+These documents collectively outline the intended architecture, workflows, and operational models but do not constitute authoritative or executable source code.
 
 ## Source File List
 
-- `docs/PLAN.md`  
-- `docs/WHY.md`  
-- `docs/plans/agent-integration.md`  
-- `docs/plans/ci-publishing.md`  
-- `docs/plans/doc-validation.md`  
-- `docs/plans/github-action.md`  
-- `docs/plans/incremental-mode.md`  
-- `docs/plans/karpathy-llm-wiki-alignment.md`  
-- `docs/plans/llm-compiler.md`  
-- `docs/plans/production-scanner.md`  
-- `docs/plans/query-and-file-back.md`  
-- `docs/plans/search-index.md`  
-- `docs/plans/trust-hardening.md`  
-- `docs/plans/wiki-graph.md`  
-- `docs/plans/wiki-health.md`  
+- `docs/PLAN.md`
+- `docs/WHY.md`
+- `docs/plans/agent-integration.md`
+- `docs/plans/ci-publishing.md`
+- `docs/plans/doc-validation.md`
+- `docs/plans/github-action.md`
+- `docs/plans/incremental-mode.md`
+- `docs/plans/karpathy-llm-wiki-alignment.md`
+- `docs/plans/llm-compiler.md`
+- `docs/plans/production-scanner.md`
+- `docs/plans/query-and-file-back.md`
+- `docs/plans/search-index.md`
+- `docs/plans/trust-hardening.md`
+- `docs/plans/wiki-graph.md`
+- `docs/plans/wiki-health.md`
 
 ## Key Symbols and Entry Points
 
-As this module consists entirely of Markdown documentation files, there are no executable symbols or code entry points. Instead, the key conceptual entry points are the major epics and architectural summaries described within the documents, such as:
+As this module consists solely of Markdown documentation files, there are no code symbols, functions, classes, or runtime entry points defined here. Instead, the key "entry points" are the individual Markdown documents that provide conceptual and architectural guidance.
 
-- **Implementation Plan and Product Vision** (`docs/PLAN.md`)  
-- **Project Rationale and Design Philosophy** (`docs/WHY.md`)  
-- **Agent Integration Epic** (`docs/plans/agent-integration.md`)  
-- **CI & Publishing Workflow** (`docs/plans/ci-publishing.md`)  
-- **Documentation Validation Strategy** (`docs/plans/doc-validation.md`)  
-- **GitHub Action Integration** (`docs/plans/github-action.md`)  
-- **Incremental Mode Design** (`docs/plans/incremental-mode.md`)  
-- **LLM Wiki Alignment and Compiler** (`docs/plans/karpathy-llm-wiki-alignment.md`, `docs/plans/llm-compiler.md`)  
-- **Search Indexing and Query Workflows** (`docs/plans/search-index.md`, `docs/plans/query-and-file-back.md`)  
-- **Trust Hardening and Wiki Health** (`docs/plans/trust-hardening.md`, `docs/plans/wiki-health.md`)  
+Notable documents include:
+
+- `docs/PLAN.md`: Contains the overall implementation plan, product vision, and goals.
+- `docs/WHY.md`: Explains the rationale behind the repo-wiki approach.
+- `docs/plans/github-action.md`: Details the GitHub Action integration plan.
+- `docs/plans/ci-publishing.md`: Describes continuous integration and publishing workflows.
+- `docs/plans/search-index.md`: Discusses the design of the local search index.
 
 ## Dependencies and Imports
 
-There are no code dependencies or imports within this module since it is purely documentation. The documents reference concepts and components that may exist elsewhere in the codebase, but these references are descriptive rather than programmatic.
+There are no code dependencies or imports within this documentation module. The Markdown files do not import or require other modules programmatically. However, the documentation references concepts and components that may be implemented in other parts of the repository.
 
 ## Related Tests
 
-No direct tests are associated with this documentation module. Validation of the claims and plans described here requires cross-referencing with source code, CI workflows, runtime configurations, and automated tests located outside this module.
+No direct tests are associated with this documentation module. Validation of the claims and plans described here requires cross-referencing with:
+
+- Source code implementations in other modules.
+- Automated tests and CI workflows.
+- Runtime configurations and schemas.
+- Published artifacts and operational monitoring.
 
 ## Known Gaps or Open Questions
 
-- The documentation is largely in a planning or partially validated state; several files are marked as unvalidated or stale, indicating that the plans may be incomplete or outdated.  
-- Operational behavior, current implementation status, and runtime details are not verifiable from these Markdown files alone.  
-- There is no authoritative linkage from these documents to executable code, making it necessary to consult source code, tests, and CI configurations for confirmation.  
-- Some epics and architectural summaries lack validation and may require updates to reflect the current state of the project.  
-- The incremental mode plan is marked stale, suggesting that it may not represent the latest design or implementation approach.  
+- The documentation files are secondary evidence and may not reflect the current or exact runtime behavior of the system.
+- Several plans are marked as unvalidated or partially validated, indicating ongoing development or incomplete verification.
+- The incremental mode plan is noted as stale, suggesting it may be outdated or superseded.
+- Operational claims, architectural details, and workflows described here should be validated against authoritative sources such as source code, tests, and CI configurations.
+- There is no direct linkage from these documents to executable code, so discrepancies may exist between documented plans and actual implementation.
 
-Users should treat this documentation as a helpful but secondary resource and verify any critical information against primary source code and runtime artifacts.
+---
+
+**Note:** This module is documentation-only and should be used as a conceptual and planning reference rather than a definitive source of truth for runtime behavior or implementation details.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
