@@ -434,3 +434,349 @@ test('createBootstrapPlan builds affected_page_graph mapping source files to wik
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('createBootstrapPlan incremental mode selects affected pages from graph and always includes global pages', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-plan-incremental-graph-'));
+  const llmwikiDir = path.join(dir, '.llmwiki');
+  const scanDir = path.join(llmwikiDir, 'run');
+  const outFile = path.join(llmwikiDir, 'incremental-plan.json');
+
+  try {
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      mode: 'incremental',
+      repo_path: dir,
+      remote: 'origin',
+      commit: 'abc123',
+      changed_paths: ['docs/guide.md', 'apps/api/server.ts'],
+      totals: {
+        runtime_hints: {},
+        categories: { source: 1, docs: 1 }
+      },
+      files: [
+        { path: 'apps/api/server.ts', category: 'source', language: 'TypeScript', runtime_hints: [], reasons: ['source'], bytes: 100 },
+        { path: 'docs/guide.md', category: 'docs', language: 'Markdown', runtime_hints: [], reasons: ['docs'], bytes: 100 }
+      ],
+      documentation: {
+        files: [
+          {
+            kind: 'documentation_card',
+            path: 'docs/guide.md',
+            authority: 'secondary',
+            status: 'unvalidated',
+            stale: false,
+            claims: [],
+            validation: { contradictions: [], validated: [], commands: [], env_vars: [] }
+          }
+        ]
+      }
+    }, null, 2), 'utf8');
+
+    await writeFile(path.join(llmwikiDir, 'graph.json'), JSON.stringify({
+      schema_version: 1,
+      nodes: [
+        { id: 'page:Service-api.md', kind: 'page', path: 'Service-api.md', page_state: 'generated' },
+        { id: 'page:Documentation-Debt-Report.md', kind: 'page', path: 'Documentation-Debt-Report.md', page_state: 'mixed' },
+        { id: 'page:Security-and-Secrets.md', kind: 'page', path: 'Security-and-Secrets.md', page_state: 'human-owned' },
+        { id: 'source:apps/api/server.ts', kind: 'source', path: 'apps/api/server.ts' },
+        { id: 'source:docs/guide.md', kind: 'documentation', path: 'docs/guide.md' }
+      ],
+      edges: [
+        { type: 'affects', from: 'source:apps/api/server.ts', to: 'page:Security-and-Secrets.md' },
+        { type: 'affects', from: 'source:apps/api/server.ts', to: 'page:Service-api.md' },
+        { type: 'affects', from: 'source:docs/guide.md', to: 'page:Documentation-Debt-Report.md' }
+      ]
+    }, null, 2), 'utf8');
+
+    await createBootstrapPlan({ scanDir, outFile });
+    const plan = await readJson(outFile);
+    assert.ok(plan.incremental_selection, 'incremental plan should include incremental_selection');
+    assert.equal(plan.incremental_selection.summary.graph_available, true);
+    assert.equal(plan.incremental_selection.summary.graph_used, true);
+    assert.deepEqual(plan.incremental_selection.changed_paths, ['apps/api/server.ts', 'docs/guide.md']);
+
+    const selectedByPage = new Map<string, any>(plan.incremental_selection.selected_pages.map((entry: any) => [entry.page, entry]));
+    assert.ok(selectedByPage.has('Service-api.md'), 'source change should affect module page');
+    assert.deepEqual(selectedByPage.get('Service-api.md').changed_paths, ['apps/api/server.ts']);
+    assert.ok(selectedByPage.get('Service-api.md').reasons.includes('graph_affects'));
+
+    assert.ok(selectedByPage.has('Documentation-Debt-Report.md'), 'docs change should affect docs debt page');
+    assert.deepEqual(selectedByPage.get('Documentation-Debt-Report.md').changed_paths, ['docs/guide.md']);
+    assert.ok(selectedByPage.get('Documentation-Debt-Report.md').reasons.includes('graph_affects'));
+
+    assert.ok(!selectedByPage.has('Security-and-Secrets.md'),
+      'human-owned page should be excluded from graph-selected incremental regeneration set');
+
+    for (const page of ['Index.md', '_Sidebar.md', 'Log.md', 'Agent-Context-Pack.md']) {
+      const selected: any = selectedByPage.get(page);
+      assert.ok(selected, `${page} must always be selected in incremental mode`);
+      assert.ok(selected.reasons.includes('always_affected_global'));
+    }
+
+    const selectedPageNames = plan.incremental_selection.selected_pages.map((entry: any) => entry.page);
+    assert.deepEqual(selectedPageNames, [...selectedPageNames].sort((a, b) => a.localeCompare(b)),
+      'selected_pages must be sorted by page path');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('createBootstrapPlan incremental mode supports documentation graph node IDs', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-plan-incremental-doc-node-'));
+  const llmwikiDir = path.join(dir, '.llmwiki');
+  const scanDir = path.join(llmwikiDir, 'run');
+  const outFile = path.join(llmwikiDir, 'incremental-plan.json');
+
+  try {
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      mode: 'incremental',
+      repo_path: dir,
+      remote: 'origin',
+      commit: 'abc123',
+      changed_paths: ['docs/guide.md'],
+      totals: {
+        runtime_hints: {},
+        categories: { docs: 1 }
+      },
+      files: [
+        { path: 'docs/guide.md', category: 'docs', language: 'Markdown', runtime_hints: [], reasons: ['docs'], bytes: 100 }
+      ],
+      documentation: {
+        files: [
+          {
+            kind: 'documentation_card',
+            path: 'docs/guide.md',
+            authority: 'secondary',
+            status: 'unvalidated',
+            stale: false,
+            claims: [],
+            validation: { contradictions: [], validated: [], commands: [], env_vars: [] }
+          }
+        ]
+      }
+    }, null, 2), 'utf8');
+
+    await writeFile(path.join(llmwikiDir, 'graph.json'), JSON.stringify({
+      schema_version: 1,
+      nodes: [
+        { id: 'page:Documentation-Debt-Report.md', kind: 'page', path: 'Documentation-Debt-Report.md', page_state: 'generated' },
+        { id: 'documentation:docs/guide.md', kind: 'documentation', path: 'docs/guide.md' }
+      ],
+      edges: [
+        { type: 'affects', from: 'documentation:docs/guide.md', to: 'page:Documentation-Debt-Report.md' }
+      ]
+    }, null, 2), 'utf8');
+
+    await createBootstrapPlan({ scanDir, outFile });
+    const plan = await readJson(outFile);
+    const selectedByPage = new Map<string, any>(plan.incremental_selection.selected_pages.map((entry: any) => [entry.page, entry]));
+
+    assert.ok(selectedByPage.has('Documentation-Debt-Report.md'), 'documentation node ids should resolve docs changes to affected pages');
+    assert.deepEqual(selectedByPage.get('Documentation-Debt-Report.md').changed_paths, ['docs/guide.md']);
+    assert.ok(selectedByPage.get('Documentation-Debt-Report.md').reasons.includes('graph_affects'));
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('createBootstrapPlan incremental mode falls back when graph is present but changed-path attribution is absent', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-plan-incremental-missing-changed-paths-'));
+  const llmwikiDir = path.join(dir, '.llmwiki');
+  const scanDir = path.join(llmwikiDir, 'run');
+  const outFile = path.join(llmwikiDir, 'incremental-plan.json');
+
+  try {
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      mode: 'incremental',
+      repo_path: dir,
+      remote: 'origin',
+      commit: 'abc123',
+      totals: {
+        runtime_hints: {},
+        categories: { source: 1 }
+      },
+      files: [
+        { path: 'apps/api/server.ts', category: 'source', language: 'TypeScript', runtime_hints: [], reasons: ['source'], bytes: 100 }
+      ],
+      documentation: { files: [] }
+    }, null, 2), 'utf8');
+
+    await writeFile(path.join(llmwikiDir, 'graph.json'), JSON.stringify({
+      schema_version: 1,
+      nodes: [
+        { id: 'page:Service-api.md', kind: 'page', path: 'Service-api.md', page_state: 'generated' },
+        { id: 'source:apps/api/server.ts', kind: 'source', path: 'apps/api/server.ts' }
+      ],
+      edges: [
+        { type: 'affects', from: 'source:apps/api/server.ts', to: 'page:Service-api.md' }
+      ]
+    }, null, 2), 'utf8');
+
+    await createBootstrapPlan({ scanDir, outFile });
+    const plan = await readJson(outFile);
+
+    assert.ok(plan.incremental_selection, 'incremental plan should include incremental_selection');
+    assert.equal(plan.incremental_selection.summary.graph_available, true);
+    assert.equal(plan.incremental_selection.summary.graph_used, false);
+    assert.equal(plan.incremental_selection.summary.changed_paths_available, false);
+    assert.equal(plan.incremental_selection.summary.fallback_reason, 'fallback_missing_changed_paths');
+    assert.deepEqual(plan.incremental_selection.changed_paths, []);
+
+    const selectedByPage = new Map<string, any>(plan.incremental_selection.selected_pages.map((entry: any) => [entry.page, entry]));
+    for (const plannedPage of plan.pages.map((page: any) => page.path)) {
+      assert.ok(selectedByPage.has(plannedPage), `fallback must include planned page ${plannedPage}`);
+      assert.ok(selectedByPage.get(plannedPage).reasons.includes('fallback_missing_changed_paths'));
+    }
+
+    for (const page of ['Index.md', '_Sidebar.md', 'Log.md', 'Agent-Context-Pack.md']) {
+      const selected: any = selectedByPage.get(page);
+      assert.ok(selected, `${page} must always be selected when changed-path attribution is absent`);
+      assert.ok(selected.reasons.includes('always_affected_global'));
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('createBootstrapPlan incremental mode falls back when changed paths are absent from the graph artifact', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-plan-incremental-unmatched-changed-paths-'));
+  const llmwikiDir = path.join(dir, '.llmwiki');
+  const scanDir = path.join(llmwikiDir, 'run');
+  const outFile = path.join(llmwikiDir, 'incremental-plan.json');
+
+  try {
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      mode: 'incremental',
+      repo_path: dir,
+      remote: 'origin',
+      commit: 'abc123',
+      changed_paths: ['apps/api/new.ts'],
+      totals: {
+        runtime_hints: {},
+        categories: { source: 1 }
+      },
+      files: [
+        { path: 'apps/api/new.ts', category: 'source', language: 'TypeScript', runtime_hints: [], reasons: ['source'], bytes: 100 }
+      ],
+      documentation: { files: [] }
+    }, null, 2), 'utf8');
+
+    await writeFile(path.join(llmwikiDir, 'graph.json'), JSON.stringify({
+      schema_version: 1,
+      nodes: [
+        { id: 'page:Service-api.md', kind: 'page', path: 'Service-api.md', page_state: 'generated' },
+        { id: 'source:apps/api/old.ts', kind: 'source', path: 'apps/api/old.ts' }
+      ],
+      edges: [
+        { type: 'affects', from: 'source:apps/api/old.ts', to: 'page:Service-api.md' }
+      ]
+    }, null, 2), 'utf8');
+
+    await createBootstrapPlan({ scanDir, outFile });
+    const plan = await readJson(outFile);
+
+    assert.ok(plan.incremental_selection, 'incremental plan should include incremental_selection');
+    assert.equal(plan.incremental_selection.summary.graph_available, true);
+    assert.equal(plan.incremental_selection.summary.graph_used, false);
+    assert.equal(plan.incremental_selection.summary.changed_paths_available, true);
+    assert.equal(plan.incremental_selection.summary.fallback_reason, 'fallback_unmatched_changed_paths');
+    assert.deepEqual(plan.incremental_selection.changed_paths, ['apps/api/new.ts']);
+
+    const selectedByPage = new Map<string, any>(plan.incremental_selection.selected_pages.map((entry: any) => [entry.page, entry]));
+    for (const plannedPage of plan.pages.map((page: any) => page.path)) {
+      assert.ok(selectedByPage.has(plannedPage), `fallback must include planned page ${plannedPage}`);
+      assert.ok(selectedByPage.get(plannedPage).reasons.includes('fallback_unmatched_changed_paths'));
+    }
+
+    for (const page of ['Index.md', '_Sidebar.md', 'Log.md', 'Agent-Context-Pack.md']) {
+      const selected: any = selectedByPage.get(page);
+      assert.ok(selected, `${page} must always be selected when changed paths are absent from the graph artifact`);
+      assert.ok(selected.reasons.includes('always_affected_global'));
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('createBootstrapPlan incremental mode rejects malformed graph artifacts', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-plan-incremental-bad-graph-'));
+  const llmwikiDir = path.join(dir, '.llmwiki');
+  const scanDir = path.join(llmwikiDir, 'run');
+  const outFile = path.join(llmwikiDir, 'incremental-plan.json');
+
+  try {
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      mode: 'incremental',
+      repo_path: dir,
+      remote: 'origin',
+      commit: 'abc123',
+      changed_paths: ['apps/api/server.ts'],
+      totals: {
+        runtime_hints: {},
+        categories: { source: 1 }
+      },
+      files: [
+        { path: 'apps/api/server.ts', category: 'source', language: 'TypeScript', runtime_hints: [], reasons: ['source'], bytes: 100 }
+      ],
+      documentation: { files: [] }
+    }, null, 2), 'utf8');
+
+    await writeFile(path.join(llmwikiDir, 'graph.json'), '{ not valid json\n', 'utf8');
+
+    await assert.rejects(createBootstrapPlan({ scanDir, outFile }), SyntaxError);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('createBootstrapPlan incremental mode falls back deterministically when graph artifact is missing', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-plan-incremental-fallback-'));
+  const llmwikiDir = path.join(dir, '.llmwiki');
+  const scanDir = path.join(llmwikiDir, 'run');
+  const outFile = path.join(llmwikiDir, 'incremental-plan.json');
+
+  try {
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      mode: 'incremental',
+      repo_path: dir,
+      remote: 'origin',
+      commit: 'abc123',
+      changed_paths: ['apps/api/server.ts'],
+      totals: {
+        runtime_hints: {},
+        categories: { source: 1 }
+      },
+      files: [
+        { path: 'apps/api/server.ts', category: 'source', language: 'TypeScript', runtime_hints: [], reasons: ['source'], bytes: 100 }
+      ],
+      documentation: { files: [] }
+    }, null, 2), 'utf8');
+
+    await createBootstrapPlan({ scanDir, outFile });
+    const plan = await readJson(outFile);
+
+    assert.ok(plan.incremental_selection, 'incremental plan should include incremental_selection');
+    assert.equal(plan.incremental_selection.summary.graph_available, false);
+    assert.equal(plan.incremental_selection.summary.graph_used, false);
+    assert.equal(plan.incremental_selection.summary.fallback_reason, 'fallback_missing_graph');
+
+    const selectedByPage = new Map<string, any>(plan.incremental_selection.selected_pages.map((entry: any) => [entry.page, entry]));
+    for (const plannedPage of plan.pages.map((page: any) => page.path)) {
+      assert.ok(selectedByPage.has(plannedPage), `fallback must include planned page ${plannedPage}`);
+      assert.ok(selectedByPage.get(plannedPage).reasons.includes('fallback_missing_graph'));
+    }
+
+    for (const page of ['Index.md', '_Sidebar.md', 'Log.md', 'Agent-Context-Pack.md']) {
+      const selected: any = selectedByPage.get(page);
+      assert.ok(selected, `${page} must always be selected in fallback mode`);
+      assert.ok(selected.reasons.includes('always_affected_global'));
+    }
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
