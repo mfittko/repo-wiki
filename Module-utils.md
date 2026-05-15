@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "64636a87dfde6c5a3055391035a1bb4598fc5c10"
+source_commit: "e8e50cf58d4fe0b1575ca9d2f73e98541cc2c545"
 page_state: "generated"
 source_paths: ["src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-The `utils` module provides a collection of utility functions and types implemented in TypeScript to support various common tasks related to argument parsing, environment variable loading, filesystem operations, and Git command interactions. This module serves as foundational source code to facilitate handling command-line arguments, managing `.env` files, performing file system manipulations, and executing Git commands programmatically.
+The `utils` module provides a collection of utility functions and types implemented in TypeScript that support various common tasks related to argument parsing, environment variable loading, filesystem operations, and Git command execution. This module serves as foundational source code to facilitate handling command-line arguments, managing `.env` files, performing file system manipulations, and interacting with Git repositories programmatically.
 
 ## Source file list
 
@@ -30,7 +30,7 @@ The `utils` module provides a collection of utility functions and types implemen
 
 ### `src/utils/dotenv.ts`
 - `loadDotEnv` — Function to load environment variables from `.env` files.
-- `parseDotEnv` — Function to parse `.env` file content.
+- `parseDotEnv` — Function to parse the contents of `.env` files.
 - `DotEnvLoadResult` — Type representing the result of loading `.env` files.
 
 ### `src/utils/fs.ts`
@@ -69,9 +69,9 @@ No explicit test files or test-related documentation cards are present in the so
 ## Known gaps or open questions
 
 - There is no information about test coverage or test files related to this module.
-- The repository remote URL and commit SHA are unspecified, limiting traceability.
-- The exact runtime environment or usage context for these utilities is not detailed.
+- The repository remote URL and commit SHA are unknown, limiting traceability.
 - No documentation or usage examples are provided for the exported symbols.
+- The exact runtime environment or intended usage context is not specified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
