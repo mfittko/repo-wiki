@@ -4,8 +4,9 @@ import { createHash } from 'node:crypto';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { assembleAllPageContexts, assemblePageContext } from './context-assembler.js';
 import { ensureDir, readJson, writeJson, writeText } from './utils/fs.js';
-import { buildRouteSurfaceIndex, collectKnownEnvironmentVariables, collectManifestDirectories, dedupeRouteValidationFindings, normalizeRepoPath, resolveDocumentedPathFromManifest, validateRouteClaims } from './docs-validation.js';
+import { buildRouteSurfaceIndex, cleanDocumentedPathTarget, collectKnownEnvironmentVariables, collectManifestDirectories, dedupeRouteValidationFindings, normalizeRepoPath, resolveDocumentedPathFromManifest, validateRouteClaims } from './docs-validation.js';
 import { classifyDocumentedCommands, extractRouteClaims, mergePackageScripts } from './docs-ingestor.js';
+import { extractFrontmatterBlock } from './frontmatter.js';
 import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-ownership.js';
 import { buildRequest, createProvider, createProviderFromResolvedConfig, LLMProviderError, resolveArchitectureOverrides, resolveProviderConfig } from './llm-provider.js';
 import type { LLMProvider } from './llm-provider.js';
@@ -318,7 +319,7 @@ export async function compileWiki({
 
   // Keep the graph artifact rooted in the local .llmwiki workspace rather than the configurable wikiDir.
   // This preserves the fixed `.llmwiki/graph.json` contract even when callers override `--wiki`.
-  await writeJson(path.join(path.dirname(scanDir), 'graph.json'), buildWikiGraphSkeleton(manifest, plan));
+  await writeJson(path.join(path.dirname(scanDir), 'graph.json'), await buildWikiGraph(manifest, plan, wikiDir));
 
   return {
     contexts: pageContexts,
@@ -343,40 +344,44 @@ type WikiGraphNode = {
   id: string;
   kind: WikiGraphNodeKind;
   path: string;
+  page_state?: 'generated' | 'mixed' | 'human-owned' | 'unmanaged';
 };
 
 type WikiGraphEdge = {
-  type: 'affects';
+  type: 'affects' | 'wiki_link' | 'provenance';
   from: string;
   to: string;
 };
 
-function buildWikiGraphSkeleton(manifest: any, plan: any): {
+async function buildWikiGraph(manifest: any, plan: any, wikiDir: string): Promise<{
   schema_version: number;
   nodes: WikiGraphNode[];
   edges: WikiGraphEdge[];
-} {
+}> {
   const plannedPagePaths = uniqueSorted((plan?.pages || []).map((page: any) => String(page?.path || '')).filter(Boolean)) as string[];
   const sourceToPages = Array.isArray(plan?.affected_page_graph?.source_to_pages) ? plan.affected_page_graph.source_to_pages : [];
   const documentationPaths = new Set<string>([
     ...(manifest?.documentation?.files || []).map((file: any) => String(file?.path || '')).filter(Boolean),
     ...(manifest?.files || []).filter((file: any) => file?.category === 'docs').map((file: any) => String(file?.path || '')).filter(Boolean),
   ]);
+  const pageContentByPath = new Map<string, string>();
+  const pageBodyByPath = new Map<string, string>();
+  const pageStateByPath = new Map<string, 'generated' | 'mixed' | 'human-owned' | 'unmanaged'>();
+  for (const pagePath of plannedPagePaths) {
+    try {
+      const content = await fs.readFile(path.join(wikiDir, pagePath), 'utf8');
+      pageContentByPath.set(pagePath, content);
+      pageBodyByPath.set(pagePath, stripLeadingFrontmatter(content));
+      pageStateByPath.set(pagePath, detectPageState(content));
+    } catch (error) {
+      if (!isNodeError(error) || error.code !== 'ENOENT') {
+        throw error;
+      }
+      pageStateByPath.set(pagePath, 'generated');
+    }
+  }
 
-  const sourcePaths = uniqueSorted(sourceToPages.map((entry: any) => String(entry?.source || '')).filter(Boolean)) as string[];
-  const nodes: WikiGraphNode[] = [
-    ...plannedPagePaths.map((pagePath) => ({
-      id: `page:${pagePath}`,
-      kind: 'page' as const,
-      path: pagePath,
-    })),
-    ...sourcePaths.map((sourcePath) => ({
-      id: `source:${sourcePath}`,
-      kind: (documentationPaths.has(sourcePath) || isDocumentationPath(sourcePath) ? 'documentation' : 'source') as WikiGraphNodeKind,
-      path: sourcePath,
-    })),
-  ].sort((left, right) => left.id.localeCompare(right.id));
-
+  const sourcePathSet = new Set<string>(sourceToPages.map((entry: any) => String(entry?.source || '')).filter(Boolean));
   const edgeSet = new Set<string>();
   for (const entry of sourceToPages) {
     const sourcePath = String(entry?.source || '');
@@ -388,26 +393,603 @@ function buildWikiGraphSkeleton(manifest: any, plan: any): {
       if (!pagePath) {
         continue;
       }
-      edgeSet.add(`${sourcePath}\u0000${pagePath}`);
+      edgeSet.add(`affects\u0000source:${sourcePath}\u0000page:${pagePath}`);
     }
   }
 
-  const edges: WikiGraphEdge[] = [...edgeSet]
-    .map((pair) => {
-      const [sourcePath, pagePath] = pair.split('\u0000');
-      return {
-        type: 'affects' as const,
-        from: `source:${sourcePath}`,
-        to: `page:${pagePath}`,
-      };
-    })
-    .sort((left, right) => left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
+  const pageTargetByReference = new Map<string, string>();
+  for (const pagePath of plannedPagePaths) {
+    pageTargetByReference.set(canonicalWikiPageReference(pagePath), pagePath);
+  }
+  for (const [fromPagePath, pageBody] of pageBodyByPath.entries()) {
+    for (const targetReference of extractLocalWikiLinks(pageBody)) {
+      const toPagePath = pageTargetByReference.get(targetReference);
+      if (toPagePath) {
+        edgeSet.add(`wiki_link\u0000page:${fromPagePath}\u0000page:${toPagePath}`);
+      }
+    }
+  }
+
+  for (const [pagePath, pageContent] of pageContentByPath.entries()) {
+    const sourcePaths = extractFrontmatterSourcePaths(pageContent);
+    for (const sourcePath of sourcePaths) {
+      sourcePathSet.add(sourcePath);
+      edgeSet.add(`provenance\u0000page:${pagePath}\u0000source:${sourcePath}`);
+    }
+  }
+
+  const sourcePaths = uniqueSorted([...sourcePathSet]) as string[];
+  const pageNodes: WikiGraphNode[] = plannedPagePaths.map((pagePath) => ({
+    id: `page:${pagePath}`,
+    kind: 'page',
+    path: pagePath,
+    page_state: pageStateByPath.get(pagePath) || 'generated',
+  }));
+  const sourceNodes: WikiGraphNode[] = sourcePaths.map((sourcePath) => ({
+    id: `source:${sourcePath}`,
+    kind: (documentationPaths.has(sourcePath) || isDocumentationPath(sourcePath) ? 'documentation' : 'source') as WikiGraphNodeKind,
+    path: sourcePath,
+  }));
+
+  const nodes: WikiGraphNode[] = [...pageNodes, ...sourceNodes];
+  const edges: WikiGraphEdge[] = [...edgeSet].map((entry) => {
+    const [type, from, to] = entry.split('\u0000');
+    return {
+      type: type as WikiGraphEdge['type'],
+      from,
+      to,
+    };
+  }).sort((left, right) => left.type.localeCompare(right.type) || left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
 
   return {
     schema_version: 1,
     nodes,
     edges,
   };
+}
+
+function stripLeadingFrontmatter(content: string): string {
+  return extractFrontmatterBlock(content)?.body ?? content;
+}
+
+function canonicalWikiPageReference(value: string): string {
+  return String(value || '').trim().replace(/^\.\//, '').replace(/#.*$/, '').replace(/\.md$/i, '');
+}
+
+function extractLocalWikiLinks(content: string): string[] {
+  const links = new Set<string>();
+  const lines = content.replace(/\r\n?/g, '\n').split('\n');
+  const visibleLines: string[] = [];
+  let fenceMarker: { char: '`' | '~'; length: number } | null = null;
+  let inHtmlComment = false;
+  let activeListItemIndent: number | null = null;
+
+  for (const rawLine of lines) {
+    const line = stripMarkdownBlockquotePrefixes(rawLine);
+    const fenceMatch = parseMarkdownFenceLine(line);
+    if (fenceMatch) {
+      if (!fenceMarker) {
+        fenceMarker = fenceMatch.marker;
+        continue;
+      }
+      if (fenceMatch.marker.char === fenceMarker.char && fenceMatch.marker.length >= fenceMarker.length && !fenceMatch.trailing.trim()) {
+        fenceMarker = null;
+        continue;
+      }
+    }
+    if (fenceMarker) {
+      continue;
+    }
+
+    const visibleLine = stripWikiLinkExtractionNoise(line, inHtmlComment);
+    inHtmlComment = visibleLine.inHtmlComment;
+    if (isIndentedMarkdownCodeBlockLine(line, activeListItemIndent)) {
+      if (!visibleLine.text.trim()) {
+        activeListItemIndent = null;
+      }
+      continue;
+    }
+
+    visibleLines.push(visibleLine.text);
+    activeListItemIndent = nextMarkdownListItemIndent(visibleLine.text, activeListItemIndent);
+  }
+
+  const referenceTargets = extractMarkdownReferenceDefinitions(visibleLines);
+  for (const line of visibleLines) {
+    for (const href of extractMarkdownLinkTargets(line, referenceTargets)) {
+      const target = cleanDocumentedPathTarget(href);
+      if (!target || /^(?:https?:|mailto:|ftp:|\/\/|#)/i.test(target) || /^(?:javascript:|data:|vbscript:|blob:|about:)/i.test(target)) {
+        continue;
+      }
+      const normalized = target.replace(/^\.\//, '');
+      if (!normalized || normalized.includes('/')) {
+        continue;
+      }
+      const extension = path.extname(normalized).toLowerCase();
+      if (extension && extension !== '.md') {
+        continue;
+      }
+      const canonical = canonicalWikiPageReference(normalized);
+      if (canonical) {
+        links.add(canonical);
+      }
+    }
+  }
+
+  return [...links];
+}
+
+function parseMarkdownFenceLine(line: string): { marker: { char: '`' | '~'; length: number }; trailing: string } | null {
+  const match = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(line);
+  if (!match) {
+    return null;
+  }
+  return {
+    marker: {
+      char: match[2][0] as '`' | '~',
+      length: match[2].length,
+    },
+    trailing: match[3] || '',
+  };
+}
+
+function stripMarkdownBlockquotePrefixes(line: string): string {
+  let result = line;
+  while (true) {
+    const match = /^( {0,3})> ?/.exec(result);
+    if (!match) {
+      return result;
+    }
+    result = result.slice(match[0].length);
+  }
+}
+
+function leadingMarkdownIndentWidth(line: string): number {
+  let width = 0;
+  for (const char of line) {
+    if (char === ' ') {
+      width += 1;
+      continue;
+    }
+    if (char === '\t') {
+      width += 4;
+      continue;
+    }
+    break;
+  }
+  return width;
+}
+
+function nextMarkdownListItemIndent(line: string, activeListItemIndent: number | null): number | null {
+  if (!line.trim()) {
+    return null;
+  }
+
+  const listItem = /^(\s*)(?:[*+-]|\d+[.)])\s+/.exec(line);
+  if (listItem) {
+    return leadingMarkdownIndentWidth(listItem[1]);
+  }
+
+  const indentWidth = leadingMarkdownIndentWidth(line);
+  if (activeListItemIndent !== null && indentWidth > activeListItemIndent) {
+    return activeListItemIndent;
+  }
+
+  return null;
+}
+
+function isIndentedMarkdownCodeBlockLine(line: string, activeListItemIndent: number | null): boolean {
+  const indentMatch = /^([ \t]+)(.*)$/.exec(line);
+  if (!indentMatch) {
+    return false;
+  }
+
+  const indentWidth = leadingMarkdownIndentWidth(indentMatch[1]);
+  if (indentWidth < 4) {
+    return false;
+  }
+
+  if (/^(?:[*+-]|\d+[.)])\s/.test(indentMatch[2])) {
+    return false;
+  }
+
+  if (activeListItemIndent !== null && indentWidth > activeListItemIndent) {
+    return false;
+  }
+
+  return true;
+}
+
+function isEscapedMarkdownCharacter(line: string, index: number): boolean {
+  let backslashCount = 0;
+  for (let cursor = index - 1; cursor >= 0 && line[cursor] === '\\'; cursor -= 1) {
+    backslashCount += 1;
+  }
+  return backslashCount % 2 === 1;
+}
+
+function normalizeMarkdownReferenceLabel(value: string): string {
+  return value.trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function findClosingMarkdownBracket(line: string, openBracket: number): number {
+  let depth = 0;
+  for (let index = openBracket + 1; index < line.length; index += 1) {
+    const char = line[index];
+    if (isEscapedMarkdownCharacter(line, index)) {
+      continue;
+    }
+    if (char === '[') {
+      depth += 1;
+      continue;
+    }
+    if (char === ']') {
+      if (depth === 0) {
+        return index;
+      }
+      depth -= 1;
+    }
+  }
+  return -1;
+}
+
+function stripYamlInlineComment(value: string): string {
+  let result = '';
+  let quote: '"' | "'" | '' = '';
+  for (let index = 0; index < value.length; index += 1) {
+    const char = value[index];
+    if ((char === '"' || char === "'") && !isEscapedMarkdownCharacter(value, index)) {
+      quote = quote === char ? '' : (quote || char);
+      result += char;
+      continue;
+    }
+    if (!quote && char === '#' && (index === 0 || /\s/.test(value[index - 1] || ''))) {
+      break;
+    }
+    result += char;
+  }
+  return result.trimEnd();
+}
+
+function normalizeYamlPathScalar(value: string): string {
+  return unquoteYamlScalar(stripYamlInlineComment(value).trim());
+}
+
+function extractMarkdownReferenceDefinitions(lines: string[]): Map<string, string> {
+  const definitions = new Map<string, string>();
+  for (const line of lines) {
+    const match = /^\s*\[([^\]]+)\]:\s*(.+)$/.exec(line);
+    if (!match) {
+      continue;
+    }
+    const label = normalizeMarkdownReferenceLabel(match[1]);
+    const target = extractMarkdownReferenceDefinitionTarget(match[2]);
+    if (label && target && !definitions.has(label)) {
+      definitions.set(label, target);
+    }
+  }
+  return definitions;
+}
+
+function extractMarkdownReferenceDefinitionTarget(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+  if (trimmed.startsWith('<')) {
+    const closeAngle = trimmed.indexOf('>');
+    return closeAngle === -1 ? '' : trimmed.slice(1, closeAngle).trim();
+  }
+  const match = /^([^\s]+)/.exec(trimmed);
+  return match ? match[1].trim() : '';
+}
+
+function stripWikiLinkExtractionNoise(line: string, initialInHtmlComment = false): { text: string; inHtmlComment: boolean } {
+  let text = '';
+  let index = 0;
+  let inHtmlComment = initialInHtmlComment;
+
+  while (index < line.length) {
+    if (inHtmlComment) {
+      const commentEnd = line.indexOf('-->', index);
+      if (commentEnd === -1) {
+        return { text, inHtmlComment: true };
+      }
+      inHtmlComment = false;
+      index = commentEnd + 3;
+      continue;
+    }
+
+    const commentStart = line.indexOf('<!--', index);
+    const codeStart = line.indexOf('`', index);
+    const nextStop = [commentStart, codeStart].filter((value) => value !== -1).sort((left, right) => left - right)[0] ?? -1;
+    if (nextStop === -1) {
+      text += line.slice(index);
+      break;
+    }
+
+    text += line.slice(index, nextStop);
+
+    if (nextStop === commentStart) {
+      inHtmlComment = true;
+      index = commentStart + 4;
+      continue;
+    }
+
+    let tickCount = 1;
+    while (line[nextStop + tickCount] === '`') {
+      tickCount += 1;
+    }
+    const closingTicks = '`'.repeat(tickCount);
+    const closingIndex = line.indexOf(closingTicks, nextStop + tickCount);
+    if (closingIndex === -1) {
+      text += line.slice(nextStop);
+      break;
+    }
+    index = closingIndex + tickCount;
+  }
+
+  return { text, inHtmlComment };
+}
+
+function consumeOptionalMarkdownLinkTitle(line: string, startIndex: number): number {
+  let cursor = startIndex;
+  while (line[cursor] && /\s/.test(line[cursor])) cursor += 1;
+  if (line[cursor] === ')') {
+    return cursor;
+  }
+
+  const opener = line[cursor];
+  if (!opener || !['"', "'", '('].includes(opener)) {
+    return -1;
+  }
+  const closer = opener === '(' ? ')' : opener;
+  cursor += 1;
+  while (cursor < line.length) {
+    const char = line[cursor];
+    if (char === closer && line[cursor - 1] !== '\\') {
+      cursor += 1;
+      while (line[cursor] && /\s/.test(line[cursor])) cursor += 1;
+      return line[cursor] === ')' ? cursor : -1;
+    }
+    cursor += 1;
+  }
+  return -1;
+}
+
+function extractMarkdownLinkTargets(line: string, referenceTargets = new Map<string, string>()): string[] {
+  const targets: string[] = [];
+  const isReferenceDefinitionLine = /^\s*\[[^\]]+\]:/.test(line);
+  if (isReferenceDefinitionLine) {
+    return targets;
+  }
+  for (let index = 0; index < line.length; index += 1) {
+    const openBracket = line.indexOf('[', index);
+    if (openBracket === -1) break;
+    if (openBracket > 0 && line[openBracket - 1] === '!') {
+      const closeImageAlt = findClosingMarkdownBracket(line, openBracket);
+      if (closeImageAlt !== -1 && line[closeImageAlt + 1] === '[') {
+        const closeImageReference = findClosingMarkdownBracket(line, closeImageAlt + 1);
+        index = closeImageReference === -1 ? closeImageAlt : closeImageReference;
+      } else {
+        index = closeImageAlt === -1 ? openBracket : closeImageAlt;
+      }
+      continue;
+    }
+    if (isEscapedMarkdownCharacter(line, openBracket)) {
+      index = openBracket;
+      continue;
+    }
+    const closeBracket = findClosingMarkdownBracket(line, openBracket);
+    if (closeBracket === -1 || isEscapedMarkdownCharacter(line, closeBracket)) {
+      index = openBracket;
+      continue;
+    }
+
+    const nextChar = line[closeBracket + 1];
+    if (nextChar !== '(') {
+      if (!isReferenceDefinitionLine) {
+        if (nextChar === '[') {
+          const closeReference = line.indexOf(']', closeBracket + 2);
+          if (closeReference !== -1 && !isEscapedMarkdownCharacter(line, closeReference)) {
+            const rawReference = line.slice(closeBracket + 2, closeReference).trim();
+            const label = normalizeMarkdownReferenceLabel(rawReference || line.slice(openBracket + 1, closeBracket));
+            const target = referenceTargets.get(label);
+            if (target) {
+              targets.push(target);
+            }
+            index = closeReference;
+            continue;
+          }
+        }
+
+        const label = normalizeMarkdownReferenceLabel(line.slice(openBracket + 1, closeBracket));
+        const target = referenceTargets.get(label);
+        if (target) {
+          targets.push(target);
+          index = closeBracket;
+          continue;
+        }
+      }
+      index = openBracket;
+      continue;
+    }
+
+    let cursor = closeBracket + 2;
+    let target = '';
+    if (line[cursor] === '<') {
+      cursor += 1;
+      const closeAngle = line.indexOf('>', cursor);
+      if (closeAngle === -1) {
+        index = cursor;
+        continue;
+      }
+      target = line.slice(cursor, closeAngle);
+      cursor = consumeOptionalMarkdownLinkTitle(line, closeAngle + 1);
+      if (cursor === -1) {
+        index = closeAngle + 1;
+        continue;
+      }
+      targets.push(target);
+      index = cursor;
+      continue;
+    }
+
+    let depth = 0;
+    let quote: '"' | "'" | '' = '';
+    for (; cursor < line.length; cursor += 1) {
+      const char = line[cursor];
+      if ((char === '"' || char === "'") && !quote) {
+        quote = char;
+        continue;
+      }
+      if (quote) {
+        if (char === quote && line[cursor - 1] !== '\\') {
+          quote = '';
+        }
+        continue;
+      }
+      if (char === '(') {
+        depth += 1;
+        continue;
+      }
+      if (char === ')') {
+        if (depth === 0) {
+          target = line.slice(closeBracket + 2, cursor).trim();
+          targets.push(target);
+          index = cursor;
+          break;
+        }
+        depth -= 1;
+      }
+    }
+  }
+  return targets;
+}
+
+
+function extractFrontmatterSourcePaths(content: string): string[] {
+  const block = extractFrontmatterBlock(content);
+  if (!block) {
+    return [];
+  }
+
+  const lines = block.yaml.replace(/\r\n?/g, '\n').split('\n');
+  const values: string[] = [];
+  for (let index = 0; index < lines.length; index++) {
+    const match = /^source_paths:\s*(.*)$/.exec(lines[index]);
+    if (!match) {
+      continue;
+    }
+
+    const value = stripYamlInlineComment(match[1]).trim();
+    if (value.startsWith('[') && value.endsWith(']')) {
+      values.push(...parseInlineYamlSequence(value));
+      continue;
+    }
+
+    if (value !== '') {
+      values.push(normalizeYamlPathScalar(value));
+      continue;
+    }
+
+    const sourcePathsIndent = lines[index].match(/^\s*/)?.[0].length ?? 0;
+    for (let listIndex = index + 1; listIndex < lines.length; listIndex++) {
+      const line = lines[listIndex];
+      const trimmedLine = line.trim();
+      if (!trimmedLine || /^#/.test(trimmedLine)) {
+        continue;
+      }
+      const listEntry = /^\s*-\s*(.*)$/.exec(line);
+      if (listEntry) {
+        values.push(normalizeYamlPathScalar(listEntry[1].trim()));
+        index = listIndex;
+        continue;
+      }
+      const lineIndent = line.match(/^\s*/)?.[0].length ?? 0;
+      if (lineIndent > sourcePathsIndent) {
+        continue;
+      }
+      break;
+    }
+  }
+
+  return uniqueSorted(values
+    .map((entry) => canonicalRepoRelativePath(normalizeYamlPathScalar(entry).trim()))
+    .filter(Boolean)) as string[];
+}
+
+
+function parseInlineYamlSequence(value: string): string[] {
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed)) {
+      return parsed.filter((entry): entry is string => typeof entry === 'string');
+    }
+  } catch {
+    // Fall through to permissive YAML-style parsing.
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
+    return [];
+  }
+
+  const entries: string[] = [];
+  let current = '';
+  let quote: '"' | "'" | '' = '';
+
+  for (const char of trimmed.slice(1, -1)) {
+    if (quote) {
+      current += char;
+      if (char === quote) {
+        quote = '';
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+      continue;
+    }
+    if (char === ',') {
+      if (current.trim()) {
+        entries.push(unquoteYamlScalar(current.trim()));
+      }
+      current = '';
+      continue;
+    }
+    current += char;
+  }
+
+  if (current.trim()) {
+    entries.push(unquoteYamlScalar(current.trim()));
+  }
+
+  return entries;
+}
+
+function canonicalRepoRelativePath(value: string): string {
+  const normalized = path.posix.normalize(normalizeRepoPath(String(value || '').trim()).replace(/^\.\//, ''));
+  if (!normalized || normalized === '.' || normalized === '..' || normalized.startsWith('../')) {
+    return '';
+  }
+  return normalized.replace(/^\.\//, '');
+}
+
+function unquoteYamlScalar(value: string): string {
+  if (value.startsWith('"') && value.endsWith('"') && value.length >= 2) {
+    try {
+      return String(JSON.parse(value));
+    } catch {
+      return value.slice(1, -1);
+    }
+  }
+  if (value.startsWith('\'') && value.endsWith('\'') && value.length >= 2) {
+    return value.slice(1, -1).replace(/''/g, '\'');
+  }
+  return value;
 }
 
 /**
