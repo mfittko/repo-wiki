@@ -2,11 +2,14 @@ import path from 'node:path';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { readJson, writeJson } from './utils/fs.js';
 
+const ALWAYS_AFFECTED_INCREMENTAL_PAGES = ['Agent-Context-Pack.md', 'Index.md', 'Log.md', '_Sidebar.md'] as const;
+
 export async function createBootstrapPlan({ scanDir, outFile }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
   const modules = groupIntoModules(manifest.files);
   const pages = createPagePlan(manifest, modules);
   const affectedPageGraph = buildAffectedPageGraph(manifest, modules, pages);
+  const incrementalSelection = await buildIncrementalSelection(manifest, pages, scanDir);
 
   const plan = {
     schema_version: 1,
@@ -39,7 +42,8 @@ export async function createBootstrapPlan({ scanDir, outFile }) {
     ],
     modules,
     pages,
-    affected_page_graph: affectedPageGraph
+    affected_page_graph: affectedPageGraph,
+    ...(incrementalSelection ? { incremental_selection: incrementalSelection } : {})
   };
 
   await writeJson(outFile, plan);
@@ -52,6 +56,151 @@ export async function createBootstrapPlan({ scanDir, outFile }) {
       outFile
     }
   };
+}
+
+async function buildIncrementalSelection(manifest: any, pages: any[], scanDir: string) {
+  if (manifest.mode !== 'incremental') {
+    return null;
+  }
+
+  const plannedPages = new Set((pages || []).map((page: any) => String(page?.path || '')).filter(Boolean));
+  const changedPaths = extractChangedPaths(manifest);
+  const selected = new Map<string, { reasons: Set<string>; changedPaths: Set<string> }>();
+
+  function markSelected(pagePath: string, reason: string, changedPath?: string) {
+    if (!plannedPages.has(pagePath)) {
+      return;
+    }
+    let entry = selected.get(pagePath);
+    if (!entry) {
+      entry = { reasons: new Set(), changedPaths: new Set() };
+      selected.set(pagePath, entry);
+    }
+    entry.reasons.add(reason);
+    if (changedPath) {
+      entry.changedPaths.add(changedPath);
+    }
+  }
+
+  let graphAvailable = false;
+  let graphUsed = false;
+  let fallbackReason: string | null = null;
+  const graphPath = path.join(path.dirname(scanDir), 'graph.json');
+
+  try {
+    const graph = await readJson(graphPath);
+    graphAvailable = true;
+
+    const managedPages = getManagedPagePathsFromGraph(graph);
+    const affectsEdges = (graph?.edges || [])
+      .filter((edge: any) => edge?.type === 'affects')
+      .map((edge: any) => ({ from: String(edge?.from || ''), to: String(edge?.to || '') }));
+
+    for (const changedPath of changedPaths) {
+      const sourceNodeId = `source:${changedPath}`;
+      for (const edge of affectsEdges) {
+        if (edge.from !== sourceNodeId || !edge.to.startsWith('page:')) {
+          continue;
+        }
+        const pagePath = edge.to.slice('page:'.length);
+        const isAlwaysAffected = ALWAYS_AFFECTED_INCREMENTAL_PAGES.includes(pagePath as (typeof ALWAYS_AFFECTED_INCREMENTAL_PAGES)[number]);
+        if (managedPages.has(pagePath) || isAlwaysAffected) {
+          markSelected(pagePath, 'graph_affects', changedPath);
+          graphUsed = true;
+        }
+      }
+    }
+  } catch {
+    fallbackReason = 'fallback_missing_graph';
+  }
+
+  if (!graphAvailable || changedPaths.length === 0) {
+    if (!fallbackReason) {
+      fallbackReason = 'fallback_no_changed_paths';
+    }
+    for (const pagePath of [...plannedPages].sort()) {
+      markSelected(pagePath, fallbackReason);
+    }
+  }
+
+  for (const pagePath of ALWAYS_AFFECTED_INCREMENTAL_PAGES) {
+    markSelected(pagePath, 'always_affected_global');
+  }
+
+  const selectedPages = [...selected.entries()]
+    .map(([page, detail]) => ({
+      page,
+      reasons: [...detail.reasons].sort(),
+      changed_paths: [...detail.changedPaths].sort()
+    }))
+    .sort((a, b) => a.page.localeCompare(b.page));
+
+  return {
+    graph_path: graphPath,
+    changed_paths: changedPaths,
+    always_affected_pages: [...ALWAYS_AFFECTED_INCREMENTAL_PAGES],
+    selected_pages: selectedPages,
+    summary: {
+      selected_pages: selectedPages.length,
+      graph_available: graphAvailable,
+      graph_used: graphUsed,
+      fallback_reason: fallbackReason
+    }
+  };
+}
+
+function extractChangedPaths(manifest: any): string[] {
+  const raw = [
+    manifest?.changed_paths,
+    manifest?.changedPaths,
+    manifest?.analysis?.changed_paths,
+    manifest?.analysis?.changedPaths,
+    manifest?.incremental?.changed_paths,
+    manifest?.incremental?.changedPaths
+  ];
+
+  const changed = new Set<string>();
+  for (const candidate of raw) {
+    if (!Array.isArray(candidate)) {
+      continue;
+    }
+    for (const item of candidate) {
+      const value = typeof item === 'string'
+        ? item
+        : (item && typeof item.path === 'string' ? item.path : '');
+      const normalized = normalizeRelativePath(value);
+      if (normalized) {
+        changed.add(normalized);
+      }
+    }
+  }
+
+  return [...changed].sort();
+}
+
+function getManagedPagePathsFromGraph(graph: any): Set<string> {
+  const managed = new Set<string>();
+  for (const node of graph?.nodes || []) {
+    if (node?.kind !== 'page') {
+      continue;
+    }
+    const pagePath = typeof node.path === 'string' ? node.path : '';
+    if (!pagePath) {
+      continue;
+    }
+    const pageState = String(node?.page_state || 'generated');
+    if (pageState === 'generated' || pageState === 'mixed') {
+      managed.add(pagePath);
+    }
+  }
+  return managed;
+}
+
+function normalizeRelativePath(value: string): string {
+  return String(value || '')
+    .replace(/\\/g, '/')
+    .replace(/^\.\//, '')
+    .trim();
 }
 
 function groupIntoModules(files) {
