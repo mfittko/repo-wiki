@@ -97,9 +97,9 @@ async function buildIncrementalSelection(manifest: any, pages: any[], scanDir: s
       .map((edge: any) => ({ from: String(edge?.from || ''), to: String(edge?.to || '') }));
 
     for (const changedPath of changedPaths) {
-      const sourceNodeId = `source:${changedPath}`;
+      const sourceNodeIds = new Set([`source:${changedPath}`, `documentation:${changedPath}`]);
       for (const edge of affectsEdges) {
-        if (edge.from !== sourceNodeId || !edge.to.startsWith('page:')) {
+        if (!sourceNodeIds.has(edge.from) || !edge.to.startsWith('page:')) {
           continue;
         }
         const pagePath = edge.to.slice('page:'.length);
@@ -115,9 +115,8 @@ async function buildIncrementalSelection(manifest: any, pages: any[], scanDir: s
   }
 
   if (!graphAvailable) {
-    const fallback = fallbackReason || 'fallback_missing_graph';
     for (const pagePath of [...plannedPages].sort()) {
-      markSelected(pagePath, fallback);
+      markSelected(pagePath, 'fallback_missing_graph');
     }
   }
 
