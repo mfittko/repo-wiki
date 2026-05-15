@@ -2,7 +2,7 @@ import path from 'node:path';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { readJson, writeJson } from './utils/fs.js';
 
-const ALWAYS_AFFECTED_INCREMENTAL_PAGES = ['Agent-Context-Pack.md', 'Index.md', 'Log.md', '_Sidebar.md'] as const;
+const ALWAYS_AFFECTED_INCREMENTAL_PAGES: readonly string[] = ['Agent-Context-Pack.md', 'Index.md', 'Log.md', '_Sidebar.md'];
 
 export async function createBootstrapPlan({ scanDir, outFile }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
@@ -103,7 +103,7 @@ async function buildIncrementalSelection(manifest: any, pages: any[], scanDir: s
           continue;
         }
         const pagePath = edge.to.slice('page:'.length);
-        const isAlwaysAffected = ALWAYS_AFFECTED_INCREMENTAL_PAGES.includes(pagePath as (typeof ALWAYS_AFFECTED_INCREMENTAL_PAGES)[number]);
+        const isAlwaysAffected = ALWAYS_AFFECTED_INCREMENTAL_PAGES.includes(pagePath);
         if (managedPages.has(pagePath) || isAlwaysAffected) {
           markSelected(pagePath, 'graph_affects', changedPath);
           graphUsed = true;
@@ -114,12 +114,10 @@ async function buildIncrementalSelection(manifest: any, pages: any[], scanDir: s
     fallbackReason = 'fallback_missing_graph';
   }
 
-  if (!graphAvailable || changedPaths.length === 0) {
-    if (!fallbackReason) {
-      fallbackReason = 'fallback_no_changed_paths';
-    }
+  if (!graphAvailable) {
+    const fallback = fallbackReason || 'fallback_missing_graph';
     for (const pagePath of [...plannedPages].sort()) {
-      markSelected(pagePath, fallbackReason);
+      markSelected(pagePath, fallback);
     }
   }
 
