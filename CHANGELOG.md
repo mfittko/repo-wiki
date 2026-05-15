@@ -57,6 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tighten repo-local reading guidance.
 - Gate Architecture.md regeneration and patch deterministic architecture sections.
 - Emit a deterministic wiki graph skeleton to `.llmwiki/graph.json`.
+- Enrich `.llmwiki/graph.json` with deterministic `page_state`, `wiki_link`, and `provenance` data.
 
 ### Fixed
 - Complete deterministic scanner coverage for NestJS, Koa, tRPC, GraphQL, and OpenAPI API surfaces (including GraphQL field-config resolver mapping).
