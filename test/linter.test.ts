@@ -381,6 +381,23 @@ test('lintWiki exempts top-level hub pages from provenance warnings', async () =
   }
 });
 
+test('lintWiki still requires content provenance for Agent-Context-Pack', async () => {
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Agent-Context-Pack.md': generatedPage('Agent Context Pack', 'This page summarizes repository behavior for agents without direct source citations yet.', ['kind: "agent_context"'])
+  });
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+    const provenanceWarning = result.issues.find((issue) => issue.code === 'missing-source-provenance' && issue.message.includes('Agent-Context-Pack.md'));
+
+    assert.ok(provenanceWarning);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+
 test('lintWiki checks nested pages with hub filenames for provenance warnings', async () => {
   const { dir, wikiDir, scanDir } = await writeWikiFixture({
     ...requiredPages,

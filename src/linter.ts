@@ -20,8 +20,7 @@ const PROVENANCE_EXEMPT_PAGES = new Set([
   'Home.md',
   '_Sidebar.md',
   'Index.md',
-  'Log.md',
-  'Agent-Context-Pack.md'
+  'Log.md'
 ]);
 const GRAPH_HEALTH_EXEMPT_PAGES = new Set([
   'Home.md',
