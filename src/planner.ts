@@ -2,11 +2,14 @@ import path from 'node:path';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { readJson, writeJson } from './utils/fs.js';
 
+const ALWAYS_AFFECTED_INCREMENTAL_PAGES = ['Index.md', '_Sidebar.md', 'Log.md', 'Agent-Context-Pack.md'] as const;
+
 export async function createBootstrapPlan({ scanDir, outFile }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
   const modules = groupIntoModules(manifest.files);
   const pages = createPagePlan(manifest, modules);
   const affectedPageGraph = buildAffectedPageGraph(manifest, modules, pages);
+  const incrementalSelection = await buildIncrementalSelection({ manifest, scanDir, pages });
 
   const plan = {
     schema_version: 1,
@@ -39,7 +42,8 @@ export async function createBootstrapPlan({ scanDir, outFile }) {
     ],
     modules,
     pages,
-    affected_page_graph: affectedPageGraph
+    affected_page_graph: affectedPageGraph,
+    ...(incrementalSelection ? { incremental_selection: incrementalSelection } : {})
   };
 
   await writeJson(outFile, plan);
@@ -52,6 +56,148 @@ export async function createBootstrapPlan({ scanDir, outFile }) {
       outFile
     }
   };
+}
+
+async function buildIncrementalSelection({ manifest, scanDir, pages }: { manifest: any; scanDir: string; pages: any[] }) {
+  if (manifest.mode !== 'incremental') {
+    return null;
+  }
+
+  const plannedPages = new Set<string>(pages.map((page) => page.path));
+  const alwaysAffected = ALWAYS_AFFECTED_INCREMENTAL_PAGES.filter((page) => plannedPages.has(page));
+  const changedPaths = extractChangedPaths(manifest);
+  const graphPath = path.join(path.dirname(scanDir), 'graph.json');
+
+  let graph: any = null;
+  let selectionMode: 'graph' | 'fallback_missing_graph' | 'fallback_missing_changed_paths' = 'graph';
+
+  try {
+    graph = await readJson(graphPath);
+  } catch (error) {
+    if (isNodeError(error) && error.code === 'ENOENT') {
+      selectionMode = 'fallback_missing_graph';
+    } else {
+      throw error;
+    }
+  }
+
+  if (selectionMode === 'graph' && changedPaths.length === 0) {
+    selectionMode = 'fallback_missing_changed_paths';
+  }
+
+  const selectedPages = new Map<string, Set<string>>();
+  const addReason = (page: string, reason: string) => {
+    if (!plannedPages.has(page)) {
+      return;
+    }
+    let reasons = selectedPages.get(page);
+    if (!reasons) {
+      reasons = new Set<string>();
+      selectedPages.set(page, reasons);
+    }
+    reasons.add(reason);
+  };
+
+  if (selectionMode === 'graph') {
+    const changedPathSet = new Set(changedPaths);
+    const managedPages = extractManagedPagesFromGraph(graph, plannedPages);
+    for (const edge of graph?.edges || []) {
+      if (edge?.type !== 'affects') {
+        continue;
+      }
+      const sourcePath = extractGraphNodePath(edge.from, 'source');
+      const pagePath = extractGraphNodePath(edge.to, 'page');
+      if (!sourcePath || !pagePath) {
+        continue;
+      }
+      if (!changedPathSet.has(sourcePath)) {
+        continue;
+      }
+      if (!managedPages.has(pagePath)) {
+        continue;
+      }
+      addReason(pagePath, `affects:${sourcePath}`);
+    }
+  } else {
+    const fallbackReason = selectionMode === 'fallback_missing_graph' ? 'fallback_graph_missing' : 'fallback_changed_paths_missing';
+    for (const pagePath of plannedPages) {
+      addReason(pagePath, fallbackReason);
+    }
+  }
+
+  for (const pagePath of alwaysAffected) {
+    addReason(pagePath, 'always_global');
+  }
+
+  const selected = [...selectedPages.entries()]
+    .map(([page, reasons]) => ({ page, reasons: [...reasons].sort() }))
+    .sort((a, b) => a.page.localeCompare(b.page));
+
+  return {
+    graph_path: '.llmwiki/graph.json',
+    mode: selectionMode,
+    changed_paths: changedPaths,
+    always_affected_pages: [...alwaysAffected].sort((a, b) => a.localeCompare(b)),
+    selected_pages: selected
+  };
+}
+
+function extractManagedPagesFromGraph(graph: any, plannedPages: Set<string>) {
+  const managed = new Set<string>();
+  for (const node of graph?.nodes || []) {
+    if (node?.kind !== 'page' || typeof node.path !== 'string') {
+      continue;
+    }
+    if (!plannedPages.has(node.path)) {
+      continue;
+    }
+    const pageState = typeof node.page_state === 'string' ? node.page_state : 'generated';
+    if (pageState === 'generated' || pageState === 'mixed') {
+      managed.add(node.path);
+    }
+  }
+  if (managed.size === 0) {
+    for (const pagePath of plannedPages) {
+      managed.add(pagePath);
+    }
+  }
+  return managed;
+}
+
+function extractGraphNodePath(value: unknown, kind: 'source' | 'page') {
+  if (typeof value !== 'string' || !value.startsWith(`${kind}:`)) {
+    return null;
+  }
+  const pathPart = value.slice(kind.length + 1);
+  return pathPart || null;
+}
+
+function extractChangedPaths(manifest: any): string[] {
+  const candidates: unknown[] = [
+    manifest?.changed_paths,
+    manifest?.changed_files,
+    manifest?.analysis?.changed_paths,
+    manifest?.analysis?.changed_files,
+    manifest?.incremental?.changed_paths,
+    manifest?.incremental?.changed_files
+  ];
+
+  const changed = new Set<string>();
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate)) {
+      continue;
+    }
+    for (const item of candidate) {
+      if (typeof item === 'string' && item.length > 0) {
+        changed.add(item);
+      }
+    }
+  }
+  return [...changed].sort((a, b) => a.localeCompare(b));
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return Boolean(error) && typeof error === 'object' && 'code' in error;
 }
 
 function groupIntoModules(files) {

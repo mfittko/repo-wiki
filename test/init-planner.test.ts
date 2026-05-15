@@ -434,3 +434,114 @@ test('createBootstrapPlan builds affected_page_graph mapping source files to wik
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('createBootstrapPlan incremental mode selects affected pages from graph affects edges deterministically', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-plan-incremental-graph-'));
+  const llmwikiDir = path.join(dir, '.llmwiki');
+  const scanDir = path.join(llmwikiDir, 'run');
+  const outFile = path.join(llmwikiDir, 'incremental-plan.json');
+  const graphFile = path.join(llmwikiDir, 'graph.json');
+
+  try {
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      mode: 'incremental',
+      repo_path: dir,
+      remote: 'origin',
+      commit: 'abc123',
+      changed_paths: ['docs/guide.md', 'src/api/index.ts'],
+      totals: {
+        runtime_hints: {},
+        categories: { source: 1, docs: 1 }
+      },
+      files: [
+        { path: 'src/api/index.ts', category: 'source', language: 'TypeScript', runtime_hints: [], reasons: ['source'], bytes: 100 },
+        { path: 'docs/guide.md', category: 'docs', language: 'Markdown', runtime_hints: [], reasons: ['docs'], bytes: 100 }
+      ]
+    }, null, 2), 'utf8');
+
+    await writeFile(graphFile, JSON.stringify({
+      schema_version: 1,
+      nodes: [
+        { id: 'page:Module-api.md', kind: 'page', path: 'Module-api.md', page_state: 'generated' },
+        { id: 'page:Documentation-Debt-Report.md', kind: 'page', path: 'Documentation-Debt-Report.md', page_state: 'generated' },
+        { id: 'page:Home.md', kind: 'page', path: 'Home.md', page_state: 'generated' },
+        { id: 'source:docs/guide.md', kind: 'documentation', path: 'docs/guide.md' },
+        { id: 'source:src/api/index.ts', kind: 'source', path: 'src/api/index.ts' }
+      ],
+      edges: [
+        { type: 'affects', from: 'source:src/api/index.ts', to: 'page:Module-api.md' },
+        { type: 'affects', from: 'source:docs/guide.md', to: 'page:Documentation-Debt-Report.md' },
+        { type: 'wiki_link', from: 'page:Home.md', to: 'page:Module-api.md' },
+        { type: 'provenance', from: 'page:Documentation-Debt-Report.md', to: 'source:docs/guide.md' }
+      ]
+    }, null, 2), 'utf8');
+
+    await createBootstrapPlan({ scanDir, outFile });
+    const plan = await readJson(outFile);
+
+    assert.ok(plan.incremental_selection, 'incremental mode plan should emit incremental_selection');
+    assert.equal(plan.incremental_selection.graph_path, '.llmwiki/graph.json');
+    assert.equal(plan.incremental_selection.mode, 'graph');
+    assert.deepEqual(plan.incremental_selection.changed_paths, ['docs/guide.md', 'src/api/index.ts']);
+    assert.deepEqual(plan.incremental_selection.always_affected_pages, ['_Sidebar.md', 'Agent-Context-Pack.md', 'Index.md', 'Log.md']);
+
+    const selectedPages = plan.incremental_selection.selected_pages.map((entry: any) => entry.page);
+    const sortedSelectedPages = [...selectedPages].sort((left, right) => left.localeCompare(right));
+    assert.deepEqual(selectedPages, sortedSelectedPages, 'selected pages must be sorted deterministically');
+
+    const selectedByPage = new Map(plan.incremental_selection.selected_pages.map((entry: any) => [entry.page, entry.reasons]));
+    assert.deepEqual(selectedByPage.get('Module-api.md'), ['affects:src/api/index.ts']);
+    assert.deepEqual(selectedByPage.get('Documentation-Debt-Report.md'), ['affects:docs/guide.md']);
+    assert.deepEqual(selectedByPage.get('Index.md'), ['always_global']);
+    assert.deepEqual(selectedByPage.get('_Sidebar.md'), ['always_global']);
+    assert.deepEqual(selectedByPage.get('Log.md'), ['always_global']);
+    assert.deepEqual(selectedByPage.get('Agent-Context-Pack.md'), ['always_global']);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('createBootstrapPlan incremental mode falls back deterministically when graph artifact is missing', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-plan-incremental-fallback-'));
+  const llmwikiDir = path.join(dir, '.llmwiki');
+  const scanDir = path.join(llmwikiDir, 'run');
+  const outFile = path.join(llmwikiDir, 'incremental-plan.json');
+
+  try {
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({
+      mode: 'incremental',
+      repo_path: dir,
+      remote: 'origin',
+      commit: 'abc123',
+      changed_paths: ['src/api/index.ts'],
+      totals: {
+        runtime_hints: {},
+        categories: { source: 1 }
+      },
+      files: [
+        { path: 'src/api/index.ts', category: 'source', language: 'TypeScript', runtime_hints: [], reasons: ['source'], bytes: 100 }
+      ]
+    }, null, 2), 'utf8');
+
+    await createBootstrapPlan({ scanDir, outFile });
+    const plan = await readJson(outFile);
+
+    assert.ok(plan.incremental_selection);
+    assert.equal(plan.incremental_selection.mode, 'fallback_missing_graph');
+
+    const selectedPages = plan.incremental_selection.selected_pages.map((entry: any) => entry.page);
+    const expectedSelectedPages = [...plan.pages.map((page: any) => page.path)].sort((left, right) => left.localeCompare(right));
+    assert.deepEqual(selectedPages, expectedSelectedPages, 'missing graph should deterministically fall back to broader planned-page regeneration');
+
+    const selectedByPage = new Map(plan.incremental_selection.selected_pages.map((entry: any) => [entry.page, entry.reasons]));
+    assert.deepEqual(selectedByPage.get('Home.md'), ['fallback_graph_missing']);
+    assert.deepEqual(selectedByPage.get('Index.md'), ['always_global', 'fallback_graph_missing']);
+    assert.deepEqual(selectedByPage.get('_Sidebar.md'), ['always_global', 'fallback_graph_missing']);
+    assert.deepEqual(selectedByPage.get('Log.md'), ['always_global', 'fallback_graph_missing']);
+    assert.deepEqual(selectedByPage.get('Agent-Context-Pack.md'), ['always_global', 'fallback_graph_missing']);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
