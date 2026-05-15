@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { lintWiki } from '../src/linter.js';
 
-async function writeWikiFixture(pages: Record<string, string>) {
+async function writeWikiFixture(pages: Record<string, string>, graph: any = null) {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-linter-test-'));
   const wikiDir = path.join(dir, 'wiki');
   const scanDir = path.join(dir, 'scan');
@@ -17,6 +17,10 @@ async function writeWikiFixture(pages: Record<string, string>) {
     const pagePath = path.join(wikiDir, name);
     await mkdir(path.dirname(pagePath), { recursive: true });
     await writeFile(pagePath, content, 'utf8');
+  }
+
+  if (graph) {
+    await writeFile(path.join(dir, 'graph.json'), JSON.stringify(graph), 'utf8');
   }
 
   return { dir, wikiDir, scanDir };
@@ -388,6 +392,72 @@ test('lintWiki checks nested pages with hub filenames for provenance warnings', 
     const nestedProvenanceWarning = result.issues.find((issue) => issue.code === 'missing-source-provenance' && issue.message.includes('nested/Home.md'));
 
     assert.ok(nestedProvenanceWarning);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('lintWiki emits deterministic graph-health findings for GRAPH001-GRAPH004 with exemptions', async () => {
+  const graph = {
+    schema_version: 1,
+    nodes: [
+      { id: 'page:Home.md', kind: 'page', path: 'Home.md', page_state: 'generated' },
+      { id: 'page:_Sidebar.md', kind: 'page', path: '_Sidebar.md', page_state: 'generated' },
+      { id: 'page:Index.md', kind: 'page', path: 'Index.md', page_state: 'generated' },
+      { id: 'page:Log.md', kind: 'page', path: 'Log.md', page_state: 'generated' },
+      { id: 'page:Agent-Context-Pack.md', kind: 'page', path: 'Agent-Context-Pack.md', page_state: 'generated' },
+      { id: 'page:Repository-Overview.md', kind: 'page', path: 'Repository-Overview.md', page_state: 'generated' },
+      { id: 'page:Orphan-Page.md', kind: 'page', path: 'Orphan-Page.md', page_state: 'generated' },
+      { id: 'page:Broken-Link-Page.md', kind: 'page', path: 'Broken-Link-Page.md', page_state: 'generated' },
+      { id: 'page:Missing-Provenance-Page.md', kind: 'page', path: 'Missing-Provenance-Page.md', page_state: 'generated' },
+      { id: 'page:Dangling-Provenance-Page.md', kind: 'page', path: 'Dangling-Provenance-Page.md', page_state: 'generated' },
+      { id: 'source:src/existing.ts', kind: 'source', path: 'src/existing.ts' }
+    ],
+    edges: [
+      { type: 'wiki_link', from: 'page:Home.md', to: 'page:Repository-Overview.md' },
+      { type: 'wiki_link', from: 'page:Home.md', to: 'page:Broken-Link-Page.md' },
+      { type: 'wiki_link', from: 'page:Home.md', to: 'page:Missing-Provenance-Page.md' },
+      { type: 'wiki_link', from: 'page:Home.md', to: 'page:Dangling-Provenance-Page.md' },
+      { type: 'wiki_link', from: 'page:Broken-Link-Page.md', to: 'page:Missing-Target.md' },
+      { type: 'provenance', from: 'page:Repository-Overview.md', to: 'source:src/existing.ts' },
+      { type: 'provenance', from: 'page:Orphan-Page.md', to: 'source:src/existing.ts' },
+      { type: 'provenance', from: 'page:Broken-Link-Page.md', to: 'source:src/existing.ts' },
+      { type: 'provenance', from: 'page:Dangling-Provenance-Page.md', to: 'source:src/missing.ts' }
+    ]
+  };
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Orphan-Page.md': generatedPage('Orphan Page'),
+    'Broken-Link-Page.md': generatedPage('Broken Link Page'),
+    'Missing-Provenance-Page.md': generatedPage('Missing Provenance Page'),
+    'Dangling-Provenance-Page.md': generatedPage('Dangling Provenance Page')
+  }, graph);
+
+  try {
+    const first = await lintWiki({ wikiDir, scanDir });
+    const second = await lintWiki({ wikiDir, scanDir });
+
+    assert.deepEqual(first.summary.graph_health.findings, second.summary.graph_health.findings);
+    assert.deepEqual(first.summary.graph_health.findings.map((item: any) => item.code), ['GRAPH001', 'GRAPH002', 'GRAPH003', 'GRAPH004']);
+    assert.deepEqual(first.summary.graph_health.findings.map((item: any) => item.page_or_path), [
+      'Orphan-Page.md',
+      'Broken-Link-Page.md',
+      'Missing-Provenance-Page.md',
+      'Dangling-Provenance-Page.md'
+    ]);
+    assert.deepEqual(first.summary.graph_health.findings.map((item: any) => item.target), [
+      null,
+      'Missing-Target.md',
+      null,
+      'src/missing.ts'
+    ]);
+
+    const graphIssueCodes = first.issues.filter((issue) => issue.code.startsWith('GRAPH')).map((issue) => issue.code);
+    assert.deepEqual(graphIssueCodes, ['GRAPH001', 'GRAPH002', 'GRAPH003', 'GRAPH004']);
+    assert.equal(first.issues.some((issue) => issue.message.includes('Home.md has no inbound wiki links')), false);
+    assert.equal(first.issues.some((issue) => issue.message.includes('Agent-Context-Pack.md has no inbound wiki links')), false);
+    assert.equal(first.issues.some((issue) => issue.message.includes('Home.md is managed but has no provenance edges')), false);
+    assert.equal(first.issues.some((issue) => issue.message.includes('Agent-Context-Pack.md is managed but has no provenance edges')), false);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
