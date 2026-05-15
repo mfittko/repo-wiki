@@ -521,7 +521,7 @@ function severityRank(severity: 'error' | 'warning') {
 }
 
 function isManagedPageState(pageState: string) {
-  return ['generated', 'mixed', 'human-owned'].includes(pageState);
+  return ['generated', 'mixed'].includes(pageState);
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {

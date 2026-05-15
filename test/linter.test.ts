@@ -505,3 +505,29 @@ test('lintWiki skips graph-health findings for unsupported graph schema versions
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('lintWiki does not emit GRAPH003 for human-owned graph pages without provenance edges', async () => {
+  const graph = {
+    schema_version: 1,
+    nodes: [
+      { id: 'page:Home.md', kind: 'page', path: 'Home.md', page_state: 'generated' },
+      { id: 'page:Human-Owned-Page.md', kind: 'page', path: 'Human-Owned-Page.md', page_state: 'human-owned' }
+    ],
+    edges: [
+      { type: 'wiki_link', from: 'page:Home.md', to: 'page:Human-Owned-Page.md' }
+    ]
+  };
+  const { dir, wikiDir, scanDir } = await writeWikiFixture({
+    ...requiredPages,
+    'Human-Owned-Page.md': generatedPage('Human Owned Page', '', ['page_state: "human-owned"'])
+  }, graph);
+
+  try {
+    const result = await lintWiki({ wikiDir, scanDir });
+
+    assert.equal(result.summary.graph_health.findings.some((finding: any) => finding.code === 'GRAPH003' && finding.page_or_path === 'Human-Owned-Page.md'), false);
+    assert.equal(result.issues.some((issue) => issue.code === 'GRAPH003' && issue.message.includes('Human-Owned-Page.md')), false);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
