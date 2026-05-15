@@ -66,6 +66,7 @@ async function buildIncrementalSelection(manifest: any, pages: any[], scanDir: s
   const plannedPages = new Set((pages || []).map((page: any) => String(page?.path || '')).filter(Boolean));
   const changedPathAttribution = extractChangedPaths(manifest);
   const changedPaths = changedPathAttribution.paths;
+  const graphMatchedChangedPaths = new Set<string>();
   const selected = new Map<string, { reasons: Set<string>; changedPaths: Set<string> }>();
 
   function markSelected(pagePath: string, reason: string, changedPath?: string) {
@@ -108,6 +109,7 @@ async function buildIncrementalSelection(manifest: any, pages: any[], scanDir: s
           const isAlwaysAffected = ALWAYS_AFFECTED_INCREMENTAL_PAGES.includes(pagePath);
           if (managedPages.has(pagePath) || isAlwaysAffected) {
             markSelected(pagePath, 'graph_affects', changedPath);
+            graphMatchedChangedPaths.add(changedPath);
             graphUsed = true;
           }
         }
@@ -122,6 +124,10 @@ async function buildIncrementalSelection(manifest: any, pages: any[], scanDir: s
 
   if (graphAvailable && !changedPathAttribution.available) {
     fallbackReason = 'fallback_missing_changed_paths';
+  }
+
+  if (graphAvailable && changedPathAttribution.available && changedPaths.some((changedPath) => !graphMatchedChangedPaths.has(changedPath))) {
+    fallbackReason = 'fallback_unmatched_changed_paths';
   }
 
   if (fallbackReason) {
