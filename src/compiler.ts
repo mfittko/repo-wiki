@@ -462,31 +462,36 @@ function extractLocalWikiLinks(content: string): string[] {
   const visibleLines: string[] = [];
   let fenceMarker: { char: '`' | '~'; length: number } | null = null;
   let inHtmlComment = false;
+  let activeListItemIndent: number | null = null;
 
-  for (const line of lines) {
-    const fenceMatch = /^\s*(`{3,}|~{3,})/.exec(line);
+  for (const rawLine of lines) {
+    const line = stripMarkdownBlockquotePrefixes(rawLine);
+    const fenceMatch = parseMarkdownFenceLine(line);
     if (fenceMatch) {
-      const marker = {
-        char: fenceMatch[1][0] as '`' | '~',
-        length: fenceMatch[1].length,
-      };
-      const fenceRemainder = line.slice(fenceMatch[0].length);
       if (!fenceMarker) {
-        fenceMarker = marker;
+        fenceMarker = fenceMatch.marker;
         continue;
       }
-      if (marker.char === fenceMarker.char && marker.length >= fenceMarker.length && !fenceRemainder.trim()) {
+      if (fenceMatch.marker.char === fenceMarker.char && fenceMatch.marker.length >= fenceMarker.length && !fenceMatch.trailing.trim()) {
         fenceMarker = null;
         continue;
       }
     }
-    if (fenceMarker || isIndentedMarkdownCodeBlockLine(line)) {
+    if (fenceMarker) {
       continue;
     }
 
     const visibleLine = stripWikiLinkExtractionNoise(line, inHtmlComment);
     inHtmlComment = visibleLine.inHtmlComment;
+    if (isIndentedMarkdownCodeBlockLine(line, activeListItemIndent)) {
+      if (!visibleLine.text.trim()) {
+        activeListItemIndent = null;
+      }
+      continue;
+    }
+
     visibleLines.push(visibleLine.text);
+    activeListItemIndent = nextMarkdownListItemIndent(visibleLine.text, activeListItemIndent);
   }
 
   const referenceTargets = extractMarkdownReferenceDefinitions(visibleLines);
@@ -514,9 +519,85 @@ function extractLocalWikiLinks(content: string): string[] {
   return [...links];
 }
 
+function parseMarkdownFenceLine(line: string): { marker: { char: '`' | '~'; length: number }; trailing: string } | null {
+  const match = /^( {0,3})(`{3,}|~{3,})(.*)$/.exec(line);
+  if (!match) {
+    return null;
+  }
+  return {
+    marker: {
+      char: match[2][0] as '`' | '~',
+      length: match[2].length,
+    },
+    trailing: match[3] || '',
+  };
+}
 
-function isIndentedMarkdownCodeBlockLine(line: string): boolean {
-  return /^(?: {4,}|	)(?![*+-]\s|\d+[.)]\s)/.test(line);
+function stripMarkdownBlockquotePrefixes(line: string): string {
+  let result = line;
+  while (true) {
+    const match = /^( {0,3})> ?/.exec(result);
+    if (!match) {
+      return result;
+    }
+    result = result.slice(match[0].length);
+  }
+}
+
+function leadingMarkdownIndentWidth(line: string): number {
+  let width = 0;
+  for (const char of line) {
+    if (char === ' ') {
+      width += 1;
+      continue;
+    }
+    if (char === '\t') {
+      width += 4;
+      continue;
+    }
+    break;
+  }
+  return width;
+}
+
+function nextMarkdownListItemIndent(line: string, activeListItemIndent: number | null): number | null {
+  if (!line.trim()) {
+    return null;
+  }
+
+  const listItem = /^(\s*)(?:[*+-]|\d+[.)])\s+/.exec(line);
+  if (listItem) {
+    return leadingMarkdownIndentWidth(listItem[1]);
+  }
+
+  const indentWidth = leadingMarkdownIndentWidth(line);
+  if (activeListItemIndent !== null && indentWidth > activeListItemIndent) {
+    return activeListItemIndent;
+  }
+
+  return null;
+}
+
+function isIndentedMarkdownCodeBlockLine(line: string, activeListItemIndent: number | null): boolean {
+  const indentMatch = /^([ \t]+)(.*)$/.exec(line);
+  if (!indentMatch) {
+    return false;
+  }
+
+  const indentWidth = leadingMarkdownIndentWidth(indentMatch[1]);
+  if (indentWidth < 4) {
+    return false;
+  }
+
+  if (/^(?:[*+-]|\d+[.)])\s/.test(indentMatch[2])) {
+    return false;
+  }
+
+  if (activeListItemIndent !== null && indentWidth > activeListItemIndent) {
+    return false;
+  }
+
+  return true;
 }
 
 function isEscapedMarkdownCharacter(line: string, index: number): boolean {
@@ -679,10 +760,23 @@ function consumeOptionalMarkdownLinkTitle(line: string, startIndex: number): num
 function extractMarkdownLinkTargets(line: string, referenceTargets = new Map<string, string>()): string[] {
   const targets: string[] = [];
   const isReferenceDefinitionLine = /^\s*\[[^\]]+\]:/.test(line);
+  if (isReferenceDefinitionLine) {
+    return targets;
+  }
   for (let index = 0; index < line.length; index += 1) {
     const openBracket = line.indexOf('[', index);
     if (openBracket === -1) break;
-    if ((openBracket > 0 && line[openBracket - 1] === '!') || isEscapedMarkdownCharacter(line, openBracket)) {
+    if (openBracket > 0 && line[openBracket - 1] === '!') {
+      const closeImageAlt = findClosingMarkdownBracket(line, openBracket);
+      if (closeImageAlt !== -1 && line[closeImageAlt + 1] === '[') {
+        const closeImageReference = findClosingMarkdownBracket(line, closeImageAlt + 1);
+        index = closeImageReference === -1 ? closeImageAlt : closeImageReference;
+      } else {
+        index = closeImageAlt === -1 ? openBracket : closeImageAlt;
+      }
+      continue;
+    }
+    if (isEscapedMarkdownCharacter(line, openBracket)) {
       index = openBracket;
       continue;
     }

@@ -2594,9 +2594,16 @@ test('compileWiki graph enrichment normalizes page states, wiki links, and prove
       { path: 'Beta.md', phase: 'module', purpose: 'Beta' },
       { path: 'Delta.md', phase: 'module', purpose: 'Delta' },
       { path: 'Epsilon.md', phase: 'module', purpose: 'Epsilon' },
+      { path: 'Eta.md', phase: 'module', purpose: 'Eta' },
       { path: 'Gamma.md', phase: 'module', purpose: 'Gamma' },
       { path: 'Iota.md', phase: 'module', purpose: 'Iota' },
+      { path: 'Kappa.md', phase: 'module', purpose: 'Kappa' },
+      { path: 'Lambda.md', phase: 'module', purpose: 'Lambda' },
+      { path: 'Nu.md', phase: 'module', purpose: 'Nu' },
+      { path: 'Omicron.md', phase: 'module', purpose: 'Omicron' },
+      { path: 'Pi.md', phase: 'module', purpose: 'Pi' },
       { path: 'Theta.md', phase: 'module', purpose: 'Theta' },
+      { path: 'Xi.md', phase: 'module', purpose: 'Xi' },
       { path: 'Zeta.md', phase: 'module', purpose: 'Zeta' }
     ],
     modules: [],
@@ -2644,7 +2651,8 @@ Inline code \`[Inline](Gamma.md)\` should not count.
 <!-- [Comment](Gamma.md) -->
 <!--
 [Hidden](Gamma.md)
--->
+    -->
+[Eta](Eta.md)
 \`\`\`\`md
 \`\`\`\`ts
 [Code sample](Gamma.md)
@@ -2655,8 +2663,20 @@ Inline code \`[Inline](Gamma.md)\` should not count.
 [Nested](nested/Beta.md)
 - Parent
     - [Iota](Iota.md)
+- Parent 2
+    [Kappa](Kappa.md)
 
     [Indented code link](Gamma.md)
+    \`\`\`md
+[Lambda](Lambda.md)
+> \`\`\`md
+> [Quoted code](Nu.md)
+> \`\`\`
+>     [Quoted indented code](Xi.md)
+> [Eta again](Eta.md)
+![diagram][omicron-image]
+[omicron-image]: Omicron.md
+[def-with-inline]: docs/readme.md "see [Pi](Pi.md)"
 [zeta-ref]: Zeta.md
 [zeta-ref]: Gamma.md
 `);
@@ -2708,7 +2728,10 @@ Needs review.
     assert.equal(pageStateByPath.get('Gamma.md'), 'mixed');
     assert.equal(pageStateByPath.get('Delta.md'), 'generated');
     assert.equal(pageStateByPath.get('Epsilon.md'), 'generated');
+    assert.equal(pageStateByPath.get('Eta.md'), 'generated');
     assert.equal(pageStateByPath.get('Iota.md'), 'generated');
+    assert.equal(pageStateByPath.get('Kappa.md'), 'generated');
+    assert.equal(pageStateByPath.get('Lambda.md'), 'generated');
     assert.equal(pageStateByPath.get('Theta.md'), 'generated');
     assert.equal(pageStateByPath.get('Zeta.md'), 'generated');
 
@@ -2718,7 +2741,10 @@ Needs review.
     assert.deepEqual(wikiLinks, [
       'page:Alpha.md->page:Beta.md',
       'page:Alpha.md->page:Epsilon.md',
+      'page:Alpha.md->page:Eta.md',
       'page:Alpha.md->page:Iota.md',
+      'page:Alpha.md->page:Kappa.md',
+      'page:Alpha.md->page:Lambda.md',
       'page:Alpha.md->page:Theta.md',
       'page:Alpha.md->page:Zeta.md'
     ]);
