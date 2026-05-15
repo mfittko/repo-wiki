@@ -153,7 +153,7 @@ export async function runCli(argv: string[]) {
         scanDir: getStringOption(options, 'scan') || '.llmwiki/run'
       });
       for (const finding of result.summary.graph_health?.findings || []) {
-        console.error(`${String(finding.severity || 'warning').toUpperCase()} ${String(finding.code || 'GRAPH')} ${String(finding.message || '')}`);
+        console.error(`${finding.severity.toUpperCase()} ${finding.code} ${finding.message}`);
       }
       console.log(JSON.stringify(result.summary, null, 2));
       if (result.summary.errors > 0) {

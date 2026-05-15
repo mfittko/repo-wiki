@@ -73,6 +73,11 @@ type GraphEdge = {
   to: string;
 };
 
+type GraphData = {
+  nodes?: unknown[];
+  edges?: unknown[];
+};
+
 export async function lintWiki({ wikiDir, scanDir }: { wikiDir: string; scanDir: string }) {
   const manifest = await readJson(path.join(scanDir, 'manifest.json'));
   const issues: LintIssue[] = [];
@@ -365,18 +370,18 @@ function warning(code: string, message: string): LintIssue {
 
 async function collectGraphHealthFindings(scanDir: string): Promise<GraphHealthFinding[]> {
   const graphPath = path.join(path.dirname(scanDir), 'graph.json');
-  let graph: any;
+  let graphData: GraphData;
   try {
-    graph = await readJson(graphPath);
-  } catch (error: any) {
-    if (error && error.code === 'ENOENT') {
+    graphData = await readJson(graphPath);
+  } catch (error: unknown) {
+    if (isNodeError(error) && error.code === 'ENOENT') {
       return [];
     }
     throw error;
   }
 
-  const nodes = Array.isArray(graph?.nodes) ? graph.nodes : [];
-  const edges = Array.isArray(graph?.edges) ? graph.edges : [];
+  const nodes = Array.isArray(graphData?.nodes) ? graphData.nodes : [];
+  const edges = Array.isArray(graphData?.edges) ? graphData.edges : [];
   const parsedNodes: GraphNode[] = nodes
     .filter((node: any) => typeof node?.id === 'string' && typeof node?.kind === 'string' && typeof node?.path === 'string')
     .map((node: any) => ({
@@ -437,12 +442,14 @@ async function collectGraphHealthFindings(scanDir: string): Promise<GraphHealthF
     if (toPage?.kind === 'page') {
       continue;
     }
+    const fromPath = String(fromPage.path || edge.from.replace(/^page:/, ''));
+    const missingTarget = edge.to.replace(/^page:/, '');
     findings.push({
       code: 'GRAPH002',
       severity: 'warning',
-      page_or_path: String(fromPage.path || edge.from.replace(/^page:/, '')),
-      target: edge.to.replace(/^page:/, ''),
-      message: `${String(fromPage.path || edge.from.replace(/^page:/, ''))} links to missing page ${edge.to.replace(/^page:/, '')} in .llmwiki/graph.json.`
+      page_or_path: fromPath,
+      target: missingTarget,
+      message: `${fromPath} links to missing page ${missingTarget} in .llmwiki/graph.json.`
     });
   }
 
@@ -477,12 +484,14 @@ async function collectGraphHealthFindings(scanDir: string): Promise<GraphHealthF
     if (toNode && (toNode.kind === 'source' || toNode.kind === 'documentation')) {
       continue;
     }
+    const fromPath = String(fromPage.path || edge.from.replace(/^page:/, ''));
+    const danglingTarget = edge.to.replace(/^(source|documentation):/, '');
     findings.push({
       code: 'GRAPH004',
       severity: 'warning',
-      page_or_path: String(fromPage.path || edge.from.replace(/^page:/, '')),
-      target: edge.to.replace(/^(source|documentation):/, ''),
-      message: `${String(fromPage.path || edge.from.replace(/^page:/, ''))} references missing provenance target ${edge.to.replace(/^(source|documentation):/, '')} in .llmwiki/graph.json.`
+      page_or_path: fromPath,
+      target: danglingTarget,
+      message: `${fromPath} references missing provenance target ${danglingTarget} in .llmwiki/graph.json.`
     });
   }
 
@@ -499,7 +508,7 @@ function compareGraphHealthFindings(left: GraphHealthFinding, right: GraphHealth
   return severityRank(left.severity) - severityRank(right.severity)
     || left.code.localeCompare(right.code)
     || left.page_or_path.localeCompare(right.page_or_path)
-    || String(left.target || '').localeCompare(String(right.target || ''));
+    || (left.target || '').localeCompare(right.target || '');
 }
 
 function severityRank(severity: 'error' | 'warning') {
@@ -508,4 +517,8 @@ function severityRank(severity: 'error' | 'warning') {
 
 function isManagedPageState(pageState: string) {
   return ['generated', 'mixed', 'human-owned'].includes(pageState);
+}
+
+function isNodeError(error: unknown): error is NodeJS.ErrnoException {
+  return !!error && typeof error === 'object' && 'code' in error;
 }
