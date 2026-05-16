@@ -11,6 +11,7 @@ import { detectPageState, extractHumanNotes, preserveHumanNotes } from './page-o
 import { buildRequest, createProvider, createProviderFromResolvedConfig, LLMProviderError, resolveArchitectureOverrides, resolveProviderConfig } from './llm-provider.js';
 import type { LLMProvider } from './llm-provider.js';
 import { synthesizeWikiPage, WikiPatchError } from './wiki-patch.js';
+import { buildSearchIndex } from './search.js';
 
 export async function compileWiki({
   scanDir,
@@ -321,8 +322,16 @@ export async function compileWiki({
   // This preserves the fixed `.llmwiki/graph.json` contract even when callers override `--wiki`.
   await writeJson(path.join(path.dirname(scanDir), 'graph.json'), await buildWikiGraph(manifest, plan, wikiDir));
 
+  // Keep the search artifact rooted in the local .llmwiki workspace rather than the configurable wikiDir.
+  // This preserves the fixed `.llmwiki/search/` contract even when callers override `--wiki`.
+  const search = await buildSearchIndex({
+    wikiDir,
+    outDir: path.join(path.dirname(scanDir), 'search')
+  });
+
   return {
     contexts: pageContexts,
+    search,
     summary: {
       wikiDir,
       compiler_mode: compilerMode,
@@ -333,7 +342,8 @@ export async function compileWiki({
       skipped_by_state: skippedByState,
       commit: manifest.commit,
       contexts: pageContexts.length,
-      architecture_decision: archDecision ?? 'full-regenerated'
+      architecture_decision: archDecision ?? 'full-regenerated',
+      search: search.summary
     }
   };
 }

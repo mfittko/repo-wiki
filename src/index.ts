@@ -20,3 +20,5 @@ export { FRONTMATTER_POLICIES, isFrontmatterPolicy, stripFrontmatter, applyFront
 export type { FrontmatterPolicy } from './frontmatter.js';
 export { WikiPatchError, validateWikiPatch, parseWikiPatch, synthesizeWikiPage } from './wiki-patch.js';
 export type { WikiPatch, WikiPatchFrontmatter, WikiPatchIssue, SynthesizeOptions } from './wiki-patch.js';
+export { buildSearchIndex, searchWiki, searchIndex, formatSearchResults, defaultSearchDirForWiki, SEARCH_INDEX_VERSION } from './search.js';
+export type { SearchIndex, SearchIndexEntry, SearchResult } from './search.js';

@@ -2,7 +2,36 @@
 
 ## Summary
 
-Build a local search index over generated wiki pages, source cards, and documentation cards so that `repo-wiki search` and `repo-wiki query` can route questions efficiently without external services. Design the index layer as an adapter so that optional qmd, MCP, or other backends can be swapped in later without changing core scan and compile behavior.
+Ship the first built-in local search path over compiled wiki pages so that `repo-wiki search` works fully offline today. Preserve enough metadata for later query/runtime routing, but defer external adapters until after the built-in page-first contract is stable.
+
+## Shipped built-in slice
+
+The shipped slice is intentionally bounded:
+
+- deterministic index artifact: `.llmwiki/search/index.json`
+- inputs: compiled wiki pages plus local metadata already present in page frontmatter and internal wiki links
+- ranking: deterministic page-first lexical scoring with evidence-oriented results
+- CLI: `repo-wiki search <query>` with text output for humans and `--json` for tools/agents
+- rebuild path: compile refreshes the search artifact, and `search` can rebuild it on demand from local wiki pages
+
+### Result contract
+
+Each result includes:
+
+- page title and page path
+- page `kind` / `page_state` when available
+- summary/snippet for quick routing
+- `source_paths` when available
+- lightweight graph context from inbound/outbound internal wiki links
+
+## Deferred after the shipped slice
+
+These remain explicitly deferred:
+
+- source-card/documentation-card indexing beyond what is already promoted into compiled wiki pages
+- section-level ranking as a primary retrieval contract
+- qmd, MCP, embedding, or hosted adapters
+- answer synthesis / `query` / file-back workflows
 
 ## Architecture
 
@@ -34,19 +63,18 @@ flowchart LR
 
 ## Key Deliverables
 
-- Local index builder that runs after `compile` and indexes wiki pages and cards.
-- Built-in ranked text search (TF-IDF or equivalent) with no external dependencies.
-- Adapter interface for optional qmd and MCP backends.
+- Local index builder that runs after `compile` and indexes compiled wiki pages.
+- Built-in ranked text search with no external dependencies.
 - Index stored under `.llmwiki/search/` alongside run artifacts.
-- `repo-wiki search <query>` CLI command that returns ranked results with page title, category, and source paths.
-- Index rebuilt incrementally: only changed pages are re-indexed when incremental mode is used.
-- Index entries include page metadata: `kind`, `source_commit`, `source_paths`, `page_state`.
+- `repo-wiki search <query>` CLI command that returns ranked results with page title, category/kind, snippet, graph context, and source paths.
+- Deterministic full rebuilds that are compatible with later incremental indexing.
+- Index entries include page metadata: `kind`, `source_commit`, `source_paths`, `page_state`, and internal-link adjacency.
 
 ## Success Criteria
 
 - `repo-wiki search "query"` returns ranked results without network access.
 - Search results include source paths so callers can drill into evidence.
-- Optional adapters plug in without touching scan or compile logic.
+- The built-in shipped contract is stable enough for later query/runtime work to consume directly.
 - Index rebuild is fast enough to run after every compile in a typical repository.
 
 ## Acceptance Criteria (from PLAN.md)
@@ -60,15 +88,19 @@ flowchart LR
 ```json
 {
   "version": 1,
-  "built_at": "2026-05-10T14:30:00Z",
-  "source_commit": "abc1234",
+  "wikiDir": "/repo/.llmwiki/wiki",
+  "sourceCommits": ["abc1234"],
   "entries": [
     {
-      "page": "Architecture",
-      "category": "foundation",
+      "pagePath": "Architecture.md",
+      "title": "Architecture",
+      "kind": "foundation",
+      "pageState": "generated",
       "summary": "High-level system design and data flow.",
-      "source_paths": ["src/compiler.ts", "src/scanner.ts"],
-      "tokens": ["compiler", "scanner", "planner", "wiki"]
+      "sourcePaths": ["src/compiler.ts", "src/scanner.ts"],
+      "outboundLinks": ["Module-scanner-ts.md"],
+      "inboundLinks": [],
+      "searchText": "architecture compiler scanner planner wiki"
     }
   ]
 }
@@ -81,6 +113,6 @@ flowchart LR
 
 ## Open Questions
 
-- Should the built-in index use TF-IDF, BM25, or a simpler token match?
-- What is the right threshold for triggering an external adapter rather than the built-in search?
-- Should qmd or MCP be the first optional adapter to implement?
+- When incremental mode becomes diff-minimal, what is the narrowest safe page-level reindex contract?
+- Should section-level ranking be added on top of the page-first contract, or remain a downstream concern for `query`?
+- If optional adapters arrive later, should qmd or MCP be the first external backend to implement?
