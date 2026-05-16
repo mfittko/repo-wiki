@@ -1,42 +1,70 @@
 # repo-wiki
 
-A Node.js CLI and library for compiling any GitHub repository into a GitHub Wiki knowledge base for humans and coding agents.
+`repo-wiki` is a Node.js CLI and library that compiles a Git repository into a source-grounded wiki knowledge base for humans and coding agents.
 
-The package is dual-role:
+It follows the LLM Wiki pattern described in `docs/PLAN.md`: scan the repository at a pinned commit, ingest markdown as secondary evidence, compile durable wiki pages, and lint the result before publishing. GitHub Wiki is the primary publication target today, and GitHub Pages is also supported.
 
-1. Use it on any existing repository.
-2. Use it to maintain this repository's own wiki.
+## What it does
 
-It follows an LLM Wiki pattern: pinned source input, source cards, documentation cards, a compiled wiki, and lint gates that keep the wiki navigable, source-grounded, and safe.
+- scans repository files into source cards plus a manifest
+- ingests markdown documentation into documentation cards
+- validates documented commands, file paths, environment variables, and route/API claims
+- plans and compiles local wiki pages under `.llmwiki/wiki/`
+- preserves `HUMAN_NOTES` and skips human-owned or unmanaged pages
+- publishes the local wiki to either GitHub Wiki or GitHub Pages
+- supports deterministic compilation and an LLM-assisted compilation path
 
-## Install or run with npx
+## Current implementation scope
+
+Today the package includes:
+
+- a working CLI and library API
+- bootstrap and incremental command flow (`incremental` is wired through the CLI, but scanning is still broad rather than diff-minimal)
+- JavaScript/TypeScript AST-backed extraction for imports, symbols, exports, and route-adjacent surfaces
+- regex/baseline extraction for Python, Go, Rust, and Ruby imports and symbols
+- route detection for Express, Fastify, NestJS, Hono, Koa, tRPC, GraphQL, OpenAPI, and file-based route handlers
+- migration/model detection for SQL-style migrations plus Prisma, TypeORM, Sequelize, and Mongoose-style model signals
+- test-to-source mapping, package-script extraction, CI command extraction, dependency-edge analysis, and environment-variable collection
+- documentation linting and a generated `Documentation-Debt-Report.md`
+- GitHub Wiki and GitHub Pages publishing, including target-specific frontmatter handling
+- LLM synthesis for module pages and `Architecture.md` behind a validated provider boundary
+
+## Requirements
+
+- Node.js 24+
+
+## Quick start
+
+Initialize a repository for repo-wiki:
 
 ```bash
 npx repo-wiki init --repo . --write-agents
-npx repo-wiki run --mode bootstrap --repo . --wiki .llmwiki/wiki
 ```
 
-## Local development
+Run a full local bootstrap:
 
 ```bash
-npm install
-npm run build
-npm test
-npm run check
-npm run coverage
-npm run changelog:ensure
-npm run self:wiki
-npm run lint:docs
-npm run lint:local
+npx repo-wiki run \
+  --mode bootstrap \
+  --repo . \
+  --scan .llmwiki/run \
+  --plan .llmwiki/bootstrap-plan.json \
+  --wiki .llmwiki/wiki
 ```
 
-The local CLI and package verification flow runs against compiled output in `dist/`. `npm test`, `npm run check`, and `npm run coverage` all require a successful TypeScript build before tests run. CI enforces a 95% line coverage gate on compiled source coverage. Changelog maintenance is automated with `scripts/update-changelog.mjs`: merged PR title plus changed files feed `Unreleased` on `main`, and a release workflow rotates `Unreleased` into versioned sections.
+The default workflow writes:
 
-## Commands
+- `.llmwiki/config.json`
+- `.llmwiki/schema.md`
+- `.llmwiki/run/manifest.json` and card artifacts
+- `.llmwiki/wiki/*.md`
+- an optional agent pointer file when `--write-agents` is used
+
+## Command surface
 
 ```text
 repo-wiki init      Add .llmwiki config/schema files to a repository.
-repo-wiki scan      Scan source files and markdown docs into cards and manifest files.
+repo-wiki scan      Scan source files and markdown docs into cards and a manifest.
 repo-wiki plan      Create a bootstrap or incremental wiki compilation plan.
 repo-wiki lint-docs Validate ingested markdown documentation before compilation.
 repo-wiki compile   Generate or update local wiki markdown pages.
@@ -45,35 +73,60 @@ repo-wiki publish   Publish local wiki pages to GitHub Wiki or GitHub Pages.
 repo-wiki run       Run scan -> plan -> lint-docs -> compile -> lint, optionally followed by publish.
 ```
 
-## Documentation ingestion policy
+`run` blocks compilation and publish when `lint-docs` reports error-level issues.
 
-Markdown documentation is ingested by default, but it is secondary evidence. Code at the pinned commit is authoritative; tests, CI, config, schemas, and migrations have higher authority than markdown.
+## Documentation authority model
 
-Documentation is useful for intent, terminology, onboarding, runbooks, and ADR rationale. It can also be stale. The package therefore creates documentation cards and runs `repo-wiki lint-docs` before compilation.
+Code at the pinned commit is authoritative. Tests, CI/configuration, and generated schemas are stronger evidence than markdown. Markdown docs are still ingested because they often contain intent, terminology, onboarding, and runbook context.
 
-Configuration:
+The default documentation config is loaded from `src/config.ts` and includes:
 
-```json
-{
-  "documentation": {
-    "ingest": true,
-    "authority": "secondary",
-    "include": ["README.md", "docs/**/*.md", "ADR/**/*.md", ".github/**/*.md"],
-    "exclude": ["CHANGELOG.md", "docs/archive/**", "docs/old/**"],
-    "stale_after_days": 180,
-    "validation_strictness": "standard",
-    "require_code_validation": true,
-    "allow_unvalidated_context": true,
-    "preserve_original_claims": false,
-    "fail_on_stale_docs": false,
-    "fail_on_conflicting_docs": true
-  }
-}
-```
+- `documentation.ingest=true`
+- `authority="secondary"`
+- include patterns for `README.md`, `docs/**/*.md`, `ADR/**/*.md`, and `.github/**/*.md`
+- default lint behavior for stale docs, contradicted docs, broken file references, unvalidated env vars, and unvalidated route claims
 
-Generated wikis include a `Documentation-Debt-Report` wiki page, which summarizes stale docs, contradicted docs, unvalidated claims (including route/API claims), and broken references with deterministic validation tables.
+`repo-wiki lint-docs` validates documented package scripts/commands, checks relative links and referenced repo paths, and compares route/API claims against scanner-extracted route surfaces when available.
 
-## Publish to GitHub Wiki
+## Deterministic and LLM compilation
+
+The default compiler mode is deterministic.
+
+LLM mode is also shipped:
+
+- set `compiler.mode` to `llm` in `.llmwiki/config.json`, or
+- export `LLMWIKI_COMPILER_MODE=llm`
+
+In LLM mode:
+
+- module pages and `Architecture.md` are synthesized through the provider boundary
+- generated output must pass structured wiki-patch validation before it is written
+- foundation and cross-cutting pages remain deterministic today
+- the mock provider is still useful for tests and CI, while hosted mode uses the OpenAI-compatible provider
+
+Useful environment variables include:
+
+- `LLMWIKI_COMPILER_MODE`
+- `LLMWIKI_LLM_PROVIDER`
+- `LLMWIKI_LLM_BASE_URL`
+- `LLMWIKI_LLM_MODEL`
+- `LLMWIKI_LLM_API_KEY`
+- `LLMWIKI_LLM_SYSTEM_PROMPT`
+- `LLMWIKI_LLM_SYSTEM_PROMPT_FILE`
+- `LLMWIKI_LLM_TEMPERATURE`
+- `LLMWIKI_LLM_MAX_OUTPUT_TOKENS`
+- `LLMWIKI_LLM_TIMEOUT_MS`
+- `LLMWIKI_LLM_REASONING_EFFORT`
+- `LLMWIKI_LLM_RETRIES`
+- `LLMWIKI_LLM_VALIDATION_RETRIES`
+- `LLMWIKI_LLM_ARCHITECTURE_MODEL`
+- `LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS`
+- `LLMWIKI_LLM_ARCHITECTURE_TIMEOUT_MS`
+- `LLMWIKI_LLM_ARCHITECTURE_REASONING_EFFORT`
+
+## Publish targets
+
+Publish to GitHub Wiki:
 
 ```bash
 repo-wiki publish \
@@ -82,7 +135,7 @@ repo-wiki publish \
   --remote https://github.com/OWNER/REPO.wiki.git
 ```
 
-## Publish to GitHub Pages
+Publish to GitHub Pages:
 
 ```bash
 repo-wiki publish \
@@ -93,40 +146,17 @@ repo-wiki publish \
   --pages-path .
 ```
 
-For Pages-from-branch in `/docs`, use `--pages-path docs`. For `github-pages`, frontmatter is preserved by default.
+Notes:
 
-Configuration example:
+- GitHub Wiki defaults to `frontmatter=provenance`
+- GitHub Pages defaults to `frontmatter=preserve`
+- `--frontmatter-policy` and `--frontmatter` are both accepted
+- `--dry-run` reports target, branch/path, page count, and frontmatter policy without pushing
+- `LLMWIKI_PUBLISH_REMOTE` is the primary publish remote env var; GitHub Wiki publishing also falls back to `GITHUB_WIKI_REMOTE`
 
-```json
-{
-  "publish": {
-    "target": "github-pages",
-    "pages": {
-      "branch": "gh-pages",
-      "path": ".",
-      "frontmatter": "preserve"
-    },
-    "wiki": {
-      "branch": "master",
-      "frontmatter": "provenance"
-    }
-  }
-}
-```
+The repository also ships `.github/workflows/wiki.yml`, which compiles on `main`, publishes the GitHub Wiki on `main`, publishes GitHub Pages automatically on pushes to `main`, and can also publish Pages on manual dispatch when `publish_pages=true`.
 
-GitHub Wiki target defaults to rendering frontmatter as a visible provenance block; GitHub Pages defaults to preserving frontmatter. You can override with `--frontmatter-policy` or `--frontmatter`.
-
-The repository wiki workflow publishes GitHub Wiki output on `main` and can publish GitHub Pages output to the `gh-pages` branch. Use the workflow dispatch inputs to smoke-test Pages publishing manually before merge (set `publish_pages=true` and `pages_path` to a smoke path such as `smoke/pr-N`); automatic `main` publishes can use the production path such as `docs`.
-
-GitHub Wiki via environment variable:
-
-```bash
-LLMWIKI_PUBLISH_REMOTE=https://github.com/OWNER/REPO.wiki.git npm run kb:publish
-```
-
-Use a dedicated token or GitHub App credentials in CI. Do not publish generated wiki changes from untrusted pull requests.
-
-## Package API
+## Library API
 
 ```js
 import {
@@ -140,6 +170,32 @@ import {
 } from 'repo-wiki';
 ```
 
-## Current status
+Advanced exports also expose prompt-building, provider configuration, frontmatter policies, wiki-patch validation, and page-ownership helpers.
 
-This is a complete implementation scaffold, not a production-grade semantic compiler. It includes a working CLI, deterministic scanner, documentation ingestor, documentation linter, planner, wiki compiler, wiki linter, publisher, tests, prompts, configuration, and GitHub Actions workflow. The LLM synthesis layer and deep language-specific validators are intentionally left as the next implementation stage.
+## Local development
+
+```bash
+npm install
+npm run build
+npm run lint:code
+npm run check
+npm run coverage
+npm run pack:check
+npm run self:wiki
+npm run lint:docs
+npm run lint:local
+npm run changelog:ensure
+```
+
+Notes:
+
+- `npm test` aliases `npm run check`
+- tests run against built output in `dist/`
+- `npm run coverage` enforces a 95% line-coverage gate on compiled source
+- `npm run self:wiki` runs the package against this repository
+
+## Current status and near-term gaps
+
+The current package ships a working CLI, scanner, docs linting, deterministic compiler, LLM page synthesis path, wiki linting, publisher, and CI workflows.
+
+Still planned rather than shipped are user-facing `doctor`, `diff`, `query`, `search`, and deeper incremental maintenance, search, and wiki-health workflows described in `docs/PLAN.md`.
