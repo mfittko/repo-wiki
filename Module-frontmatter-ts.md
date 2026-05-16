@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "b1b3a9c5f3b8a59dd631cd206cda223760e1ba3a"
+source_commit: "c5432024529f5133bed4df4fd18ec2b67d908b7e"
 page_state: "generated"
 source_paths: ["src/frontmatter.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "2024-06-05T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides utilities and types for handling frontmatter blocks within text content. It includes functionality to extract, parse, apply policies to, and strip frontmatter sections. The module defines policies and types related to frontmatter processing, enabling controlled manipulation and validation of frontmatter data.
+This module provides utilities and types for handling frontmatter blocks within text files. It includes functionality to extract, parse, and apply policies to frontmatter content, supporting structured metadata processing. The module appears to focus on parsing frontmatter in a YAML-like format and enforcing or interpreting policies related to frontmatter content.
 
 ## Source file list
 
@@ -21,28 +21,30 @@ This module provides utilities and types for handling frontmatter blocks within 
 
 ## Key symbols and entry points
 
-- **applyFrontmatterPolicy**: Applies a specified frontmatter policy to a frontmatter block.
-- **extractFrontmatterBlock**: Extracts the frontmatter block from a given text input.
-- **FRONTMATTER_POLICIES**: A collection of predefined frontmatter policies.
-- **FrontmatterBlock**: Type representing a frontmatter block.
-- **FrontmatterPolicy**: Type defining the structure of a frontmatter policy.
-- **isFrontmatterPolicy**: Type guard to check if a value is a frontmatter policy.
-- **parseFrontmatterPolicy**: Parses a frontmatter policy from input.
-- **stripFrontmatter**: Removes the frontmatter block from a text input.
+- **applyFrontmatterPolicy**: Applies a specified frontmatter policy to a given frontmatter block.
+- **extractFrontmatterBlock**: Extracts the frontmatter block from a text source.
+- **FRONTMATTER_POLICIES**: A collection or enumeration of predefined frontmatter policies.
+- **FrontmatterBlock**: Type or interface representing a frontmatter block.
+- **FrontmatterPolicy**: Type or interface defining a frontmatter policy.
+- **isFrontmatterPolicy**: Type guard or predicate function to check if a value is a frontmatter policy.
+- **parseFrontmatterPolicy**: Parses a frontmatter policy from a given input.
+- **parseSimpleYamlObject**: Parses a simple YAML object, likely used for interpreting frontmatter content.
+- **stripFrontmatter**: Removes the frontmatter block from a text source.
 
 ## Dependencies and imports
 
-- Imports from `./secret-patterns.js` (details of imported entities are not specified in the source card).
+- Imports from `./secret-patterns.js`: This dependency likely provides patterns or utilities used internally for parsing or matching frontmatter content.
 
 ## Related tests
 
-No documentation or test files are listed for this module in the provided source cards.
+No documentation or test cards were found for this module. It is unclear if dedicated tests exist or are documented elsewhere.
 
 ## Known gaps or open questions
 
-- The exact nature and contents of the imported `./secret-patterns.js` module are not detailed.
-- No explicit documentation or test coverage is indicated, which may limit understanding of usage scenarios and robustness.
-- The policies defined in `FRONTMATTER_POLICIES` and their specific behaviors are not described in detail.
+- The exact nature and structure of `FRONTMATTER_POLICIES` and how policies are defined or used is not detailed.
+- No explicit documentation or examples are provided, limiting understanding of usage scenarios.
+- The relationship between frontmatter parsing and secret patterns (imported from `./secret-patterns.js`) is not elaborated.
+- Absence of related test documentation leaves the testing coverage and approach unknown.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

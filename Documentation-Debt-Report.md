@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "b1b3a9c5f3b8a59dd631cd206cda223760e1ba3a"
-compiled_at: "2026-05-16T11:56:44.359Z"
+source_commit: "c5432024529f5133bed4df4fd18ec2b67d908b7e"
+compiled_at: "2026-05-16T12:55:26.011Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 claim_status: "review-needed"
@@ -44,7 +44,7 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
 
 - Documentation ingestion enabled: true
 - Documentation files scanned: 24
-- Claims extracted: 29
+- Claims extracted: 30
 - Stale documents: 1
 - Commands found in docs: 23
 - Environment variable mentions: 29
@@ -72,12 +72,12 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
 | `docs/plans/llm-compiler.md` | partially_validated | secondary | 0 | 2 | 0 | 8 |
 | `docs/plans/production-scanner.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `docs/plans/query-and-file-back.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
-| `docs/plans/search-index.md` | partially_validated | secondary | 0 | 1 | 0 | 0 |
+| `docs/plans/search-index.md` | unvalidated | secondary | 0 | 1 | 0 | 0 |
 | `docs/plans/trust-hardening.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `docs/plans/wiki-graph.md` | unvalidated | secondary | 0 | 1 | 0 | 0 |
 | `docs/plans/wiki-health.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `docs/WHY.md` | partially_validated | secondary | 0 | 5 | 0 | 0 |
-| `README.md` | partially_validated | secondary | 0 | 6 | 12 | 19 |
+| `README.md` | partially_validated | secondary | 0 | 7 | 12 | 19 |
 
 ## Command validation
 
@@ -178,13 +178,13 @@ Repository file and directory references extracted from markdown links and inlin
 | `docs/WHY.md:19` | `Log.md` | ❌ missing | not found |
 | `docs/WHY.md:61` | `./PLAN.md` | ✅ valid | `docs/PLAN.md` |
 | `README.md:5` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
-| `README.md:28` | `Documentation-Debt-Report.md` | ❌ missing | not found |
-| `README.md:30` | `Architecture.md` | ❌ missing | not found |
-| `README.md:82` | `src/config.ts` | ✅ valid | `src/config.ts` |
-| `README.md:86` | `README.md` | ✅ valid | `README.md` |
-| `README.md:102` | `Architecture.md` | ❌ missing | not found |
-| `README.md:157` | `.github/workflows/wiki.yml` | ✅ valid | `.github/workflows/wiki.yml` |
-| `README.md:201` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
+| `README.md:29` | `Documentation-Debt-Report.md` | ❌ missing | not found |
+| `README.md:31` | `Architecture.md` | ❌ missing | not found |
+| `README.md:94` | `src/config.ts` | ✅ valid | `src/config.ts` |
+| `README.md:98` | `README.md` | ✅ valid | `README.md` |
+| `README.md:114` | `Architecture.md` | ❌ missing | not found |
+| `README.md:169` | `.github/workflows/wiki.yml` | ✅ valid | `.github/workflows/wiki.yml` |
+| `README.md:213` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
 
 ## Environment variable validation
 
@@ -256,6 +256,7 @@ Conservative ADR detection uses deterministic path hints (`ADR/**`, `docs/adr/**
 
 ### Unvalidated
 
+- `docs/plans/search-index.md` - documentation claims have no validation signal.
 - `docs/plans/wiki-graph.md` - documentation claims have no validation signal.
 - `npx repo-wiki init --repo . --write-agents` - command source unknown.
 - `npx repo-wiki run --mode bootstrap --repo . --wiki .llmwiki/wiki` - command source unknown.
@@ -303,9 +304,9 @@ Conservative ADR detection uses deterministic path hints (`ADR/**`, `docs/adr/**
 - `docs/plans/wiki-graph.md:108` references `Index.md` (missing).
 - `docs/WHY.md:18` references `Index.md` (missing).
 - `docs/WHY.md:19` references `Log.md` (missing).
-- `README.md:28` references `Documentation-Debt-Report.md` (missing).
-- `README.md:30` references `Architecture.md` (missing).
-- `README.md:102` references `Architecture.md` (missing).
+- `README.md:29` references `Documentation-Debt-Report.md` (missing).
+- `README.md:31` references `Architecture.md` (missing).
+- `README.md:114` references `Architecture.md` (missing).
 
 ### ADR-specific
 

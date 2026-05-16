@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "b1b3a9c5f3b8a59dd631cd206cda223760e1ba3a"
-compiled_at: "2026-05-16T11:56:44.354Z"
+source_commit: "c5432024529f5133bed4df4fd18ec2b67d908b7e"
+compiled_at: "2026-05-16T12:55:26.006Z"
 kind: "open_questions"
 claim_status: "review-needed"
 confidence: "low"
@@ -39,7 +39,7 @@ Documentation cards listed below are secondary evidence and require review. Do n
 - `docs/plans/llm-compiler.md` - claims need validation.
 - `docs/plans/production-scanner.md` - unvalidated status.
 - `docs/plans/query-and-file-back.md` - unvalidated status.
-- `docs/plans/search-index.md` - claims need validation.
+- `docs/plans/search-index.md` - unvalidated status.
 - `docs/plans/trust-hardening.md` - unvalidated status.
 - `docs/plans/wiki-graph.md` - unvalidated status.
 - `docs/plans/wiki-health.md` - unvalidated status.

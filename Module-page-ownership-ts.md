@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "b1b3a9c5f3b8a59dd631cd206cda223760e1ba3a"
+source_commit: "c5432024529f5133bed4df4fd18ec2b67d908b7e"
 page_state: "generated"
 source_paths: ["src/page-ownership.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -38,8 +38,8 @@ This module provides functionality related to managing and preserving human-gene
 ## Known gaps or open questions
 
 - There is no explicit documentation or test coverage information available.
-- The exact implementation details and usage scenarios of the exported functions and types are not described.
-- The module's integration context within a larger system is not specified.
+- The exact implementation details and usage scenarios of the key functions and types are not described.
+- The module's interaction with other parts of the system or its runtime environment is not specified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
