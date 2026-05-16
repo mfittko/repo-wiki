@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { readJson, writeJson } from './utils/fs.js';
+import { loadWikiGraph, selectAffectedPagePaths } from './wiki-graph.js';
 
 const ALWAYS_AFFECTED_INCREMENTAL_PAGES: readonly string[] = ['Agent-Context-Pack.md', 'Index.md', 'Log.md', '_Sidebar.md'];
 
@@ -90,25 +91,16 @@ async function buildIncrementalSelection(manifest: any, pages: any[], scanDir: s
   const graphPath = path.join(path.dirname(scanDir), 'graph.json');
 
   try {
-    const graph = await readJson(graphPath);
+    const graph = await loadWikiGraph(graphPath);
     graphAvailable = true;
 
-    const managedPages = getManagedPagePathsFromGraph(graph);
-    const affectsEdges = (graph?.edges || [])
-      .filter((edge: any) => edge?.type === 'affects')
-      .map((edge: any) => ({ from: String(edge?.from || ''), to: String(edge?.to || '') }));
-
     if (changedPathAttribution.available) {
-      for (const changedPath of changedPaths) {
-        const sourceNodeIds = new Set([`source:${changedPath}`, `documentation:${changedPath}`]);
-        for (const edge of affectsEdges) {
-          if (!sourceNodeIds.has(edge.from) || !edge.to.startsWith('page:')) {
-            continue;
-          }
-          const pagePath = edge.to.slice('page:'.length);
-          const isAlwaysAffected = ALWAYS_AFFECTED_INCREMENTAL_PAGES.includes(pagePath);
-          if (managedPages.has(pagePath) || isAlwaysAffected) {
-            markSelected(pagePath, 'graph_affects', changedPath);
+      const affectedPages = selectAffectedPagePaths(graph, changedPaths);
+      for (const affectedPage of affectedPages) {
+        const isAlwaysAffected = ALWAYS_AFFECTED_INCREMENTAL_PAGES.includes(affectedPage.pagePath);
+        if (isAlwaysAffected || affectedPage.changedPaths.length > 0) {
+          for (const changedPath of affectedPage.changedPaths) {
+            markSelected(affectedPage.pagePath, 'graph_affects', changedPath);
             graphMatchedChangedPaths.add(changedPath);
             graphUsed = true;
           }
@@ -195,24 +187,6 @@ function extractChangedPaths(manifest: any): { available: boolean; paths: string
     available,
     paths: [...changed].sort()
   };
-}
-
-function getManagedPagePathsFromGraph(graph: any): Set<string> {
-  const managed = new Set<string>();
-  for (const node of graph?.nodes || []) {
-    if (node?.kind !== 'page') {
-      continue;
-    }
-    const pagePath = typeof node.path === 'string' ? node.path : '';
-    if (!pagePath) {
-      continue;
-    }
-    const pageState = String(node?.page_state || 'generated');
-    if (pageState === 'generated' || pageState === 'mixed') {
-      managed.add(pagePath);
-    }
-  }
-  return managed;
 }
 
 function normalizeRelativePath(value: string): string {
