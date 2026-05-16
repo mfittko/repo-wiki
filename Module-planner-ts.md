@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "171111a1609e1e510e20bfa1989ecfcee1993eb2"
+source_commit: "349f357c41f2135ffba209e27c9fa6e032320e2e"
 page_state: "generated"
 source_paths: ["src/planner.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "2024-06-05T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to planning operations within the codebase. Specifically, it exports the symbol `createBootstrapPlan`, which suggests it is responsible for creating a bootstrap plan, likely used to initialize or configure some aspect of the system. The module is implemented in TypeScript and serves as a source module.
+This module provides functionality related to planning operations within the codebase. Specifically, it exports the symbol `createBootstrapPlan`, which suggests it is responsible for creating or managing a bootstrap plan, likely related to initialization or setup procedures. The module is implemented in TypeScript and categorized as source code.
 
 ## Source file list
 
@@ -21,26 +21,26 @@ This module provides functionality related to planning operations within the cod
 
 ## Key symbols and entry points
 
-- `createBootstrapPlan`: The primary exported symbol from this module. It likely represents a function or factory that generates a bootstrap plan.
+- `createBootstrapPlan`: The primary exported function or symbol from this module. It likely encapsulates the logic to generate or manage a bootstrap plan.
 
 ## Dependencies and imports
 
 The module imports the following dependencies:
 
-- `./data-model-signals.js`: A local module, possibly providing reactive or signal-based data models.
+- `./data-model-signals.js`: A local module, possibly providing reactive signals or data model utilities.
 - `./utils/fs.js`: A local utility module related to filesystem operations.
 - `node:path`: The Node.js built-in module for handling and transforming file paths.
 
 ## Related tests
 
-No test files or test-related documentation cards are currently associated with this module.
+No documentation or test cards were found related to this module. It is unknown if there are dedicated tests for `planner.ts`.
 
 ## Known gaps or open questions
 
-- The exact functionality and API of `createBootstrapPlan` are not documented here.
-- There is no information on how this module integrates with other parts of the system.
-- No related tests or usage examples are provided, limiting understanding of its practical application.
-- The source repository and commit SHA are unknown, which restricts traceability.
+- The exact behavior and API of `createBootstrapPlan` are not documented here.
+- There is no information about related tests or usage examples.
+- The repository remote URL and commit SHA are unknown, limiting traceability.
+- Further details about the role of this module within the larger system are not provided.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

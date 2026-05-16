@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "171111a1609e1e510e20bfa1989ecfcee1993eb2"
+source_commit: "349f357c41f2135ffba209e27c9fa6e032320e2e"
 page_state: "generated"
 source_paths: ["src/cli.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides the command-line interface (CLI) entry point for the application. It exposes the `runCli` function, which likely orchestrates the CLI operations by integrating various components such as compilation, configuration, linting, frontmatter processing, and initialization. The module serves as the main interface for users to interact with the tool via the command line.
+This module provides the command-line interface (CLI) entry point for the application. It primarily exports the `runCli` function, which orchestrates the CLI operations. The module serves as the interface between the user and the underlying system components, enabling command execution and interaction through the terminal.
 
 ## Source file list
 
@@ -21,31 +21,32 @@ This module provides the command-line interface (CLI) entry point for the applic
 
 ## Key symbols and entry points
 
-- `runCli`: The primary exported function that runs the CLI logic.
+- `runCli`: The main exported function that initiates and manages the CLI workflow.
 
 ## Dependencies and imports
 
-The module imports several other modules to fulfill its responsibilities:
+The module imports several internal modules to support its functionality:
 
 - `./compiler.js`
 - `./config.js`
 - `./docs-linter.js`
 - `./frontmatter.js`
 - `./init.js`
-- (Additionally noted in the excerpt but not explicitly listed in the imports: `./linter.js`, `./planner.js`, `./publisher.js`)
+- `./linter.js`
+- `./planner.js`
+- `./publisher.js`
 
-These dependencies suggest that the CLI coordinates compilation, configuration management, documentation linting, frontmatter handling, initialization routines, and possibly planning and publishing workflows.
+These dependencies suggest that the CLI coordinates compilation, configuration, documentation linting, frontmatter processing, initialization, linting, planning, and publishing tasks.
 
 ## Related tests
 
-No documentation or source cards indicate the presence of related test files or test suites for this module.
+No documentation or source cards indicate the presence of related test files or test suites specifically for this module.
 
 ## Known gaps or open questions
 
-- The exact behavior and implementation details of `runCli` are not described here.
-- There is no explicit documentation or test coverage information available.
-- The presence of some imports (`./linter.js`, `./planner.js`, `./publisher.js`) is mentioned in the excerpt but not in the imports list, which may indicate dynamic imports or conditional usage.
-- The source repository and commit SHA are unknown, limiting traceability.
+- There is no explicit documentation or test coverage information available for this module.
+- The exact CLI commands, options, and user interactions handled by `runCli` are not detailed in the source cards.
+- The relationship and interaction details between the imported modules and the CLI workflow remain unspecified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

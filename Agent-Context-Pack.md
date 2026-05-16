@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "171111a1609e1e510e20bfa1989ecfcee1993eb2"
-compiled_at: "2026-05-15T17:30:04.952Z"
+source_commit: "349f357c41f2135ffba209e27c9fa6e032320e2e"
+compiled_at: "2026-05-16T10:47:16.732Z"
 kind: "agent_context_pack"
 claim_status: "grounded"
 source_paths: [".env.example",".github/ISSUE_TEMPLATE/config.yml",".github/ISSUE_TEMPLATE/epic.yml",".github/ISSUE_TEMPLATE/task.yml",".github/workflows/changelog-on-merge.yml",".github/workflows/changelog-release.yml",".github/workflows/ci.yml",".github/workflows/wiki.yml",".gitignore",".pi/settings.json",".tsbuildinfo","bin/repo-wiki.ts","LICENSE","package-lock.json","package.json","scripts/update-changelog.mjs","src/cli.ts","src/compiler.ts","src/config.ts","src/context-assembler.ts","src/data-model-signals.ts","src/docs-ingestor.ts","src/docs-linter.ts","src/docs-validation.ts","src/extractors.ts","src/frontmatter.ts","src/index.ts","src/init.ts","src/language.ts","src/linter.ts","src/llm-provider.ts","src/page-ownership.ts","src/planner.ts","src/prompts.ts","src/publisher.ts","src/repository-analysis.ts","src/scanner.ts","src/secret-patterns.ts","src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts","src/wiki-patch.ts","test/cli.test.ts","test/compiler-eval.test.ts","test/compiler.test.ts","test/context-assembler.test.ts","test/docs-linter.test.ts","test/dotenv.test.ts","test/extractors-go.test.ts"]
@@ -15,8 +15,8 @@ This page is the compact entry point for coding agents and developers.
 ## Repository snapshot
 
 - Source: `https://github.com/mfittko/repo-wiki`
-- Commit: `171111a1609e1e510e20bfa1989ecfcee1993eb2`
-- Last compiled: `2026-05-15T17:30:04.945Z`
+- Commit: `349f357c41f2135ffba209e27c9fa6e032320e2e`
+- Last compiled: `2026-05-16T10:47:16.725Z`
 - Files scanned: 109
 
 ## Read first

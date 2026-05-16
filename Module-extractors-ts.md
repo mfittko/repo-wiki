@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "171111a1609e1e510e20bfa1989ecfcee1993eb2"
+source_commit: "349f357c41f2135ffba209e27c9fa6e032320e2e"
 page_state: "generated"
 source_paths: ["src/extractors.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -26,7 +26,7 @@ This module provides a collection of functions designed to analyze and extract v
 - `extractExportedSymbols` — Retrieves symbols that are exported from the source code.
 - `extractGoPackage` — Extracts Go package information from the source.
 - `extractImports` — Parses and extracts import statements.
-- `extractMigrationSurfaces` — Identifies migration-related surfaces in the code.
+- `extractMigrationSurfaces` — Identifies migration-related surfaces in the codebase.
 - `extractModelSurfaces` — Extracts model-related surfaces.
 - `extractRouteSurfaces` — Extracts route-related surfaces.
 - `extractSymbols` — General symbol extraction utility.
@@ -38,14 +38,14 @@ This module provides a collection of functions designed to analyze and extract v
 
 ## Related tests
 
-No documentation or test cards are currently associated with this module. It is recommended to verify the presence and coverage of tests related to the extraction functions in the project’s test suites.
+No documentation or test files are explicitly linked to this module in the current source cards. Further investigation into the test suite may be required to identify relevant tests.
 
 ## Known gaps or open questions
 
 - There is no explicit documentation or test coverage information available for this module.
-- The exact runtime environments or contexts targeted by `detectRuntimeHints` and other extraction functions are not detailed.
-- Further clarification on the nature and structure of the "surfaces" (migration, model, route) would enhance understanding.
-- The module’s integration points or consumers within the larger project are not specified.
+- The exact runtime environments or frameworks targeted by `detectRuntimeHints` and other extraction functions are not detailed.
+- The relationship and usage context of the various "surface" extraction functions (migration, model, route) could benefit from further clarification.
+- The module appears to be a core source component but lacks explicit usage examples or integration notes.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

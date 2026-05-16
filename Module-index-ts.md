@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "171111a1609e1e510e20bfa1989ecfcee1993eb2"
+source_commit: "349f357c41f2135ffba209e27c9fa6e032320e2e"
 page_state: "generated"
 source_paths: ["src/index.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module serves as the main entry point for the source code located in `src/index.ts`. It consolidates and exports core functionalities related to assembling page contexts, building prompts, and applying frontmatter policies. The module orchestrates various components such as CLI handling, compilation, configuration, context assembly, and linting by importing and integrating them. It provides foundational building blocks for constructing requests and prompts, which are likely used in higher-level workflows or applications.
+This module serves as the primary entry point for the source code located in `src/index.ts`. It consolidates and exports core functionalities related to page context assembly, prompt building, request construction, and frontmatter policy application. The module integrates multiple internal components to provide a cohesive API surface for building and managing prompts, assembling page contexts, and applying policies within the system.
 
 ## Source file list
 
@@ -35,31 +35,33 @@ This module serves as the main entry point for the source code located in `src/i
   - `AssemblePageContextInput`
   - `BuildRequestOptions`
 
-These symbols represent the primary API surface of the module, enabling users to assemble page contexts, build various types of prompts, and construct requests with configurable options.
+These symbols represent the main API surface exported by the module, enabling users to assemble page contexts, build various types of prompts, apply frontmatter policies, and construct requests with configurable options.
 
 ## Dependencies and imports
 
-The module imports functionality from the following internal modules:
+The module imports from several internal modules, indicating its role as an aggregator and coordinator of functionality:
 
 - `./cli.js`
 - `./compiler.js`
 - `./config.js`
 - `./context-assembler.js`
 - `./docs-linter.js`
-- Additionally, it imports from `./frontmatter.js`, `./init.js`, and `./linter.js` as indicated by the excerpt, though these are not explicitly listed in the source cards.
+- `./frontmatter.js`
+- `./init.js`
+- `./linter.js`
 
-These dependencies suggest the module integrates command-line interface utilities, compilation logic, configuration management, context assembly mechanisms, and documentation linting capabilities.
+These dependencies suggest that `index.ts` ties together command-line interface utilities, compilation logic, configuration management, context assembly, documentation linting, frontmatter handling, initialization routines, and linting capabilities.
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are associated with this module in the provided source information.
+No explicit test files or test-related documentation cards are listed for this module. It is unclear from the current source cards whether dedicated tests exist for the exported symbols in `index.ts`.
 
 ## Known gaps or open questions
 
-- The exact behavior and implementation details of the exported functions and types are not described here, limiting deeper understanding without consulting the source code.
-- There is no information on test coverage or related test suites.
-- The role of some imported modules like `./init.js` and `./linter.js` is not fully clear from the available data.
-- The repository remote URL and commit SHA are placeholders, so the exact source context is unknown.
+- The absence of documentation cards or test references leaves open questions about the coverage and usage examples for the exported functions and types.
+- The exact behavior and implementation details of the key symbols are not described here, requiring consultation of the source code for deeper understanding.
+- The source repository remote URL and commit SHA are unspecified, limiting traceability to a specific codebase version.
+- The module appears to be a central integration point, but the scope and boundaries relative to other modules are not detailed.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
