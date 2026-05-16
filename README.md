@@ -154,7 +154,7 @@ Notes:
 - `--dry-run` reports target, branch/path, page count, and frontmatter policy without pushing
 - `LLMWIKI_PUBLISH_REMOTE` is the primary publish remote env var; GitHub Wiki publishing also falls back to `GITHUB_WIKI_REMOTE`
 
-The repository also ships `.github/workflows/wiki.yml`, which compiles on `main`, publishes the GitHub Wiki on `main`, and can optionally publish GitHub Pages on push or manual dispatch.
+The repository also ships `.github/workflows/wiki.yml`, which compiles on `main`, publishes the GitHub Wiki on `main`, publishes GitHub Pages automatically on pushes to `main`, and can also publish Pages on manual dispatch when `publish_pages=true`.
 
 ## Library API
 
