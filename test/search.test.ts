@@ -68,6 +68,9 @@ test('buildSearchIndex writes a deterministic offline index and captures link co
 
     assert.equal(first.summary.pages, 5);
     assert.deepEqual(first.index.sourceCommits, ['abc1234']);
+    assert.equal(first.index.wikiDir, '../wiki');
+    assert.equal(path.isAbsolute(first.summary.outDir), false);
+    assert.equal(path.isAbsolute(first.summary.outFile), false);
     assert.equal(firstContent, secondContent);
     assert.deepEqual(first.index.entries.find((entry) => entry.pagePath === 'Architecture.md')?.outboundLinks, ['Build-Test-and-Run.md', 'Module-scanner-ts.md']);
     assert.deepEqual(second.index.entries.find((entry) => entry.pagePath === 'Module-scanner-ts.md')?.inboundLinks, ['Architecture.md']);
@@ -93,6 +96,9 @@ test('searchIndex ranks page-title and source-path matches ahead of broader ment
 
     const emptyResults = searchIndex(index, 'nonexistent-query');
     assert.deepEqual(emptyResults, []);
+
+    const zeroLimitResults = searchIndex(index, 'scanner', 0);
+    assert.deepEqual(zeroLimitResults, []);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

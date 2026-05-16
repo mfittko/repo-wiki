@@ -2,6 +2,7 @@ node_modules/
 .llmwiki/run/
 .llmwiki/wiki/
 .llmwiki/graph.json
+.llmwiki/search/
 .llmwiki/bootstrap-plan.json
 .llmwiki/incremental-plan.json
 .llmwiki/plan.json

@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
-import { extractFrontmatterBlock } from './frontmatter.js';
+import { extractFrontmatterBlock, parseSimpleYamlObject } from './frontmatter.js';
 import { ensureDir, writeJson } from './utils/fs.js';
 
 export const SEARCH_INDEX_VERSION = 1;
@@ -63,6 +63,7 @@ export async function buildSearchIndex({
   outDir?: string;
 }) {
   const resolvedWikiDir = path.resolve(wikiDir);
+  const resolvedOutDir = path.resolve(outDir);
   const pageFiles = (await fs.readdir(resolvedWikiDir, { withFileTypes: true }))
     .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
     .map((entry) => entry.name)
@@ -133,20 +134,20 @@ export async function buildSearchIndex({
 
   const index: SearchIndex = {
     version: SEARCH_INDEX_VERSION,
-    wikiDir: resolvedWikiDir,
+    wikiDir: normalizeStoredPath(path.relative(resolvedOutDir, resolvedWikiDir) || '.'),
     sourceCommits,
     entries
   };
 
-  await ensureDir(outDir);
-  const outFile = path.join(path.resolve(outDir), 'index.json');
+  await ensureDir(resolvedOutDir);
+  const outFile = path.join(resolvedOutDir, 'index.json');
   await writeJson(outFile, index);
 
   return {
     index,
     summary: {
-      outDir: path.resolve(outDir),
-      outFile,
+      outDir: normalizeSummaryPath(path.relative(process.cwd(), resolvedOutDir) || '.'),
+      outFile: normalizeSummaryPath(path.relative(process.cwd(), outFile) || path.basename(outFile)),
       pages: entries.length,
       sourceCommits
     }
@@ -181,6 +182,10 @@ export async function searchWiki({
 }
 
 export function searchIndex(index: SearchIndex, query: string, limit = DEFAULT_LIMIT): SearchResult[] {
+  if (!Number.isFinite(limit) || limit <= 0) {
+    return [];
+  }
+
   const tokens = tokenizeSearchText(query);
   if (tokens.length === 0) {
     return [];
@@ -285,74 +290,43 @@ function parseSearchEntry(pagePath: string, content: string) {
 }
 
 function parseFrontmatter(rawYaml: string): ParsedFrontmatter {
-  const lines = rawYaml.replace(/\r\n/g, '\n').split('\n');
-  const sourcePaths: string[] = [];
-  let collectingSourcePaths = false;
-
-  let kind: string | null = null;
-  let pageState: string | null = null;
-  let sourceCommit: string | null = null;
-
-  for (const rawLine of lines) {
-    const line = rawLine.trimEnd();
-    if (!line.trim()) {
-      continue;
-    }
-
-    const listMatch = /^\s*-\s+(.*)$/.exec(rawLine);
-    if (collectingSourcePaths && listMatch) {
-      const value = stripYamlString(listMatch[1]);
-      if (value) {
-        sourcePaths.push(value);
-      }
-      continue;
-    }
-
-    collectingSourcePaths = false;
-    const fieldMatch = /^([A-Za-z_][A-Za-z0-9_-]*):\s*(.*)$/.exec(line);
-    if (!fieldMatch) {
-      continue;
-    }
-
-    const [, key, value] = fieldMatch;
-    const normalized = stripYamlString(value);
-    if (key === 'kind') {
-      kind = normalized;
-    } else if (key === 'page_state') {
-      pageState = normalized;
-    } else if (key === 'source_commit') {
-      sourceCommit = normalized;
-    } else if (key === 'source_paths') {
-      collectingSourcePaths = true;
-      if (value.startsWith('[') && value.endsWith(']')) {
-        for (const item of value.slice(1, -1).split(',')) {
-          const parsed = stripYamlString(item);
-          if (parsed) {
-            sourcePaths.push(parsed);
-          }
-        }
-        collectingSourcePaths = false;
-      }
-    }
-  }
-
+  const parsed = parseSimpleYamlObject(rawYaml) || {};
   return {
-    kind,
-    pageState,
-    sourceCommit,
-    sourcePaths: uniqueSorted(sourcePaths)
+    kind: readOptionalFrontmatterString(parsed.kind),
+    pageState: readOptionalFrontmatterString(parsed.page_state),
+    sourceCommit: readOptionalFrontmatterString(parsed.source_commit),
+    sourcePaths: uniqueSorted(readFrontmatterStringArray(parsed.source_paths))
   };
 }
 
-function stripYamlString(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) {
+function readOptionalFrontmatterString(value: unknown) {
+  if (value === undefined || value === null) {
     return null;
   }
-  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
-    return trimmed.slice(1, -1);
+  if (typeof value === 'string') {
+    return value;
   }
-  return trimmed;
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return null;
+}
+
+function readFrontmatterStringArray(value: unknown) {
+  if (value === undefined || value === null) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const entries: string[] = [];
+  for (const entry of value) {
+    const normalized = readOptionalFrontmatterString(entry);
+    if (normalized !== null) {
+      entries.push(normalized);
+    }
+  }
+  return entries;
 }
 
 function extractTitle(pagePath: string, body: string) {
@@ -527,6 +501,14 @@ function truncate(value: string, maxLength: number) {
   return `${normalized.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
 }
 
+
+function normalizeStoredPath(value: string) {
+  return value.replaceAll(path.sep, '/');
+}
+
+function normalizeSummaryPath(value: string) {
+  return normalizeStoredPath(value);
+}
 
 function formatSourcePaths(sourcePaths: string[]) {
   const visible = sourcePaths.slice(0, 5);
