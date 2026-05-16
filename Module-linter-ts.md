@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "349f357c41f2135ffba209e27c9fa6e032320e2e"
+source_commit: "b1b3a9c5f3b8a59dd631cd206cda223760e1ba3a"
 page_state: "generated"
 source_paths: ["src/linter.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-15T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides linting functionality as indicated by the presence of the `lintWiki` symbol. It is implemented in TypeScript and serves as a source module within the codebase. The module likely performs linting operations on wiki content or related files, leveraging utilities and patterns imported from other parts of the project.
+This module provides linting functionality as indicated by the presence of the `lintWiki` symbol. It is implemented in TypeScript and serves as a source module within the codebase. The module likely performs linting operations on wiki content or related files, leveraging various utilities and patterns imported from other parts of the project.
 
 ## Source file list
 
@@ -21,30 +21,34 @@ This module provides linting functionality as indicated by the presence of the `
 
 ## Key symbols and entry points
 
-- `lintWiki` — The primary exported symbol from this module, presumably the main function or object responsible for linting wiki content.
+- `lintWiki`: The primary exported symbol from this module, presumably the main entry point for linting operations.
 
 ## Dependencies and imports
 
-The module imports the following dependencies:
+The module imports several internal and Node.js modules, indicating its integration with other parts of the system and use of filesystem capabilities:
 
-- Local project modules:
-  - `./frontmatter.js` — likely for parsing or handling frontmatter metadata.
-  - `./secret-patterns.js` — possibly for detecting or managing secret patterns during linting.
-  - `./utils/fs.js` — utility functions related to filesystem operations.
+- Internal imports:
+  - `./frontmatter.js`
+  - `./secret-patterns.js`
+  - `./utils/fs.js`
+  - `./wiki-graph.js`
+
 - Node.js built-in modules:
-  - `node:fs` — Node.js filesystem API.
-  - `node:path` — Node.js path utilities.
+  - `node:fs`
+  - `node:path`
+
+These dependencies suggest that the module processes file system data, parses frontmatter metadata, applies secret pattern detection, and interacts with a wiki graph structure.
 
 ## Related tests
 
-No documentation or test cards are currently associated with this module, and no explicit test files or test-related symbols are indicated in the source cards.
+No documentation or source cards indicate the presence of related tests for this module at this time.
 
 ## Known gaps or open questions
 
 - The exact functionality and interface of `lintWiki` are not detailed in the available source cards.
-- There is no information on how this module integrates with the rest of the system or how it is invoked.
-- No test coverage or examples are documented, which limits understanding of usage and robustness.
-- The repository remote URL and commit SHA are unknown, which restricts traceability.
+- There is no information on test coverage or example usage.
+- The repository remote URL and commit SHA are unknown, limiting traceability.
+- No documentation cards exist to provide further context or usage guidelines.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

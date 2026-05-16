@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "349f357c41f2135ffba209e27c9fa6e032320e2e"
+source_commit: "b1b3a9c5f3b8a59dd631cd206cda223760e1ba3a"
 page_state: "generated"
 source_paths: ["src/context-assembler.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality to assemble and manage page contexts within an application. It exports several key functions and types related to constructing comprehensive page context objects, handling budgets, page types, and redacting sensitive information. The module appears to be a core part of the source code responsible for aggregating and preparing contextual data for pages, likely to be used in rendering or processing workflows.
+This module provides functionality to assemble and manage page context data structures in a TypeScript environment. It exports several symbols related to constructing and manipulating page contexts, including assembling all page contexts or individual page contexts, defining input types, and handling sensitive information redaction. The module appears to be a core part of source code responsible for context assembly without external dependencies.
 
 ## Source file list
 
@@ -21,32 +21,28 @@ This module provides functionality to assemble and manage page contexts within a
 
 ## Key symbols and entry points
 
-- **Functions:**
-  - `assembleAllPageContexts` — Likely responsible for assembling contexts for multiple pages at once.
-  - `assemblePageContext` — Builds or assembles the context for a single page.
-  - `redactSecretLikeText` — Utility function to redact or mask text that resembles secrets or sensitive information.
-
-- **Types / Interfaces:**
-  - `AssemblePageContextInput` — Input type for assembling a page context.
-  - `PageContext` — Represents the assembled context of a page.
-  - `PageContextBudget` — Possibly defines budget constraints or limits within a page context.
-  - `PageContextPage` — Represents page-specific data within the context.
-  - `PageContextType` — Enum or type defining different page context categories or types.
+- **assembleAllPageContexts**: Likely a function to assemble context data for all pages collectively.
+- **assemblePageContext**: Likely a function to assemble context data for a single page.
+- **AssemblePageContextInput**: Input type/interface for assembling a page context.
+- **PageContext**: Type/interface representing the structure of a page context.
+- **PageContextBudget**: Type/interface related to budgeting or resource constraints within a page context.
+- **PageContextPage**: Type/interface representing a page within the context.
+- **PageContextType**: Enum or type defining possible page context types.
+- **redactSecretLikeText**: Utility function to redact or mask secret-like text within contexts.
 
 ## Dependencies and imports
 
-- The source card indicates that `src/context-assembler.ts` has **no imports**, suggesting this module is self-contained or relies on global types or ambient declarations.
+- This module does not import any external modules or dependencies, indicating it is self-contained.
 
 ## Related tests
 
-- No documentation or test cards were found related to this module.
-- No explicit test files or test-related symbols are indicated in the source cards.
+- No documentation or source cards indicate the presence of related test files or test cases for this module.
 
 ## Known gaps or open questions
 
-- The exact behavior and implementation details of the exported functions and types are not described beyond their names and signatures.
-- No information on how this module integrates with other parts of the system or its runtime environment.
-- Absence of test coverage or documentation cards leaves open questions about usage examples and edge cases.
+- The exact behavior and implementation details of the exported functions and types are not documented here.
+- There is no information about how this module integrates with other parts of the system.
+- No test coverage or examples are provided to illustrate usage.
 - The source repository and commit SHA are unknown, limiting traceability.
 
 <!-- HUMAN_NOTES_START -->
