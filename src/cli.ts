@@ -4,6 +4,7 @@ import { initProject } from './init.js';
 import { scanRepository } from './scanner.js';
 import { createBootstrapPlan } from './planner.js';
 import { compileWiki } from './compiler.js';
+import { formatSearchResults, searchWiki, defaultSearchDirForWiki } from './search.js';
 import { lintWiki } from './linter.js';
 import { lintDocs } from './docs-linter.js';
 import { loadConfig } from './config.js';
@@ -28,6 +29,7 @@ Commands:
   lint      Validate generated wiki pages.
   lint-docs Validate ingested markdown documentation before compilation.
   publish   Push local wiki pages to GitHub Wiki or GitHub Pages.
+  search    Search local wiki pages through the built-in offline index.
   run       Run scan -> plan -> lint-docs -> compile -> lint, optionally followed by publish.
 
 Options:
@@ -46,6 +48,7 @@ Examples:
   repo-wiki run --mode bootstrap --repo . --scan .llmwiki/run --plan .llmwiki/bootstrap-plan.json --wiki .llmwiki/wiki
   repo-wiki publish --target github-wiki --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git
   repo-wiki publish --target github-pages --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.git --branch gh-pages --pages-path .
+  repo-wiki search "architecture" --wiki .llmwiki/wiki --json
   npx repo-wiki run --mode bootstrap --repo /path/to/existing/repo --wiki /tmp/repo-wiki
 `.trim();
 
@@ -188,6 +191,32 @@ export async function runCli(argv: string[]) {
         frontmatterPolicy: getFrontmatterPolicyOption(options, target, getConfiguredFrontmatterPolicy(config.publish, target))
       });
       console.log(JSON.stringify(result.summary, null, 2));
+      return;
+    }
+
+    case 'search': {
+      const positionals = getPositionals(rest);
+      const query = positionals.join(' ').trim();
+      if (!query) {
+        throw new Error('Missing search query. Usage: repo-wiki search <query> [--wiki <path>] [--json]');
+      }
+
+      const wikiDir = getStringOption(options, 'wiki') || '.llmwiki/wiki';
+      const outDir = getStringOption(options, 'index') || getStringOption(options, 'search') || defaultSearchDirForWiki(wikiDir);
+      const limit = parsePositiveInt(getStringOption(options, 'limit')) || 10;
+      const result = await searchWiki({ query, wikiDir, outDir, limit });
+
+      if (Boolean(options.json)) {
+        console.log(JSON.stringify({
+          query: result.summary.query,
+          limit: result.summary.limit,
+          totalResults: result.summary.totalResults,
+          index: result.summary.index,
+          results: result.results
+        }, null, 2));
+      } else {
+        console.log(formatSearchResults(query, result.results));
+      }
       return;
     }
 
@@ -335,4 +364,31 @@ function getConfiguredFrontmatterPolicy(configuredPublish: PublishConfig | undef
     return configuredPublish?.wiki?.frontmatter || configuredPublish?.frontmatter;
   }
   return configuredPublish?.frontmatter;
+}
+
+function getPositionals(argv: string[]) {
+  const positionals: string[] = [];
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index];
+    if (!token.startsWith('--')) {
+      positionals.push(token);
+      continue;
+    }
+
+    const next = argv[index + 1];
+    if (next && !next.startsWith('--')) {
+      index += 1;
+    }
+  }
+
+  return positionals;
+}
+
+function parsePositiveInt(value: string | undefined) {
+  if (!value) {
+    return null;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }

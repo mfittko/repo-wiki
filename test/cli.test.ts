@@ -37,6 +37,7 @@ test('CLI help describes GitHub Wiki and GitHub Pages publish targets', async ()
     assert.match(stdout, /publish\s+Push local wiki pages to GitHub Wiki or GitHub Pages\./);
     assert.match(stdout, /run\s+Run scan -> plan -> lint-docs -> compile -> lint, optionally followed by publish\./);
     assert.match(stdout, /--target <github-wiki\|github-pages>/);
+    assert.match(stdout, /search\s+Search local wiki pages through the built-in offline index\./);
     assert.doesNotMatch(stdout, /local-artifact/);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
@@ -460,6 +461,45 @@ test('CLI lint prints graph-health findings to stderr and returns machine-readab
     assert.doesNotMatch(summary.graph_health.findings[0].message, /\.llmwiki\/graph\.json/);
     assert.match(stderr, /GRAPH001/);
     assert.match(stderr, /graph\.json/);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
+
+test('CLI search returns stable JSON results for local wiki pages', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-cli-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+
+  try {
+    await mkdir(wikiDir, { recursive: true });
+    await writeFile(path.join(wikiDir, 'Architecture.md'), `---
+kind: "foundation"
+page_state: "generated"
+source_paths:
+  - "src/compiler.ts"
+---
+# Architecture
+
+Architecture covers compile and search flow.
+`, 'utf8');
+    await writeFile(path.join(wikiDir, 'Module-scanner-ts.md'), `---
+kind: "module"
+page_state: "generated"
+source_paths:
+  - "src/scanner.ts"
+---
+# Module scanner ts
+
+Scanner builds repository manifests.
+`, 'utf8');
+
+    const { stdout } = await captureCli(['search', 'scanner', '--wiki', wikiDir, '--json'], tempDir);
+    const summary = JSON.parse(stdout);
+
+    assert.equal(summary.query, 'scanner');
+    assert.equal(summary.results[0].pagePath, 'Module-scanner-ts.md');
+    assert.deepEqual(summary.results[0].sourcePaths, ['src/scanner.ts']);
+    assert.equal(summary.index.pages, 2);
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }

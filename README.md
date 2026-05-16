@@ -12,6 +12,7 @@ It follows the LLM Wiki pattern described in `docs/PLAN.md`: scan the repository
 - plans and compiles local wiki pages under `.llmwiki/wiki/`
 - preserves `HUMAN_NOTES` and skips human-owned or unmanaged pages
 - publishes the local wiki to either GitHub Wiki or GitHub Pages
+- builds a deterministic offline search index under `.llmwiki/search/` and exposes `repo-wiki search`
 - supports deterministic compilation and an LLM-assisted compilation path
 
 ## Current implementation scope
@@ -58,6 +59,7 @@ The default workflow writes:
 - `.llmwiki/schema.md`
 - `.llmwiki/run/manifest.json` and card artifacts
 - `.llmwiki/wiki/*.md`
+- `.llmwiki/search/index.json`
 - an optional agent pointer file when `--write-agents` is used
 
 ## Command surface
@@ -70,10 +72,20 @@ repo-wiki lint-docs Validate ingested markdown documentation before compilation.
 repo-wiki compile   Generate or update local wiki markdown pages.
 repo-wiki lint      Validate generated wiki pages.
 repo-wiki publish   Publish local wiki pages to GitHub Wiki or GitHub Pages.
+repo-wiki search    Search local wiki pages through the built-in offline index.
 repo-wiki run       Run scan -> plan -> lint-docs -> compile -> lint, optionally followed by publish.
 ```
 
 `run` blocks compilation and publish when `lint-docs` reports error-level issues.
+
+Search is fully local and page-first:
+
+```bash
+repo-wiki search "scanner" --wiki .llmwiki/wiki
+repo-wiki search "architecture" --wiki .llmwiki/wiki --json
+```
+
+The built-in index is rebuilt deterministically from local wiki pages and stored at `.llmwiki/search/index.json`. Results include page identity, kind, snippet/summary, source paths, and lightweight internal-link graph context for routing follow-up investigation.
 
 ## Documentation authority model
 
@@ -198,4 +210,4 @@ Notes:
 
 The current package ships a working CLI, scanner, docs linting, deterministic compiler, LLM page synthesis path, wiki linting, publisher, and CI workflows.
 
-Still planned rather than shipped are user-facing `doctor`, `diff`, `query`, `search`, and deeper incremental maintenance, search, and wiki-health workflows described in `docs/PLAN.md`.
+Still planned rather than shipped are user-facing `doctor`, `diff`, `query`, and deeper incremental maintenance and wiki-health workflows described in `docs/PLAN.md`. The shipped search surface is the built-in local page-first index; external adapters and richer query/file-back layers remain deferred.

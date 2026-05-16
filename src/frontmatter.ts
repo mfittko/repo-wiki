@@ -227,7 +227,7 @@ function parseSupportedFrontmatter(yaml: string): SupportedFrontmatter | null {
   };
 }
 
-function parseSimpleYamlObject(yaml: string): Record<string, unknown> | null {
+export function parseSimpleYamlObject(yaml: string): Record<string, unknown> | null {
   const result: Record<string, unknown> = {};
   const lines = yaml.replace(/\r\n/g, '\n').split('\n');
 
