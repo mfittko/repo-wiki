@@ -3,6 +3,7 @@ import path from 'node:path';
 import { extractFrontmatterBlock, stripFrontmatter } from './frontmatter.js';
 import { containsSecretLikeContent } from './secret-patterns.js';
 import { readJson } from './utils/fs.js';
+import { loadWikiGraph, getEdgesByType, getIncomingEdges, getNodeById, getNodesByKind, getOutgoingEdges, isManagedPageState, isSupportedWikiGraphSchema } from './wiki-graph.js';
 
 const REQUIRED_PAGES = [
   'Home.md',
@@ -57,25 +58,6 @@ type GraphHealthFinding = {
   page_or_path: string;
   target: string | null;
   message: string;
-};
-
-type GraphNode = {
-  id: string;
-  kind: string;
-  path: string;
-  page_state?: string;
-};
-
-type GraphEdge = {
-  type: string;
-  from: string;
-  to: string;
-};
-
-type GraphData = {
-  schema_version?: unknown;
-  nodes?: unknown[];
-  edges?: unknown[];
 };
 
 export async function lintWiki({ wikiDir, scanDir }: { wikiDir: string; scanDir: string }) {
@@ -370,10 +352,9 @@ function warning(code: string, message: string): LintIssue {
 
 async function collectGraphHealthFindings(scanDir: string): Promise<GraphHealthFinding[]> {
   const graphPath = path.join(path.dirname(scanDir), 'graph.json');
-  const graphLabel = path.basename(graphPath);
-  let graphData: GraphData;
+  let graph;
   try {
-    graphData = await readJson(graphPath);
+    graph = await loadWikiGraph(graphPath);
   } catch (error: unknown) {
     if (isNodeError(error) && error.code === 'ENOENT') {
       return [];
@@ -381,50 +362,23 @@ async function collectGraphHealthFindings(scanDir: string): Promise<GraphHealthF
     throw error;
   }
 
-  if (graphData?.schema_version !== 1) {
+  if (!isSupportedWikiGraphSchema(graph)) {
     return [];
   }
 
-  const nodes = Array.isArray(graphData?.nodes) ? graphData.nodes : [];
-  const edges = Array.isArray(graphData?.edges) ? graphData.edges : [];
-  const parsedNodes: GraphNode[] = nodes
-    .filter((node: any) => typeof node?.id === 'string' && typeof node?.kind === 'string' && typeof node?.path === 'string')
-    .map((node: any) => ({
-      id: String(node.id),
-      kind: String(node.kind),
-      path: String(node.path),
-      page_state: typeof node.page_state === 'string' ? node.page_state : undefined
-    }));
-  const parsedEdges: GraphEdge[] = edges
-    .filter((edge: any) => typeof edge?.type === 'string' && typeof edge?.from === 'string' && typeof edge?.to === 'string')
-    .map((edge: any) => ({ type: String(edge.type), from: String(edge.from), to: String(edge.to) }));
-  const nodeById = new Map<string, GraphNode>(parsedNodes.map((node) => [node.id, node]));
-  const pageNodes = parsedNodes
-    .filter((node) => node.kind === 'page')
+  const graphLabel = graph.graphLabel;
+  const pageNodes = getNodesByKind(graph, 'page')
     .map((node) => ({
       id: node.id,
       path: node.path,
       page_state: String(node.page_state || 'generated')
     }))
     .sort((left, right) => left.path.localeCompare(right.path));
-  const sortedEdges = parsedEdges
-    .sort((left, right) => left.type.localeCompare(right.type) || left.from.localeCompare(right.from) || left.to.localeCompare(right.to));
-
-  const inboundWikiLinksByPageId = new Map<string, number>();
-  const provenanceCountByPageId = new Map<string, number>();
-  for (const edge of sortedEdges) {
-    if (edge.type === 'wiki_link') {
-      inboundWikiLinksByPageId.set(edge.to, (inboundWikiLinksByPageId.get(edge.to) || 0) + 1);
-    }
-    if (edge.type === 'provenance') {
-      provenanceCountByPageId.set(edge.from, (provenanceCountByPageId.get(edge.from) || 0) + 1);
-    }
-  }
 
   const findings: GraphHealthFinding[] = [];
 
   for (const page of pageNodes) {
-    if (!GRAPH_HEALTH_EXEMPT_PAGES.has(page.path) && (inboundWikiLinksByPageId.get(page.id) || 0) === 0) {
+    if (!GRAPH_HEALTH_EXEMPT_PAGES.has(page.path) && getIncomingEdges(graph, page.id, { type: 'wiki_link' }).length === 0) {
       findings.push({
         code: 'GRAPH001',
         severity: 'warning',
@@ -435,15 +389,12 @@ async function collectGraphHealthFindings(scanDir: string): Promise<GraphHealthF
     }
   }
 
-  for (const edge of sortedEdges) {
-    if (edge.type !== 'wiki_link') {
-      continue;
-    }
-    const fromPage = nodeById.get(edge.from);
+  for (const edge of getEdgesByType(graph, 'wiki_link')) {
+    const fromPage = getNodeById(graph, edge.from);
     if (!fromPage || fromPage.kind !== 'page') {
       continue;
     }
-    const toPage = nodeById.get(edge.to);
+    const toPage = getNodeById(graph, edge.to);
     if (toPage?.kind === 'page') {
       continue;
     }
@@ -465,7 +416,7 @@ async function collectGraphHealthFindings(scanDir: string): Promise<GraphHealthF
     if (!isManagedPageState(page.page_state)) {
       continue;
     }
-    if ((provenanceCountByPageId.get(page.id) || 0) > 0) {
+    if (getOutgoingEdges(graph, page.id, { type: 'provenance' }).length > 0) {
       continue;
     }
     findings.push({
@@ -477,15 +428,12 @@ async function collectGraphHealthFindings(scanDir: string): Promise<GraphHealthF
     });
   }
 
-  for (const edge of sortedEdges) {
-    if (edge.type !== 'provenance') {
-      continue;
-    }
-    const fromPage = nodeById.get(edge.from);
+  for (const edge of getEdgesByType(graph, 'provenance')) {
+    const fromPage = getNodeById(graph, edge.from);
     if (!fromPage || fromPage.kind !== 'page') {
       continue;
     }
-    const toNode = nodeById.get(edge.to);
+    const toNode = getNodeById(graph, edge.to);
     if (toNode && (toNode.kind === 'source' || toNode.kind === 'documentation')) {
       continue;
     }
@@ -518,10 +466,6 @@ function compareGraphHealthFindings(left: GraphHealthFinding, right: GraphHealth
 
 function severityRank(severity: 'error' | 'warning') {
   return severity === 'error' ? 0 : 1;
-}
-
-function isManagedPageState(pageState: string) {
-  return ['generated', 'mixed'].includes(pageState);
 }
 
 function isNodeError(error: unknown): error is NodeJS.ErrnoException {
