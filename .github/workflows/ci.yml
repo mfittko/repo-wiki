@@ -37,6 +37,8 @@ jobs:
             command: npm run coverage
           - name: Pack dry run
             command: npm run pack:check
+          - name: Consumer install smoke
+            command: npm run smoke:consumer
 
     steps:
       - uses: actions/checkout@v5

@@ -34,6 +34,21 @@ Today the package includes:
 
 - Node.js 24+
 
+## Supported downstream consumer contract
+
+`repo-wiki` currently supports one downstream consumer path:
+
+1. install from a packaged artifact (`npm install repo-wiki` when published, or `npm install ./repo-wiki-<version>.tgz` from `npm pack`)
+2. run the CLI directly (for example `npx repo-wiki --help`)
+
+Contract details:
+
+1. **Supported consumer path**: `npm install` from the package artifact (`repo-wiki` release package or `npm pack` tarball)
+2. **Runnable CLI guarantee**: installed `repo-wiki` command resolves to `dist/bin/repo-wiki.js`
+3. **Artifact shape**: consumer install must include `dist/` (including `dist/bin/repo-wiki.js`) and package metadata (`package.json`, `README.md`, `CHANGELOG.md`, `.llmwiki/schema.md`, `.llmwiki/config.json`)
+4. **Validation path**: `npm run smoke:consumer` packs the current artifact, performs a fresh consumer-style install, and executes `npx --no-install repo-wiki --help`
+5. **Non-goal boundary**: downstream repositories should not need custom clone/build/proxy bootstrap scripts to run `repo-wiki`
+
 ## Quick start
 
 Initialize a repository for repo-wiki:
