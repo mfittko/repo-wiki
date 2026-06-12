@@ -435,7 +435,6 @@ test('lintWiki rejects malformed graph contracts deterministically', async () =>
       { type: 'wiki_link', from: 'page:Home.md', to: 'page:Broken-Link-Page.md' },
       { type: 'wiki_link', from: 'page:Home.md', to: 'page:Missing-Provenance-Page.md' },
       { type: 'wiki_link', from: 'page:Home.md', to: 'page:Dangling-Provenance-Page.md' },
-      { type: 'wiki_link', from: 'page:Broken-Link-Page.md', to: 'page:Missing-Target.md' },
       { type: 'provenance', from: 'page:Repository-Overview.md', to: 'source:src/existing.ts' },
       { type: 'provenance', from: 'page:Orphan-Page.md', to: 'source:src/existing.ts' },
       { type: 'provenance', from: 'page:Broken-Link-Page.md', to: 'source:src/existing.ts' },

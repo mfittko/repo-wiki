@@ -2530,8 +2530,18 @@ test('compileWiki writes deterministic enriched graph.json while preserving sour
       'source nodes must be sorted deterministically by canonical path'
     );
 
+    const documentationPaths = new Set([
+      ...(manifest.documentation?.files || []).map((file: any) => file.path),
+      ...(manifest.files || []).filter((file: any) => file.category === 'docs').map((file: any) => file.path)
+    ]);
+    const isDocumentationGraphPath = (sourcePath: string) => (
+      documentationPaths.has(sourcePath)
+      || /\.(?:md|mdx|markdown)$/i.test(sourcePath)
+      || /(?:^|\/)docs(?:\/|$)/i.test(sourcePath)
+      || /(?:^|\/)documentation(?:\/|$)/i.test(sourcePath)
+    );
     const expectedPairs = (plan.affected_page_graph.source_to_pages as any[])
-      .flatMap((entry: any) => (entry.pages || []).map((pageEntry: any) => `${entry.source.startsWith('docs/') ? 'documentation' : 'source'}:${entry.source}→page:${pageEntry.page}`))
+      .flatMap((entry: any) => (entry.pages || []).map((pageEntry: any) => `${isDocumentationGraphPath(entry.source) ? 'documentation' : 'source'}:${entry.source}→page:${pageEntry.page}`))
       .sort();
     const actualPairs = graph.edges
       .filter((edge: any) => edge.type === 'affects')
