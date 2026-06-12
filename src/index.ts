@@ -22,3 +22,5 @@ export { WikiPatchError, validateWikiPatch, parseWikiPatch, synthesizeWikiPage }
 export type { WikiPatch, WikiPatchFrontmatter, WikiPatchIssue, SynthesizeOptions } from './wiki-patch.js';
 export { buildSearchIndex, searchWiki, searchIndex, formatSearchResults, defaultSearchDirForWiki, SEARCH_INDEX_VERSION } from './search.js';
 export type { SearchIndex, SearchIndexEntry, SearchResult } from './search.js';
+export { buildWikiQueryAnswer, buildWikiExplanation, findWikiGraphPath, formatWikiQueryAnswer, formatWikiExplanation, formatWikiGraphPath, defaultGraphPathForWiki } from './wiki-query.js';
+export type { WikiEvidence, WikiQueryAnswer, WikiExplanation, WikiGraphPathResult } from './wiki-query.js';

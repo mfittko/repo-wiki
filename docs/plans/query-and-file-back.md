@@ -42,20 +42,28 @@ flowchart TD
   FileBack -->|no| Done["Done"]
 ```
 
-## Key Deliverables
+## Shipped command slice
 
-- `repo-wiki search <query>` — local ranked search over wiki pages, source cards, and documentation cards.
-- `repo-wiki query <question>` — source-cited question answering that reads the wiki first and verifies material claims.
+- `repo-wiki search <query>` — local ranked search over wiki pages.
+- `repo-wiki query <question>` — offline extractive answer assembly over ranked wiki pages plus graph provenance evidence.
+- `repo-wiki path <from> <to>` — deterministic shortest-path traversal over `.llmwiki/graph.json`.
+- `repo-wiki explain <node-or-page>` — focused local explanation tied to wiki page summaries and graph/source evidence.
+- All four commands support `--json` for machine-readable reuse.
+
+## Deferred file-back slice
+
 - `--file-back` flag on `query` to create or update a wiki page from a durable answer.
 - Filed-back pages include provenance (query text, answering commit, source paths, page state).
 - Query and file-back events appended to `Log.md` in the standard parseable format.
+- Optional hosted wording layered behind the same evidence path.
 - Mock/deterministic mode for tests (no hosted LLM required).
 - Query answers never treat stale or contradicted docs as authoritative.
 
 ## Success Criteria
 
 - `repo-wiki search "query"` returns ranked wiki pages and evidence paths without external services.
-- Query answers cite source paths for every material claim.
+- `repo-wiki query`, `path`, and `explain` work without external services and expose JSON output.
+- Query and explain answers cite source paths for material claims when graph/wiki provenance is available.
 - Filed-back pages include provenance, query text, source paths, and page state in frontmatter.
 - The feature works in deterministic/mock mode for tests.
 - Query and file-back events appear in `Log.md` with the standard timestamp and operation type.

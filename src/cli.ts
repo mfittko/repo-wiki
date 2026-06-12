@@ -5,6 +5,7 @@ import { scanRepository } from './scanner.js';
 import { createBootstrapPlan } from './planner.js';
 import { compileWiki } from './compiler.js';
 import { formatSearchResults, searchWiki, defaultSearchDirForWiki } from './search.js';
+import { buildWikiExplanation, buildWikiQueryAnswer, defaultGraphPathForWiki, findWikiGraphPath, formatWikiExplanation, formatWikiGraphPath, formatWikiQueryAnswer } from './wiki-query.js';
 import { lintWiki } from './linter.js';
 import { lintDocs } from './docs-linter.js';
 import { loadConfig } from './config.js';
@@ -30,6 +31,9 @@ Commands:
   lint-docs Validate ingested markdown documentation before compilation.
   publish   Push local wiki pages to GitHub Wiki or GitHub Pages.
   search    Search local wiki pages through the built-in offline index.
+  query     Answer from local wiki/search/graph evidence.
+  path      Find a deterministic traversal in .llmwiki/graph.json.
+  explain   Explain a wiki page or graph node with evidence.
   run       Run scan -> plan -> lint-docs -> compile -> lint, optionally followed by publish.
 
 Options:
@@ -49,6 +53,9 @@ Examples:
   repo-wiki publish --target github-wiki --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.wiki.git
   repo-wiki publish --target github-pages --wiki .llmwiki/wiki --remote https://github.com/OWNER/REPO.git --branch gh-pages --pages-path .
   repo-wiki search "architecture" --wiki .llmwiki/wiki --json
+  repo-wiki query "How does compile work?" --wiki .llmwiki/wiki --json
+  repo-wiki path Architecture.md src/compiler.ts --graph .llmwiki/graph.json --json
+  repo-wiki explain Module-compiler-ts.md --wiki .llmwiki/wiki --json
   npx repo-wiki run --mode bootstrap --repo /path/to/existing/repo --wiki /tmp/repo-wiki
 `.trim();
 
@@ -216,6 +223,54 @@ export async function runCli(argv: string[]) {
         }, null, 2));
       } else {
         console.log(formatSearchResults(query, result.results));
+      }
+      return;
+    }
+
+    case 'query': {
+      const positionals = getPositionals(rest);
+      const question = positionals.join(' ').trim();
+      if (!question) {
+        throw new Error('Missing query question. Usage: repo-wiki query <question> [--wiki <path>] [--graph <path>] [--json]');
+      }
+      const wikiDir = getStringOption(options, 'wiki') || '.llmwiki/wiki';
+      const graphPath = getStringOption(options, 'graph') || defaultGraphPathForWiki(wikiDir);
+      const outDir = getStringOption(options, 'index') || getStringOption(options, 'search') || defaultSearchDirForWiki(wikiDir);
+      const limit = parsePositiveInt(getStringOption(options, 'limit')) || 5;
+      const result = await buildWikiQueryAnswer({ question, wikiDir, graphPath, outDir, limit });
+      console.log(Boolean(options.json) ? JSON.stringify(result, null, 2) : formatWikiQueryAnswer(result));
+      return;
+    }
+
+    case 'path': {
+      const positionals = getPositionals(rest);
+      const [from, to] = positionals;
+      if (!from || !to) {
+        throw new Error('Missing path endpoints. Usage: repo-wiki path <from> <to> [--graph <path>] [--json]');
+      }
+      const wikiDir = getStringOption(options, 'wiki') || '.llmwiki/wiki';
+      const graphPath = getStringOption(options, 'graph') || defaultGraphPathForWiki(wikiDir);
+      const result = await findWikiGraphPath({ graphPath, from, to });
+      console.log(Boolean(options.json) ? JSON.stringify(result, null, 2) : formatWikiGraphPath(result));
+      if (!result.found) {
+        process.exitCode = 1;
+      }
+      return;
+    }
+
+    case 'explain': {
+      const positionals = getPositionals(rest);
+      const target = positionals.join(' ').trim();
+      if (!target) {
+        throw new Error('Missing explain target. Usage: repo-wiki explain <node-or-page> [--wiki <path>] [--graph <path>] [--json]');
+      }
+      const wikiDir = getStringOption(options, 'wiki') || '.llmwiki/wiki';
+      const graphPath = getStringOption(options, 'graph') || defaultGraphPathForWiki(wikiDir);
+      const outDir = getStringOption(options, 'index') || getStringOption(options, 'search') || defaultSearchDirForWiki(wikiDir);
+      const result = await buildWikiExplanation({ target, wikiDir, graphPath, outDir });
+      console.log(Boolean(options.json) ? JSON.stringify(result, null, 2) : formatWikiExplanation(result));
+      if (!result.found) {
+        process.exitCode = 1;
       }
       return;
     }
