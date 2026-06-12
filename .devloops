@@ -1,5 +1,8 @@
 version: 1
 
+strategy:
+  default: local-first
+
 refinement:
   maxCopilotRounds: 2
 
