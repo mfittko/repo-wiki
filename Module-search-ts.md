@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "7b125ae9a68ac15891f3248ef52c552b163fcda2"
+source_commit: "144bad2d897ff76640a6ae71a662559850345164"
 page_state: "generated"
 source_paths: ["src/search.ts"]
-compiled_at: "2024-06-15T00:00:00Z"
+compiled_at: "<ISO-8601 timestamp>"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to searching within a wiki or documentation context. It includes building and managing a search index, formatting search results, and performing search queries over the indexed content. The module is implemented in TypeScript and is part of the source code base.
+This module provides functionality related to searching within the wiki or documentation source. It includes building and managing a search index, formatting search results, and performing search queries. The module is implemented in TypeScript and is part of the source category, indicating it contains core source code for search-related features.
 
 ## Source file list
 
@@ -21,10 +21,10 @@ This module provides functionality related to searching within a wiki or documen
 
 ## Key symbols and entry points
 
-- **buildSearchIndex**: Function to construct or update the search index from source content.
+- **buildSearchIndex**: Function to construct or update the search index from source data.
 - **defaultSearchDirForWiki**: A constant or function providing the default directory path used for searching within the wiki.
-- **formatSearchResults**: Function to format raw search results into a user-friendly or display-ready structure.
-- **SEARCH_INDEX_VERSION**: A version identifier for the search index format or schema.
+- **formatSearchResults**: Function to format raw search results into a user-friendly or structured output.
+- **SEARCH_INDEX_VERSION**: A constant representing the version of the search index format or schema.
 - **searchIndex**: Likely an object or data structure representing the current search index.
 - **SearchIndex**: Type or interface defining the structure of the search index.
 - **SearchIndexEntry**: Type or interface representing an individual entry within the search index.
@@ -40,18 +40,18 @@ This module provides functionality related to searching within a wiki or documen
   - `fs`
   - `path`
 
-These dependencies suggest the module interacts with file system operations and processes frontmatter metadata, likely to extract searchable content and metadata from source files.
+These dependencies suggest the module interacts with file system operations and processes frontmatter metadata, likely to build or update the search index.
 
 ## Related tests
 
-No documentation or source cards indicate the presence of related test files or test suites for this module.
+No documentation cards or test files are listed for this module, indicating that either tests are not documented here or are located elsewhere.
 
 ## Known gaps or open questions
 
-- The exact behavior and API details of the exported functions and types are not documented here.
-- There is no information about error handling, performance considerations, or integration with other modules.
-- No test coverage or examples are provided, which limits understanding of usage patterns.
-- The source repository and commit SHA are unknown, which restricts traceability and versioning context.
+- No explicit test coverage or test references are provided.
+- The exact behavior and API details of the key functions and types are not documented here.
+- The source repository URL and commit SHA are unknown, limiting traceability.
+- The module's integration with other parts of the system is not described.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

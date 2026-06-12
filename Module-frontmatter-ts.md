@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "7b125ae9a68ac15891f3248ef52c552b163fcda2"
+source_commit: "144bad2d897ff76640a6ae71a662559850345164"
 page_state: "generated"
 source_paths: ["src/frontmatter.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides utilities and types for handling frontmatter blocks within text files. It includes functionality to extract, parse, and apply policies to frontmatter content, supporting structured metadata processing. The module appears to focus on parsing frontmatter in a YAML-like format and enforcing or interpreting policies related to frontmatter content.
+This module provides utilities and types for handling frontmatter in text files, particularly focusing on parsing, extracting, and applying policies to frontmatter blocks. It includes functionality to identify and manipulate frontmatter sections, parse simple YAML objects within frontmatter, and enforce or apply frontmatter policies.
 
 ## Source file list
 
@@ -21,30 +21,30 @@ This module provides utilities and types for handling frontmatter blocks within 
 
 ## Key symbols and entry points
 
-- **applyFrontmatterPolicy**: Applies a specified frontmatter policy to a given frontmatter block.
-- **extractFrontmatterBlock**: Extracts the frontmatter block from a text source.
-- **FRONTMATTER_POLICIES**: A collection or enumeration of predefined frontmatter policies.
+- **applyFrontmatterPolicy**: Function to apply a given frontmatter policy to a frontmatter block.
+- **extractFrontmatterBlock**: Function to extract the frontmatter block from a text source.
+- **FRONTMATTER_POLICIES**: Presumably a collection or registry of predefined frontmatter policies.
 - **FrontmatterBlock**: Type representing a frontmatter block.
 - **FrontmatterPolicy**: Type defining the structure of a frontmatter policy.
-- **isFrontmatterPolicy**: Type guard or predicate to check if a value conforms to a frontmatter policy.
-- **parseFrontmatterPolicy**: Parses a frontmatter policy from a given input.
-- **parseSimpleYamlObject**: Parses a simple YAML object, likely used for interpreting frontmatter content.
-- **stripFrontmatter**: Removes the frontmatter block from a text source.
+- **isFrontmatterPolicy**: Type guard or predicate function to check if an object is a frontmatter policy.
+- **parseFrontmatterPolicy**: Function to parse a frontmatter policy from a given input.
+- **parseSimpleYamlObject**: Function to parse a simple YAML object, likely used within frontmatter.
+- **stripFrontmatter**: Function to remove frontmatter from a text source.
 
 ## Dependencies and imports
 
-- Imports from `./secret-patterns.js`, indicating some dependency on secret pattern matching or related utilities.
+- Imports from `./secret-patterns.js` (details of this dependency are not provided here, but it likely contains patterns or utilities related to secret detection or pattern matching used in frontmatter processing).
 
 ## Related tests
 
-No documentation or test cards are currently available for this module, so related tests are unknown.
+- No documentation or test cards were found for this module. It is unknown if there are dedicated tests for `frontmatter.ts`.
 
 ## Known gaps or open questions
 
-- The exact nature and structure of `FRONTMATTER_POLICIES` and how policies are defined or used is not detailed.
-- No explicit documentation or test coverage is provided, limiting insight into usage scenarios or edge cases.
-- The relationship between frontmatter parsing and secret pattern matching (via the imported module) is not clarified.
-- The module's handling of YAML parsing is limited to "simple" YAML objects, suggesting potential limitations with complex frontmatter structures.
+- The exact nature and contents of `FRONTMATTER_POLICIES` are not detailed.
+- No explicit documentation or test coverage information is available.
+- The relationship and usage context of `./secret-patterns.js` in this module is not fully described.
+- The module's handling of complex YAML frontmatter or edge cases is not specified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

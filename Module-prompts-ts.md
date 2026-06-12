@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "7b125ae9a68ac15891f3248ef52c552b163fcda2"
+source_commit: "144bad2d897ff76640a6ae71a662559850345164"
 page_state: "generated"
 source_paths: ["src/prompts.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -35,7 +35,7 @@ This module provides a collection of functions and types related to building and
   - `ModelContext`
   - `ModuleInfo`
 
-These symbols represent the core API of the module, with the `build*Prompt` functions likely serving as primary entry points for generating different categories of prompts. The context and info types provide structured data to support prompt construction and usage.
+These symbols represent the core API of the module, enabling construction of different prompt types and providing contextual information for prompt generation.
 
 ## Dependencies and imports
 
@@ -43,14 +43,14 @@ These symbols represent the core API of the module, with the `build*Prompt` func
 
 ## Related tests
 
-- No documentation cards or test references are provided for this module, so no related tests are currently documented.
+- No documentation or source cards mention related test files or test coverage for this module.
 
 ## Known gaps or open questions
 
-- The exact behavior and implementation details of the prompt-building functions are not described here.
-- There is no information on how these prompts are consumed or integrated into the larger system.
-- No test coverage or usage examples are documented, which limits understanding of practical application.
-- The repository and commit information are unknown, which restricts traceability.
+- There is no explicit documentation or comments describing the detailed behavior or usage scenarios of the prompt-building functions.
+- The relationships and intended usage of the context types (`DocCardContext`, `MigrationContext`, `ModelContext`) are not elaborated.
+- No information is available about how these prompts integrate with other parts of the system or their runtime environment.
+- Absence of related tests or examples leaves the module's practical application unclear.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

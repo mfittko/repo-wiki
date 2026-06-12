@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "7b125ae9a68ac15891f3248ef52c552b163fcda2"
+source_commit: "144bad2d897ff76640a6ae71a662559850345164"
 page_state: "generated"
 source_paths: ["src/index.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module serves as the main entry point for the source code located in `src/index.ts`. It consolidates and exports core functionalities related to page context assembly, prompt building, request construction, and frontmatter policy application. The module integrates multiple internal components such as CLI handling, compilation, configuration, context assembly, and documentation linting to provide a cohesive interface for these operations.
+This module serves as the primary entry point for the source code located in `src/index.ts`. It consolidates and exposes core functionalities related to page context assembly, prompt building, request construction, and frontmatter policy application. The module integrates multiple internal components such as CLI handling, compilation, configuration, context assembly, and documentation linting to provide a cohesive interface for these operations.
 
 ## Source file list
 
@@ -35,31 +35,31 @@ This module serves as the main entry point for the source code located in `src/i
   - `AssemblePageContextInput`
   - `BuildRequestOptions`
 
-These symbols represent the primary API surface of the module, facilitating tasks such as assembling page contexts, constructing various prompt types, applying frontmatter policies, and building requests with configurable options.
+These symbols represent the main API surface of the module, facilitating tasks such as assembling page contexts, constructing various prompt types, applying frontmatter policies, and building requests with configurable options.
 
 ## Dependencies and imports
 
-The module imports from several internal modules, indicating its role as an integrator of multiple subsystems:
+The module imports functionality from several internal modules, indicating a modular architecture:
 
 - `./cli.js`
 - `./compiler.js`
 - `./config.js`
 - `./context-assembler.js`
 - `./docs-linter.js`
-- Additionally, it references other internal modules such as `./frontmatter.js`, `./init.js`, and `./linter.js` as indicated by the import excerpt.
+- Additionally, it imports from `./frontmatter.js`, `./init.js`, and `./linter.js` as indicated in the source excerpt.
 
-These dependencies suggest the module coordinates CLI interactions, compilation processes, configuration management, context assembly logic, and documentation linting.
+These dependencies suggest the module orchestrates interactions between command-line interfaces, compilation processes, configuration management, context assembly, and documentation linting.
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are listed for this module. Further investigation into the repository's test directories or related modules may be necessary to identify associated tests.
+No explicit test files or test-related documentation cards are listed for this module. Further investigation into the repository may be required to identify associated test suites or coverage.
 
 ## Known gaps or open questions
 
-- The module's documentation does not specify detailed behavior or usage examples for the exported symbols.
-- There is no direct information about error handling, performance considerations, or configuration options beyond the symbol names.
-- The absence of related test documentation leaves the coverage and reliability of this module unclear.
-- The exact role and interaction of some imported modules (e.g., `./init.js`, `./linter.js`) are not fully detailed in the source excerpt.
+- The module documentation does not specify detailed behavior or usage examples for the exported symbols.
+- There is no direct information about error handling, performance considerations, or configuration options.
+- The absence of related tests in the source cards leaves the testing status unclear.
+- The exact repository remote URL and commit SHA are not provided, limiting traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
