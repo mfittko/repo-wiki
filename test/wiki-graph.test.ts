@@ -164,3 +164,47 @@ test('graph helper managed-page classification matches planner and lint expectat
   assert.equal(isManagedPageState(undefined), true);
   assert.equal(isSupportedWikiGraphSchema(buildWikiGraphIndex({ schema_version: 2, nodes: [], edges: [] })), false);
 });
+
+test('buildWikiGraphIndex validates node id formats and edge endpoint kinds', () => {
+  assert.throws(
+    () => buildWikiGraphIndex({
+      schema_version: 1,
+      nodes: [{ id: 'source:src/other.ts', kind: 'source', path: 'src/server.ts' }],
+      edges: []
+    }),
+    (error: any) => error instanceof WikiGraphError && /expected source:src\/server\.ts/.test(error.message)
+  );
+
+  assert.throws(
+    () => buildWikiGraphIndex({
+      schema_version: 1,
+      nodes: [{ id: 'module:bad:id', kind: 'module', path: 'Module.md' }],
+      edges: []
+    }),
+    (error: any) => error instanceof WikiGraphError && /module:<id> format/.test(error.message)
+  );
+
+  const graph = buildWikiGraphIndex({
+    schema_version: 1,
+    nodes: [
+      { id: 'module:service', kind: 'module', path: 'Service.md' },
+      { id: 'page:Service.md', kind: 'page', path: 'Service.md' },
+      { id: 'source:src/service.ts', kind: 'source', path: 'src/service.ts' },
+      { id: 'source:docs/reference.md', kind: 'documentation', path: 'docs/reference.md' }
+    ],
+    edges: [
+      { type: 'owns', from: 'module:service', to: 'page:Service.md' },
+      { type: 'owns', from: 'module:service', to: 'source:src/service.ts' },
+      { type: 'owns', from: 'module:service', to: 'source:docs/reference.md' },
+      { type: 'affects', from: 'module:service', to: 'page:Service.md' },
+      { type: 'provenance', from: 'page:Service.md', to: 'source:docs/reference.md' }
+    ]
+  });
+
+  assert.deepEqual(getOutgoingEdges(graph, 'module:service').map((edge) => edge.type), [
+    'affects',
+    'owns',
+    'owns',
+    'owns'
+  ]);
+});
