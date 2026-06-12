@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "edb41c2402583d52b198e0b02471275199a0fcb1"
+source_commit: "2a5afb6af319ea4b1fcdbebcdd868a271584028c"
 page_state: "generated"
 source_paths: ["src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-The `utils` module provides a collection of utility functions and types implemented in TypeScript to support various common tasks related to argument parsing, environment variable loading, filesystem operations, and Git interactions. This module serves as foundational source code to facilitate handling command-line arguments, managing `.env` files, performing file system manipulations, and executing Git commands programmatically.
+The `utils` module provides a collection of utility functions and types implemented in TypeScript to support various common tasks related to argument parsing, environment variable loading, filesystem operations, and Git command interactions. This module serves as foundational source code to facilitate handling command-line arguments, managing `.env` files, performing file system manipulations, and executing Git commands programmatically.
 
 ## Source file list
 
@@ -27,7 +27,7 @@ The `utils` module provides a collection of utility functions and types implemen
   Contains filesystem-related utilities including directory creation, file existence checks, JSON reading/writing, file walking, and text writing. Key symbols include `ensureDir`, `fileExists`, `readJson`, `writeJson`, `writeText`, `walkFiles`, and the constant `DEFAULT_WALK_EXCLUDES`.
 
 - `src/utils/git.ts`  
-  Offers Git-related utilities to retrieve commit information, remote URLs, repository status, and to run arbitrary Git commands. Exposed symbols include `getGitCommit`, `getGitRemote`, `getGitStatus`, and `runGit`.
+  Offers Git-related utilities to run Git commands and retrieve information such as the current commit, remote URL, and status. Exports include `runGit`, `getGitCommit`, `getGitRemote`, and `getGitStatus`.
 
 ## Key symbols and entry points
 
@@ -50,35 +50,36 @@ The `utils` module provides a collection of utility functions and types implemen
   - `walkFiles`
 
 - **Git Utilities**  
+  - `runGit`  
   - `getGitCommit`  
   - `getGitRemote`  
-  - `getGitStatus`  
-  - `runGit`
+  - `getGitStatus`
 
 ## Dependencies and imports
 
-- `src/utils/dotenv.ts` imports:  
-  - `./fs.js` (local filesystem utilities)  
+- `src/utils/args.ts`  
+  - No external imports.
+
+- `src/utils/dotenv.ts`  
+  - Imports from local module: `./fs.js`  
   - Node.js built-in modules: `fs`, `path`
 
-- `src/utils/fs.ts` imports:  
+- `src/utils/fs.ts`  
   - Node.js built-in modules: `fs`, `path`
 
-- `src/utils/git.ts` imports:  
+- `src/utils/git.ts`  
   - Node.js built-in modules: `child_process`, `util`
-
-- `src/utils/args.ts` has no imports.
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are present in the current source data for this module.
+No explicit test files or test-related documentation cards are present in the source data for this module.
 
 ## Known gaps or open questions
 
-- There is no information about test coverage or test files related to this module.
+- There is no information about test coverage or existing test suites for the utilities in this module.
 - The repository remote URL and commit SHA are unspecified, limiting traceability.
-- No documentation or usage examples are provided for the exported symbols.
-- The exact runtime environment or expected usage context for these utilities is not detailed.
+- The exact runtime environment or usage context for these utilities is not described.
+- No documentation or usage examples are provided, which could aid in understanding the intended use cases.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

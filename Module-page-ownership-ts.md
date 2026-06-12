@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "edb41c2402583d52b198e0b02471275199a0fcb1"
+source_commit: "2a5afb6af319ea4b1fcdbebcdd868a271584028c"
 page_state: "generated"
 source_paths: ["src/page-ownership.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to managing and preserving human-generated notes and page state within a system. It includes utilities to detect the current state of a page, extract human notes from it, inject notes back into the page, and preserve these notes across operations. The module is implemented in TypeScript and contains no external imports.
+This module provides functionality related to managing and preserving human-generated notes and page state within a system. It includes utilities to detect the current state of a page, extract human notes embedded in the content, inject such notes back into the page, and preserve these notes across operations. The module is implemented in TypeScript and contains no external imports.
 
 ## Source file list
 
@@ -22,9 +22,9 @@ This module provides functionality related to managing and preserving human-gene
 ## Key symbols and entry points
 
 - **detectPageState**: Function to determine the current state of a page.
-- **extractHumanNotes**: Function to extract human-authored notes from a page.
-- **injectHumanNotes**: Function to insert or re-inject human notes into a page.
-- **preserveHumanNotes**: Function to maintain human notes through page state changes.
+- **extractHumanNotes**: Function to extract human-authored notes from page content.
+- **injectHumanNotes**: Function to insert or re-insert human notes into page content.
+- **preserveHumanNotes**: Function to maintain human notes intact during page updates or transformations.
 - **PageState**: Likely a type or interface representing the state of a page.
 
 ## Dependencies and imports
@@ -33,14 +33,14 @@ This module provides functionality related to managing and preserving human-gene
 
 ## Related tests
 
-- No documentation or source cards indicate the presence of related tests for this module.
+- No documentation or source cards indicate the presence of related test files or test cases for this module.
 
 ## Known gaps or open questions
 
-- The module documentation and source cards do not provide detailed descriptions or usage examples for the exported symbols.
-- There is no information about how `PageState` is structured or used.
-- The absence of related tests or documentation leaves open questions about the module's integration and coverage.
-- The source repository and commit information are unknown, limiting traceability.
+- There is no explicit documentation or test coverage information available.
+- The exact structure and usage of `PageState` are not detailed.
+- The internal implementation details and how these functions interact with other parts of the system are not described.
+- The module's integration context or usage scenarios remain unspecified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

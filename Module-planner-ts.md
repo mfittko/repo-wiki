@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "edb41c2402583d52b198e0b02471275199a0fcb1"
+source_commit: "2a5afb6af319ea4b1fcdbebcdd868a271584028c"
 page_state: "generated"
 source_paths: ["src/planner.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to planning operations within the codebase. It exports the symbol `createBootstrapPlan`, which suggests it is responsible for creating an initial or bootstrap plan, likely used to initialize or configure some process or workflow. The module is implemented in TypeScript and imports utilities and data models from related modules, indicating it plays a role in orchestrating or managing planning logic grounded in the data model and filesystem utilities.
+This module provides functionality related to planning operations within the codebase. It exports the symbol `createBootstrapPlan`, which suggests it is responsible for creating an initial or bootstrap plan, likely used to initialize or configure some process or workflow. The module is implemented in TypeScript and imports utilities and data models that support its planning logic.
 
 ## Source file list
 
@@ -21,14 +21,16 @@ This module provides functionality related to planning operations within the cod
 
 ## Key symbols and entry points
 
-- `createBootstrapPlan`: The primary exported function or symbol from this module, presumably responsible for generating a bootstrap plan.
+- `createBootstrapPlan`: The primary exported function or symbol from this module, serving as the main entry point for creating a bootstrap plan.
 
 ## Dependencies and imports
 
-- `./data-model-signals.js`: Likely provides reactive or signal-based data model utilities used in planning.
-- `./utils/fs.js`: Filesystem utility functions, possibly for reading or writing plan-related data.
-- `./wiki-graph.js`: Possibly used for graph-based operations or dependencies within the planning logic.
-- `node:path`: Node.js core module for handling and transforming file paths.
+The module imports the following dependencies:
+
+- `./data-model-signals.js`: Likely provides data models or reactive signals used in planning.
+- `./utils/fs.js`: Utility functions related to filesystem operations.
+- `./wiki-graph.js`: Possibly manages graph structures or relationships relevant to planning.
+- `node:path`: Node.js built-in module for handling and transforming file paths.
 
 ## Related tests
 
@@ -36,10 +38,10 @@ No documentation or test cards are currently associated with this module, so rel
 
 ## Known gaps or open questions
 
-- The exact behavior and API of `createBootstrapPlan` are not documented here.
-- No test coverage or usage examples are provided.
-- The role of the imported modules in the planning process is not explicitly described.
-- Further documentation or source inspection is needed to clarify the module's integration and usage context.
+- The exact behavior and implementation details of `createBootstrapPlan` are not described here.
+- No test coverage or documentation is currently linked to this module.
+- The role of the imported modules in the planning process is not explicitly detailed.
+- Further exploration of the source code is needed to clarify the module's full capabilities and integration points.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

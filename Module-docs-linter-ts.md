@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "edb41c2402583d52b198e0b02471275199a0fcb1"
+source_commit: "2a5afb6af319ea4b1fcdbebcdd868a271584028c"
 page_state: "generated"
 source_paths: ["src/docs-linter.ts"]
 compiled_at: "2024-06-05T00:00:00Z"
@@ -41,13 +41,14 @@ These dependencies indicate that the module likely reads and processes documenta
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are listed for this module. It is unclear if dedicated tests exist or are integrated elsewhere.
+No documentation or source cards indicate the presence of related test files or test suites for this module.
 
 ## Known gaps or open questions
 
-- No documentation cards or detailed descriptions are available, limiting insight into the specific linting rules or behaviors implemented.
-- The absence of related test information leaves the testing coverage and strategy unknown.
-- The repository remote URL and commit SHA are not provided, which restricts traceability to the exact source version.
+- There is no explicit documentation or test coverage information available.
+- The exact behavior and linting rules enforced by `lintDocs` are not detailed here.
+- The source repository and commit SHA are unknown, limiting traceability.
+- No usage examples or further documentation are provided to clarify integration or usage patterns.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
