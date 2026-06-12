@@ -504,3 +504,61 @@ Scanner builds repository manifests.
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+
+test('CLI query, path, and explain expose stable JSON over local wiki artifacts', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-cli-query-test-'));
+  const wikiDir = path.join(tempDir, 'wiki');
+  const graphPath = path.join(tempDir, 'graph.json');
+
+  try {
+    await mkdir(wikiDir, { recursive: true });
+    await writeFile(path.join(wikiDir, 'Architecture.md'), `---
+kind: "foundation"
+page_state: "generated"
+source_paths:
+  - "src/compiler.ts"
+---
+# Architecture
+
+Architecture covers compile and query flow.
+`, 'utf8');
+    await writeFile(path.join(wikiDir, 'Module-compiler-ts.md'), `---
+kind: "module"
+page_state: "generated"
+source_paths:
+  - "src/compiler.ts"
+---
+# Module compiler ts
+
+Compiler writes generated wiki pages from source cards.
+`, 'utf8');
+    await writeFile(graphPath, JSON.stringify({
+      schema_version: 1,
+      nodes: [
+        { id: 'page:Architecture.md', kind: 'page', path: 'Architecture.md', page_state: 'generated' },
+        { id: 'page:Module-compiler-ts.md', kind: 'page', path: 'Module-compiler-ts.md', page_state: 'generated' },
+        { id: 'source:src/compiler.ts', kind: 'source', path: 'src/compiler.ts' }
+      ],
+      edges: [
+        { type: 'wiki_link', from: 'page:Architecture.md', to: 'page:Module-compiler-ts.md' },
+        { type: 'provenance', from: 'page:Module-compiler-ts.md', to: 'source:src/compiler.ts' }
+      ]
+    }), 'utf8');
+
+    const query = JSON.parse((await captureCli(['query', 'compiler pages', '--wiki', wikiDir, '--graph', graphPath, '--json'], tempDir)).stdout);
+    assert.equal(query.question, 'compiler pages');
+    assert.equal(query.evidence.some((item: any) => item.ref === 'src/compiler.ts'), true);
+
+    const traversal = JSON.parse((await captureCli(['path', 'Architecture.md', 'src/compiler.ts', '--wiki', wikiDir, '--graph', graphPath, '--json'], tempDir)).stdout);
+    assert.equal(traversal.found, true);
+    assert.deepEqual(traversal.edges.map((edge: any) => edge.type), ['wiki_link', 'provenance']);
+
+    const explain = JSON.parse((await captureCli(['explain', 'Module-compiler-ts.md', '--wiki', wikiDir, '--graph', graphPath, '--json'], tempDir)).stdout);
+    assert.equal(explain.found, true);
+    assert.equal(explain.page.pagePath, 'Module-compiler-ts.md');
+    assert.deepEqual(explain.evidence.map((item: any) => item.ref), ['src/compiler.ts']);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});

@@ -13,7 +13,7 @@ It follows the LLM Wiki pattern described in `docs/PLAN.md`: scan the repository
 - builds a deterministic graph artifact under `.llmwiki/graph.json` for internal traversal and incremental mapping
 - preserves `HUMAN_NOTES` and skips human-owned or unmanaged pages
 - publishes the local wiki to either GitHub Wiki or GitHub Pages
-- builds a deterministic offline search index under `.llmwiki/search/` and exposes `repo-wiki search`
+- builds a deterministic offline search index under `.llmwiki/search/` and exposes `repo-wiki search`, `repo-wiki query`, `repo-wiki path`, and `repo-wiki explain`
 - supports deterministic compilation and an LLM-assisted compilation path
 
 ## Current implementation scope
@@ -75,6 +75,9 @@ repo-wiki compile   Generate or update local wiki markdown pages.
 repo-wiki lint      Validate generated wiki pages.
 repo-wiki publish   Publish local wiki pages to GitHub Wiki or GitHub Pages.
 repo-wiki search    Search local wiki pages through the built-in offline index.
+repo-wiki query     Answer from local wiki/search/graph evidence.
+repo-wiki path      Traverse `.llmwiki/graph.json` between two nodes or paths.
+repo-wiki explain   Explain a page or graph node with local evidence.
 repo-wiki run       Run scan -> plan -> lint-docs -> compile -> lint, optionally followed by publish.
 ```
 
@@ -85,9 +88,12 @@ Search is fully local and page-first:
 ```bash
 repo-wiki search "scanner" --wiki .llmwiki/wiki
 repo-wiki search "architecture" --wiki .llmwiki/wiki --json
+repo-wiki query "How does compile work?" --wiki .llmwiki/wiki --json
+repo-wiki path Architecture.md src/compiler.ts --graph .llmwiki/graph.json --json
+repo-wiki explain Module-compiler-ts.md --wiki .llmwiki/wiki --json
 ```
 
-The built-in index is rebuilt deterministically from local wiki pages and stored at `.llmwiki/search/index.json`. Results include page identity, kind, snippet/summary, source paths, and lightweight internal-link graph context for routing follow-up investigation.
+The built-in index is rebuilt deterministically from local wiki pages and stored at `.llmwiki/search/index.json`. Results include page identity, kind, snippet/summary, source paths, and lightweight internal-link graph context for routing follow-up investigation. `query` and `explain` are offline, extractive v1 surfaces: they assemble answers from ranked wiki pages plus graph provenance and include evidence references for material claims. `path` uses the persisted graph artifact for deterministic shortest-path traversal. Hosted synthesis, file-back, and runtime transports are deferred.
 
 ## Graph foundation (shipped in v1)
 
@@ -222,4 +228,4 @@ Notes:
 
 The current package ships a working CLI, scanner, docs linting, deterministic compiler, LLM page synthesis path, wiki linting, publisher, and CI workflows.
 
-Still planned rather than shipped are user-facing `doctor`, `diff`, `query`, backend graph adapters (for example Neo4j/SQLite), and runtime transport surfaces described in `docs/PLAN.md` and `docs/plans/wiki-graph.md`. The shipped search surface is the built-in local page-first index; external adapters and richer query/file-back layers remain deferred.
+Still planned rather than shipped are user-facing `doctor`, `diff`, backend graph adapters (for example Neo4j/SQLite), filed-back query pages, hosted answer synthesis, and runtime transport surfaces described in `docs/PLAN.md` and `docs/plans/wiki-graph.md`. The shipped search/query/path/explain surfaces are built-in local page-first commands; external adapters and richer file-back layers remain deferred.

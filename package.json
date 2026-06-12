@@ -51,7 +51,8 @@
     "prepack": "npm run build",
     "changelog:ensure": "node ./scripts/update-changelog.mjs ensure",
     "changelog:release": "node ./scripts/update-changelog.mjs release",
-    "changelog:update": "node ./scripts/update-changelog.mjs update"
+    "changelog:update": "node ./scripts/update-changelog.mjs update",
+    "verify": "npm test"
   },
   "keywords": [
     "llm-wiki",

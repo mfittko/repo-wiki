@@ -68,7 +68,7 @@ Karpathy's pattern has three layers and three operations. `repo-wiki` maps them 
 | Karpathy operation | repo-wiki implementation |
 |---|---|
 | Ingest | `scan -> plan -> lint-docs -> compile -> lint`, producing source cards, doc cards, page plans, and generated wiki pages. |
-| Query | Future `repo-wiki query` and search surfaces read the wiki first, then drill into source cards and source files for verification. Durable answers may be filed back into the wiki. |
+| Query | Shipped local `repo-wiki search`, `query`, `path`, and `explain` surfaces read the wiki/graph first, then expose evidence references for source verification. Durable file-back remains planned. |
 | Lint | `lint-docs`, `lint`, and future wiki-health checks detect contradictions, stale claims, orphan pages, missing cross-references, undocumented concepts, and unsafe content. |
 
 ### Design implications
@@ -327,7 +327,7 @@ sequenceDiagram
   end
 ```
 
-Planned query behavior:
+Shipped query/path/explain behavior and planned file-back:
 
 - Read `Index.md` first at small and medium scale.
 - Use local search over wiki pages and cards as scale grows.
@@ -526,7 +526,9 @@ Planned commands:
 ```text
 repo-wiki doctor    Explain readiness, detected stacks, skipped files, config gaps, and publish safety.
 repo-wiki diff      Show wiki pages that would change for a branch or PR.
-repo-wiki query     Ask a source-cited question against the wiki, cards, and source files.
+repo-wiki query     Ask an offline evidence-cited question against local wiki/search/graph artifacts.
+repo-wiki path      Traverse the local wiki graph between two nodes or paths.
+repo-wiki explain   Explain a wiki page or graph node with local evidence.
 repo-wiki search    Local search over generated wiki pages, cards, and selected source metadata.
 repo-wiki health    Focused wiki-health diagnostics, using the graph/orphan/stale/contradiction checks also enforced by lint policy.
 repo-wiki publish --target github-wiki|github-pages
@@ -687,7 +689,7 @@ These items turn the deterministic compiler into a semantic compiler.
 These items make the wiki useful after generation.
 
 - Implement `repo-wiki search` over wiki pages, source cards, and documentation cards.
-- Implement `repo-wiki query` with source-cited answers and explicit confidence.
+- Implement `repo-wiki query`, `path`, and `explain` with source-cited local evidence and JSON output.
 - Support a `--file-back` mode that creates or updates investigation/topic pages.
 - Add local search adapters, starting with a simple built-in index and optionally supporting qmd or MCP later.
 - Ensure query answers never treat stale or contradicted docs as authoritative.
