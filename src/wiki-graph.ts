@@ -2,7 +2,9 @@ import path from 'node:path';
 import { readJson } from './utils/fs.js';
 
 const MANAGED_PAGE_STATES = new Set(['generated', 'mixed']);
-const GRAPH_NODE_KINDS_WITH_PATH_LOOKUPS = new Set(['page', 'source', 'documentation']);
+const GRAPH_NODE_KINDS_WITH_PATH_LOOKUPS = new Set(['page', 'source', 'documentation', 'module']);
+const SUPPORTED_GRAPH_NODE_KINDS = new Set(['page', 'source', 'documentation', 'module']);
+const SUPPORTED_GRAPH_EDGE_TYPES = new Set(['affects', 'wiki_link', 'provenance', 'owns']);
 
 export type WikiGraphNode = {
   id: string;
@@ -80,6 +82,15 @@ export function buildWikiGraphIndex(rawGraph: unknown, options: { graphPath?: st
   }
 
   for (const edge of graph.edges) {
+    const fromNode = nodeById.get(edge.from);
+    if (!fromNode) {
+      throw new WikiGraphError(`Graph edge ${edge.type} references missing from-node ${edge.from}.`, options.graphPath);
+    }
+    const toNode = nodeById.get(edge.to);
+    if (!toNode) {
+      throw new WikiGraphError(`Graph edge ${edge.type} references missing to-node ${edge.to}.`, options.graphPath);
+    }
+    validateEdgeEndpoints(edge, fromNode, toNode, options.graphPath);
     pushIndexed(edgesByType, edge.type, edge);
     pushIndexed(outgoingEdgesByNodeId, edge.from, edge);
     pushIndexed(incomingEdgesByNodeId, edge.to, edge);
@@ -253,14 +264,24 @@ function parseNode(rawNode: unknown, index: number, graphPath?: string): WikiGra
   if (typeof node.kind !== 'string' || !node.kind) {
     throw new WikiGraphError(`Graph node ${String(node.id)} must include a non-empty string kind.`, graphPath);
   }
+  if (!SUPPORTED_GRAPH_NODE_KINDS.has(String(node.kind))) {
+    throw new WikiGraphError(`Graph node ${String(node.id)} has unsupported kind ${String(node.kind)}.`, graphPath);
+  }
   if (typeof node.path !== 'string' || !node.path) {
     throw new WikiGraphError(`Graph node ${String(node.id)} must include a non-empty string path.`, graphPath);
   }
 
+  const normalizedPath = normalizeGraphPath(String(node.path));
+  validateNodeId({
+    id: String(node.id),
+    kind: String(node.kind),
+    path: normalizedPath
+  }, graphPath);
+
   return {
     id: String(node.id),
     kind: String(node.kind),
-    path: normalizeGraphPath(String(node.path)),
+    path: normalizedPath,
     ...(typeof node.page_state === 'string' ? { page_state: String(node.page_state) } : {})
   };
 }
@@ -273,6 +294,9 @@ function parseEdge(rawEdge: unknown, index: number, graphPath?: string): WikiGra
   const edge = rawEdge as Record<string, unknown>;
   if (typeof edge.type !== 'string' || !edge.type) {
     throw new WikiGraphError(`Graph edge at index ${index} must include a non-empty string type.`, graphPath);
+  }
+  if (!SUPPORTED_GRAPH_EDGE_TYPES.has(String(edge.type))) {
+    throw new WikiGraphError(`Graph edge at index ${index} has unsupported type ${String(edge.type)}.`, graphPath);
   }
   if (typeof edge.from !== 'string' || !edge.from) {
     throw new WikiGraphError(`Graph edge at index ${index} must include a non-empty string from.`, graphPath);
@@ -309,6 +333,52 @@ function compareGraphEdges(left: WikiGraphEdge, right: WikiGraphEdge) {
   return left.type.localeCompare(right.type)
     || left.from.localeCompare(right.from)
     || left.to.localeCompare(right.to);
+}
+
+function validateNodeId(node: { id: string; kind: string; path: string }, graphPath?: string) {
+  if (node.kind === 'documentation') {
+    if (node.id === `documentation:${node.path}` || node.id === `source:${node.path}`) {
+      return;
+    }
+    throw new WikiGraphError(`Graph node ${node.id} must match its kind/path (expected documentation:${node.path} or source:${node.path}).`, graphPath);
+  }
+  if (node.kind === 'module') {
+    if (/^module:[^:\s][^:\n\r]*$/.test(node.id)) {
+      return;
+    }
+    throw new WikiGraphError(`Graph node ${node.id} must use module:<id> format.`, graphPath);
+  }
+  if (node.id !== `${node.kind}:${node.path}`) {
+    throw new WikiGraphError(`Graph node ${node.id} must match its kind/path (expected ${node.kind}:${node.path}).`, graphPath);
+  }
+}
+
+function validateEdgeEndpoints(edge: WikiGraphEdge, fromNode: WikiGraphNode, toNode: WikiGraphNode, graphPath?: string) {
+  switch (edge.type) {
+    case 'affects':
+      if ((fromNode.kind === 'source' || fromNode.kind === 'documentation' || fromNode.kind === 'module') && toNode.kind === 'page') {
+        return;
+      }
+      break;
+    case 'wiki_link':
+      if (fromNode.kind === 'page' && toNode.kind === 'page') {
+        return;
+      }
+      break;
+    case 'provenance':
+      if (fromNode.kind === 'page' && (toNode.kind === 'source' || toNode.kind === 'documentation')) {
+        return;
+      }
+      break;
+    case 'owns':
+      if (fromNode.kind === 'module' && (toNode.kind === 'page' || toNode.kind === 'source' || toNode.kind === 'documentation')) {
+        return;
+      }
+      break;
+    default:
+      break;
+  }
+  throw new WikiGraphError(`Graph edge ${edge.type} has invalid endpoint kinds ${fromNode.kind} -> ${toNode.kind}.`, graphPath);
 }
 
 function pushIndexed<T>(index: Map<string, T[]>, key: string, value: T) {

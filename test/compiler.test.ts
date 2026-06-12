@@ -2444,6 +2444,21 @@ test('compileWiki writes deterministic enriched graph.json while preserving sour
   };
   const plan = {
     ...createPlan(),
+    pages: [
+      ...createPlan().pages,
+      { path: 'Service-api.md', phase: 'modules', purpose: 'Service module page.', moduleName: 'Service api' }
+    ],
+    modules: [
+      {
+        name: 'Service api',
+        slug: 'Service-api',
+        files: ['src/server.ts', 'docs/guide.md'],
+        categories: { source: 1, docs: 1 },
+        languages: { TypeScript: 1, Markdown: 1 },
+        runtime_hints: {},
+        important_reasons: []
+      }
+    ],
     affected_page_graph: {
       source_to_pages: [
         {
@@ -2495,10 +2510,12 @@ test('compileWiki writes deterministic enriched graph.json while preserving sour
       .map((node: any) => node.path);
     assert.deepEqual(actualPagePaths, expectedPagePaths);
 
-    const docsNode = graph.nodes.find((node: any) => node.id === 'source:docs/guide.md');
+    const docsNode = graph.nodes.find((node: any) => node.id === 'documentation:docs/guide.md');
     const sourceNode = graph.nodes.find((node: any) => node.id === 'source:src/server.ts');
+    const moduleNode = graph.nodes.find((node: any) => node.id === 'module:Service-api');
     assert.equal(docsNode?.kind, 'documentation');
     assert.equal(sourceNode?.kind, 'source');
+    assert.equal(moduleNode?.kind, 'module');
 
     const pageNodes = graph.nodes.filter((node: any) => node.kind === 'page');
     const sourceNodes = graph.nodes.filter((node: any) => node.kind !== 'page');
@@ -2513,8 +2530,18 @@ test('compileWiki writes deterministic enriched graph.json while preserving sour
       'source nodes must be sorted deterministically by canonical path'
     );
 
+    const documentationPaths = new Set([
+      ...(manifest.documentation?.files || []).map((file: any) => file.path),
+      ...(manifest.files || []).filter((file: any) => file.category === 'docs').map((file: any) => file.path)
+    ]);
+    const isDocumentationGraphPath = (sourcePath: string) => (
+      documentationPaths.has(sourcePath)
+      || /\.(?:md|mdx|markdown)$/i.test(sourcePath)
+      || /(?:^|\/)docs(?:\/|$)/i.test(sourcePath)
+      || /(?:^|\/)documentation(?:\/|$)/i.test(sourcePath)
+    );
     const expectedPairs = (plan.affected_page_graph.source_to_pages as any[])
-      .flatMap((entry: any) => (entry.pages || []).map((pageEntry: any) => `source:${entry.source}→page:${pageEntry.page}`))
+      .flatMap((entry: any) => (entry.pages || []).map((pageEntry: any) => `${isDocumentationGraphPath(entry.source) ? 'documentation' : 'source'}:${entry.source}→page:${pageEntry.page}`))
       .sort();
     const actualPairs = graph.edges
       .filter((edge: any) => edge.type === 'affects')
@@ -2535,6 +2562,16 @@ test('compileWiki writes deterministic enriched graph.json while preserving sour
       assert.ok(graphNodeIdSet.has(edge.from), `missing from-node for ${edge.from} -> ${edge.to}`);
       assert.ok(graphNodeIdSet.has(edge.to), `missing to-node for ${edge.from} -> ${edge.to}`);
     }
+
+    const ownershipEdges = graph.edges
+      .filter((edge: any) => edge.type === 'owns')
+      .map((edge: any) => `${edge.from}→${edge.to}`)
+      .sort();
+    assert.deepEqual(ownershipEdges, [
+      'module:Service-api→documentation:docs/guide.md',
+      'module:Service-api→page:Service-api.md',
+      'module:Service-api→source:src/server.ts'
+    ]);
 
     assertNoWallClockFields(graph);
 
@@ -2756,9 +2793,9 @@ Needs review.
     assert.deepEqual(provenanceEdges, [
       'page:Alpha.md->source:src/a.ts',
       'page:Beta.md->source:src/a.ts',
-      'page:Delta.md->source:docs/readme.md',
+      'page:Delta.md->documentation:docs/readme.md',
       'page:Delta.md->source:src/a.ts',
-      'page:Gamma.md->source:docs/readme.md',
+      'page:Gamma.md->documentation:docs/readme.md',
       'page:Gamma.md->source:src/gamma.ts'
     ]);
 

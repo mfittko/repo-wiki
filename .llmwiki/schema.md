@@ -52,6 +52,25 @@ source_paths:
 
 `page_state` is emitted for generated pages, including `_Sidebar.md`, and may be `generated`, `mixed`, or `human-owned`. Pages marked `human-owned` or `owned_by: "human"` are skipped by the compiler; generated pages with non-empty preserved HUMAN_NOTES are rewritten as `mixed`. Existing pages without repo-wiki ownership metadata are treated as unmanaged and are not overwritten or adopted by default; adoption must be explicit by adding generated frontmatter/ownership metadata.
 
+## Graph artifact contract
+
+`repo-wiki compile` also writes a deterministic graph artifact to `.llmwiki/graph.json`.
+
+- `schema_version`: currently `1`
+- node kinds: `page`, `source`, `documentation`, `module`
+- node IDs:
+  - `page:<wiki-page-path>` for wiki pages
+  - `source:<repo-path>` for source files
+  - `documentation:<repo-path>` for documentation files; legacy `source:<repo-path>` documentation IDs are still accepted by the loader for compatibility
+  - `module:<stable-module-id>` for planner/compiler module records
+- edge kinds and endpoint rules:
+  - `wiki_link`: `page` -> `page`
+  - `provenance`: `page` -> `source` or `documentation`
+  - `affects`: `source`, `documentation`, or `module` -> `page`
+  - `owns`: `module` -> `page`, `source`, or `documentation`
+
+The graph artifact is an internal contract for planner/linter/incremental traversal helpers. It is additive and does not replace `.llmwiki/wiki` as the primary generated documentation artifact.
+
 ## Citation, provenance, and confidence policy
 
 Material claims (repository behavior, commands, APIs, architecture, configuration, dependencies, tests, data models, operations, and security posture) should include at least one provenance signal:

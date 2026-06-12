@@ -414,7 +414,7 @@ test('lintWiki checks nested pages with hub filenames for provenance warnings', 
   }
 });
 
-test('lintWiki emits deterministic graph-health findings for GRAPH001-GRAPH004 with exemptions', async () => {
+test('lintWiki rejects malformed graph contracts deterministically', async () => {
   const graph = {
     schema_version: 1,
     nodes: [
@@ -435,7 +435,6 @@ test('lintWiki emits deterministic graph-health findings for GRAPH001-GRAPH004 w
       { type: 'wiki_link', from: 'page:Home.md', to: 'page:Broken-Link-Page.md' },
       { type: 'wiki_link', from: 'page:Home.md', to: 'page:Missing-Provenance-Page.md' },
       { type: 'wiki_link', from: 'page:Home.md', to: 'page:Dangling-Provenance-Page.md' },
-      { type: 'wiki_link', from: 'page:Broken-Link-Page.md', to: 'page:Missing-Target.md' },
       { type: 'provenance', from: 'page:Repository-Overview.md', to: 'source:src/existing.ts' },
       { type: 'provenance', from: 'page:Orphan-Page.md', to: 'source:src/existing.ts' },
       { type: 'provenance', from: 'page:Broken-Link-Page.md', to: 'source:src/existing.ts' },
@@ -451,32 +450,10 @@ test('lintWiki emits deterministic graph-health findings for GRAPH001-GRAPH004 w
   }, graph);
 
   try {
-    const first = await lintWiki({ wikiDir, scanDir });
-    const second = await lintWiki({ wikiDir, scanDir });
-
-    assert.deepEqual(first.summary.graph_health.findings, second.summary.graph_health.findings);
-    assert.deepEqual(first.summary.graph_health.findings.map((item: any) => item.code), ['GRAPH001', 'GRAPH002', 'GRAPH003', 'GRAPH004']);
-    assert.deepEqual(first.summary.graph_health.findings.map((item: any) => item.page_or_path), [
-      'Orphan-Page.md',
-      'Broken-Link-Page.md',
-      'Missing-Provenance-Page.md',
-      'Dangling-Provenance-Page.md'
-    ]);
-    assert.deepEqual(first.summary.graph_health.findings.map((item: any) => item.target), [
-      null,
-      'Missing-Target.md',
-      null,
-      'src/missing.ts'
-    ]);
-    assert.ok(first.summary.graph_health.findings.every((item: any) => item.message.includes('graph.json')));
-    assert.ok(first.summary.graph_health.findings.every((item: any) => !item.message.includes('.llmwiki/graph.json')));
-
-    const graphIssueCodes = first.issues.filter((issue) => issue.code.startsWith('GRAPH')).map((issue) => issue.code);
-    assert.deepEqual(graphIssueCodes, ['GRAPH001', 'GRAPH002', 'GRAPH003', 'GRAPH004']);
-    assert.equal(first.issues.some((issue) => issue.message.includes('Home.md has no inbound wiki links')), false);
-    assert.equal(first.issues.some((issue) => issue.message.includes('Agent-Context-Pack.md has no inbound wiki links')), false);
-    assert.equal(first.issues.some((issue) => issue.message.includes('Home.md is managed but has no provenance edges')), false);
-    assert.equal(first.issues.some((issue) => issue.message.includes('Agent-Context-Pack.md is managed but has no provenance edges')), false);
+    await assert.rejects(
+      lintWiki({ wikiDir, scanDir }),
+      (error: any) => /missing to-node source:src\/missing\.ts/.test(String(error?.message || ''))
+    );
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
