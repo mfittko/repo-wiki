@@ -110,3 +110,62 @@ test('query/explain/path no-result cases are explicit and machine-readable', asy
     await rm(tempDir, { recursive: true, force: true });
   }
 });
+
+test('wiki query helpers cover missing graph, documentation evidence, formatting, and graph misses', async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-query-test-'));
+  try {
+    const wikiDir = path.join(tempDir, 'wiki');
+    const graphPath = path.join(tempDir, 'graph.json');
+    await mkdir(wikiDir, { recursive: true });
+    await writeFile(path.join(wikiDir, 'Docs.md'), `---
+kind: "guide"
+page_state: "generated"
+source_paths:
+  - "docs/guide.md"
+---
+# Docs
+
+Guide page covers documentation-only behavior.
+`, 'utf8');
+    await writeFile(path.join(wikiDir, 'Isolated.md'), `---
+kind: "guide"
+page_state: "generated"
+source_paths:
+  - "src/isolated.ts"
+---
+# Isolated
+
+Standalone page.
+`, 'utf8');
+    await writeFile(graphPath, JSON.stringify({
+      schema_version: 1,
+      nodes: [
+        { id: 'page:Docs.md', kind: 'page', path: 'Docs.md', page_state: 'generated' },
+        { id: 'page:Isolated.md', kind: 'page', path: 'Isolated.md', page_state: 'generated' },
+        { id: 'documentation:docs/guide.md', kind: 'documentation', path: 'docs/guide.md' }
+      ],
+      edges: [
+        { type: 'provenance', from: 'page:Docs.md', to: 'documentation:docs/guide.md' }
+      ]
+    }), 'utf8');
+
+    const missingGraphAnswer = await buildWikiQueryAnswer({ question: 'documentation behavior', wikiDir, graphPath: path.join(tempDir, 'missing-graph.json') });
+    assert.equal(missingGraphAnswer.evidence[0].strength, 'documentation');
+
+    const explanation = await buildWikiExplanation({ target: 'page:Docs.md', wikiDir, graphPath });
+    assert.equal(explanation.found, true);
+    assert.equal(explanation.evidence[0].kind, 'documentation');
+
+    const formattedPath = await findWikiGraphPath({ graphPath, from: 'page:Docs.md', to: 'documentation:docs/guide.md' });
+    assert.match((await import('../src/wiki-query.js')).formatWikiGraphPath(formattedPath), /--provenance-->/);
+
+    const noPath = await findWikiGraphPath({ graphPath, from: 'Docs.md', to: 'Isolated.md' });
+    assert.equal(noPath.reason, 'no-path');
+    assert.match((await import('../src/wiki-query.js')).formatWikiGraphPath(noPath), /No path/);
+
+    const unknownSource = await findWikiGraphPath({ graphPath, from: 'Missing.md', to: 'Docs.md' });
+    assert.equal(unknownSource.reason, 'unknown-source');
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
+  }
+});
