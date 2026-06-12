@@ -14,6 +14,8 @@ import {
   getNodesByKind,
   getNodesByPath,
   getOutgoingEdges,
+  selectLinkedPagePaths,
+  selectPageProvenancePaths,
   isManagedPageState,
   isSupportedWikiGraphSchema,
   loadWikiGraph,
@@ -63,6 +65,15 @@ test('loadWikiGraph provides deterministic indexing and traversal helpers', asyn
     assert.deepEqual(getOutgoingEdges(graph, 'page:Service-api.md', { type: 'wiki_link' }).map((edge) => edge.to), ['page:Documentation-Debt-Report.md']);
     assert.deepEqual(getIncomingEdges(graph, 'page:Documentation-Debt-Report.md', { type: 'wiki_link' }).map((edge) => edge.from), ['page:Service-api.md']);
     assert.deepEqual(getAdjacentNodes(graph, 'page:Service-api.md', { type: 'wiki_link' }).map((node) => node.path), ['Documentation-Debt-Report.md']);
+    assert.deepEqual(selectLinkedPagePaths(graph, 'Service-api.md'), [
+      { nodeId: 'page:Documentation-Debt-Report.md', path: 'Documentation-Debt-Report.md', kind: 'page' }
+    ]);
+    assert.deepEqual(selectPageProvenancePaths(graph, 'Service-api.md'), [
+      { nodeId: 'source:src/server.ts', path: 'src/server.ts', kind: 'source' }
+    ]);
+    assert.deepEqual(selectPageProvenancePaths(graph, 'Documentation-Debt-Report.md'), [
+      { nodeId: 'documentation:docs/guide.md', path: 'docs/guide.md', kind: 'documentation' }
+    ]);
     assert.equal(getNodeById(graph, 'documentation:docs/guide.md')?.path, 'docs/guide.md');
 
     assert.deepEqual(selectAffectedPagePaths(graph, ['src/server.ts', './docs/guide.md', 'src/unknown.ts']), [
