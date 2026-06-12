@@ -1,19 +1,19 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "c5432024529f5133bed4df4fd18ec2b67d908b7e"
+source_commit: "7b125ae9a68ac15891f3248ef52c552b163fcda2"
 page_state: "generated"
 source_paths: ["src/compiler.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "2024-06-05T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
 ---
 
-# Module `compiler.ts`
+# Module: compiler.ts
 
 ## Purpose
 
-The `compiler.ts` module is a core source component responsible for compiling GitHub Wiki pages. It provides the API surface and configuration mechanisms necessary to process and assemble wiki content. The module includes logic to compute architectural decisions and compile the wiki content, integrating multiple subsystems such as context assembly, data modeling, documentation ingestion, and validation. It also supports runtime configuration via environment variables and exposes HTTP routes for wiki page management.
+The `compiler.ts` module is a core source component responsible for compiling the GitHub Wiki content. It provides the API surface and configuration mechanisms necessary to process and transform wiki pages. The module includes logic to compute architectural decisions and compile the wiki content, integrating multiple subsystems such as context assembly, data modeling, documentation ingestion, and validation. It also supports runtime configuration via environment variables and exposes HTTP routes for wiki page management.
 
 ## Source file list
 
@@ -22,20 +22,20 @@ The `compiler.ts` module is a core source component responsible for compiling Gi
 ## Key symbols and entry points
 
 - **ArchDecision**: Represents architectural decisions computed during the compilation process.
-- **compileWiki**: The main function or entry point that orchestrates the compilation of the wiki pages.
-- **computeArchDecision**: A function that calculates or derives architectural decisions relevant to the wiki compilation.
+- **compileWiki**: The main function to compile the wiki content, orchestrating various compilation steps.
+- **computeArchDecision**: A function to compute and determine architectural decisions based on the wiki content and configuration.
 
 ## Dependencies and imports
 
 The module imports several internal components to fulfill its responsibilities:
 
-- `./context-assembler.js`: Likely responsible for assembling contextual information needed during compilation.
-- `./data-model-signals.js`: Handles data model signaling or state management.
-- `./docs-ingestor.js`: Manages ingestion of documentation content.
-- `./docs-validation.js`: Provides validation logic for documentation correctness.
-- `./frontmatter.js`: Parses or manages frontmatter metadata in wiki pages.
+- `./context-assembler.js`: Likely used to assemble contextual information needed during compilation.
+- `./data-model-signals.js`: Provides data modeling signals or reactive data structures.
+- `./docs-ingestor.js`: Handles ingestion of documentation content.
+- `./docs-validation.js`: Performs validation on documentation to ensure correctness.
+- `./frontmatter.js`: Parses and manages frontmatter metadata in wiki pages.
 
-Additional imports (not explicitly listed in the source card excerpt but implied):
+Additional imports mentioned but not explicitly listed in the source card excerpt include:
 
 - `./llm-provider.js`
 - `./page-ownership.js`
@@ -52,10 +52,10 @@ No explicit test files or test-related documentation cards are listed for this m
 
 ## Known gaps or open questions
 
-- No documentation cards or detailed usage examples are currently available.
-- The exact nature and structure of the `ArchDecision` type and how architectural decisions impact compilation are not fully described.
-- The role and implementation details of the HTTP route for deleting `Architecture.md` require further clarification.
-- The interaction between the environment variable `LLMWIKI_COMPILER_MODE` and the module's runtime behavior is not fully documented.
+- The exact semantics and usage of the `ArchDecision` type and how architectural decisions impact the compilation process are not detailed.
+- The role and integration of the additional imports (`llm-provider.js`, `page-ownership.js`, `search.js`) are not fully described.
+- No documentation or test cards are currently available, indicating potential areas for future documentation and test coverage improvements.
+- The specifics of the HTTP route handler for deleting `Architecture.md` pages and its security or usage context remain unclear.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

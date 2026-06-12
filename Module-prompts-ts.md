@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "c5432024529f5133bed4df4fd18ec2b67d908b7e"
+source_commit: "7b125ae9a68ac15891f3248ef52c552b163fcda2"
 page_state: "generated"
 source_paths: ["src/prompts.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -35,7 +35,7 @@ This module provides a collection of functions and types related to building and
   - `ModelContext`
   - `ModuleInfo`
 
-These symbols represent the main API surface of the module, with the `build*Prompt` functions likely serving as entry points for creating different prompt types. The context and info types provide structured data to support prompt construction and usage.
+These symbols represent the core API of the module, with the `build*Prompt` functions likely serving as primary entry points for generating different categories of prompts. The context and info types provide structured data to support prompt construction and usage.
 
 ## Dependencies and imports
 
@@ -43,14 +43,14 @@ These symbols represent the main API surface of the module, with the `build*Prom
 
 ## Related tests
 
-- No documentation or source cards indicate the presence of related test files or test coverage for this module.
+- No documentation cards or test references are provided for this module, so no related tests are currently documented.
 
 ## Known gaps or open questions
 
 - The exact behavior and implementation details of the prompt-building functions are not described here.
-- There is no information about how these prompts are consumed or integrated into the larger system.
-- The absence of related tests or documentation cards suggests that testing and usage documentation may be incomplete or located elsewhere.
-- The repository and commit information are unknown, limiting traceability.
+- There is no information on how these prompts are consumed or integrated into the larger system.
+- No test coverage or usage examples are documented, which limits understanding of practical application.
+- The repository and commit information are unknown, which restricts traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

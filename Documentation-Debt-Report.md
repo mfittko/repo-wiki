@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "c5432024529f5133bed4df4fd18ec2b67d908b7e"
-compiled_at: "2026-05-16T12:55:26.011Z"
+source_commit: "7b125ae9a68ac15891f3248ef52c552b163fcda2"
+compiled_at: "2026-06-12T13:32:38.473Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 claim_status: "review-needed"
