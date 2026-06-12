@@ -153,7 +153,7 @@ Standalone page.
     const missingGraphAnswer = await buildWikiQueryAnswer({ question: 'documentation behavior', wikiDir, graphPath: path.join(tempDir, 'missing-graph.json') });
     assert.equal(missingGraphAnswer.evidence[0].strength, 'documentation');
 
-    const explanation = await buildWikiExplanation({ target: 'page:Docs.md', wikiDir, graphPath });
+    const explanation = await buildWikiExplanation({ target: ' page:Docs.md ', wikiDir, graphPath });
     assert.equal(explanation.found, true);
     assert.equal(explanation.evidence[0].kind, 'documentation');
 

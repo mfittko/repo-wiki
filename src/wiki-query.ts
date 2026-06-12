@@ -292,15 +292,15 @@ function formatPathNode(node: WikiGraphNode) {
 }
 
 function inferEvidenceKind(ref: string) {
-  return ref.endsWith('.md') ? 'documentation' : 'source';
+  return ref.toLowerCase().endsWith('.md') ? 'documentation' : 'source';
 }
 
 function inferEvidenceStrength(ref: string): WikiEvidence['strength'] {
-  return ref.endsWith('.md') ? 'documentation' : 'source';
+  return ref.toLowerCase().endsWith('.md') ? 'documentation' : 'source';
 }
 
 function normalizeTarget(value: string) {
-  return value.toLowerCase().replace(/^page:/, '').replace(/^source:/, '').replace(/^documentation:/, '').replace(/^\.\//, '').replace(/\.md$/i, '').replace(/\s+/g, '-').trim();
+  return value.trim().toLowerCase().replace(/^page:/, '').replace(/^source:/, '').replace(/^documentation:/, '').replace(/^\.\//, '').replace(/\.md$/i, '').replace(/\s+/g, '-').trim();
 }
 
 function compareNodes(left: WikiGraphNode, right: WikiGraphNode) {
