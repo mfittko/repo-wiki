@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2a5afb6af319ea4b1fcdbebcdd868a271584028c"
+source_commit: "2f0f1d4621e326372c896cfd4888a22f68ec0f48"
 page_state: "generated"
 source_paths: ["src/init.ts"]
 compiled_at: "2024-06-01T00:00:00Z"

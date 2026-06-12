@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2a5afb6af319ea4b1fcdbebcdd868a271584028c"
+source_commit: "2f0f1d4621e326372c896cfd4888a22f68ec0f48"
 page_state: "generated"
 source_paths: ["src/docs-ingestor.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -22,34 +22,32 @@ This module provides functionality for ingesting and processing documentation re
 ## Key symbols and entry points
 
 - **CiWorkflowCommandSource**: Represents a source of CI workflow commands.
-- **classifyDocumentedCommands**: Function to classify commands based on their documentation status.
-- **CommandClassification**: Enum or type defining possible classifications of commands.
+- **classifyDocumentedCommands**: Function to classify commands extracted from documentation.
+- **CommandClassification**: Enum or type defining possible classifications for commands.
 - **CommandSource**: Represents the origin or source context of a command.
 - **CommandStatus**: Enum or type indicating the status of a command.
-- **createDocumentationCard**: Function to create a structured documentation card for a command.
+- **createDocumentationCard**: Function to create a structured documentation card summarizing command details.
 - **DocumentedFilePath**: Type or interface representing file paths of documented sources.
 - **extractCiCommands**: Function to extract CI commands from source files.
 - **extractCiCommandSources**: Function to extract sources of CI commands.
-- **extractDocumentationClaims**: Function to extract claims made in documentation about commands.
+- **extractDocumentationClaims**: Function to extract claims made in documentation for validation or processing.
 
 ## Dependencies and imports
 
-- Imports from local module:
-  - `./docs-validation.js`
-- Node.js built-in modules:
-  - `node:fs` (filesystem operations)
-  - `node:path` (path utilities)
+- `./docs-validation.js`: Local module likely providing validation utilities for documentation.
+- `node:fs`: Node.js file system module for file operations.
+- `node:path`: Node.js path module for handling and transforming file paths.
 
 ## Related tests
 
-No explicit test files or test-related symbols are indicated in the source cards for this module.
+No explicit test files or test-related symbols are indicated in the source cards or module metadata. Further investigation in the repository may be required to locate tests related to this module.
 
 ## Known gaps or open questions
 
-- There is no documentation or test coverage information provided for this module.
-- The exact behavior and implementation details of the key functions and types are not described beyond their names and general purpose.
-- The relationship between extracted documentation claims and validation logic in `./docs-validation.js` is not detailed.
-- No example usage or integration context is provided.
+- The module does not list any associated documentation cards or test coverage in the provided metadata.
+- The exact nature and structure of some types (e.g., `CommandClassification`, `CommandStatus`) are not detailed here.
+- The relationship between extracted commands and their validation or usage in the broader system is not fully described.
+- The source repository and commit SHA are placeholders and should be updated for accurate traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

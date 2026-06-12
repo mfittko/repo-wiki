@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2a5afb6af319ea4b1fcdbebcdd868a271584028c"
-compiled_at: "2026-06-12T16:32:31.986Z"
+source_commit: "2f0f1d4621e326372c896cfd4888a22f68ec0f48"
+compiled_at: "2026-06-12T23:11:33.072Z"
 kind: "index"
 confidence: "medium"
 page_state: "generated"
@@ -52,6 +52,7 @@ page_state: "generated"
 - [Module secret patterns ts](Module-secret-patterns-ts.html) - Compiled page for Module secret-patterns.ts.
 - [Module wiki graph ts](Module-wiki-graph-ts.html) - Compiled page for Module wiki-graph.ts.
 - [Module wiki patch ts](Module-wiki-patch-ts.html) - Compiled page for Module wiki-patch.ts.
+- [Module wiki query ts](Module-wiki-query-ts.html) - Compiled page for Module wiki-query.ts.
 
 ## Cross-cutting
 
@@ -72,15 +73,15 @@ page_state: "generated"
     "Markdown": 36,
     "YAML": 8,
     "JSON": 7,
-    "TypeScript": 52,
+    "TypeScript": 54,
     "JavaScript": 6
   },
   "categories": {
-    "source": 45,
+    "source": 46,
     "docs": 36,
     "ci": 5,
     "package": 5,
-    "test": 22,
+    "test": 23,
     "infra": 1
   },
   "runtime_hints": {

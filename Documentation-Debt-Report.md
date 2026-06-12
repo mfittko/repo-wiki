@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2a5afb6af319ea4b1fcdbebcdd868a271584028c"
-compiled_at: "2026-06-12T16:32:32.002Z"
+source_commit: "2f0f1d4621e326372c896cfd4888a22f68ec0f48"
+compiled_at: "2026-06-12T23:11:33.087Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 claim_status: "review-needed"
@@ -131,34 +131,34 @@ Repository file and directory references extracted from markdown links and inlin
 | `docs/PLAN.md:337` | `Log.md` | ❌ missing | not found |
 | `docs/PLAN.md:491` | `Index.md` | ❌ missing | not found |
 | `docs/PLAN.md:499` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:609` | `docs/plans/` | ✅ valid | `docs/plans` |
-| `docs/PLAN.md:661` | `Index.md` | ❌ missing | not found |
-| `docs/PLAN.md:661` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:694` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:717` | `src/extractors.ts` | ✅ valid | `src/extractors.ts` |
-| `docs/PLAN.md:771` | `Index.md` | ❌ missing | not found |
-| `docs/PLAN.md:771` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:777` | `Index.md` | ❌ missing | not found |
-| `docs/PLAN.md:883` | `docs/plans/` | ✅ valid | `docs/plans` |
-| `docs/PLAN.md:887` | `docs/plans/production-scanner.md` | ✅ valid | `docs/plans/production-scanner.md` |
-| `docs/PLAN.md:888` | `docs/plans/doc-validation.md` | ✅ valid | `docs/plans/doc-validation.md` |
-| `docs/PLAN.md:889` | `docs/plans/wiki-graph.md` | ✅ valid | `docs/plans/wiki-graph.md` |
-| `docs/PLAN.md:890` | `docs/plans/llm-compiler.md` | ✅ valid | `docs/plans/llm-compiler.md` |
-| `docs/PLAN.md:891` | `docs/plans/incremental-mode.md` | ✅ valid | `docs/plans/incremental-mode.md` |
-| `docs/PLAN.md:892` | `docs/plans/ci-publishing.md` | ✅ valid | `docs/plans/ci-publishing.md` |
-| `docs/PLAN.md:893` | `docs/plans/agent-integration.md` | ✅ valid | `docs/plans/agent-integration.md` |
-| `docs/PLAN.md:894` | `docs/plans/karpathy-llm-wiki-alignment.md` | ✅ valid | `docs/plans/karpathy-llm-wiki-alignment.md` |
-| `docs/PLAN.md:895` | `docs/plans/wiki-health.md` | ✅ valid | `docs/plans/wiki-health.md` |
-| `docs/PLAN.md:896` | `docs/plans/query-and-file-back.md` | ✅ valid | `docs/plans/query-and-file-back.md` |
-| `docs/PLAN.md:897` | `docs/plans/search-index.md` | ✅ valid | `docs/plans/search-index.md` |
-| `docs/PLAN.md:898` | `docs/plans/trust-hardening.md` | ✅ valid | `docs/plans/trust-hardening.md` |
-| `docs/PLAN.md:899` | `docs/plans/github-action.md` | ✅ valid | `docs/plans/github-action.md` |
-| `docs/PLAN.md:924` | `Index.md` | ❌ missing | not found |
-| `docs/PLAN.md:924` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:953` | `Log.md` | ❌ missing | not found |
-| `docs/PLAN.md:970` | `AGENTS.md` | ✅ valid | `AGENTS.md` |
-| `docs/PLAN.md:970` | `AGENTS.repo-wiki.md` | ❌ missing | not found |
-| `docs/PLAN.md:971` | `Agent-Context-Pack.md` | ❌ missing | not found |
+| `docs/PLAN.md:611` | `docs/plans/` | ✅ valid | `docs/plans` |
+| `docs/PLAN.md:663` | `Index.md` | ❌ missing | not found |
+| `docs/PLAN.md:663` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:696` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:719` | `src/extractors.ts` | ✅ valid | `src/extractors.ts` |
+| `docs/PLAN.md:773` | `Index.md` | ❌ missing | not found |
+| `docs/PLAN.md:773` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:779` | `Index.md` | ❌ missing | not found |
+| `docs/PLAN.md:885` | `docs/plans/` | ✅ valid | `docs/plans` |
+| `docs/PLAN.md:889` | `docs/plans/production-scanner.md` | ✅ valid | `docs/plans/production-scanner.md` |
+| `docs/PLAN.md:890` | `docs/plans/doc-validation.md` | ✅ valid | `docs/plans/doc-validation.md` |
+| `docs/PLAN.md:891` | `docs/plans/wiki-graph.md` | ✅ valid | `docs/plans/wiki-graph.md` |
+| `docs/PLAN.md:892` | `docs/plans/llm-compiler.md` | ✅ valid | `docs/plans/llm-compiler.md` |
+| `docs/PLAN.md:893` | `docs/plans/incremental-mode.md` | ✅ valid | `docs/plans/incremental-mode.md` |
+| `docs/PLAN.md:894` | `docs/plans/ci-publishing.md` | ✅ valid | `docs/plans/ci-publishing.md` |
+| `docs/PLAN.md:895` | `docs/plans/agent-integration.md` | ✅ valid | `docs/plans/agent-integration.md` |
+| `docs/PLAN.md:896` | `docs/plans/karpathy-llm-wiki-alignment.md` | ✅ valid | `docs/plans/karpathy-llm-wiki-alignment.md` |
+| `docs/PLAN.md:897` | `docs/plans/wiki-health.md` | ✅ valid | `docs/plans/wiki-health.md` |
+| `docs/PLAN.md:898` | `docs/plans/query-and-file-back.md` | ✅ valid | `docs/plans/query-and-file-back.md` |
+| `docs/PLAN.md:899` | `docs/plans/search-index.md` | ✅ valid | `docs/plans/search-index.md` |
+| `docs/PLAN.md:900` | `docs/plans/trust-hardening.md` | ✅ valid | `docs/plans/trust-hardening.md` |
+| `docs/PLAN.md:901` | `docs/plans/github-action.md` | ✅ valid | `docs/plans/github-action.md` |
+| `docs/PLAN.md:926` | `Index.md` | ❌ missing | not found |
+| `docs/PLAN.md:926` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:955` | `Log.md` | ❌ missing | not found |
+| `docs/PLAN.md:972` | `AGENTS.md` | ✅ valid | `AGENTS.md` |
+| `docs/PLAN.md:972` | `AGENTS.repo-wiki.md` | ❌ missing | not found |
+| `docs/PLAN.md:973` | `Agent-Context-Pack.md` | ❌ missing | not found |
 | `docs/plans/agent-integration.md:62` | `AGENTS.md` | ✅ valid | `AGENTS.md` |
 | `docs/plans/agent-integration.md:62` | `AGENTS.repo-wiki.md` | ❌ missing | not found |
 | `docs/plans/agent-integration.md:63` | `Agent-Context-Pack.md` | ❌ missing | not found |
@@ -167,8 +167,8 @@ Repository file and directory references extracted from markdown links and inlin
 | `docs/plans/karpathy-llm-wiki-alignment.md:51` | `Log.md` | ❌ missing | not found |
 | `docs/plans/karpathy-llm-wiki-alignment.md:52` | `Log.md` | ❌ missing | not found |
 | `docs/plans/karpathy-llm-wiki-alignment.md:69` | `Index.md` | ❌ missing | not found |
-| `docs/plans/query-and-file-back.md:51` | `Log.md` | ❌ missing | not found |
-| `docs/plans/query-and-file-back.md:61` | `Log.md` | ❌ missing | not found |
+| `docs/plans/query-and-file-back.md:57` | `Log.md` | ❌ missing | not found |
+| `docs/plans/query-and-file-back.md:69` | `Log.md` | ❌ missing | not found |
 | `docs/plans/trust-hardening.md:31` | `page-ownership.ts` | ❌ missing | not found |
 | `docs/plans/trust-hardening.md:72` | `src/secret-patterns.ts` | ✅ valid | `src/secret-patterns.ts` |
 | `docs/plans/wiki-graph.md:97` | `_Sidebar.md` | ❌ missing | not found |
@@ -180,12 +180,12 @@ Repository file and directory references extracted from markdown links and inlin
 | `README.md:5` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
 | `README.md:30` | `Documentation-Debt-Report.md` | ❌ missing | not found |
 | `README.md:32` | `Architecture.md` | ❌ missing | not found |
-| `README.md:106` | `src/config.ts` | ✅ valid | `src/config.ts` |
-| `README.md:110` | `README.md` | ✅ valid | `README.md` |
-| `README.md:126` | `Architecture.md` | ❌ missing | not found |
-| `README.md:181` | `.github/workflows/wiki.yml` | ✅ valid | `.github/workflows/wiki.yml` |
-| `README.md:225` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
-| `README.md:225` | `docs/plans/wiki-graph.md` | ✅ valid | `docs/plans/wiki-graph.md` |
+| `README.md:112` | `src/config.ts` | ✅ valid | `src/config.ts` |
+| `README.md:116` | `README.md` | ✅ valid | `README.md` |
+| `README.md:132` | `Architecture.md` | ❌ missing | not found |
+| `README.md:187` | `.github/workflows/wiki.yml` | ✅ valid | `.github/workflows/wiki.yml` |
+| `README.md:231` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
+| `README.md:231` | `docs/plans/wiki-graph.md` | ✅ valid | `docs/plans/wiki-graph.md` |
 
 ## Environment variable validation
 
@@ -280,25 +280,25 @@ Conservative ADR detection uses deterministic path hints (`ADR/**`, `docs/adr/**
 - `docs/PLAN.md:337` references `Log.md` (missing).
 - `docs/PLAN.md:491` references `Index.md` (missing).
 - `docs/PLAN.md:499` references `Log.md` (missing).
-- `docs/PLAN.md:661` references `Index.md` (missing).
-- `docs/PLAN.md:661` references `Log.md` (missing).
-- `docs/PLAN.md:694` references `Log.md` (missing).
-- `docs/PLAN.md:771` references `Index.md` (missing).
-- `docs/PLAN.md:771` references `Log.md` (missing).
-- `docs/PLAN.md:777` references `Index.md` (missing).
-- `docs/PLAN.md:924` references `Index.md` (missing).
-- `docs/PLAN.md:924` references `Log.md` (missing).
-- `docs/PLAN.md:953` references `Log.md` (missing).
-- `docs/PLAN.md:970` references `AGENTS.repo-wiki.md` (missing).
-- `docs/PLAN.md:971` references `Agent-Context-Pack.md` (missing).
+- `docs/PLAN.md:663` references `Index.md` (missing).
+- `docs/PLAN.md:663` references `Log.md` (missing).
+- `docs/PLAN.md:696` references `Log.md` (missing).
+- `docs/PLAN.md:773` references `Index.md` (missing).
+- `docs/PLAN.md:773` references `Log.md` (missing).
+- `docs/PLAN.md:779` references `Index.md` (missing).
+- `docs/PLAN.md:926` references `Index.md` (missing).
+- `docs/PLAN.md:926` references `Log.md` (missing).
+- `docs/PLAN.md:955` references `Log.md` (missing).
+- `docs/PLAN.md:972` references `AGENTS.repo-wiki.md` (missing).
+- `docs/PLAN.md:973` references `Agent-Context-Pack.md` (missing).
 - `docs/plans/agent-integration.md:62` references `AGENTS.repo-wiki.md` (missing).
 - `docs/plans/agent-integration.md:63` references `Agent-Context-Pack.md` (missing).
 - `docs/plans/karpathy-llm-wiki-alignment.md:51` references `Index.md` (missing).
 - `docs/plans/karpathy-llm-wiki-alignment.md:51` references `Log.md` (missing).
 - `docs/plans/karpathy-llm-wiki-alignment.md:52` references `Log.md` (missing).
 - `docs/plans/karpathy-llm-wiki-alignment.md:69` references `Index.md` (missing).
-- `docs/plans/query-and-file-back.md:51` references `Log.md` (missing).
-- `docs/plans/query-and-file-back.md:61` references `Log.md` (missing).
+- `docs/plans/query-and-file-back.md:57` references `Log.md` (missing).
+- `docs/plans/query-and-file-back.md:69` references `Log.md` (missing).
 - `docs/plans/trust-hardening.md:31` references `page-ownership.ts` (missing).
 - `docs/plans/wiki-graph.md:97` references `_Sidebar.md` (missing).
 - `docs/plans/wiki-graph.md:124` references `_Sidebar.md` (missing).
@@ -307,7 +307,7 @@ Conservative ADR detection uses deterministic path hints (`ADR/**`, `docs/adr/**
 - `docs/WHY.md:19` references `Log.md` (missing).
 - `README.md:30` references `Documentation-Debt-Report.md` (missing).
 - `README.md:32` references `Architecture.md` (missing).
-- `README.md:126` references `Architecture.md` (missing).
+- `README.md:132` references `Architecture.md` (missing).
 
 ### ADR-specific
 

@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2a5afb6af319ea4b1fcdbebcdd868a271584028c"
+source_commit: "2f0f1d4621e326372c896cfd4888a22f68ec0f48"
 page_state: "generated"
 source_paths: ["src/wiki-graph.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality for constructing and querying a graph representation of wiki pages. It includes utilities to build an index of wiki graph nodes and edges, retrieve nodes by various criteria, and explore relationships between pages through their edges. The module is designed to support operations such as selecting affected pages, managing page paths, and navigating adjacency in the wiki graph.
+This module provides functionality for constructing and querying a graph representation of wiki pages. It includes utilities to build an index of wiki graph nodes and edges, retrieve nodes by various criteria, and explore relationships between pages through their edges. The module is designed to support operations on a managed set of wiki pages, facilitating navigation and analysis of their interconnections.
 
 ## Source file list
 
@@ -21,21 +21,21 @@ This module provides functionality for constructing and querying a graph represe
 
 ## Key symbols and entry points
 
-- **AffectedWikiGraphPageSelection**: Likely a type or interface related to selecting pages affected in the wiki graph.
-- **buildWikiGraphIndex**: Function to build an index structure representing the wiki graph.
-- **getAdjacentNodes**: Retrieves nodes adjacent to a given node in the graph.
-- **getEdgesByType**: Fetches edges filtered by their type.
-- **getIncomingEdges**: Retrieves edges directed towards a specific node.
-- **getManagedPagePaths**: Returns paths of pages managed within the graph.
-- **getNodeById**: Finds a node by its unique identifier.
+- **AffectedWikiGraphPageSelection**: Likely a type or interface representing a selection of wiki graph pages affected by some criteria.
+- **buildWikiGraphIndex**: Function to build an index of the wiki graph, presumably creating nodes and edges from source data.
+- **getAdjacentNodes**: Retrieves nodes adjacent to a given node, useful for graph traversal.
+- **getEdgesByType**: Returns edges filtered by their type, enabling focused queries on specific relationships.
+- **getIncomingEdges**: Gets edges directed towards a specified node.
+- **getManagedPagePaths**: Retrieves paths of pages managed within the wiki graph.
+- **getNodeById**: Finds a node in the graph by its unique identifier.
 - **getNodesByKind**: Retrieves nodes filtered by their kind or category.
-- **getNodesByPath**: Finds nodes based on their associated path.
-- **getOutgoingEdges**: Retrieves edges originating from a specific node.
+- **getNodesByPath**: Finds nodes based on their associated file or page path.
+- **getOutgoingEdges**: Gets edges originating from a specified node.
 
 ## Dependencies and imports
 
-- Imports from `./utils/fs.js`: likely utilities related to filesystem operations.
-- Imports from `node:path`: Node.js core module for handling and transforming file paths.
+- `./utils/fs.js`: A local utility module, likely providing filesystem-related functions.
+- `node:path`: Node.js built-in module for handling and transforming file paths.
 
 ## Related tests
 
@@ -44,10 +44,9 @@ No documentation or source cards indicate the presence of related test files or 
 ## Known gaps or open questions
 
 - The exact structure and semantics of `AffectedWikiGraphPageSelection` are not detailed.
-- There is no explicit documentation or examples illustrating usage patterns.
-- No test coverage or test references are provided, so the robustness and correctness of the module are not verifiable from the current data.
-- The repository remote URL and commit SHA are unknown, limiting traceability.
-- The module's integration context within a larger system or application is not described.
+- There is no explicit documentation or test coverage information available.
+- The module's integration context within a larger system or how it interacts with other modules is not specified.
+- The nature of the graph data (e.g., what kinds of nodes and edges exist) is not fully described.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

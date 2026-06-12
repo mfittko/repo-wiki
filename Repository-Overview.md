@@ -1,10 +1,10 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2a5afb6af319ea4b1fcdbebcdd868a271584028c"
-compiled_at: "2026-06-12T16:32:31.994Z"
+source_commit: "2f0f1d4621e326372c896cfd4888a22f68ec0f48"
+compiled_at: "2026-06-12T23:11:33.080Z"
 kind: "repository_overview"
 claim_status: "grounded"
-source_paths: [".devloops",".env.example",".github/ISSUE_TEMPLATE/config.yml",".github/ISSUE_TEMPLATE/epic.yml",".github/ISSUE_TEMPLATE/task.yml",".github/workflows/changelog-on-merge.yml",".github/workflows/changelog-release.yml",".github/workflows/ci.yml",".github/workflows/wiki.yml",".gitignore",".pi/settings.json",".tsbuildinfo","bin/repo-wiki.ts","LICENSE","package-lock.json","package.json","scripts/update-changelog.mjs","src/cli.ts","src/compiler.ts","src/config.ts","src/context-assembler.ts","src/data-model-signals.ts","src/docs-ingestor.ts","src/docs-linter.ts","src/docs-validation.ts","src/extractors.ts","src/frontmatter.ts","src/index.ts","src/init.ts","src/language.ts","src/linter.ts","src/llm-provider.ts","src/page-ownership.ts","src/planner.ts","src/prompts.ts","src/publisher.ts","src/repository-analysis.ts","src/scanner.ts","src/search.ts","src/secret-patterns.ts","src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts","src/wiki-graph.ts","src/wiki-patch.ts","test/cli.test.ts","test/compiler-eval.test.ts","test/compiler.test.ts","test/context-assembler.test.ts"]
+source_paths: [".devloops",".env.example",".github/ISSUE_TEMPLATE/config.yml",".github/ISSUE_TEMPLATE/epic.yml",".github/ISSUE_TEMPLATE/task.yml",".github/workflows/changelog-on-merge.yml",".github/workflows/changelog-release.yml",".github/workflows/ci.yml",".github/workflows/wiki.yml",".gitignore",".pi/settings.json",".tsbuildinfo","bin/repo-wiki.ts","LICENSE","package-lock.json","package.json","scripts/update-changelog.mjs","src/cli.ts","src/compiler.ts","src/config.ts","src/context-assembler.ts","src/data-model-signals.ts","src/docs-ingestor.ts","src/docs-linter.ts","src/docs-validation.ts","src/extractors.ts","src/frontmatter.ts","src/index.ts","src/init.ts","src/language.ts","src/linter.ts","src/llm-provider.ts","src/page-ownership.ts","src/planner.ts","src/prompts.ts","src/publisher.ts","src/repository-analysis.ts","src/scanner.ts","src/search.ts","src/secret-patterns.ts","src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts","src/wiki-graph.ts","src/wiki-patch.ts","src/wiki-query.ts","test/cli.test.ts","test/compiler-eval.test.ts","test/compiler.test.ts"]
 confidence: "medium"
 page_state: "generated"
 ---
@@ -14,7 +14,7 @@ page_state: "generated"
 
 | Language | Files |
 |---|---:|
-| TypeScript | 52 |
+| TypeScript | 54 |
 | Markdown | 36 |
 | YAML | 8 |
 | JSON | 7 |
@@ -25,16 +25,16 @@ page_state: "generated"
 
 | Category | Files |
 |---|---:|
-| source | 45 |
+| source | 46 |
 | docs | 36 |
-| test | 22 |
+| test | 23 |
 | ci | 5 |
 | package | 5 |
 | infra | 1 |
 
 ## Main knowledge units
 
-- [Repository Root](Repository-Root.html) - 53 files
+- [Repository Root](Repository-Root.html) - 54 files
 - [CI and Automation](CI-and-Automation.html) - 17 files
 - [Documentation](Documentation.html) - 15 files
 - [Module utils](Module-utils.html) - 4 files
@@ -63,3 +63,4 @@ page_state: "generated"
 - [Module secret-patterns.ts](Module-secret-patterns-ts.html) - 1 files
 - [Module wiki-graph.ts](Module-wiki-graph-ts.html) - 1 files
 - [Module wiki-patch.ts](Module-wiki-patch-ts.html) - 1 files
+- [Module wiki-query.ts](Module-wiki-query-ts.html) - 1 files
