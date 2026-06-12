@@ -4,6 +4,22 @@
 
 Build a plugin-based knowledge graph system that models relationships between wiki pages, source modules, documentation topics, and ownership state. The core graph is backend-agnostic — adapters translate it to different storage and rendering targets (GitHub Wiki, Neo4j, Confluence, Obsidian, flat JSON). The graph powers navigation generation, cross-link validation, agent query routing, affected-page detection for incremental updates, and safe reconciliation with existing wikis.
 
+## Current shipped foundation (Phase 1)
+
+The repository now ships a local deterministic graph foundation at `.llmwiki/graph.json` (`schema_version: 1`) with internal loader/index/traversal helpers.
+
+- Shipped node kinds: `page`, `source`, `documentation`, `module`
+- Shipped edge kinds: `wiki_link`, `provenance`, `affects`, `owns`
+- Shipped validation gates: malformed IDs, duplicate IDs, dangling endpoints, invalid edge endpoint kinds
+
+This foundation is intentionally local and JSON-based. `.llmwiki/wiki` remains the primary derived artifact.
+
+## Still planned (not shipped in Phase 1)
+
+- backend adapters (Neo4j/SQLite/other)
+- plugin discovery and adapter registration
+- public runtime query/path/explain/watch transports
+
 ## Architecture
 
 ```mermaid

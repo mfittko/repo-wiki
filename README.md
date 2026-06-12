@@ -10,6 +10,7 @@ It follows the LLM Wiki pattern described in `docs/PLAN.md`: scan the repository
 - ingests markdown documentation into documentation cards
 - validates documented commands, file paths, environment variables, and route/API claims
 - plans and compiles local wiki pages under `.llmwiki/wiki/`
+- builds a deterministic graph artifact under `.llmwiki/graph.json` for internal traversal and incremental mapping
 - preserves `HUMAN_NOTES` and skips human-owned or unmanaged pages
 - publishes the local wiki to either GitHub Wiki or GitHub Pages
 - builds a deterministic offline search index under `.llmwiki/search/` and exposes `repo-wiki search`
@@ -59,6 +60,7 @@ The default workflow writes:
 - `.llmwiki/schema.md`
 - `.llmwiki/run/manifest.json` and card artifacts
 - `.llmwiki/wiki/*.md`
+- `.llmwiki/graph.json`
 - `.llmwiki/search/index.json`
 - an optional agent pointer file when `--write-agents` is used
 
@@ -86,6 +88,16 @@ repo-wiki search "architecture" --wiki .llmwiki/wiki --json
 ```
 
 The built-in index is rebuilt deterministically from local wiki pages and stored at `.llmwiki/search/index.json`. Results include page identity, kind, snippet/summary, source paths, and lightweight internal-link graph context for routing follow-up investigation.
+
+## Graph foundation (shipped in v1)
+
+The compiler now emits `.llmwiki/graph.json` as a deterministic local artifact. Current v1 graph contract includes:
+
+- node kinds: `page`, `source`, `documentation`, `module`
+- edge kinds: `wiki_link`, `provenance`, `affects`, `owns`
+- deterministic validation for duplicate node IDs, malformed IDs, dangling edge endpoints, and invalid edge target kinds
+
+The graph is an additive internal foundation used by planner/linter/incremental helpers. `.llmwiki/wiki` remains the primary derived artifact and publication surface.
 
 ## Documentation authority model
 
@@ -210,4 +222,4 @@ Notes:
 
 The current package ships a working CLI, scanner, docs linting, deterministic compiler, LLM page synthesis path, wiki linting, publisher, and CI workflows.
 
-Still planned rather than shipped are user-facing `doctor`, `diff`, `query`, and deeper incremental maintenance and wiki-health workflows described in `docs/PLAN.md`. The shipped search surface is the built-in local page-first index; external adapters and richer query/file-back layers remain deferred.
+Still planned rather than shipped are user-facing `doctor`, `diff`, `query`, backend graph adapters (for example Neo4j/SQLite), and runtime transport surfaces described in `docs/PLAN.md` and `docs/plans/wiki-graph.md`. The shipped search surface is the built-in local page-first index; external adapters and richer query/file-back layers remain deferred.

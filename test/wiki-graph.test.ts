@@ -110,7 +110,7 @@ test('buildWikiGraphIndex rejects malformed graph structures explicitly', () => 
       schema_version: 1,
       nodes: [
         { id: 'page:Home.md', kind: 'page', path: 'Home.md' },
-        { id: 'page:Home.md', kind: 'page', path: 'Home-copy.md' }
+        { id: 'page:Home.md', kind: 'page', path: 'Home.md' }
       ],
       edges: []
     }),
@@ -124,6 +124,36 @@ test('buildWikiGraphIndex rejects malformed graph structures explicitly', () => 
       edges: [{ from: 'page:Home.md', to: 'page:Index.md' }]
     }),
     (error: any) => error instanceof WikiGraphError && /must include a non-empty string type/.test(error.message)
+  );
+
+  assert.throws(
+    () => buildWikiGraphIndex({
+      schema_version: 1,
+      nodes: [{ id: 'documentation:docs/other.md', kind: 'documentation', path: 'docs/guide.md' }],
+      edges: []
+    }),
+    (error: any) => error instanceof WikiGraphError && /must match its kind\/path/.test(error.message)
+  );
+
+  assert.throws(
+    () => buildWikiGraphIndex({
+      schema_version: 1,
+      nodes: [{ id: 'page:Home.md', kind: 'page', path: 'Home.md' }],
+      edges: [{ type: 'wiki_link', from: 'page:Home.md', to: 'page:Missing.md' }]
+    }),
+    (error: any) => error instanceof WikiGraphError && /missing to-node/.test(error.message)
+  );
+
+  assert.throws(
+    () => buildWikiGraphIndex({
+      schema_version: 1,
+      nodes: [
+        { id: 'page:Home.md', kind: 'page', path: 'Home.md' },
+        { id: 'source:src/server.ts', kind: 'source', path: 'src/server.ts' }
+      ],
+      edges: [{ type: 'wiki_link', from: 'page:Home.md', to: 'source:src/server.ts' }]
+    }),
+    (error: any) => error instanceof WikiGraphError && /invalid endpoint kinds/.test(error.message)
   );
 });
 

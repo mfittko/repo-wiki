@@ -348,7 +348,7 @@ export async function compileWiki({
   };
 }
 
-type WikiGraphNodeKind = 'page' | 'source' | 'documentation';
+type WikiGraphNodeKind = 'page' | 'source' | 'documentation' | 'module';
 
 type WikiGraphNode = {
   id: string;
@@ -358,7 +358,7 @@ type WikiGraphNode = {
 };
 
 type WikiGraphEdge = {
-  type: 'affects' | 'wiki_link' | 'provenance';
+  type: 'affects' | 'wiki_link' | 'provenance' | 'owns';
   from: string;
   to: string;
 };
@@ -370,10 +370,53 @@ async function buildWikiGraph(manifest: any, plan: any, wikiDir: string): Promis
 }> {
   const plannedPagePaths = uniqueSorted((plan?.pages || []).map((page: any) => String(page?.path || '')).filter(Boolean)) as string[];
   const sourceToPages = Array.isArray(plan?.affected_page_graph?.source_to_pages) ? plan.affected_page_graph.source_to_pages : [];
+  const modulePagePathByName = new Map<string, string>();
+  const modulePagePathBySlug = new Map<string, string>();
+  for (const page of plan?.pages || []) {
+    const pagePath = String(page?.path || '');
+    if (!pagePath) {
+      continue;
+    }
+    const moduleName = String(page?.moduleName || '').trim();
+    if (moduleName) {
+      modulePagePathByName.set(moduleName, pagePath);
+    }
+    const extension = path.extname(pagePath);
+    const slug = extension ? pagePath.slice(0, -extension.length) : pagePath;
+    if (slug) {
+      modulePagePathBySlug.set(slug, pagePath);
+    }
+  }
+  const moduleById = new Map<string, { id: string; path: string; files: Set<string> }>();
+  for (const module of plan?.modules || []) {
+    const slug = String(module?.slug || '').trim();
+    if (!slug) {
+      continue;
+    }
+    const moduleId = `module:${slug}`;
+    const moduleName = String(module?.name || '').trim();
+    const modulePath = modulePagePathByName.get(moduleName) || modulePagePathBySlug.get(slug) || `${slug}.md`;
+    let entry = moduleById.get(moduleId);
+    if (!entry) {
+      entry = { id: moduleId, path: modulePath, files: new Set<string>() };
+      moduleById.set(moduleId, entry);
+    }
+    for (const file of module?.files || []) {
+      const sourcePath = String(file || '').trim();
+      if (sourcePath) {
+        entry.files.add(sourcePath);
+      }
+    }
+  }
   const documentationPaths = new Set<string>([
     ...(manifest?.documentation?.files || []).map((file: any) => String(file?.path || '')).filter(Boolean),
     ...(manifest?.files || []).filter((file: any) => file?.category === 'docs').map((file: any) => String(file?.path || '')).filter(Boolean),
   ]);
+  const sourceNodeIdForPath = (sourcePath: string) => (
+    documentationPaths.has(sourcePath) || isDocumentationPath(sourcePath)
+      ? `documentation:${sourcePath}`
+      : `source:${sourcePath}`
+  );
   const pageContentByPath = new Map<string, string>();
   const pageBodyByPath = new Map<string, string>();
   const pageStateByPath = new Map<string, 'generated' | 'mixed' | 'human-owned' | 'unmanaged'>();
@@ -398,12 +441,13 @@ async function buildWikiGraph(manifest: any, plan: any, wikiDir: string): Promis
     if (!sourcePath) {
       continue;
     }
+    const fromNodeId = sourceNodeIdForPath(sourcePath);
     for (const page of entry?.pages || []) {
       const pagePath = String(page?.page || '');
       if (!pagePath) {
         continue;
       }
-      edgeSet.add(`affects\u0000source:${sourcePath}\u0000page:${pagePath}`);
+      edgeSet.add(`affects\u0000${fromNodeId}\u0000page:${pagePath}`);
     }
   }
 
@@ -424,7 +468,17 @@ async function buildWikiGraph(manifest: any, plan: any, wikiDir: string): Promis
     const sourcePaths = extractFrontmatterSourcePaths(pageContent);
     for (const sourcePath of sourcePaths) {
       sourcePathSet.add(sourcePath);
-      edgeSet.add(`provenance\u0000page:${pagePath}\u0000source:${sourcePath}`);
+      edgeSet.add(`provenance\u0000page:${pagePath}\u0000${sourceNodeIdForPath(sourcePath)}`);
+    }
+  }
+
+  for (const moduleNode of moduleById.values()) {
+    if (plannedPagePaths.includes(moduleNode.path)) {
+      edgeSet.add(`owns\u0000${moduleNode.id}\u0000page:${moduleNode.path}`);
+    }
+    for (const sourcePath of moduleNode.files) {
+      sourcePathSet.add(sourcePath);
+      edgeSet.add(`owns\u0000${moduleNode.id}\u0000${sourceNodeIdForPath(sourcePath)}`);
     }
   }
 
@@ -435,13 +489,20 @@ async function buildWikiGraph(manifest: any, plan: any, wikiDir: string): Promis
     path: pagePath,
     page_state: pageStateByPath.get(pagePath) || 'generated',
   }));
+  const moduleNodes: WikiGraphNode[] = [...moduleById.values()]
+    .map((moduleNode) => ({
+      id: moduleNode.id,
+      kind: 'module' as WikiGraphNodeKind,
+      path: moduleNode.path,
+    }))
+    .sort(compareWikiGraphNodes);
   const sourceNodes: WikiGraphNode[] = sourcePaths.map((sourcePath) => ({
-    id: `source:${sourcePath}`,
+    id: sourceNodeIdForPath(sourcePath),
     kind: (documentationPaths.has(sourcePath) || isDocumentationPath(sourcePath) ? 'documentation' : 'source') as WikiGraphNodeKind,
     path: sourcePath,
   }));
 
-  const nodes: WikiGraphNode[] = [...pageNodes, ...sourceNodes];
+  const nodes: WikiGraphNode[] = [...pageNodes, ...moduleNodes, ...sourceNodes].sort(compareWikiGraphNodes);
   const edges: WikiGraphEdge[] = [...edgeSet].map((entry) => {
     const [type, from, to] = entry.split('\u0000');
     return {
@@ -456,6 +517,12 @@ async function buildWikiGraph(manifest: any, plan: any, wikiDir: string): Promis
     nodes,
     edges,
   };
+}
+
+function compareWikiGraphNodes(left: WikiGraphNode, right: WikiGraphNode) {
+  return left.path.localeCompare(right.path)
+    || left.kind.localeCompare(right.kind)
+    || left.id.localeCompare(right.id);
 }
 
 function stripLeadingFrontmatter(content: string): string {
