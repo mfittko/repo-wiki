@@ -1,4 +1,34 @@
+# Ignore all root dot files/directories by default; opt in the tracked ones below.
+.*
+
+# Tracked dot files and directories
+!.gitignore
+!.env.example
+!.github/
+!.github/**
+!.llmwiki/
+!.llmwiki/schema.md
+!.pi/
+!.pi/AGENTS.md
+!.pi/agents/
+!.pi/agents/**
+!.pi/skills/
+!.pi/skills/**
+
+# Local pi/dev-loop runtime artifacts (ignored even though .pi/ is re-included)
+.pi/settings.json
+.pi/input-history.jsonl
+.pi/runner-coordination/
+
+# Dependencies
 node_modules/
+
+# Build artifacts
+dist/
+.tsbuildinfo
+coverage/
+
+# Generated local wiki/graph/search/run outputs
 .llmwiki/run/
 .llmwiki/wiki/
 .llmwiki/graph.json
@@ -6,11 +36,9 @@ node_modules/
 .llmwiki/bootstrap-plan.json
 .llmwiki/incremental-plan.json
 .llmwiki/plan.json
-coverage/
-dist/
+
+# OS
 .DS_Store
-.env
-.env.*
-!.env.example
-.tsbuildinfo
+
+# Scratch
 tmp/
