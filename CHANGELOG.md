@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add deterministic graph-health lint findings from `graph.json`.
 - Add internal wiki graph traversal helpers.
 - Add local offline search index and `repo-wiki search`.
+- Phase 1 graph foundation: stabilize `.llmwiki/graph.json` contract and internal traversal surface.
 
 ### Changed
 - Node.js engine requirement raised to `>=24`; removed unsafe incremental cache from scanner
