@@ -37,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add local offline search index and `repo-wiki search`.
 - Phase 1 graph foundation: stabilize `.llmwiki/graph.json` contract and internal traversal surface.
 - Add graph traversal convenience helpers.
+- Add wiki-first query, path, and explain commands.
 
 ### Changed
 - Node.js engine requirement raised to `>=24`; removed unsafe incremental cache from scanner
