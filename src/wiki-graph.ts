@@ -44,6 +44,12 @@ export type AffectedWikiGraphPageSelection = {
   changedPaths: string[];
 };
 
+export type WikiGraphTraversalSelection = {
+  nodeId: string;
+  path: string;
+  kind: string;
+};
+
 export class WikiGraphError extends Error {
   code: string;
   graphPath: string | null;
@@ -191,6 +197,15 @@ export function getAdjacentNodes(
     .filter((node): node is WikiGraphNode => !!node);
 }
 
+
+export function selectLinkedPagePaths(index: WikiGraphIndex, pagePath: string): WikiGraphTraversalSelection[] {
+  return selectPageTraversalNodes(index, pagePath, 'wiki_link', ['page']);
+}
+
+export function selectPageProvenancePaths(index: WikiGraphIndex, pagePath: string): WikiGraphTraversalSelection[] {
+  return selectPageTraversalNodes(index, pagePath, 'provenance', ['source', 'documentation']);
+}
+
 export function getManagedPagePaths(index: WikiGraphIndex): Set<string> {
   const managed = new Set<string>();
   for (const node of getNodesByKind(index, 'page')) {
@@ -250,6 +265,40 @@ export function selectAffectedPagePaths(
 
 export function isManagedPageState(pageState: string | undefined): boolean {
   return MANAGED_PAGE_STATES.has(String(pageState || 'generated'));
+}
+
+
+function selectPageTraversalNodes(
+  index: WikiGraphIndex,
+  pagePath: string,
+  edgeType: 'wiki_link' | 'provenance',
+  targetKinds: string[]
+): WikiGraphTraversalSelection[] {
+  const pageNodes = getNodesByPath(index, pagePath, { kind: 'page' });
+  const targetKindSet = new Set(targetKinds);
+  const selected = new Map<string, WikiGraphTraversalSelection>();
+
+  for (const pageNode of pageNodes) {
+    for (const edge of getOutgoingEdges(index, pageNode.id, { type: edgeType })) {
+      const targetNode = getNodeById(index, edge.to);
+      if (!targetNode || !targetKindSet.has(targetNode.kind)) {
+        continue;
+      }
+      selected.set(targetNode.id, {
+        nodeId: targetNode.id,
+        path: targetNode.path,
+        kind: targetNode.kind
+      });
+    }
+  }
+
+  return [...selected.values()].sort(compareTraversalSelections);
+}
+
+function compareTraversalSelections(left: WikiGraphTraversalSelection, right: WikiGraphTraversalSelection) {
+  return left.kind.localeCompare(right.kind)
+    || left.path.localeCompare(right.path)
+    || left.nodeId.localeCompare(right.nodeId);
 }
 
 function parseNode(rawNode: unknown, index: number, graphPath?: string): WikiGraphNode {
