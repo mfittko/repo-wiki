@@ -340,7 +340,7 @@ function validateNodeId(node: { id: string; kind: string; path: string }, graphP
     if (node.id === `documentation:${node.path}` || node.id === `source:${node.path}`) {
       return;
     }
-    throw new WikiGraphError(`Graph node ${node.id} must match its kind/path (expected documentation:${node.path}).`, graphPath);
+    throw new WikiGraphError(`Graph node ${node.id} must match its kind/path (expected documentation:${node.path} or source:${node.path}).`, graphPath);
   }
   if (node.kind === 'module') {
     if (/^module:[^:\s][^:\n\r]*$/.test(node.id)) {

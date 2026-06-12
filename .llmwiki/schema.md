@@ -58,7 +58,16 @@ source_paths:
 
 - `schema_version`: currently `1`
 - node kinds: `page`, `source`, `documentation`, `module`
-- edge kinds: `wiki_link`, `provenance`, `affects`, `owns`
+- node IDs:
+  - `page:<wiki-page-path>` for wiki pages
+  - `source:<repo-path>` for source files
+  - `documentation:<repo-path>` for documentation files; legacy `source:<repo-path>` documentation IDs are still accepted by the loader for compatibility
+  - `module:<stable-module-id>` for planner/compiler module records
+- edge kinds and endpoint rules:
+  - `wiki_link`: `page` -> `page`
+  - `provenance`: `page` -> `source` or `documentation`
+  - `affects`: `source`, `documentation`, or `module` -> `page`
+  - `owns`: `module` -> `page`, `source`, or `documentation`
 
 The graph artifact is an internal contract for planner/linter/incremental traversal helpers. It is additive and does not replace `.llmwiki/wiki` as the primary generated documentation artifact.
 

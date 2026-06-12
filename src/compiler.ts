@@ -473,7 +473,7 @@ async function buildWikiGraph(manifest: any, plan: any, wikiDir: string): Promis
   }
 
   for (const moduleNode of moduleById.values()) {
-    if (plannedPagePaths.includes(moduleNode.path)) {
+    if (pageStateByPath.has(moduleNode.path)) {
       edgeSet.add(`owns\u0000${moduleNode.id}\u0000page:${moduleNode.path}`);
     }
     for (const sourcePath of moduleNode.files) {
