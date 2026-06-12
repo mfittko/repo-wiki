@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "144bad2d897ff76640a6ae71a662559850345164"
-compiled_at: "2026-06-12T14:44:47.992Z"
+source_commit: "edb41c2402583d52b198e0b02471275199a0fcb1"
+compiled_at: "2026-06-12T15:34:24.764Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 claim_status: "review-needed"
@@ -44,11 +44,11 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
 
 - Documentation ingestion enabled: true
 - Documentation files scanned: 24
-- Claims extracted: 30
+- Claims extracted: 34
 - Stale documents: 1
 - Commands found in docs: 23
 - Environment variable mentions: 29
-- File path references: 68
+- File path references: 69
 
 ## Documentation status table
 
@@ -74,10 +74,10 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
 | `docs/plans/query-and-file-back.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `docs/plans/search-index.md` | unvalidated | secondary | 0 | 1 | 0 | 0 |
 | `docs/plans/trust-hardening.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
-| `docs/plans/wiki-graph.md` | unvalidated | secondary | 0 | 1 | 0 | 0 |
+| `docs/plans/wiki-graph.md` | unvalidated | secondary | 0 | 3 | 0 | 0 |
 | `docs/plans/wiki-health.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `docs/WHY.md` | partially_validated | secondary | 0 | 5 | 0 | 0 |
-| `README.md` | partially_validated | secondary | 0 | 7 | 12 | 19 |
+| `README.md` | partially_validated | secondary | 0 | 9 | 12 | 19 |
 
 ## Command validation
 
@@ -112,7 +112,7 @@ Commands extracted from documentation code blocks, validated against `package.js
 
 Repository file and directory references extracted from markdown links and inline code spans. Generated-output roots such as `dist/`, `coverage/`, and `.llmwiki/` are excluded from extraction.
 
-- Valid: 30
+- Valid: 31
 - Missing: 38
 
 | Documentation location | Reference | Status | Resolved path |
@@ -171,20 +171,21 @@ Repository file and directory references extracted from markdown links and inlin
 | `docs/plans/query-and-file-back.md:61` | `Log.md` | ❌ missing | not found |
 | `docs/plans/trust-hardening.md:31` | `page-ownership.ts` | ❌ missing | not found |
 | `docs/plans/trust-hardening.md:72` | `src/secret-patterns.ts` | ✅ valid | `src/secret-patterns.ts` |
-| `docs/plans/wiki-graph.md:81` | `_Sidebar.md` | ❌ missing | not found |
-| `docs/plans/wiki-graph.md:108` | `_Sidebar.md` | ❌ missing | not found |
-| `docs/plans/wiki-graph.md:108` | `Index.md` | ❌ missing | not found |
+| `docs/plans/wiki-graph.md:97` | `_Sidebar.md` | ❌ missing | not found |
+| `docs/plans/wiki-graph.md:124` | `_Sidebar.md` | ❌ missing | not found |
+| `docs/plans/wiki-graph.md:124` | `Index.md` | ❌ missing | not found |
 | `docs/WHY.md:18` | `Index.md` | ❌ missing | not found |
 | `docs/WHY.md:19` | `Log.md` | ❌ missing | not found |
 | `docs/WHY.md:61` | `./PLAN.md` | ✅ valid | `docs/PLAN.md` |
 | `README.md:5` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
-| `README.md:29` | `Documentation-Debt-Report.md` | ❌ missing | not found |
-| `README.md:31` | `Architecture.md` | ❌ missing | not found |
-| `README.md:94` | `src/config.ts` | ✅ valid | `src/config.ts` |
-| `README.md:98` | `README.md` | ✅ valid | `README.md` |
-| `README.md:114` | `Architecture.md` | ❌ missing | not found |
-| `README.md:169` | `.github/workflows/wiki.yml` | ✅ valid | `.github/workflows/wiki.yml` |
-| `README.md:213` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
+| `README.md:30` | `Documentation-Debt-Report.md` | ❌ missing | not found |
+| `README.md:32` | `Architecture.md` | ❌ missing | not found |
+| `README.md:106` | `src/config.ts` | ✅ valid | `src/config.ts` |
+| `README.md:110` | `README.md` | ✅ valid | `README.md` |
+| `README.md:126` | `Architecture.md` | ❌ missing | not found |
+| `README.md:181` | `.github/workflows/wiki.yml` | ✅ valid | `.github/workflows/wiki.yml` |
+| `README.md:225` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
+| `README.md:225` | `docs/plans/wiki-graph.md` | ✅ valid | `docs/plans/wiki-graph.md` |
 
 ## Environment variable validation
 
@@ -299,14 +300,14 @@ Conservative ADR detection uses deterministic path hints (`ADR/**`, `docs/adr/**
 - `docs/plans/query-and-file-back.md:51` references `Log.md` (missing).
 - `docs/plans/query-and-file-back.md:61` references `Log.md` (missing).
 - `docs/plans/trust-hardening.md:31` references `page-ownership.ts` (missing).
-- `docs/plans/wiki-graph.md:81` references `_Sidebar.md` (missing).
-- `docs/plans/wiki-graph.md:108` references `_Sidebar.md` (missing).
-- `docs/plans/wiki-graph.md:108` references `Index.md` (missing).
+- `docs/plans/wiki-graph.md:97` references `_Sidebar.md` (missing).
+- `docs/plans/wiki-graph.md:124` references `_Sidebar.md` (missing).
+- `docs/plans/wiki-graph.md:124` references `Index.md` (missing).
 - `docs/WHY.md:18` references `Index.md` (missing).
 - `docs/WHY.md:19` references `Log.md` (missing).
-- `README.md:29` references `Documentation-Debt-Report.md` (missing).
-- `README.md:31` references `Architecture.md` (missing).
-- `README.md:114` references `Architecture.md` (missing).
+- `README.md:30` references `Documentation-Debt-Report.md` (missing).
+- `README.md:32` references `Architecture.md` (missing).
+- `README.md:126` references `Architecture.md` (missing).
 
 ### ADR-specific
 

@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "144bad2d897ff76640a6ae71a662559850345164"
+source_commit: "edb41c2402583d52b198e0b02471275199a0fcb1"
 page_state: "generated"
 source_paths: ["src/extractors.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "<ISO-8601 timestamp>"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides a collection of functions designed to analyze and extract various elements from source code and runtime environments. It focuses on identifying runtime hints, environment variables, exported symbols, Go package information, imports, and different types of surfaces such as migration, model, and route surfaces. The module serves as a foundational source component for code analysis and extraction tasks within the project.
+This module provides a collection of functions designed to analyze and extract various elements from source code, primarily TypeScript and Go codebases. It focuses on identifying runtime hints, environment variables, exported symbols, package information, imports, and different "surface" abstractions such as migration, model, and route surfaces. These extraction utilities facilitate deeper introspection and processing of source code structures, likely to support tooling around code analysis, generation, or migration.
 
 ## Source file list
 
@@ -21,31 +21,31 @@ This module provides a collection of functions designed to analyze and extract v
 
 ## Key symbols and entry points
 
-- `detectRuntimeHints` — Detects hints related to runtime behavior or configuration.
-- `extractEnvironmentVariables` — Extracts environment variables from the source or runtime context.
-- `extractExportedSymbols` — Retrieves symbols that are exported from a module or package.
-- `extractGoPackage` — Extracts information specific to Go packages.
+- `detectRuntimeHints` — Identifies runtime-specific hints embedded in the source.
+- `extractEnvironmentVariables` — Extracts environment variable definitions or usages.
+- `extractExportedSymbols` — Retrieves symbols explicitly exported from the source.
+- `extractGoPackage` — Extracts Go package information from source files.
 - `extractImports` — Parses and extracts import statements.
-- `extractMigrationSurfaces` — Identifies migration-related surfaces in the codebase.
-- `extractModelSurfaces` — Extracts model-related surfaces.
-- `extractRouteSurfaces` — Extracts route-related surfaces.
+- `extractMigrationSurfaces` — Extracts migration-related abstractions or metadata.
+- `extractModelSurfaces` — Extracts model-related abstractions or metadata.
+- `extractRouteSurfaces` — Extracts route-related abstractions or metadata.
 - `extractSymbols` — General symbol extraction utility.
 
 ## Dependencies and imports
 
-- `path` — Node.js path module, used for file path manipulations.
-- `typescript` — TypeScript compiler API, used for parsing and analyzing TypeScript source code.
+- Node.js `path` module — for file path manipulations.
+- `typescript` — TypeScript compiler API used for parsing and analyzing TypeScript source code.
 
 ## Related tests
 
-No documentation or test files are explicitly linked to this module in the provided source cards. It is recommended to verify the presence of tests in the project repository, particularly targeting the extraction functions listed.
+No documentation or test files are explicitly linked or referenced in the source cards for this module. It is unknown if dedicated tests exist for these extraction functions.
 
 ## Known gaps or open questions
 
 - There is no explicit documentation or test coverage information available for this module.
-- The exact nature and format of the "surfaces" (migration, model, route) extracted by the module are not detailed.
-- The runtime environment assumptions or constraints for `detectRuntimeHints` and `extractEnvironmentVariables` are not specified.
-- The module's integration points or consumers within the larger project context are not described.
+- The exact nature and structure of the "surface" abstractions (migration, model, route) are not detailed.
+- The integration context or consumers of these extraction functions are not described.
+- The module appears to be source-grounded but lacks higher-level documentation or usage examples.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

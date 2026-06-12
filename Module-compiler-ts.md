@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "144bad2d897ff76640a6ae71a662559850345164"
+source_commit: "edb41c2402583d52b198e0b02471275199a0fcb1"
 page_state: "generated"
 source_paths: ["src/compiler.ts"]
 compiled_at: "2024-06-05T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-The `compiler.ts` module is a core source component responsible for compiling and managing the wiki content architecture. It provides API surface and configuration capabilities related to the compilation process of the wiki, including decisions about architecture and the orchestration of wiki content generation. The module operates with runtime hints such as environment variables and HTTP routes, indicating its role in dynamic compilation and content management workflows.
+The `compiler.ts` module is a core source component responsible for compiling and managing the architecture decisions and wiki content within the system. It provides API surface and configuration capabilities related to the compilation process of the wiki, including decision computation and wiki compilation workflows. The module operates with runtime hints such as environment variables and HTTP routes, indicating its role in dynamic configuration and serving content.
 
 ## Source file list
 
@@ -21,34 +21,33 @@ The `compiler.ts` module is a core source component responsible for compiling an
 
 ## Key symbols and entry points
 
-- **ArchDecision**: Represents decisions related to the architecture of the wiki content, likely used to guide compilation strategies.
-- **compileWiki**: The primary function or entry point to trigger the compilation of the wiki content.
-- **computeArchDecision**: A function to compute or derive architectural decisions, possibly based on input data or configuration.
+- **ArchDecision**: Represents architectural decisions within the compilation context.
+- **compileWiki**: Main function or entry point to compile the wiki content.
+- **computeArchDecision**: Function to compute or derive architectural decisions during compilation.
 
 ## Dependencies and imports
 
-The module imports several other internal modules, indicating its integration with various aspects of the wiki system:
+The module imports several internal components, indicating its integration with various subsystems:
 
 - `./context-assembler.js`
 - `./data-model-signals.js`
 - `./docs-ingestor.js`
 - `./docs-validation.js`
 - `./frontmatter.js`
-- (Also imports from `./llm-provider.js`, `./page-ownership.js`, `./search.js` as indicated in the excerpt)
+- (also imports from `./llm-provider.js`, `./page-ownership.js`, `./search.js` as indicated in the excerpt)
 
-These dependencies suggest the module interacts with context assembly, data modeling, documentation ingestion and validation, frontmatter processing, language model providers, page ownership, and search functionalities.
+These dependencies suggest the module interacts with context assembly, data modeling, documentation ingestion and validation, frontmatter processing, language model providers, page ownership logic, and search functionalities.
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are listed for this module. Further investigation may be required to identify associated test coverage.
+No explicit test files or test documentation cards are listed for this module at this time.
 
 ## Known gaps or open questions
 
-- The exact behavior and implementation details of the key functions (`compileWiki`, `computeArchDecision`) are not documented here.
-- No documentation cards or usage examples are currently available.
-- The role and impact of the environment variable `LLMWIKI_COMPILER_MODE` on the module's runtime behavior need clarification.
-- The HTTP route `DELETE Architecture.md` is mentioned but its full context and usage are not detailed.
-- Test coverage and quality assurance status are unknown.
+- No documentation cards or detailed usage examples are currently available.
+- The exact behavior and implementation details of the exported symbols are not described in the source cards.
+- The HTTP route `DELETE Architecture.md` is mentioned but its full context and usage remain unclear.
+- Environment variable `LLMWIKI_COMPILER_MODE` is referenced, but its modes and effects are not documented here.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

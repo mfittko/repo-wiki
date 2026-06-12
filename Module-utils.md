@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "144bad2d897ff76640a6ae71a662559850345164"
+source_commit: "edb41c2402583d52b198e0b02471275199a0fcb1"
 page_state: "generated"
 source_paths: ["src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -13,65 +13,72 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-The `utils` module provides a collection of utility functions and types implemented in TypeScript to support various common tasks related to argument parsing, environment variable loading, filesystem operations, and Git command interactions. This module serves as foundational source code to facilitate handling command-line arguments, managing `.env` files, performing file system manipulations, and executing Git commands programmatically.
+The `utils` module provides a collection of utility functions and types implemented in TypeScript to support various common tasks related to argument parsing, environment variable loading, filesystem operations, and Git interactions. This module serves as foundational source code to facilitate handling command-line arguments, managing `.env` files, performing file system manipulations, and executing Git commands programmatically.
 
 ## Source file list
 
 - `src/utils/args.ts`  
+  Implements argument parsing utilities including the `parseArgs` function and the `ParsedArgs` type.
+
 - `src/utils/dotenv.ts`  
+  Provides functionality to load and parse `.env` files with symbols such as `loadDotEnv`, `parseDotEnv`, and the `DotEnvLoadResult` type.
+
 - `src/utils/fs.ts`  
+  Contains filesystem-related utilities including directory creation, file existence checks, JSON reading/writing, file walking, and text writing. Key symbols include `ensureDir`, `fileExists`, `readJson`, `writeJson`, `writeText`, `walkFiles`, and the constant `DEFAULT_WALK_EXCLUDES`.
+
 - `src/utils/git.ts`  
+  Offers Git-related utilities to retrieve commit information, remote URLs, repository status, and to run arbitrary Git commands. Exposed symbols include `getGitCommit`, `getGitRemote`, `getGitStatus`, and `runGit`.
 
 ## Key symbols and entry points
 
-### `src/utils/args.ts`
-- `parseArgs` — Function to parse command-line arguments.
-- `ParsedArgs` — Type representing the structure of parsed arguments.
+- **Argument Parsing**  
+  - `parseArgs`  
+  - `ParsedArgs`
 
-### `src/utils/dotenv.ts`
-- `loadDotEnv` — Function to load environment variables from `.env` files.
-- `parseDotEnv` — Function to parse `.env` file content.
-- `DotEnvLoadResult` — Type representing the result of loading `.env` files.
+- **Environment Variable Handling**  
+  - `loadDotEnv`  
+  - `parseDotEnv`  
+  - `DotEnvLoadResult`
 
-### `src/utils/fs.ts`
-- `DEFAULT_WALK_EXCLUDES` — Default patterns to exclude when walking directories.
-- `ensureDir` — Function to ensure a directory exists, creating it if necessary.
-- `fileExists` — Function to check if a file exists.
-- `readJson` — Function to read and parse a JSON file.
-- `walkFiles` — Function to recursively walk files in a directory.
-- `writeJson` — Function to write JSON data to a file.
-- `writeText` — Function to write text data to a file.
+- **Filesystem Utilities**  
+  - `DEFAULT_WALK_EXCLUDES`  
+  - `ensureDir`  
+  - `fileExists`  
+  - `readJson`  
+  - `writeJson`  
+  - `writeText`  
+  - `walkFiles`
 
-### `src/utils/git.ts`
-- `runGit` — Function to run arbitrary Git commands.
-- `getGitCommit` — Function to retrieve the current Git commit hash.
-- `getGitRemote` — Function to get the Git remote URL.
-- `getGitStatus` — Function to get the current Git status.
+- **Git Utilities**  
+  - `getGitCommit`  
+  - `getGitRemote`  
+  - `getGitStatus`  
+  - `runGit`
 
 ## Dependencies and imports
 
-- `src/utils/dotenv.ts` imports:
-  - `./fs.js` (local filesystem utilities)
+- `src/utils/dotenv.ts` imports:  
+  - `./fs.js` (local filesystem utilities)  
   - Node.js built-in modules: `fs`, `path`
 
-- `src/utils/fs.ts` imports:
+- `src/utils/fs.ts` imports:  
   - Node.js built-in modules: `fs`, `path`
 
-- `src/utils/git.ts` imports:
+- `src/utils/git.ts` imports:  
   - Node.js built-in modules: `child_process`, `util`
 
 - `src/utils/args.ts` has no imports.
 
 ## Related tests
 
-No test files or test-related documentation cards are present in the current source data for this module.
+No explicit test files or test-related documentation cards are present in the current source data for this module.
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or test coverage information available for this module.
-- The exact repository remote URL and commit SHA are not specified.
-- The usage context or higher-level integration of these utilities is not described.
-- No information on error handling strategies or performance considerations is provided.
+- There is no information about test coverage or test files related to this module.
+- The repository remote URL and commit SHA are unspecified, limiting traceability.
+- No documentation or usage examples are provided for the exported symbols.
+- The exact runtime environment or expected usage context for these utilities is not detailed.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

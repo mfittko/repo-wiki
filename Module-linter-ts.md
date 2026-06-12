@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "144bad2d897ff76640a6ae71a662559850345164"
+source_commit: "edb41c2402583d52b198e0b02471275199a0fcb1"
 page_state: "generated"
 source_paths: ["src/linter.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -21,21 +21,18 @@ This module provides linting functionality as indicated by the presence of the `
 
 ## Key symbols and entry points
 
-- `lintWiki` — The primary exported symbol from this module, presumably the main function or object responsible for linting wiki content.
+- `lintWiki`: The primary exported symbol from this module, presumably the main entry point for linting operations.
 
 ## Dependencies and imports
 
-The module imports several internal and external dependencies:
+The module imports the following dependencies:
 
-- Internal modules:
-  - `./frontmatter.js` — likely for parsing or handling frontmatter metadata.
-  - `./secret-patterns.js` — possibly for detecting sensitive patterns during linting.
-  - `./utils/fs.js` — utility functions related to filesystem operations.
-  - `./wiki-graph.js` — potentially for managing or analyzing wiki structure or links.
-
-- Node.js built-in modules:
-  - `node:fs` — filesystem access.
-  - `node:path` — path utilities.
+- `./frontmatter.js`: Likely used for parsing or handling frontmatter metadata in files.
+- `./secret-patterns.js`: Possibly contains patterns or rules related to secrets detection or filtering.
+- `./utils/fs.js`: Utility functions related to filesystem operations.
+- `./wiki-graph.js`: Possibly used for managing or analyzing wiki structure or relationships.
+- `node:fs`: Node.js core filesystem module.
+- `node:path`: Node.js core path module.
 
 ## Related tests
 
@@ -43,10 +40,10 @@ No documentation or test cards are currently associated with this module, and no
 
 ## Known gaps or open questions
 
-- The exact functionality and API of `lintWiki` are not documented here.
-- There are no associated documentation or test cards, so the module's usage, configuration, and expected behavior remain unclear.
+- The exact functionality and interface of `lintWiki` are not detailed in the available source cards.
+- There is no information on test coverage or related test suites.
 - The repository remote URL and commit SHA are unknown, limiting traceability.
-- Further exploration of the source file `src/linter.ts` is needed to provide detailed usage instructions or examples.
+- No documentation cards exist to provide further context or usage examples.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

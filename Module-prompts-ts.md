@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "144bad2d897ff76640a6ae71a662559850345164"
+source_commit: "edb41c2402583d52b198e0b02471275199a0fcb1"
 page_state: "generated"
 source_paths: ["src/prompts.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -35,11 +35,11 @@ This module provides a collection of functions and types related to building and
   - `ModelContext`
   - `ModuleInfo`
 
-These symbols represent the core API of the module, enabling construction of different prompt types and providing contextual information for prompt generation.
+These symbols represent the core API of the module, with the `build*Prompt` functions likely serving as entry points for generating different categories of prompts. The context and info types provide structured data to support prompt construction and usage.
 
 ## Dependencies and imports
 
-- The source card notes that `src/prompts.ts` has no imports, indicating this module is self-contained and does not depend on external modules or libraries.
+- The source card metadata indicates that `src/prompts.ts` has no imports, suggesting this module is self-contained or relies on ambient/global types or runtime.
 
 ## Related tests
 
@@ -47,10 +47,10 @@ These symbols represent the core API of the module, enabling construction of dif
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or comments describing the detailed behavior or usage scenarios of the prompt-building functions.
-- The relationships and intended usage of the context types (`DocCardContext`, `MigrationContext`, `ModelContext`) are not elaborated.
-- No information is available about how these prompts integrate with other parts of the system or their runtime environment.
-- Absence of related tests or examples leaves the module's practical application unclear.
+- The exact behavior and implementation details of the prompt-building functions are not described here.
+- There is no information about how these prompts are consumed or integrated into the larger system.
+- No test coverage or examples are provided, limiting insight into usage patterns or reliability.
+- The repository and commit information are unknown, which restricts traceability and version context.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
