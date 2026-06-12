@@ -46,8 +46,8 @@ npm install repo-wiki
 Or, from a local tarball produced with `npm pack`:
 
 ```bash
-npm pack repo-wiki
-npm install ./repo-wiki-*.tgz
+tarball=$(npm pack repo-wiki | tail -n 1)
+npm install "./$tarball"
 ```
 
 After install, the runnable CLI is exposed through `dist/bin/repo-wiki.js` declared in `package.json#bin`:
