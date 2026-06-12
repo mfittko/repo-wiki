@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2f0f1d4621e326372c896cfd4888a22f68ec0f48"
+source_commit: "91e712dcb91ba10ae83e41a917bf0d92fd2b7545"
 page_state: "generated"
 source_paths: ["src/index.ts"]
-compiled_at: "2024-06-14T00:00:00Z"
+compiled_at: "2024-06-05T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module serves as the main entry point for the source code located in `src/index.ts`. It consolidates and exports core functionalities related to page context assembly, prompt building, request construction, and frontmatter policy application. The module integrates multiple internal components to provide a cohesive interface for building and managing prompts, assembling page contexts, and applying policies within the system.
+This module serves as the central entry point for the source code located in `src/index.ts`. It consolidates and exports key functions, types, and utilities related to assembling page contexts, building prompts, and applying policies within the system. The module orchestrates core operations such as frontmatter policy application, context assembly, and prompt construction, making it foundational for higher-level workflows.
 
 ## Source file list
 
@@ -21,46 +21,45 @@ This module serves as the main entry point for the source code located in `src/i
 
 ## Key symbols and entry points
 
-The module exports and defines the following key symbols:
+- **Functions:**
+  - `applyFrontmatterPolicy`
+  - `assembleAllPageContexts`
+  - `assemblePageContext`
+  - `buildCrossCuttingPrompt`
+  - `buildFoundationPrompt`
+  - `buildModulePrompt`
+  - `buildPrompt`
+  - `buildRequest`
 
-- `applyFrontmatterPolicy`  
-- `assembleAllPageContexts`  
-- `assemblePageContext`  
-- `AssemblePageContextInput` (likely a type or interface)  
-- `buildCrossCuttingPrompt`  
-- `buildFoundationPrompt`  
-- `buildModulePrompt`  
-- `buildPrompt`  
-- `buildRequest`  
-- `BuildRequestOptions` (likely a type or interface)  
+- **Types:**
+  - `AssemblePageContextInput`
+  - `BuildRequestOptions`
 
-These symbols represent the primary API surface of the module, focusing on assembling page contexts and constructing various types of prompts and requests.
+These symbols represent the primary API surface of the module, enabling consumers to assemble page contexts and build various prompt types, as well as apply frontmatter policies.
 
 ## Dependencies and imports
 
-The module imports from several internal modules, indicating a modular architecture:
+The module imports functionality from several internal modules, indicating a modular architecture:
 
-- `./cli.js`  
-- `./compiler.js`  
-- `./config.js`  
-- `./context-assembler.js`  
-- `./docs-linter.js`  
-- `./frontmatter.js`  
-- `./init.js`  
-- `./linter.js`  
+- `./cli.js`
+- `./compiler.js`
+- `./config.js`
+- `./context-assembler.js`
+- `./docs-linter.js`
+- Additionally, it imports from `./frontmatter.js`, `./init.js`, and `./linter.js` as indicated in the source excerpt.
 
-These dependencies suggest that the module interacts with command-line interfaces, compilation processes, configuration management, context assembly logic, documentation linting, frontmatter processing, initialization routines, and linting utilities.
+These dependencies suggest the module integrates command-line interface utilities, compilation logic, configuration management, context assembly mechanisms, and documentation linting capabilities.
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are listed for this module. It is unclear if tests exist or are located elsewhere.
+No explicit test files or test-related documentation cards are referenced in the source information for this module. Further investigation into the repository may be required to locate associated tests.
 
 ## Known gaps or open questions
 
-- The exact behavior and implementation details of the exported functions and types are not described here, as only symbol names and import relationships are available.  
-- There is no information on the module's runtime environment or how it integrates with the broader system.  
-- No documentation or usage examples are provided, limiting understanding of the module's practical application.  
-- The absence of related test references leaves the testing coverage and quality unknown.
+- The exact behavior and implementation details of the exported functions and types are not described here, as only symbol names and import relationships are available.
+- No documentation cards or descriptive comments are present to clarify usage patterns or examples.
+- The source repository and commit SHA are unknown, limiting traceability.
+- Test coverage and quality assurance status are not indicated.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

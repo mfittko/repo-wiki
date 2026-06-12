@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2f0f1d4621e326372c896cfd4888a22f68ec0f48"
+source_commit: "91e712dcb91ba10ae83e41a917bf0d92fd2b7545"
 page_state: "generated"
 source_paths: ["src/page-ownership.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to managing and preserving human-generated notes and page state within a system. It includes utilities to detect the current state of a page, extract human notes from it, inject notes back into the page, and preserve these notes across operations. The module is implemented in TypeScript and contains no external imports.
+This module provides functionality related to managing and preserving human-generated notes and page state within a system. It includes utilities to detect the current state of a page, extract human notes from it, inject notes back into the page, and preserve these notes across operations. The module is implemented in TypeScript and serves as a source-level component without external dependencies.
 
 ## Source file list
 
@@ -24,7 +24,7 @@ This module provides functionality related to managing and preserving human-gene
 - **detectPageState**: Function to determine the current state of a page.
 - **extractHumanNotes**: Function to extract human-authored notes from a page.
 - **injectHumanNotes**: Function to insert or re-insert human notes into a page.
-- **preserveHumanNotes**: Function to maintain human notes during page state changes or updates.
+- **preserveHumanNotes**: Function to maintain human notes intact during page updates or transformations.
 - **PageState**: Likely a type or interface representing the state of a page.
 
 ## Dependencies and imports
@@ -38,8 +38,8 @@ This module provides functionality related to managing and preserving human-gene
 ## Known gaps or open questions
 
 - There is no explicit documentation or test coverage information available.
-- The exact implementation details and usage patterns of the exported functions and types are not described.
-- The module's integration context or how it interacts with other parts of the system is not specified.
+- The exact implementation details and usage scenarios of the exported functions and types are not described.
+- The module's integration context within a larger system is not specified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

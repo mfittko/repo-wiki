@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2f0f1d4621e326372c896cfd4888a22f68ec0f48"
+source_commit: "91e712dcb91ba10ae83e41a917bf0d92fd2b7545"
 page_state: "generated"
 source_paths: ["src/prompts.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides a collection of functions and types related to building and managing prompts, likely for use in documentation generation, code migration, or model-driven contexts. It includes utilities to construct various specialized prompts such as architecture, cross-cutting concerns, foundation, and module-specific prompts. The module appears to serve as a core source component for prompt construction and contextual information handling.
+This module provides a collection of functions and types related to building and managing prompts within the system. It includes utilities to construct various specialized prompts such as architecture, cross-cutting concerns, foundation, and module-specific prompts. The module also defines contexts and metadata structures that support prompt construction and usage.
 
 ## Source file list
 
@@ -22,35 +22,33 @@ This module provides a collection of functions and types related to building and
 ## Key symbols and entry points
 
 - **Functions:**
-  - `buildArchitecturePrompt`
-  - `buildCrossCuttingPrompt`
-  - `buildFoundationPrompt`
-  - `buildModulePrompt`
-  - `buildPrompt`
+  - `buildArchitecturePrompt` — Constructs prompts related to system architecture.
+  - `buildCrossCuttingPrompt` — Builds prompts addressing cross-cutting concerns.
+  - `buildFoundationPrompt` — Creates foundational prompts for base-level operations.
+  - `buildModulePrompt` — Generates prompts specific to individual modules.
+  - `buildPrompt` — A general prompt builder function.
 
-- **Types / Interfaces:**
-  - `BuiltPrompt`
-  - `DocCardContext`
-  - `MigrationContext`
-  - `ModelContext`
-  - `ModuleInfo`
-
-These symbols represent the main API surface of the module, with the `build*Prompt` functions likely serving as entry points for generating different categories of prompts. The context types suggest structured data passed to or returned from these functions.
+- **Types and Interfaces:**
+  - `BuiltPrompt` — Represents a constructed prompt object.
+  - `DocCardContext` — Contextual information for documentation cards.
+  - `MigrationContext` — Context used during migration-related prompt building.
+  - `ModelContext` — Context related to the data or domain model.
+  - `ModuleInfo` — Metadata describing a module.
 
 ## Dependencies and imports
 
-- The source card metadata indicates that `src/prompts.ts` has **no imports**, suggesting this module is self-contained or relies on ambient/global types or runtime.
+- The source card indicates that `src/prompts.ts` does not import any external modules or dependencies.
 
 ## Related tests
 
-- No documentation cards or test files are listed for this module, so no explicit test coverage or related test modules are known from the provided data.
+- No documentation or source cards indicate the presence of related test files or test suites for this module.
 
 ## Known gaps or open questions
 
-- The exact behavior and implementation details of the prompt-building functions are not described here.
-- There is no information on how these prompts are consumed or integrated into larger workflows.
-- The absence of imports raises questions about external dependencies or runtime environment assumptions.
-- No test coverage or usage examples are provided, limiting insight into practical application or robustness.
+- There is no explicit documentation or test coverage information available.
+- The exact behavior and implementation details of the prompt-building functions are not described beyond their names and symbol presence.
+- The relationships and usage scenarios for the context types (`DocCardContext`, `MigrationContext`, `ModelContext`) are not detailed.
+- The module's integration with other parts of the system is not specified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2f0f1d4621e326372c896cfd4888a22f68ec0f48"
-compiled_at: "2026-06-12T23:11:33.087Z"
+source_commit: "91e712dcb91ba10ae83e41a917bf0d92fd2b7545"
+compiled_at: "2026-06-12T23:31:35.789Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 claim_status: "review-needed"
@@ -46,9 +46,9 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
 - Documentation files scanned: 24
 - Claims extracted: 34
 - Stale documents: 1
-- Commands found in docs: 23
+- Commands found in docs: 27
 - Environment variable mentions: 29
-- File path references: 69
+- File path references: 76
 
 ## Documentation status table
 
@@ -77,7 +77,7 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
 | `docs/plans/wiki-graph.md` | unvalidated | secondary | 0 | 3 | 0 | 0 |
 | `docs/plans/wiki-health.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `docs/WHY.md` | partially_validated | secondary | 0 | 5 | 0 | 0 |
-| `README.md` | partially_validated | secondary | 0 | 9 | 12 | 19 |
+| `README.md` | partially_validated | secondary | 0 | 9 | 16 | 19 |
 
 ## Command validation
 
@@ -85,7 +85,7 @@ Commands extracted from documentation code blocks, validated against `package.js
 
 - Validated: 10
 - Missing (package script / Makefile / task-runner target): 0
-- Unvalidated (source unknown): 8
+- Unvalidated (source unknown): 12
 
 | Command | Status | Source |
 |---|---|---|
@@ -100,6 +100,10 @@ Commands extracted from documentation code blocks, validated against `package.js
 | `npm run lint:docs` | ✅ validated | package.json |
 | `npm run lint:local` | ✅ validated | package.json |
 | `npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --remote https://github.com/OWNER/repo-wiki.git --branch gh-pages --pages-path .` | ❓ unvalidated | unknown |
+| `npm install repo-wiki` | ❓ unvalidated | unknown |
+| `npm pack repo-wiki` | ❓ unvalidated | unknown |
+| `npm install ./repo-wiki-0.2.0.tgz` | ❓ unvalidated | unknown |
+| `npx repo-wiki --help` | ❓ unvalidated | unknown |
 | `npx repo-wiki run \` | ❓ unvalidated | unknown |
 | `npm run build` | ✅ validated | CI workflow |
 | `npm run lint:code` | ✅ validated | CI workflow |
@@ -112,7 +116,7 @@ Commands extracted from documentation code blocks, validated against `package.js
 
 Repository file and directory references extracted from markdown links and inline code spans. Generated-output roots such as `dist/`, `coverage/`, and `.llmwiki/` are excluded from extraction.
 
-- Valid: 31
+- Valid: 38
 - Missing: 38
 
 | Documentation location | Reference | Status | Resolved path |
@@ -180,12 +184,19 @@ Repository file and directory references extracted from markdown links and inlin
 | `README.md:5` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
 | `README.md:30` | `Documentation-Debt-Report.md` | ❌ missing | not found |
 | `README.md:32` | `Architecture.md` | ❌ missing | not found |
-| `README.md:112` | `src/config.ts` | ✅ valid | `src/config.ts` |
-| `README.md:116` | `README.md` | ✅ valid | `README.md` |
-| `README.md:132` | `Architecture.md` | ❌ missing | not found |
-| `README.md:187` | `.github/workflows/wiki.yml` | ✅ valid | `.github/workflows/wiki.yml` |
-| `README.md:231` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
-| `README.md:231` | `docs/plans/wiki-graph.md` | ✅ valid | `docs/plans/wiki-graph.md` |
+| `README.md:53` | `package.json` | ✅ valid | `package.json` |
+| `README.md:59` | `package.json` | ✅ valid | `package.json` |
+| `README.md:59` | `README.md` | ✅ valid | `README.md` |
+| `README.md:59` | `CHANGELOG.md` | ✅ valid | `CHANGELOG.md` |
+| `README.md:59` | `docs/` | ✅ valid | `docs` |
+| `README.md:59` | `prompts/` | ✅ valid | `prompts` |
+| `README.md:59` | `skills/` | ✅ valid | `skills` |
+| `README.md:135` | `src/config.ts` | ✅ valid | `src/config.ts` |
+| `README.md:139` | `README.md` | ✅ valid | `README.md` |
+| `README.md:155` | `Architecture.md` | ❌ missing | not found |
+| `README.md:210` | `.github/workflows/wiki.yml` | ✅ valid | `.github/workflows/wiki.yml` |
+| `README.md:254` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
+| `README.md:254` | `docs/plans/wiki-graph.md` | ✅ valid | `docs/plans/wiki-graph.md` |
 
 ## Environment variable validation
 
@@ -266,6 +277,10 @@ Conservative ADR detection uses deterministic path hints (`ADR/**`, `docs/adr/**
 - `npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --pages-path .` - command source unknown.
 - `npm install` - command source unknown.
 - `npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --remote https://github.com/OWNER/repo-wiki.git --branch gh-pages --pages-path .` - command source unknown.
+- `npm install repo-wiki` - command source unknown.
+- `npm pack repo-wiki` - command source unknown.
+- `npm install ./repo-wiki-0.2.0.tgz` - command source unknown.
+- `npx repo-wiki --help` - command source unknown.
 - `npx repo-wiki run \` - command source unknown.
 
 ### Broken-reference
@@ -307,7 +322,7 @@ Conservative ADR detection uses deterministic path hints (`ADR/**`, `docs/adr/**
 - `docs/WHY.md:19` references `Log.md` (missing).
 - `README.md:30` references `Documentation-Debt-Report.md` (missing).
 - `README.md:32` references `Architecture.md` (missing).
-- `README.md:132` references `Architecture.md` (missing).
+- `README.md:155` references `Architecture.md` (missing).
 
 ### ADR-specific
 

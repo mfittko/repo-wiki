@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2f0f1d4621e326372c896cfd4888a22f68ec0f48"
+source_commit: "91e712dcb91ba10ae83e41a917bf0d92fd2b7545"
 page_state: "generated"
 source_paths: ["src/docs-validation.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "2024-06-05T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -21,22 +21,22 @@ This module provides utilities and functions related to validating documentation
 
 ## Key symbols and entry points
 
-- **buildRouteSurfaceIndex**: Constructs an index of route surfaces, likely mapping routes to their documentation or validation metadata.
-- **candidateRepoPaths**: Represents or generates candidate repository paths for validation or indexing.
-- **cleanDocumentedPathTarget**: Cleans or normalizes documented path targets to a consistent format.
-- **collectKnownEnvironmentVariables**: Gathers environment variables known or relevant to the documentation or validation context.
-- **collectManifestDirectories**: Collects directories containing manifest files, possibly to identify documentation or route manifests.
-- **dedupeRouteValidationFindings**: Deduplicates findings from route validation to avoid redundant reports.
-- **DocumentedPathSource**: A type or interface representing the source of a documented path.
-- **hasParentDirectorySegment**: Checks if a path includes a parent directory segment (e.g., `..`).
-- **isGeneratedOutputReference**: Determines if a reference points to generated output.
-- **normalizeRepoPath**: Normalizes repository paths to a standard format.
+- `buildRouteSurfaceIndex` — Constructs an index of route surfaces, likely used to validate or analyze routing structures.
+- `candidateRepoPaths` — Possibly a collection or generator of repository paths considered for validation.
+- `cleanDocumentedPathTarget` — Cleans or normalizes documented path targets to a consistent format.
+- `collectKnownEnvironmentVariables` — Gathers environment variables known or relevant to the documentation or validation process.
+- `collectManifestDirectories` — Collects directories containing manifest files, potentially to locate documentation or configuration.
+- `dedupeRouteValidationFindings` — Removes duplicate findings from route validation results.
+- `DocumentedPathSource` — A type or interface representing the source of a documented path.
+- `hasParentDirectorySegment` — Checks if a path includes a parent directory segment (`..`).
+- `isGeneratedOutputReference` — Determines if a reference points to generated output.
+- `normalizeRepoPath` — Normalizes repository paths for consistent processing.
 
 ## Dependencies and imports
 
 - Node.js built-in modules:
-  - `fs` (file system operations)
-  - `path` (path manipulations)
+  - `fs` — File system operations.
+  - `path` — Path utilities.
 
 ## Related tests
 
@@ -44,11 +44,11 @@ No explicit test files or test-related documentation cards are present in the so
 
 ## Known gaps or open questions
 
-- The exact behavior and usage context of the key functions and types are not detailed beyond their names and inferred purposes.
+- The exact behavior and usage context of many functions are not detailed in the source cards.
 - No documentation or usage examples are available to clarify how these utilities integrate with the broader system.
-- The source repository and commit SHA are unknown, limiting traceability.
-- No related tests or test coverage information is available.
-- The module's interaction with other parts of the system or its role in the overall documentation or validation pipeline is not described.
+- The repository remote URL and commit SHA are unknown, limiting traceability.
+- No related tests or test coverage information is provided.
+- The module's interaction with other parts of the system or its consumers is not described.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

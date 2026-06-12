@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2f0f1d4621e326372c896cfd4888a22f68ec0f48"
+source_commit: "91e712dcb91ba10ae83e41a917bf0d92fd2b7545"
 page_state: "generated"
 source_paths: ["src/docs-ingestor.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -22,32 +22,32 @@ This module provides functionality for ingesting and processing documentation re
 ## Key symbols and entry points
 
 - **CiWorkflowCommandSource**: Represents a source of CI workflow commands.
-- **classifyDocumentedCommands**: Function to classify commands extracted from documentation.
-- **CommandClassification**: Enum or type defining possible classifications for commands.
+- **classifyDocumentedCommands**: Function to classify commands based on their documentation status.
+- **CommandClassification**: Enum or type defining possible classifications of commands.
 - **CommandSource**: Represents the origin or source context of a command.
 - **CommandStatus**: Enum or type indicating the status of a command.
-- **createDocumentationCard**: Function to create a structured documentation card summarizing command details.
+- **createDocumentationCard**: Function to create a structured documentation card for a command.
 - **DocumentedFilePath**: Type or interface representing file paths of documented sources.
 - **extractCiCommands**: Function to extract CI commands from source files.
 - **extractCiCommandSources**: Function to extract sources of CI commands.
-- **extractDocumentationClaims**: Function to extract claims made in documentation for validation or processing.
+- **extractDocumentationClaims**: Function to extract claims made in documentation about commands.
 
 ## Dependencies and imports
 
-- `./docs-validation.js`: Local module likely providing validation utilities for documentation.
-- `node:fs`: Node.js file system module for file operations.
-- `node:path`: Node.js path module for handling and transforming file paths.
+- Local module: `./docs-validation.js`
+- Node.js built-in modules:
+  - `fs` (file system operations)
+  - `path` (file path utilities)
 
 ## Related tests
 
-No explicit test files or test-related symbols are indicated in the source cards or module metadata. Further investigation in the repository may be required to locate tests related to this module.
+No explicit test files or test-related documentation cards are indicated in the source cards or module metadata.
 
 ## Known gaps or open questions
 
-- The module does not list any associated documentation cards or test coverage in the provided metadata.
-- The exact nature and structure of some types (e.g., `CommandClassification`, `CommandStatus`) are not detailed here.
-- The relationship between extracted commands and their validation or usage in the broader system is not fully described.
-- The source repository and commit SHA are placeholders and should be updated for accurate traceability.
+- There is no information about associated test coverage or test files for this module.
+- The exact nature and structure of some types (e.g., `CommandClassification`, `CommandStatus`) are not detailed in the source card excerpt.
+- The module's interaction with other parts of the system or its role in the overall documentation pipeline is not fully described.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

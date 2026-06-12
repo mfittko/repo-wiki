@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "2f0f1d4621e326372c896cfd4888a22f68ec0f48"
+source_commit: "91e712dcb91ba10ae83e41a917bf0d92fd2b7545"
 page_state: "generated"
 source_paths: ["src/publisher.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to publishing content to GitHub Wikis. It includes configuration for different publish targets, policies for frontmatter handling, and utilities to rewrite internal wiki links. The module supports environment-variable-driven configuration to customize publishing behavior, making it suitable for automated or CI-driven wiki publishing workflows.
+The `publisher.ts` module provides functionality related to publishing content to GitHub Wikis. It includes configuration and source code to manage publishing targets, policies for frontmatter in wiki pages, and utilities to rewrite internal wiki links. The module supports environment-variable-driven configuration to customize publishing behavior, making it suitable for automated or CI-driven wiki publishing workflows.
 
 ## Source file list
 
@@ -21,12 +21,12 @@ This module provides functionality related to publishing content to GitHub Wikis
 
 ## Key symbols and entry points
 
-- **defaultFrontmatterPolicyForTarget**: Defines default policies for handling frontmatter metadata depending on the publish target.
-- **PUBLISH_TARGETS**: A collection or enumeration of supported publish targets.
-- **PublishTarget**: Type or interface representing a publish target configuration.
-- **publishWiki**: Main function to execute the publishing process of a wiki.
-- **PublishWikiOptions**: Options interface/type for configuring the `publishWiki` function.
-- **rewriteInternalWikiLinks**: Utility function to adjust internal wiki links during publishing.
+- **defaultFrontmatterPolicyForTarget**: Defines the default policy for frontmatter metadata depending on the publishing target.
+- **PUBLISH_TARGETS**: A collection or enumeration of supported publishing targets.
+- **PublishTarget**: Type or interface representing a publishing target.
+- **publishWiki**: The main function to publish wiki content according to specified options.
+- **PublishWikiOptions**: Type or interface defining options for the `publishWiki` function.
+- **rewriteInternalWikiLinks**: Utility function to adjust internal wiki links within content to match the target wiki structure.
 
 ## Dependencies and imports
 
@@ -48,9 +48,9 @@ No explicit test files or test-related documentation cards are listed for this m
 ## Known gaps or open questions
 
 - No documentation cards or detailed usage examples are currently available.
-- The exact behavior and configuration details of `defaultFrontmatterPolicyForTarget` and `PUBLISH_TARGETS` are not described in detail.
-- The module relies on several environment variables (`GITHUB_WIKI_REMOTE`, `LLMWIKI_GIT_USER_EMAIL`, `LLMWIKI_GIT_USER_NAME`, `LLMWIKI_PUBLISH_REMOTE`) whose expected values and effects are not documented here.
-- Testing coverage and integration with other modules or CI pipelines remain unspecified.
+- The exact behavior and configuration details of `defaultFrontmatterPolicyForTarget` and `PUBLISH_TARGETS` are not fully described.
+- The module relies on environment variables (`GITHUB_WIKI_REMOTE`, `LLMWIKI_GIT_USER_EMAIL`, `LLMWIKI_GIT_USER_NAME`, `LLMWIKI_PUBLISH_REMOTE`), but their expected values and effects are not documented here.
+- No information on error handling or edge cases during publishing is provided.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
