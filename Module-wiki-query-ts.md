@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "91e712dcb91ba10ae83e41a917bf0d92fd2b7545"
+source_commit: "a3ed30252c9bfb054e0b54fe5e6c52f8f0b8d703"
 page_state: "generated"
 source_paths: ["src/wiki-query.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-The `wiki-query.ts` module provides functionality for constructing, formatting, and resolving queries and explanations related to a wiki graph structure. It includes utilities to build and format wiki explanations and query answers, as well as to find and handle graph paths within a wiki context. This module serves as a core source component for managing wiki-related query logic and presentation.
+This module provides functionality related to querying and formatting information from a wiki graph structure. It includes utilities to build explanations and answers based on wiki data, find and format graph paths, and define related data types. The module is implemented in TypeScript and serves as a source component for handling wiki query logic.
 
 ## Source file list
 
@@ -22,39 +22,39 @@ The `wiki-query.ts` module provides functionality for constructing, formatting, 
 ## Key symbols and entry points
 
 - **Functions:**
-  - `buildWikiExplanation` — Constructs explanations based on wiki data.
-  - `buildWikiQueryAnswer` — Builds answers to queries using wiki information.
-  - `defaultGraphPathForWiki` — Provides a default graph path configuration for wiki queries.
-  - `findWikiGraphPath` — Finds paths within the wiki graph structure.
-  - `formatWikiExplanation` — Formats explanations for display or output.
-  - `formatWikiGraphPath` — Formats graph path results for presentation.
-  - `formatWikiQueryAnswer` — Formats query answers derived from the wiki.
+  - `buildWikiExplanation` — Constructs a detailed explanation from wiki data.
+  - `buildWikiQueryAnswer` — Builds an answer to a query using wiki information.
+  - `defaultGraphPathForWiki` — Provides a default graph path used in wiki queries.
+  - `findWikiGraphPath` — Finds a path within the wiki graph structure.
+  - `formatWikiExplanation` — Formats a wiki explanation for output or display.
+  - `formatWikiGraphPath` — Formats a graph path related to the wiki.
+  - `formatWikiQueryAnswer` — Formats the answer generated from a wiki query.
 
 - **Types / Interfaces:**
-  - `WikiEvidence` — Represents evidence or supporting data within the wiki context.
-  - `WikiExplanation` — Represents structured explanations related to wiki queries.
-  - `WikiGraphPathResult` — Represents the result of a graph path search within the wiki.
+  - `WikiEvidence` — Represents evidence or supporting data from the wiki.
+  - `WikiExplanation` — Represents an explanation derived from wiki data.
+  - `WikiGraphPathResult` — Represents the result of a graph path search in the wiki.
 
 ## Dependencies and imports
 
 - Internal modules:
-  - `./search.js` — Likely provides search-related utilities used in query processing.
-  - `./wiki-graph.js` — Provides graph-related operations and data structures for the wiki.
+  - `./search.js` — likely provides search-related utilities used in querying.
+  - `./wiki-graph.js` — likely provides graph-related operations for the wiki data.
 
 - Node.js built-in modules:
-  - `node:fs` — Used for filesystem operations, possibly for reading or writing wiki data.
-  - `node:path` — Used for handling and manipulating file system paths.
+  - `node:fs` — for filesystem operations.
+  - `node:path` — for path manipulations.
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are listed for this module.
+No documentation or test cards were found related to this module at this time.
 
 ## Known gaps or open questions
 
-- There is no documentation or test coverage information available for this module.
-- The exact nature of the wiki graph structure and how queries interact with it is not detailed here.
-- The relationship between the imported modules (`search.js` and `wiki-graph.js`) and this module's functions could be further clarified with source or documentation.
-- No examples or usage patterns are provided, which could aid in understanding the module's application.
+- There is no explicit documentation or test coverage information available for this module.
+- The exact behavior and usage scenarios of the exported functions and types are not detailed beyond their names and inferred purposes.
+- The source repository and commit SHA are unspecified, limiting traceability.
+- Further documentation or examples would be beneficial to clarify usage patterns and integration points.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

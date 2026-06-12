@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "91e712dcb91ba10ae83e41a917bf0d92fd2b7545"
-compiled_at: "2026-06-12T23:31:35.777Z"
+source_commit: "a3ed30252c9bfb054e0b54fe5e6c52f8f0b8d703"
+compiled_at: "2026-06-12T23:52:07.692Z"
 kind: "index"
 confidence: "medium"
 page_state: "generated"
@@ -72,12 +72,12 @@ page_state: "generated"
     "Text": 5,
     "Markdown": 36,
     "YAML": 8,
-    "JSON": 7,
     "TypeScript": 54,
+    "JSON": 6,
     "JavaScript": 6
   },
   "categories": {
-    "source": 46,
+    "source": 45,
     "docs": 36,
     "ci": 5,
     "package": 5,

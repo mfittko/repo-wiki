@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "91e712dcb91ba10ae83e41a917bf0d92fd2b7545"
+source_commit: "a3ed30252c9bfb054e0b54fe5e6c52f8f0b8d703"
 page_state: "generated"
 source_paths: ["src/docs-ingestor.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality for ingesting and processing documentation related to CI workflow commands. It includes utilities to extract, classify, and create structured representations of documented commands from source files. The module supports the analysis and validation of documentation claims, facilitating the generation of documentation cards that summarize command information.
+This module provides functionality for ingesting and processing documentation related to CI workflow commands. It includes utilities to extract commands and their sources from documentation files, classify documented commands, and create structured documentation cards. The module is designed to support the validation and organization of CI command documentation by parsing source files and extracting relevant command metadata.
 
 ## Source file list
 
@@ -22,32 +22,35 @@ This module provides functionality for ingesting and processing documentation re
 ## Key symbols and entry points
 
 - **CiWorkflowCommandSource**: Represents a source of CI workflow commands.
-- **classifyDocumentedCommands**: Function to classify commands based on their documentation status.
-- **CommandClassification**: Enum or type defining possible classifications of commands.
+- **classifyDocumentedCommands**: Function to classify commands extracted from documentation.
+- **CommandClassification**: Enum or type defining possible classifications for commands.
 - **CommandSource**: Represents the origin or source context of a command.
 - **CommandStatus**: Enum or type indicating the status of a command.
-- **createDocumentationCard**: Function to create a structured documentation card for a command.
+- **createDocumentationCard**: Function to generate a structured documentation card for a command.
 - **DocumentedFilePath**: Type or interface representing file paths of documented sources.
-- **extractCiCommands**: Function to extract CI commands from source files.
+- **extractCiCommands**: Function to extract CI commands from documentation or source files.
 - **extractCiCommandSources**: Function to extract sources of CI commands.
-- **extractDocumentationClaims**: Function to extract claims made in documentation about commands.
+- **extractDocumentationClaims**: Function to extract claims or assertions made in documentation about commands.
 
 ## Dependencies and imports
 
-- Local module: `./docs-validation.js`
+- Internal:
+  - `./docs-validation.js`: Likely provides validation utilities related to documentation.
 - Node.js built-in modules:
-  - `fs` (file system operations)
-  - `path` (file path utilities)
+  - `node:fs`: File system operations.
+  - `node:path`: Path utilities for file and directory paths.
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are indicated in the source cards or module metadata.
+No explicit test files or test-related symbols are indicated in the source cards or module metadata. Further investigation in the repository may be required to locate tests related to this module.
 
 ## Known gaps or open questions
 
-- There is no information about associated test coverage or test files for this module.
-- The exact nature and structure of some types (e.g., `CommandClassification`, `CommandStatus`) are not detailed in the source card excerpt.
-- The module's interaction with other parts of the system or its role in the overall documentation pipeline is not fully described.
+- The module's documentation cards section is empty, indicating no pre-existing detailed documentation cards are available.
+- The exact nature and structure of some types (e.g., `CommandClassification`, `CommandStatus`) are not detailed here.
+- The relationship between this module and the validation utilities in `docs-validation.js` could be further clarified.
+- No direct references to testing or usage examples are present in the source metadata.
+- The repository remote URL and commit SHA are unknown, limiting traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

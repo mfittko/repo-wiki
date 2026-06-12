@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "91e712dcb91ba10ae83e41a917bf0d92fd2b7545"
+source_commit: "a3ed30252c9bfb054e0b54fe5e6c52f8f0b8d703"
 page_state: "generated"
 source_paths: ["src/frontmatter.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides utilities and types for handling frontmatter blocks within text files. It includes functionality to extract, parse, and apply policies to frontmatter content, supporting structured metadata processing typically found at the beginning of markdown or similar documents. The module also defines policies and parsing strategies for frontmatter, including YAML-like structures.
+This module provides utilities and types for handling frontmatter blocks within text files. It includes functionality to extract, parse, and apply policies to frontmatter content, supporting structured metadata processing typically found at the beginning of markdown or similar documents.
 
 ## Source file list
 
@@ -42,8 +42,8 @@ No documentation or test cards were found for this module. It is unknown if ther
 ## Known gaps or open questions
 
 - The module documentation and test coverage are not present or linked, leaving the extent of testing and usage examples unclear.
-- The exact nature and definitions of the frontmatter policies and their applications are not detailed beyond symbol names.
-- The relationship and interaction with `./secret-patterns.js` are not elaborated.
+- The exact nature and definitions of the frontmatter policies and their application contexts are not detailed here.
+- The relationship and interaction with `./secret-patterns.js` are not elaborated beyond the import statement.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
