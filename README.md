@@ -35,6 +35,29 @@ Today the package includes:
 
 - Node.js 24+
 
+## Installation
+
+`repo-wiki` is distributed as a packaged npm artifact. The supported downstream install path is:
+
+```bash
+npm install repo-wiki
+```
+
+Or, from a local tarball produced with `npm pack`:
+
+```bash
+npm pack repo-wiki
+npm install ./repo-wiki-0.2.0.tgz
+```
+
+After install, the runnable CLI is exposed through `dist/bin/repo-wiki.js` declared in `package.json#bin`:
+
+```bash
+npx repo-wiki --help
+```
+
+No clone or local build step is required for normal downstream consumption. The package guarantees the files listed in `package.json#files`, including `dist/`, `README.md`, `CHANGELOG.md`, `.llmwiki/schema.md`, `.llmwiki/config.json`, and the `docs/`, `prompts/`, and `skills/` trees. Local development from a source clone should use `npm install && npm run build` instead.
+
 ## Quick start
 
 Initialize a repository for repo-wiki:

@@ -30,7 +30,9 @@
   },
   "scripts": {
     "clean": "rm -rf dist .tsbuildinfo",
+    "prepare": "npm run build",
     "lint:code": "tsc --project tsconfig.json --noEmit",
+    "smoke:consumer": "set -eu; tmp_dir=$(mktemp -d); trap 'rm -rf \"$tmp_dir\"' EXIT; npm pack --pack-destination \"$tmp_dir\" >/dev/null; tarball=$(ls \"$tmp_dir\"/repo-wiki-*.tgz 2>/dev/null | head -n 1); if [ -z \"$tarball\" ]; then echo 'No tarball produced' >&2; exit 1; fi; consumer_dir=\"$tmp_dir/consumer\"; mkdir -p \"$consumer_dir\"; cd \"$consumer_dir\"; npm init -y >/dev/null; npm install --no-audit --no-fund \"$tarball\" >/dev/null; npx --no-install repo-wiki --help >/dev/null",
     "build": "tsc --project tsconfig.json",
     "test:compiled": "node ./dist/test/run-compiled-tests.js",
     "coverage:compiled": "c8 --include=dist/src/**/*.js --reporter=text --check-coverage --lines 95 node ./dist/test/run-compiled-tests.js",
@@ -48,7 +50,6 @@
     "self:wiki": "npm run kb:bootstrap",
     "pack:check": "npm run build --silent && npm pack --dry-run",
     "lint:docs": "npm run build --silent && node ./dist/bin/repo-wiki.js lint-docs --repo . --scan .llmwiki/run",
-    "prepack": "npm run build",
     "changelog:ensure": "node ./scripts/update-changelog.mjs ensure",
     "changelog:release": "node ./scripts/update-changelog.mjs release",
     "changelog:update": "node ./scripts/update-changelog.mjs update",
