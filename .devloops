@@ -1,0 +1,21 @@
+version: 1
+
+refinement:
+  maxCopilotRounds: 2
+
+gates:
+  draft:
+    requireCi: true
+  preApproval:
+    angles:
+      - dry
+      - kiss
+      - yagni
+      - srp
+      - soc
+      - deep
+      - docs
+
+workflow:
+  requireDraftFirst: true
+  devModeDefault: true
