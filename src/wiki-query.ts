@@ -129,7 +129,7 @@ export async function findWikiGraphPath({ graphPath, from, to }: { graphPath: st
       };
     }
 
-    for (const edge of getOutgoingEdges(graph, current.node.id).sort(compareEdges)) {
+    for (const edge of getOutgoingEdges(graph, current.node.id)) {
       const next = getNodeById(graph, edge.to);
       if (!next || visited.has(next.id)) {
         continue;
@@ -292,24 +292,30 @@ function formatPathNode(node: WikiGraphNode) {
 }
 
 function inferEvidenceKind(ref: string) {
-  return ref.toLowerCase().endsWith('.md') ? 'documentation' : 'source';
+  return /\.(md|mdx|markdown)$/i.test(ref) ? 'documentation' : 'source';
 }
 
 function inferEvidenceStrength(ref: string): WikiEvidence['strength'] {
-  return ref.toLowerCase().endsWith('.md') ? 'documentation' : 'source';
+  return /\.(md|mdx|markdown)$/i.test(ref) ? 'documentation' : 'source';
 }
 
+
 function normalizeTarget(value: string) {
-  return value.trim().toLowerCase().replace(/^page:/, '').replace(/^source:/, '').replace(/^documentation:/, '').replace(/^\.\//, '').replace(/\.md$/i, '').replace(/\s+/g, '-').trim();
+  return value
+    .toLowerCase()
+    .replace(/^page:\s*/, '')
+    .replace(/^source:\s*/, '')
+    .replace(/^documentation:\s*/, '')
+    .replace(/^\.\//, '')
+    .replace(/\.md$/i, '')
+    .trim()
+    .replace(/\s+/g, '-');
 }
 
 function compareNodes(left: WikiGraphNode, right: WikiGraphNode) {
   return left.kind.localeCompare(right.kind) || left.path.localeCompare(right.path) || left.id.localeCompare(right.id);
 }
 
-function compareEdges(left: WikiGraphEdge, right: WikiGraphEdge) {
-  return left.type.localeCompare(right.type) || left.to.localeCompare(right.to) || left.from.localeCompare(right.from);
-}
 
 function compareEvidence(left: WikiEvidence, right: WikiEvidence) {
   return evidenceStrengthRank(left.strength) - evidenceStrengthRank(right.strength)
