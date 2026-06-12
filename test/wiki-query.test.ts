@@ -72,6 +72,7 @@ test('findWikiGraphPath returns deterministic shortest traversal', async () => {
 
     assert.equal(result.found, true);
     assert.deepEqual(result.path.map((step) => step.nodeId), ['page:Architecture.md', 'source:src/compiler.ts']);
+    assert.equal('idLabel' in result.path[0], false);
     assert.deepEqual(result.edges.map((edge) => edge.type), ['provenance']);
   } finally {
     await rm(tempDir, { recursive: true, force: true });

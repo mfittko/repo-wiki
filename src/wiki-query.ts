@@ -116,8 +116,8 @@ export async function findWikiGraphPath({ graphPath, from, to }: { graphPath: st
   const queue = starts.map((node) => ({ node, path: [node], edges: [] as WikiGraphEdge[] }));
   const visited = new Set(starts.map((node) => node.id));
 
-  while (queue.length > 0) {
-    const current = queue.shift()!;
+  for (let queueIndex = 0; queueIndex < queue.length; queueIndex += 1) {
+    const current = queue[queueIndex];
     if (targets.has(current.node.id)) {
       return {
         from,
@@ -288,7 +288,7 @@ function resolveGraphNodes(graph: WikiGraphIndex, target: string): WikiGraphNode
 }
 
 function formatPathNode(node: WikiGraphNode) {
-  return { nodeId: node.id, idLabel: node.path, path: node.path, kind: node.kind };
+  return { nodeId: node.id, path: node.path, kind: node.kind };
 }
 
 function inferEvidenceKind(ref: string) {
