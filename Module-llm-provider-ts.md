@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "1defe58385a113a4dfca789e393deecf0d6135a8"
+source_commit: "a81b22c39c9e23853e62bf5ce7ade491eda4c723"
 page_state: "generated"
 source_paths: ["src/llm-provider.ts"]
 compiled_at: "2024-06-15T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides core functionality for configuring and interacting with large language model (LLM) providers within the system. It includes abstractions and utilities to build requests, manage provider configurations, and handle errors related to LLM operations. The module is designed to be configurable via environment variables, supporting flexible runtime behavior and integration with different LLM architectures and APIs.
+This module provides core functionality for configuring and interacting with large language model (LLM) providers within the system. It includes abstractions and utilities to build requests, manage provider configurations, and handle LLM-specific parameters such as architecture budgets and timeouts. The module is designed to be configurable via environment variables, enabling flexible runtime behavior for LLM interactions.
 
 ## Source file list
 
@@ -21,33 +21,45 @@ This module provides core functionality for configuring and interacting with lar
 
 ## Key symbols and entry points
 
-- **ArchitecturePageBudget**: Likely a type or interface related to budgeting token usage or resource allocation per page in the LLM architecture.
-- **buildRequest**: A function to construct requests to the LLM provider, possibly taking options to customize the request.
-- **BuildRequestOptions**: Type or interface defining options for building LLM requests.
-- **createProvider**: Factory function to instantiate an LLM provider based on configuration.
-- **createProviderFromResolvedConfig**: Similar to `createProvider`, but uses a fully resolved configuration object.
+- **ArchitecturePageBudget**: Likely a type or interface related to budgeting token usage or resource allocation per page or architecture.
+- **buildRequest**: A function to construct requests to the LLM based on given options.
+- **BuildRequestOptions**: Interface/type defining the options accepted by `buildRequest`.
+- **createProvider**: Factory function to instantiate an LLM provider.
+- **createProviderFromResolvedConfig**: Function to create an LLM provider from a fully resolved configuration object.
 - **LLM_DEFAULTS**: Default configuration values for LLM providers.
-- **LLMProvider**: Core class or interface representing an LLM provider.
-- **LLMProviderConfig**: Configuration interface or type for setting up an LLM provider.
-- **LLMProviderError**: Custom error class for handling LLM provider-related errors.
-- **LLMRequest**: Type or interface representing a request sent to an LLM provider.
+- **LLMProvider**: Main class or interface representing an LLM provider.
+- **LLMProviderConfig**: Configuration interface/type for setting up an LLM provider.
+- **LLMProviderError**: Custom error class for handling LLM provider related errors.
+- **LLMRequest**: Type or interface representing a request sent to an LLM.
 
 ## Dependencies and imports
 
-- Imports from local module: `./prompts.js` — likely provides prompt templates or utilities for constructing LLM prompts.
-- Node.js built-in module: `node:fs` — used for filesystem operations, possibly for reading configuration files or caching.
+- Imports from local module: `./prompts.js`
+- Node.js built-in module: `node:fs`
+
+## Environment variables
+
+The module supports configuration through the following environment variables, which influence runtime behavior and LLM request parameters:
+
+- `LLMWIKI_COMPILER_MODE`
+- `LLMWIKI_LLM_API_KEY`
+- `LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS`
+- `LLMWIKI_LLM_ARCHITECTURE_MODEL`
+- `LLMWIKI_LLM_ARCHITECTURE_REASONING_EFFORT`
+- `LLMWIKI_LLM_ARCHITECTURE_TIMEOUT_MS`
+- `LLMWIKI_LLM_BASE_URL`
+- `LLMWIKI_LLM_MAX_OUTPUT_TOKENS`
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are listed for this module. Testing status is unknown.
+No explicit test files or test-related documentation cards are present for this module at this time.
 
 ## Known gaps or open questions
 
-- No documentation cards or detailed usage examples are available, limiting insight into the exact usage patterns or integration details.
-- The exact nature and structure of environment variables (e.g., `LLMWIKI_COMPILER_MODE`, `LLMWIKI_LLM_API_KEY`, etc.) and how they influence runtime behavior are not fully documented here.
-- The relationship between `createProvider` and `createProviderFromResolvedConfig` and their intended usage contexts could benefit from further clarification.
-- No information on error handling strategies beyond the presence of `LLMProviderError`.
-- Absence of related tests or test coverage information leaves the robustness of the module unverified.
+- There is no documentation or test coverage currently available, which limits understanding of detailed usage patterns and edge cases.
+- The exact behavior and structure of some key types (e.g., `ArchitecturePageBudget`, `LLMRequest`) are not described in detail.
+- The interaction model with environment variables and how they override or complement configuration objects is not fully documented.
+- The role and implementation details of imported modules, especially `./prompts.js`, are not elaborated here.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

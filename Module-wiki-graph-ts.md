@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "1defe58385a113a4dfca789e393deecf0d6135a8"
+source_commit: "a81b22c39c9e23853e62bf5ce7ade491eda4c723"
 page_state: "generated"
 source_paths: ["src/wiki-graph.ts"]
 compiled_at: "2024-06-05T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality to build and query a graph representation of wiki pages. It includes utilities to index wiki pages, retrieve nodes and edges by various criteria, and navigate relationships between pages. The module is implemented in TypeScript and serves as a core source component for managing wiki graph data structures.
+This module provides functionality for constructing and querying a graph representation of wiki pages. It includes utilities to build an index of wiki graph nodes and edges, retrieve nodes by various criteria, and explore relationships between pages through their edges. The module is designed to support operations such as selecting affected pages, managing page paths, and filtering edges by type, facilitating structured navigation and analysis of wiki content.
 
 ## Source file list
 
@@ -21,21 +21,21 @@ This module provides functionality to build and query a graph representation of 
 
 ## Key symbols and entry points
 
-- **AffectedWikiGraphPageSelection** — Likely a type or interface related to selecting affected pages within the wiki graph.
-- **buildWikiGraphIndex** — Function to construct an index of the wiki graph, presumably from source data.
-- **getAdjacentNodes** — Retrieves nodes adjacent to a given node in the graph.
-- **getEdgesByType** — Fetches edges filtered by their type.
-- **getIncomingEdges** — Returns edges directed into a specified node.
-- **getManagedPagePaths** — Retrieves paths of pages managed within the graph.
-- **getNodeById** — Finds a node by its unique identifier.
+- **AffectedWikiGraphPageSelection** — Likely a type or interface representing a selection of wiki graph pages affected by some criteria.
+- **buildWikiGraphIndex** — Function to build an index of the wiki graph, presumably creating a structured representation of nodes and edges.
+- **getAdjacentNodes** — Retrieves nodes adjacent to a given node, useful for graph traversal.
+- **getEdgesByType** — Filters and returns edges of a specific type.
+- **getIncomingEdges** — Retrieves edges directed towards a specified node.
+- **getManagedPagePaths** — Returns paths of pages managed within the wiki graph.
+- **getNodeById** — Fetches a node by its unique identifier.
 - **getNodesByKind** — Retrieves nodes filtered by their kind or category.
 - **getNodesByPath** — Finds nodes based on their associated path.
-- **getOutgoingEdges** — Returns edges directed outward from a specified node.
+- **getOutgoingEdges** — Retrieves edges originating from a specified node.
 
 ## Dependencies and imports
 
-- Imports from `./utils/fs.js` — likely utilities related to filesystem operations.
-- Imports from `node:path` — Node.js built-in module for handling and transforming file paths.
+- `./utils/fs.js` — A local utility module, likely providing filesystem-related functions.
+- `node:path` — Node.js built-in module for handling and transforming file paths.
 
 ## Related tests
 
@@ -43,10 +43,10 @@ No documentation or source cards indicate the presence of related test files or 
 
 ## Known gaps or open questions
 
-- The exact nature and structure of `AffectedWikiGraphPageSelection` is not detailed.
-- No explicit documentation or comments are available to clarify the internal workings or usage examples.
-- Absence of related test information leaves coverage and reliability unverified.
-- The repository remote URL and commit SHA are unknown, limiting traceability.
+- The exact structure and semantics of `AffectedWikiGraphPageSelection` and other types are not detailed.
+- There is no explicit documentation or examples illustrating how to use the exported functions.
+- No information on error handling, performance considerations, or integration with other modules.
+- Absence of related test coverage or test references leaves the robustness of the module unverified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

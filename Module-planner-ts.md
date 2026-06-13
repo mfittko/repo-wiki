@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "1defe58385a113a4dfca789e393deecf0d6135a8"
+source_commit: "a81b22c39c9e23853e62bf5ce7ade491eda4c723"
 page_state: "generated"
 source_paths: ["src/planner.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -21,27 +21,27 @@ This module provides functionality related to planning operations within the cod
 
 ## Key symbols and entry points
 
-- `createBootstrapPlan`: The primary exported function or symbol from this module. It likely encapsulates the logic to generate a bootstrap plan.
+- `createBootstrapPlan`: The primary exported function or symbol from this module. It likely encapsulates the logic to generate a bootstrap plan, though detailed behavior is not documented here.
 
 ## Dependencies and imports
 
 The module imports the following dependencies:
 
-- `./data-model-signals.js`: Possibly provides data model signals or reactive data structures used in planning.
+- `./data-model-signals.js`: Presumably provides data model signals or reactive data structures used in planning.
 - `./utils/fs.js`: Utility functions related to filesystem operations.
-- `./wiki-graph.js`: Likely related to graph structures or operations, possibly for managing wiki or documentation graphs.
+- `./wiki-graph.js`: Likely provides graph-related utilities or data structures, possibly for representing or traversing wiki content.
 - `node:path`: Node.js built-in module for handling and transforming file paths.
 
 ## Related tests
 
-No documentation or test cards are currently associated with this module, and no explicit test files or test-related symbols are indicated.
+No documentation or source cards indicate the presence of related test files or test cases for this module.
 
 ## Known gaps or open questions
 
-- The exact behavior and implementation details of `createBootstrapPlan` are not documented here.
-- There are no related tests or documentation cards, which limits understanding of usage scenarios and correctness.
-- The role of the imported modules in the planning process is not explicitly described.
-- Further exploration of the source code or related modules may be necessary to fully understand the module's integration and purpose.
+- There is no explicit documentation or comments describing the detailed behavior or usage of `createBootstrapPlan`.
+- No test coverage or test references are available, so the robustness and correctness of the module are not verifiable from the current data.
+- The exact role and structure of the bootstrap plan created by `createBootstrapPlan` remain unspecified.
+- The interaction between this module and the imported dependencies is not detailed.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "1defe58385a113a4dfca789e393deecf0d6135a8"
-compiled_at: "2026-06-13T08:30:37.578Z"
+source_commit: "a81b22c39c9e23853e62bf5ce7ade491eda4c723"
+compiled_at: "2026-06-13T09:15:25.567Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 claim_status: "review-needed"
@@ -48,7 +48,7 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
 - Stale documents: 1
 - Commands found in docs: 26
 - Environment variable mentions: 29
-- File path references: 76
+- File path references: 77
 
 ## Documentation status table
 
@@ -100,7 +100,7 @@ Commands extracted from documentation code blocks, validated against `package.js
 | `npm run lint:docs` | ✅ validated | package.json |
 | `npm run lint:local` | ✅ validated | package.json |
 | `npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --remote https://github.com/OWNER/repo-wiki.git --branch gh-pages --pages-path .` | ❓ unvalidated | unknown |
-| `npm install repo-wiki` | ❓ unvalidated | unknown |
+| `npm install @mfittko/repo-wiki` | ❓ unvalidated | unknown |
 | `npm install "./$tarball"` | ❓ unvalidated | unknown |
 | `npx repo-wiki --help` | ❓ unvalidated | unknown |
 | `npx repo-wiki run \` | ❓ unvalidated | unknown |
@@ -116,7 +116,7 @@ Commands extracted from documentation code blocks, validated against `package.js
 Repository file and directory references extracted from markdown links and inline code spans. Generated-output roots such as `dist/`, `coverage/`, and `.llmwiki/` are excluded from extraction.
 
 - Valid: 38
-- Missing: 38
+- Missing: 39
 
 | Documentation location | Reference | Status | Resolved path |
 |---|---|---|---|
@@ -183,6 +183,7 @@ Repository file and directory references extracted from markdown links and inlin
 | `README.md:5` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
 | `README.md:30` | `Documentation-Debt-Report.md` | ❌ missing | not found |
 | `README.md:32` | `Architecture.md` | ❌ missing | not found |
+| `README.md:40` | `@mfittko/repo-wiki` | ❌ missing | not found |
 | `README.md:53` | `package.json` | ✅ valid | `package.json` |
 | `README.md:59` | `package.json` | ✅ valid | `package.json` |
 | `README.md:59` | `README.md` | ✅ valid | `README.md` |
@@ -276,7 +277,7 @@ Conservative ADR detection uses deterministic path hints (`ADR/**`, `docs/adr/**
 - `npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --branch gh-pages --pages-path .` - command source unknown.
 - `npm install` - command source unknown.
 - `npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --remote https://github.com/OWNER/repo-wiki.git --branch gh-pages --pages-path .` - command source unknown.
-- `npm install repo-wiki` - command source unknown.
+- `npm install @mfittko/repo-wiki` - command source unknown.
 - `npm install "./$tarball"` - command source unknown.
 - `npx repo-wiki --help` - command source unknown.
 - `npx repo-wiki run \` - command source unknown.
@@ -320,6 +321,7 @@ Conservative ADR detection uses deterministic path hints (`ADR/**`, `docs/adr/**
 - `docs/WHY.md:19` references `Log.md` (missing).
 - `README.md:30` references `Documentation-Debt-Report.md` (missing).
 - `README.md:32` references `Architecture.md` (missing).
+- `README.md:40` references `@mfittko/repo-wiki` (missing).
 - `README.md:155` references `Architecture.md` (missing).
 
 ### ADR-specific

@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "1defe58385a113a4dfca789e393deecf0d6135a8"
+source_commit: "a81b22c39c9e23853e62bf5ce7ade491eda4c723"
 page_state: "generated"
 source_paths: ["src/docs-ingestor.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality for ingesting and processing documentation related to CI workflow commands. It includes utilities to extract, classify, and create structured representations of documented commands from source files. The module supports the generation of documentation cards and the classification of commands based on their source and status, facilitating validation and organization of CI-related documentation.
+This module provides functionality for ingesting and processing documentation related to CI workflow commands. It includes utilities to extract commands and their sources from documentation files, classify documented commands, and create structured documentation cards. The module is designed to support the validation and organization of CI command documentation by parsing source files and extracting relevant command metadata.
 
 ## Source file list
 
@@ -23,22 +23,20 @@ This module provides functionality for ingesting and processing documentation re
 
 - **CiWorkflowCommandSource**: Represents a source of CI workflow commands.
 - **classifyDocumentedCommands**: Function to classify commands extracted from documentation.
-- **CommandClassification**: Enum or type defining possible classifications for commands.
+- **CommandClassification**: Enum or type defining classification categories for commands.
 - **CommandSource**: Represents the origin or source context of a command.
-- **CommandStatus**: Enum or type indicating the status of a command.
-- **createDocumentationCard**: Function to create a structured documentation card for commands.
+- **CommandStatus**: Enum or type representing the status of a command.
+- **createDocumentationCard**: Function to create a structured documentation card for a command.
 - **DocumentedFilePath**: Type or interface representing file paths of documented sources.
-- **extractCiCommands**: Function to extract CI commands from source files.
+- **extractCiCommands**: Function to extract CI commands from source documentation.
 - **extractCiCommandSources**: Function to extract sources of CI commands.
-- **extractDocumentationClaims**: Function to extract claims made in documentation about commands.
+- **extractDocumentationClaims**: Function to extract claims or assertions from documentation.
 
 ## Dependencies and imports
 
-- Internal:
-  - `./docs-validation.js`: Likely used for validation of documentation or commands.
-- Node.js built-in modules:
-  - `node:fs`: File system operations.
-  - `node:path`: Path utilities.
+- `./docs-validation.js`: Local module likely providing validation utilities for documentation.
+- `node:fs`: Node.js file system module for file operations.
+- `node:path`: Node.js path module for handling file paths.
 
 ## Related tests
 

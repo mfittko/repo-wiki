@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "1defe58385a113a4dfca789e393deecf0d6135a8"
+source_commit: "a81b22c39c9e23853e62bf5ce7ade491eda4c723"
 page_state: "generated"
 source_paths: ["src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -18,67 +18,60 @@ The `utils` module provides a collection of utility functions and types implemen
 ## Source file list
 
 - `src/utils/args.ts`  
-  Implements argument parsing utilities including the `parseArgs` function and the `ParsedArgs` type.
-
 - `src/utils/dotenv.ts`  
-  Provides functionality to load and parse `.env` files with symbols such as `loadDotEnv`, `parseDotEnv`, and the `DotEnvLoadResult` type.
-
 - `src/utils/fs.ts`  
-  Contains filesystem-related utilities including directory creation, file existence checks, JSON reading/writing, text writing, and file walking. Key symbols include `ensureDir`, `fileExists`, `readJson`, `writeJson`, `writeText`, `walkFiles`, and the constant `DEFAULT_WALK_EXCLUDES`.
-
 - `src/utils/git.ts`  
-  Offers Git-related utilities to run Git commands and retrieve information such as the current commit, remote URL, and status. Exports include `runGit`, `getGitCommit`, `getGitRemote`, and `getGitStatus`.
 
 ## Key symbols and entry points
 
-- **Argument Parsing**  
-  - `parseArgs`  
-  - `ParsedArgs`
+### `src/utils/args.ts`
+- `parseArgs` — Function to parse command-line arguments.
+- `ParsedArgs` — Type representing the structure of parsed arguments.
 
-- **Environment Variable Handling**  
-  - `loadDotEnv`  
-  - `parseDotEnv`  
-  - `DotEnvLoadResult`
+### `src/utils/dotenv.ts`
+- `loadDotEnv` — Function to load environment variables from `.env` files.
+- `parseDotEnv` — Function to parse `.env` file content.
+- `DotEnvLoadResult` — Type representing the result of loading `.env` files.
 
-- **Filesystem Utilities**  
-  - `DEFAULT_WALK_EXCLUDES`  
-  - `ensureDir`  
-  - `fileExists`  
-  - `readJson`  
-  - `writeJson`  
-  - `writeText`  
-  - `walkFiles`
+### `src/utils/fs.ts`
+- `DEFAULT_WALK_EXCLUDES` — Default patterns to exclude when walking directories.
+- `ensureDir` — Function to ensure a directory exists, creating it if necessary.
+- `fileExists` — Function to check if a file exists.
+- `readJson` — Function to read and parse JSON files.
+- `walkFiles` — Function to recursively walk files in a directory.
+- `writeJson` — Function to write JSON data to a file.
+- `writeText` — Function to write text data to a file.
 
-- **Git Utilities**  
-  - `runGit`  
-  - `getGitCommit`  
-  - `getGitRemote`  
-  - `getGitStatus`
+### `src/utils/git.ts`
+- `runGit` — Function to run arbitrary Git commands.
+- `getGitCommit` — Function to retrieve the current Git commit hash.
+- `getGitRemote` — Function to get the Git remote URL.
+- `getGitStatus` — Function to get the current Git status.
 
 ## Dependencies and imports
 
-- `src/utils/dotenv.ts` imports:  
-  - `./fs.js` (local filesystem utilities)  
+- `src/utils/dotenv.ts` imports:
+  - `./fs.js` (local filesystem utilities)
   - Node.js built-in modules: `fs`, `path`
 
-- `src/utils/fs.ts` imports:  
+- `src/utils/fs.ts` imports:
   - Node.js built-in modules: `fs`, `path`
 
-- `src/utils/git.ts` imports:  
+- `src/utils/git.ts` imports:
   - Node.js built-in modules: `child_process`, `util`
 
-- `src/utils/args.ts` has no imports
+- `src/utils/args.ts` has no imports.
 
 ## Related tests
 
-No test files or test-related documentation cards were identified in the source data for this module.
+No explicit test files or test-related documentation cards are present in the source data for this module.
 
 ## Known gaps or open questions
 
-- There is no explicit test coverage or test files linked to this module in the provided source data.
-- The repository remote URL and commit SHA are unknown, limiting traceability.
-- The exact runtime environment or usage context for these utilities is not specified.
-- No documentation or usage examples are included, which may limit immediate usability without source inspection.
+- There is no information about test coverage or test files related to this module.
+- The repository remote URL and commit SHA are unspecified, limiting traceability.
+- The exact runtime environment or usage context for these utilities is not detailed.
+- No documentation or usage examples are provided for the exported symbols.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

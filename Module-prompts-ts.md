@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "1defe58385a113a4dfca789e393deecf0d6135a8"
+source_commit: "a81b22c39c9e23853e62bf5ce7ade491eda4c723"
 page_state: "generated"
 source_paths: ["src/prompts.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides a collection of functions and types related to building and managing prompts, likely for use in documentation generation, code migration, or model-driven contexts. It includes utilities to construct various specialized prompts such as architecture, cross-cutting concerns, foundation, and module-specific prompts. The module also defines several context and information types that support prompt construction and usage.
+This module provides a collection of functions and types related to building and managing prompts, likely for use in documentation generation, code migration, or model-driven contexts. It defines utilities to construct various specialized prompts such as architecture, cross-cutting concerns, foundation, and module-specific prompts. The module also includes context types and metadata structures that support prompt construction and usage.
 
 ## Source file list
 
@@ -28,29 +28,29 @@ This module provides a collection of functions and types related to building and
   - `buildModulePrompt`
   - `buildPrompt`
 
-- **Types / Interfaces:**
+- **Types and Interfaces:**
   - `BuiltPrompt`
   - `DocCardContext`
   - `MigrationContext`
   - `ModelContext`
   - `ModuleInfo`
 
-These symbols represent the core API of the module, with the `build*Prompt` functions serving as primary entry points for generating different categories of prompts. The context and info types provide structured data to support prompt generation and usage.
+These symbols represent the core API of the module, enabling the creation of different prompt types and providing contextual information necessary for their construction and application.
 
 ## Dependencies and imports
 
-- The module `src/prompts.ts` does not import any external modules or dependencies, indicating it is self-contained.
+- The source card indicates that `src/prompts.ts` has no imports, suggesting this module is self-contained or relies on ambient/global types or external injection.
 
 ## Related tests
 
-- No documentation or source cards indicate the presence of related test files or test cases for this module.
+- No documentation cards or test references are provided for this module, so no related tests are currently documented.
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or comments describing the detailed behavior or intended usage of the prompt-building functions and types.
-- The absence of related test information leaves the testing coverage and reliability of this module unclear.
-- The source repository and commit information are not provided, limiting traceability.
-- The exact nature of the prompts (e.g., their format, target system, or usage context) is not described in the available source cards.
+- The exact behavior and implementation details of the prompt-building functions are not described here.
+- There is no information on how these prompts are consumed or integrated into larger workflows.
+- Absence of related tests or usage examples limits understanding of practical application.
+- The source repository and commit information are unknown, which restricts traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

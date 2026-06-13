@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "1defe58385a113a4dfca789e393deecf0d6135a8"
+source_commit: "a81b22c39c9e23853e62bf5ce7ade491eda4c723"
 page_state: "generated"
 source_paths: ["src/wiki-query.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -21,40 +21,35 @@ This module provides functionality related to querying and formatting informatio
 
 ## Key symbols and entry points
 
-- **Functions:**
-  - `buildWikiExplanation` — Constructs a detailed explanation from wiki data.
-  - `buildWikiQueryAnswer` — Builds an answer to a query using wiki information.
-  - `defaultGraphPathForWiki` — Provides a default graph path used in wiki queries.
-  - `findWikiGraphPath` — Finds a path within the wiki graph structure.
-  - `formatWikiExplanation` — Formats a wiki explanation for presentation.
-  - `formatWikiGraphPath` — Formats a graph path from the wiki data.
-  - `formatWikiQueryAnswer` — Formats the answer generated from a wiki query.
-
-- **Types / Interfaces:**
-  - `WikiEvidence` — Represents evidence extracted from the wiki.
-  - `WikiExplanation` — Represents an explanation constructed from wiki data.
-  - `WikiGraphPathResult` — Represents the result of a graph path search in the wiki.
+- **buildWikiExplanation**: Constructs a detailed explanation from wiki data.
+- **buildWikiQueryAnswer**: Builds an answer to a query using wiki information.
+- **defaultGraphPathForWiki**: Provides a default graph path configuration for wiki queries.
+- **findWikiGraphPath**: Finds a path within the wiki graph relevant to a query.
+- **formatWikiExplanation**: Formats a wiki explanation for presentation or output.
+- **formatWikiGraphPath**: Formats the graph path data for readability.
+- **formatWikiQueryAnswer**: Formats the answer generated from a wiki query.
+- **WikiEvidence**: Type representing evidence extracted from the wiki.
+- **WikiExplanation**: Type representing an explanation constructed from wiki data.
+- **WikiGraphPathResult**: Type representing the result of a graph path search in the wiki.
 
 ## Dependencies and imports
 
 - Internal modules:
-  - `./search.js` — likely used for searching within the wiki or related data.
-  - `./wiki-graph.js` — likely provides graph-related utilities or data structures for the wiki.
-
+  - `./search.js`
+  - `./wiki-graph.js`
 - Node.js built-in modules:
-  - `node:fs` — for filesystem operations.
-  - `node:path` — for path manipulations.
+  - `node:fs`
+  - `node:path`
 
 ## Related tests
 
-No documentation or test cards were found associated with this module. It is unclear if dedicated tests exist for `wiki-query.ts`.
+No documentation or test cards were found associated with this module at this time.
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or test coverage information available.
-- The exact nature of the wiki graph structure and how queries are performed is not detailed here.
-- The relationship between the imported modules (`search.js` and `wiki-graph.js`) and this module’s functions could be further clarified with source or documentation.
-- The module’s usage context within the larger system is not described.
+- There is no explicit documentation or test coverage information available for this module.
+- The exact behavior and usage patterns of the exported functions and types would benefit from example usage or further documentation.
+- The integration details with the imported modules (`search.js` and `wiki-graph.js`) are not described here.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
