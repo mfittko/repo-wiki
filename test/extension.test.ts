@@ -4,7 +4,7 @@ import { mkdtemp, rm, stat, readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import repoWikiExtension from '../src/extension.js';
+import repoWikiExtension, { splitArgs } from '../src/extension.js';
 import { runExtensionInstall } from '../src/extension-install.js';
 
 const currentFile = fileURLToPath(import.meta.url);
@@ -332,6 +332,28 @@ test('extension install defaults to project scope in cwd', async () => {
     assert.ok(await stat(skillFile).then(() => true, () => false), 'project skill not copied');
   } finally {
     process.chdir(originalCwd);
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('splitArgs parses simple and quoted arguments', () => {
+  assert.deepEqual(splitArgs('scan --repo .'), ['scan', '--repo', '.']);
+  assert.deepEqual(splitArgs('  scan   --repo .  '), ['scan', '--repo', '.']);
+  assert.deepEqual(splitArgs('compile --wiki "./my wiki"'), ['compile', '--wiki', './my wiki']);
+  assert.deepEqual(splitArgs("compile --wiki 'my wiki'"), ['compile', '--wiki', 'my wiki']);
+  assert.deepEqual(splitArgs('a "b c" d'), ['a', 'b c', 'd']);
+  assert.deepEqual(splitArgs(''), []);
+  assert.deepEqual(splitArgs('   '), []);
+});
+
+test('runExtensionInstall rejects --global combined with --project', async () => {
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-ext-scope-conflict-'));
+  try {
+    await assert.rejects(
+      () => runExtensionInstall({ global: true, project: true, piDir: tmpDir }),
+      (err: Error & { code?: string }) => err.code === 'EXT_INSTALL_SCOPE_CONFLICT'
+    );
+  } finally {
     await rm(tmpDir, { recursive: true, force: true });
   }
 });

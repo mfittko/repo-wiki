@@ -21,6 +21,11 @@ export default repoWiki;
 `;
 
 export async function runExtensionInstall(options: ExtensionInstallOptions = {}) {
+  if (options.global && options.project) {
+    const err = new Error('Cannot use --global and --project together; choose one.');
+    (err as Error & { code?: string }).code = 'EXT_INSTALL_SCOPE_CONFLICT';
+    throw err;
+  }
   const cwd = process.cwd();
   const baseDir: string = (() => {
     if (options.piDir) {

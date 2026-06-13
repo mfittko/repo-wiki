@@ -21,7 +21,12 @@ const repoWikiCommandSchema = Type.Object({
 
 const repoWikiScanSchema = Type.Object({
   repoPath: Type.Optional(Type.String({ description: 'Repository path' })),
-  mode: Type.Optional(Type.String({ description: 'bootstrap or incremental' })),
+  mode: Type.Optional(
+    Type.Union(
+      [Type.Literal('bootstrap'), Type.Literal('incremental')],
+      { description: 'Scan mode: bootstrap (full) or incremental (changed paths only)' }
+    )
+  ),
   outDir: Type.Optional(Type.String({ description: 'Output scan directory' })),
   baseRef: Type.Optional(Type.String()),
   headRef: Type.Optional(Type.String()),
@@ -91,6 +96,50 @@ function truncateForTool(text: string, maxBytes = 50000, maxLines = 2000): strin
   return text;
 }
 
+/**
+ * Split an input string into argv tokens while respecting single and double
+ * quotes and backslash escapes, matching typical shell behavior. Returns
+ * ['--help'] for an empty/whitespace-only input.
+ */
+export function splitArgs(input: string): string[] {
+  const tokens: string[] = [];
+  let current = '';
+  let inSingle = false;
+  let inDouble = false;
+  let escape = false;
+  for (const ch of input) {
+    if (escape) {
+      current += ch;
+      escape = false;
+      continue;
+    }
+    if (ch === '\\' && !inSingle) {
+      escape = true;
+      continue;
+    }
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+      continue;
+    }
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble;
+      continue;
+    }
+    if (/\s/.test(ch) && !inSingle && !inDouble) {
+      if (current.length > 0) {
+        tokens.push(current);
+        current = '';
+      }
+      continue;
+    }
+    current += ch;
+  }
+  if (current.length > 0) {
+    tokens.push(current);
+  }
+  return tokens;
+}
+
 export default function repoWikiExtension(pi: ExtensionAPI) {
   function notify(ctx: ExtensionContext, message: string, type: 'info' | 'warning' | 'error' = 'info') {
     if (ctx.ui?.notify) {
@@ -101,7 +150,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
   pi.registerCommand('repo_wiki', {
     description: 'Run a repo-wiki CLI command',
     handler: async (args: string, ctx: ExtensionContext) => {
-      const tokens = args.trim() ? args.trim().split(/\s+/) : ['--help'];
+      const tokens = args.trim() ? splitArgs(args) : ['--help'];
       try {
         await runCli(tokens);
         notify(ctx, 'repo-wiki command finished', 'info');
@@ -121,7 +170,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     promptGuidelines: ['Use repo_wiki_cli when the user asks for repo-wiki CLI behavior and structured tool arguments are not needed.'],
     parameters: repoWikiCommandSchema,
     async execute(_toolCallId, params: Static<typeof repoWikiCommandSchema>) {
-      const tokens = params.args?.trim() ? params.args.trim().split(/\s+/) : ['--help'];
+      const tokens = params.args?.trim() ? splitArgs(params.args) : ['--help'];
       await runCli(tokens);
       return { content: [{ type: 'text', text: 'repo-wiki CLI command finished' }], details: {} };
     },
@@ -136,7 +185,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     parameters: repoWikiScanSchema,
     async execute(_toolCallId, params: Static<typeof repoWikiScanSchema>) {
       const result = await scanRepository({
-        mode: (params.mode as 'bootstrap' | 'incremental') || 'bootstrap',
+        mode: params.mode ?? 'bootstrap',
         repoPath: params.repoPath || '.',
         outDir: params.outDir || '.llmwiki/run',
         baseRef: params.baseRef,
@@ -200,7 +249,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
       const text = JSON.stringify(result.summary, null, 2);
       const isError = (result.summary.errors as number) > 0;
       if (isError) {
-        throw new Error(`Wiki lint failed with ${result.summary.errors} error(s)`);
+        throw new Error(`Wiki lint failed with ${result.summary.errors} error(s)\n${text}`);
       }
       return { content: [{ type: 'text', text: truncateForTool(text) }], details: result.summary };
     },
@@ -215,11 +264,13 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     parameters: repoWikiPublishSchema,
     async execute(_toolCallId, params: Static<typeof repoWikiPublishSchema>) {
       const config = await loadConfig(process.cwd());
+      const target = 'github-wiki';
+      const branchFromConfig = config.publish?.wiki?.branch;
       const result = await publishWiki({
         wikiDir: params.wikiDir || '.llmwiki/wiki',
         remote: params.remote,
-        target: 'github-wiki',
-        branch: params.branch || (config.publish?.branch),
+        target,
+        branch: params.branch || branchFromConfig,
         pagesPath: '.',
         dryRun: Boolean(params.dryRun),
         frontmatterPolicy: 'provenance',
@@ -286,7 +337,9 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
       });
       const text = JSON.stringify(result, null, 2);
       if (!result.found) {
-        throw new Error(`No path found from ${params.from} to ${params.to}`);
+        throw new Error(
+          `No path found from ${params.from} to ${params.to} (reason: ${result.reason ?? 'unknown'})`
+        );
       }
       return { content: [{ type: 'text', text: truncateForTool(text) }], details: result };
     },
@@ -309,7 +362,8 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
       });
       const text = JSON.stringify(result, null, 2);
       if (!result.found) {
-        throw new Error(`Could not explain ${params.target}`);
+        const detail = result.explanation ? `: ${result.explanation}` : '';
+        throw new Error(`Could not explain ${params.target}${detail}`);
       }
       return { content: [{ type: 'text', text: truncateForTool(text) }], details: result };
     },
