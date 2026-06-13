@@ -7,16 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-06-13
+
 ### Changed
 - Update build, CI, and release automation to support the change.
 
 ### Fixed
-- Fix npm bin path and bump to 0.2.2.
-
-## [0.2.2] - 2026-06-13
-
-### Fixed
 - Fix `package.json` bin path to use a relative path without leading `./`, preventing npm from stripping the CLI bin entry during publish.
+- Fix npm bin path and bump to 0.2.2.
 
 ## [0.2.1] - 2026-06-13
 
