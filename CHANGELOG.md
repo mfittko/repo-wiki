@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Add repository field for npm provenance.
+
+### Changed
+- Update build, CI, and release automation to support the change.
+
 ## [0.2.4] - 2026-06-13
 
 ### Fixed
