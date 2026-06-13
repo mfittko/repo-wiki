@@ -121,8 +121,10 @@ test('extension entrypoint and skill files are listed in package files and publi
   // Verify npm pack --dry-run tarball contains the extension assets.
   const { stdout, stderr } = await execFileAsync('npm', ['pack', '--dry-run'], { cwd: packageRoot });
   const combined = `${stdout}\n${stderr}`;
-  const tarball = stdout.trim().split('\n').pop()!;
-  assert.ok(tarball.length > 0, 'npm pack produced no tarball name');
+  const lines = combined.trim().split(/\r?\n/).filter((line) => line.trim().length > 0);
+  const tarballs = lines.filter((line) => line.trim().endsWith('.tgz'));
+  const tarball = tarballs[tarballs.length - 1];
+  assert.ok(tarball && tarball.length > 0, `npm pack produced no tarball name; lines: ${lines.join(' | ')}`);
   const required = [
     'dist/src/extension.js',
     'dist/src/extension.d.ts',
@@ -389,7 +391,7 @@ test('truncateForTool hard-truncates a single oversized line', async () => {
   const longLine = 'x'.repeat(200);
   const out = truncateForTool(longLine, 100, 10);
   // Output must respect maxBytes and end with truncation marker.
-  assert.ok(Buffer.byteLength(out, 'utf8') <= 200, 'output should fit within reasonable bound');
+  assert.ok(Buffer.byteLength(out, 'utf8') <= 100, 'output should fit within maxBytes');
   assert.ok(out.includes('[Output truncated]'), 'missing truncation marker');
 });
 
@@ -432,6 +434,28 @@ test('runExtensionInstall reports scope custom when only --pi-dir is set', async
     }
     const summary = JSON.parse(captured);
     assert.equal(summary.scope, 'custom');
+  } finally {
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+
+test('splitArgs rejects unterminated quotes and backslash escapes', () => {
+  assert.throws(() => splitArgs('a "b'), /Unterminated double quote/);
+  assert.throws(() => splitArgs("a 'b"), /Unterminated single quote/);
+  assert.throws(() => splitArgs('foo\\'), /Unterminated backslash escape/);
+});
+
+test('extension install --force replaces an existing shim directory', async () => {
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-ext-force-dir-'));
+  try {
+    await runExtensionInstall({ piDir: tmpDir });
+    const shimPath = path.join(tmpDir, 'extensions', 'repo-wiki.ts');
+    await rm(shimPath, { force: true });
+    await mkdir(shimPath, { recursive: true });
+    await runExtensionInstall({ piDir: tmpDir, force: true });
+    const shim = await readFile(shimPath, 'utf8');
+    assert.ok(shim.includes('@mfittko/repo-wiki/extension'));
   } finally {
     await rm(tmpDir, { recursive: true, force: true });
   }

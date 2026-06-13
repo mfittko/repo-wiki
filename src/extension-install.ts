@@ -72,6 +72,10 @@ export async function runExtensionInstall(options: ExtensionInstallOptions = {})
     throw err;
   }
 
+  if (options.force) {
+    await rm(shimPath, { recursive: true, force: true });
+  }
+
   await writeFile(shimPath, SHIM, 'utf8');
 
   await rm(skillDestination, { recursive: true, force: true });

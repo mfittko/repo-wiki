@@ -84,21 +84,25 @@ const repoWikiSearchSchema = Type.Object({
 });
 
 export function truncateForTool(text: string, maxBytes = 50000, maxLines = 2000): string {
+  const marker = '\n\n[Output truncated]';
+  const markerBytes = Buffer.byteLength(marker, 'utf8');
+  const targetBytes = Math.max(0, maxBytes - markerBytes);
+
   const lines = text.split('\n');
   if (lines.length > maxLines || Buffer.byteLength(text, 'utf8') > maxBytes) {
     const head = lines.slice(0, maxLines);
     let joined = head.join('\n');
-    while (Buffer.byteLength(joined, 'utf8') > maxBytes && head.length > 1) {
+    while (Buffer.byteLength(joined, 'utf8') > targetBytes && head.length > 1) {
       head.pop();
       joined = head.join('\n');
     }
-    // Hard-truncate any remaining single oversized line to honour maxBytes.
-    while (Buffer.byteLength(joined, 'utf8') > maxBytes) {
+    // Hard-truncate any remaining single oversized line to honour the budget.
+    while (Buffer.byteLength(joined, 'utf8') > targetBytes) {
       const buf = Buffer.from(joined, 'utf8');
-      joined = buf.subarray(0, Math.max(0, maxBytes - 1)).toString('utf8');
+      joined = buf.subarray(0, Math.max(0, targetBytes - 1)).toString('utf8');
       joined = joined.replace(/\uFFFD+$/, '');
     }
-    return `${joined}\n\n[Output truncated]`;
+    return `${joined}${marker}`;
   }
   return text;
 }
@@ -142,10 +146,32 @@ export function splitArgs(input: string): string[] {
     }
     current += ch;
   }
+  if (escape) {
+    throw new Error('Unterminated backslash escape');
+  }
+  if (inSingle || inDouble) {
+    throw new Error(`Unterminated ${inSingle ? 'single' : 'double'} quote`);
+  }
   if (current.length > 0) {
     tokens.push(current);
   }
   return tokens;
+}
+
+async function runCliIsolated(argv: string[]) {
+  const previousExitCode = process.exitCode;
+  process.exitCode = undefined;
+  try {
+    await runCli(argv);
+  } catch (error) {
+    process.exitCode = previousExitCode;
+    throw error;
+  }
+  const leaked = process.exitCode;
+  process.exitCode = previousExitCode;
+  if (leaked !== undefined && leaked !== 0) {
+    throw new Error(`repo-wiki CLI exited with status ${leaked}`);
+  }
 }
 
 export default function repoWikiExtension(pi: ExtensionAPI) {
@@ -160,7 +186,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     handler: async (args: string, ctx: ExtensionContext) => {
       const tokens = args.trim() ? splitArgs(args) : ['--help'];
       try {
-        await runCli(tokens);
+        await runCliIsolated(tokens);
         notify(ctx, 'repo-wiki command finished', 'info');
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
@@ -179,7 +205,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     parameters: repoWikiCommandSchema,
     async execute(_toolCallId, params: Static<typeof repoWikiCommandSchema>) {
       const tokens = params.args?.trim() ? splitArgs(params.args) : ['--help'];
-      await runCli(tokens);
+      await runCliIsolated(tokens);
       return { content: [{ type: 'text', text: 'repo-wiki CLI command finished' }], details: {} };
     },
   });
