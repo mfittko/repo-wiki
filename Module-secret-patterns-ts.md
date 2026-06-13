@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "06a68a1856f28bfd2083ba36b00bf83a0754e19c"
+source_commit: "9897e5b449323bf6db3eac895995c3e384690a41"
 page_state: "generated"
 source_paths: ["src/secret-patterns.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -21,8 +21,11 @@ This module provides functionality related to detecting secret-like content with
 
 ## Key symbols and entry points
 
-- **`SECRET_PATTERNS`**: A collection of patterns (likely regular expressions or similar constructs) used to identify secret-like content.
-- **`containsSecretLikeContent`**: A function that utilizes `SECRET_PATTERNS` to determine if a given input contains potential secrets.
+- `SECRET_PATTERNS`  
+  A collection of patterns (likely regular expressions or similar constructs) used to identify secret-like content.
+
+- `containsSecretLikeContent`  
+  A function that utilizes `SECRET_PATTERNS` to determine if a given input contains content resembling secrets.
 
 ## Dependencies and imports
 
@@ -35,7 +38,7 @@ This module provides functionality related to detecting secret-like content with
 ## Known gaps or open questions
 
 - The exact nature and structure of `SECRET_PATTERNS` are not detailed here.
-- There is no information about how `containsSecretLikeContent` processes input or its API signature.
+- There is no information on how `containsSecretLikeContent` processes input or what types of secrets it targets.
 - No test coverage or usage examples are documented.
 - The repository and commit information are unknown, limiting traceability.
 

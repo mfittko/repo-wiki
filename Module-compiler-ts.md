@@ -1,19 +1,19 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "06a68a1856f28bfd2083ba36b00bf83a0754e19c"
+source_commit: "9897e5b449323bf6db3eac895995c3e384690a41"
 page_state: "generated"
 source_paths: ["src/compiler.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "2024-06-05T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
 ---
 
-# Module: compiler.ts
+# Module `compiler.ts`
 
 ## Purpose
 
-The `compiler.ts` module is a core source component responsible for compiling and processing GitHub Wiki content. It provides the API surface and configuration mechanisms necessary to transform and validate wiki pages, particularly focusing on architectural decisions and documentation ingestion. The module supports runtime configuration via environment variables and exposes HTTP routes for managing wiki content, such as deleting architecture documentation pages.
+The `compiler.ts` module provides core functionality for compiling and managing the architecture of a source-grounded GitHub Wiki. It exposes key API surface elements related to the compilation process, configuration handling, and architectural decision computation. The module integrates with various components such as context assembly, data model signals, documentation ingestion, and validation to orchestrate the compilation workflow. It also supports runtime configuration via environment variables and exposes HTTP routes for managing wiki pages.
 
 ## Source file list
 
@@ -21,33 +21,32 @@ The `compiler.ts` module is a core source component responsible for compiling an
 
 ## Key symbols and entry points
 
-- **ArchDecision**: Represents architectural decision data structures or logic within the compilation process.
-- **compileWiki**: The primary function or method responsible for compiling the entire wiki content.
-- **computeArchDecision**: A function likely involved in computing or deriving architectural decisions from source data.
+- **ArchDecision**: Represents architectural decisions within the compilation process.
+- **compileWiki**: Main function responsible for compiling the wiki source into a structured output.
+- **computeArchDecision**: Function to compute or derive architectural decisions based on input data and context.
 
 ## Dependencies and imports
 
-The module imports several internal components to fulfill its responsibilities:
+The module imports and depends on the following internal modules:
 
 - `./context-assembler.js`
 - `./data-model-signals.js`
 - `./docs-ingestor.js`
 - `./docs-validation.js`
 - `./frontmatter.js`
-- Additional imports inferred from the excerpt (not explicitly listed in source cards but present in the source file): `./llm-provider.js`, `./page-ownership.js`, `./search.js`
 
-These dependencies suggest the module integrates context assembly, data modeling, documentation ingestion and validation, frontmatter parsing, and possibly language model provider integration and search capabilities.
+These dependencies provide supporting functionality for assembling context, managing data signals, ingesting and validating documentation, and handling frontmatter metadata.
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are listed for this module.
+No explicit test files or test-related documentation cards are currently associated with this module.
 
 ## Known gaps or open questions
 
-- The exact behavior and implementation details of the HTTP route `DELETE Architecture.md` are not fully described.
-- No documentation cards or detailed usage examples are available, limiting insight into the module's internal workflows.
-- The role and impact of the environment variable `LLMWIKI_COMPILER_MODE` on runtime behavior require further clarification.
-- Absence of related test coverage information leaves the testing status unclear.
+- No documentation cards or detailed usage examples are available, limiting insight into the module's internal logic and integration points.
+- The exact behavior and configuration options controlled by the environment variable `LLMWIKI_COMPILER_MODE` are not documented.
+- The HTTP route `DELETE Architecture.md` is mentioned but its full context and usage remain unclear.
+- Source repository and commit information are not provided, which limits traceability and versioning context.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

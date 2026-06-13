@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "06a68a1856f28bfd2083ba36b00bf83a0754e19c"
+source_commit: "9897e5b449323bf6db3eac895995c3e384690a41"
 page_state: "generated"
 source_paths: ["src/publisher.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-The `publisher.ts` module provides core functionality for publishing content to GitHub Wikis. It includes configuration and source code to manage publishing targets, policies for frontmatter handling, and utilities to rewrite internal wiki links. The module supports environment-variable-driven configuration to customize publishing behavior, making it suitable for automated or CI-driven wiki publishing workflows.
+The `publisher.ts` module provides functionality related to publishing content to GitHub Wikis. It includes configuration and source code to manage publishing targets, policies for frontmatter in wiki pages, and utilities to rewrite internal wiki links. The module supports environment-variable-driven configuration for Git remotes and user identity, facilitating automated or scripted wiki publishing workflows.
 
 ## Source file list
 
@@ -21,25 +21,25 @@ The `publisher.ts` module provides core functionality for publishing content to 
 
 ## Key symbols and entry points
 
-- **defaultFrontmatterPolicyForTarget**: Defines default policies for handling frontmatter metadata based on the publishing target.
+- **defaultFrontmatterPolicyForTarget**: Defines default policies for frontmatter metadata depending on the publishing target.
 - **PUBLISH_TARGETS**: A collection or enumeration of supported publishing targets.
 - **PublishTarget**: Type or interface representing a publishing target.
-- **publishWiki**: Main function to execute the publishing process of a wiki, likely the primary entry point.
+- **publishWiki**: Main function to publish content to a GitHub Wiki repository.
 - **PublishWikiOptions**: Options interface/type for configuring the `publishWiki` function.
-- **rewriteInternalWikiLinks**: Utility function to adjust internal wiki links during publishing.
+- **rewriteInternalWikiLinks**: Utility function to adjust internal wiki links within content, ensuring correct linking after publishing.
 
 ## Dependencies and imports
 
 - Local modules:
-  - `./frontmatter.js` — likely for frontmatter metadata handling.
+  - `./frontmatter.js` — likely handles frontmatter metadata processing.
   - `./utils/fs.js` — filesystem utilities.
   - `./utils/git.js` — Git-related utilities.
 - External modules:
   - `https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs` — Mermaid diagram rendering library.
 - Node.js built-in modules:
-  - `fs`
-  - `os`
-  - `path`
+  - `fs` — filesystem operations.
+  - `os` — operating system utilities.
+  - `path` — path utilities.
 
 ## Related tests
 
@@ -47,10 +47,10 @@ No explicit test files or test-related documentation cards are listed for this m
 
 ## Known gaps or open questions
 
-- No documentation cards or detailed usage examples are currently available.
-- The exact behavior and configuration options of `publishWiki` and related policies are not documented here.
-- The environment variables `GITHUB_WIKI_REMOTE`, `LLMWIKI_GIT_USER_EMAIL`, `LLMWIKI_GIT_USER_NAME`, and `LLMWIKI_PUBLISH_REMOTE` influence runtime behavior but their detailed usage and defaults are not described.
-- No information on error handling or logging mechanisms within the publishing process.
+- No documentation cards or detailed usage examples are available.
+- The exact behavior and configuration details of `defaultFrontmatterPolicyForTarget` and `PUBLISH_TARGETS` are not described.
+- The interaction with environment variables such as `GITHUB_WIKI_REMOTE`, `LLMWIKI_GIT_USER_EMAIL`, `LLMWIKI_GIT_USER_NAME`, and `LLMWIKI_PUBLISH_REMOTE` is indicated but not elaborated.
+- No information on error handling or edge cases during publishing is provided.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

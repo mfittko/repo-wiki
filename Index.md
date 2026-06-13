@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "06a68a1856f28bfd2083ba36b00bf83a0754e19c"
-compiled_at: "2026-06-13T10:30:35.747Z"
+source_commit: "9897e5b449323bf6db3eac895995c3e384690a41"
+compiled_at: "2026-06-13T10:32:33.377Z"
 kind: "index"
 confidence: "medium"
 page_state: "generated"
