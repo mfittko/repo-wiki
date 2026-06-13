@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "a33ab6cfdfb7a298ba26e23ddb762c00190f3ef2"
+source_commit: "1defe58385a113a4dfca789e393deecf0d6135a8"
 page_state: "generated"
 source_paths: ["src/llm-provider.ts"]
 compiled_at: "2024-06-15T00:00:00Z"
@@ -21,45 +21,33 @@ This module provides core functionality for configuring and interacting with lar
 
 ## Key symbols and entry points
 
-- **ArchitecturePageBudget**: Likely a type or interface related to budgeting token usage per page or request.
-- **buildRequest**: A function to construct LLM request payloads based on given options.
-- **BuildRequestOptions**: Interface/type defining options for building requests.
-- **createProvider**: Factory function to instantiate an LLM provider.
-- **createProviderFromResolvedConfig**: Function to create a provider from a fully resolved configuration.
+- **ArchitecturePageBudget**: Likely a type or interface related to budgeting token usage or resource allocation per page in the LLM architecture.
+- **buildRequest**: A function to construct requests to the LLM provider, possibly taking options to customize the request.
+- **BuildRequestOptions**: Type or interface defining options for building LLM requests.
+- **createProvider**: Factory function to instantiate an LLM provider based on configuration.
+- **createProviderFromResolvedConfig**: Similar to `createProvider`, but uses a fully resolved configuration object.
 - **LLM_DEFAULTS**: Default configuration values for LLM providers.
-- **LLMProvider**: Main class or interface representing an LLM provider.
-- **LLMProviderConfig**: Configuration interface/type for LLM providers.
-- **LLMProviderError**: Custom error class for handling LLM provider related errors.
-- **LLMRequest**: Type or interface representing a request to an LLM.
+- **LLMProvider**: Core class or interface representing an LLM provider.
+- **LLMProviderConfig**: Configuration interface or type for setting up an LLM provider.
+- **LLMProviderError**: Custom error class for handling LLM provider-related errors.
+- **LLMRequest**: Type or interface representing a request sent to an LLM provider.
 
 ## Dependencies and imports
 
-- Imports from local module: `./prompts.js`
-- Node.js built-in module: `node:fs`
-
-## Environment variables
-
-The module supports configuration through the following environment variables, enabling dynamic adjustment of LLM behavior and integration parameters:
-
-- `LLMWIKI_COMPILER_MODE`
-- `LLMWIKI_LLM_API_KEY`
-- `LLMWIKI_LLM_ARCHITECTURE_MAX_OUTPUT_TOKENS`
-- `LLMWIKI_LLM_ARCHITECTURE_MODEL`
-- `LLMWIKI_LLM_ARCHITECTURE_REASONING_EFFORT`
-- `LLMWIKI_LLM_ARCHITECTURE_TIMEOUT_MS`
-- `LLMWIKI_LLM_BASE_URL`
-- `LLMWIKI_LLM_MAX_OUTPUT_TOKENS`
+- Imports from local module: `./prompts.js` — likely provides prompt templates or utilities for constructing LLM prompts.
+- Node.js built-in module: `node:fs` — used for filesystem operations, possibly for reading configuration files or caching.
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are listed for this module at this time.
+No explicit test files or test-related documentation cards are listed for this module. Testing status is unknown.
 
 ## Known gaps or open questions
 
-- There is no documentation or test coverage information available, which limits understanding of usage patterns and robustness.
-- The exact behavior and implementation details of key functions and classes (e.g., `createProvider`, `buildRequest`) are not described here.
-- The interaction model with environment variables and how they influence runtime behavior could be further clarified.
+- No documentation cards or detailed usage examples are available, limiting insight into the exact usage patterns or integration details.
+- The exact nature and structure of environment variables (e.g., `LLMWIKI_COMPILER_MODE`, `LLMWIKI_LLM_API_KEY`, etc.) and how they influence runtime behavior are not fully documented here.
+- The relationship between `createProvider` and `createProviderFromResolvedConfig` and their intended usage contexts could benefit from further clarification.
 - No information on error handling strategies beyond the presence of `LLMProviderError`.
+- Absence of related tests or test coverage information leaves the robustness of the module unverified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

@@ -1,19 +1,19 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "a33ab6cfdfb7a298ba26e23ddb762c00190f3ef2"
+source_commit: "1defe58385a113a4dfca789e393deecf0d6135a8"
 page_state: "generated"
 source_paths: ["src/wiki-graph.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "2024-06-05T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
 ---
 
-# Module wiki-graph.ts
+# Module `wiki-graph.ts`
 
 ## Purpose
 
-This module provides functionality for constructing and querying a graph representation of wiki pages. It includes utilities to build an index of wiki graph nodes and edges, retrieve nodes by various criteria, and explore relationships such as adjacency and edge types. The module is implemented in TypeScript and serves as a core source component for managing wiki graph data structures.
+This module provides functionality to build and query a graph representation of wiki pages. It includes utilities to index wiki pages, retrieve nodes and edges by various criteria, and navigate relationships between pages. The module is implemented in TypeScript and serves as a core source component for managing wiki graph data structures.
 
 ## Source file list
 
@@ -22,31 +22,31 @@ This module provides functionality for constructing and querying a graph represe
 ## Key symbols and entry points
 
 - **AffectedWikiGraphPageSelection** — Likely a type or interface related to selecting affected pages within the wiki graph.
-- **buildWikiGraphIndex** — Function to build an index of the wiki graph, presumably creating nodes and edges from source data.
+- **buildWikiGraphIndex** — Function to construct an index of the wiki graph, presumably from source data.
 - **getAdjacentNodes** — Retrieves nodes adjacent to a given node in the graph.
-- **getEdgesByType** — Returns edges filtered by their type.
-- **getIncomingEdges** — Retrieves edges directed into a specified node.
-- **getManagedPagePaths** — Returns paths of pages managed within the wiki graph.
-- **getNodeById** — Fetches a node by its unique identifier.
+- **getEdgesByType** — Fetches edges filtered by their type.
+- **getIncomingEdges** — Returns edges directed into a specified node.
+- **getManagedPagePaths** — Retrieves paths of pages managed within the graph.
+- **getNodeById** — Finds a node by its unique identifier.
 - **getNodesByKind** — Retrieves nodes filtered by their kind or category.
-- **getNodesByPath** — Finds nodes based on their associated file or resource path.
-- **getOutgoingEdges** — Retrieves edges directed outward from a specified node.
+- **getNodesByPath** — Finds nodes based on their associated path.
+- **getOutgoingEdges** — Returns edges directed outward from a specified node.
 
 ## Dependencies and imports
 
-- Imports from `./utils/fs.js` — likely utilities for filesystem operations.
-- Imports from `node:path` — Node.js path module for handling file paths.
+- Imports from `./utils/fs.js` — likely utilities related to filesystem operations.
+- Imports from `node:path` — Node.js built-in module for handling and transforming file paths.
 
 ## Related tests
 
-No documentation or source cards indicate the presence of related tests for this module.
+No documentation or source cards indicate the presence of related test files or test cases for this module.
 
 ## Known gaps or open questions
 
-- No explicit documentation or test coverage is provided.
-- The exact structure and semantics of the graph nodes and edges are not detailed.
-- The role and definition of `AffectedWikiGraphPageSelection` are not fully clear.
-- The module's integration context within the larger system is not described.
+- The exact nature and structure of `AffectedWikiGraphPageSelection` is not detailed.
+- No explicit documentation or comments are available to clarify the internal workings or usage examples.
+- Absence of related test information leaves coverage and reliability unverified.
+- The repository remote URL and commit SHA are unknown, limiting traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
