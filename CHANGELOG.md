@@ -7,14 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- Publish as @mfittko/repo-wiki.
-- Update build, CI, and release automation to support the change.
-
 ## [0.2.1] - 2026-06-13
 
 ### Changed
 - Publish package as `@mfittko/repo-wiki` to resolve npm name-squatting conflict with `repowiki`
+- Publish as @mfittko/repo-wiki.
+- Update build, CI, and release automation to support the change.
 
 ## [0.2.0] - 2026-06-13
 
