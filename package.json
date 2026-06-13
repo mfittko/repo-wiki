@@ -1,6 +1,6 @@
 {
   "name": "@mfittko/repo-wiki",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Node.js CLI and library for compiling any Git repository and its validated documentation into a GitHub Wiki knowledge base.",
   "type": "module",
   "private": false,
@@ -68,6 +68,10 @@
     "github-actions"
   ],
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mfittko/repo-wiki"
+  },
   "types": "./dist/src/index.d.ts",
   "dependencies": {
     "typescript": "^5.8.3"
