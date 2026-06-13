@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `package.json` exports `@mfittko/repo-wiki/extension` and includes the extension build artifacts and `skills/` in the npm tarball.
   - Smoke test verifies the extension factory registers commands/tools and the install command writes the expected files.
   - README documents the install path and registered commands/tools.
+- `extension install` now refuses to overwrite an existing shim or skill unless `--force` is supplied, preventing accidental clobbering of user content.
 
 ## [0.2.4] - 2026-06-13
 

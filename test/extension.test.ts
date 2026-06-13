@@ -230,6 +230,30 @@ test('extension install supports global scope', async () => {
   }
 });
 
+test('extension install refuses to overwrite existing files without --force', async () => {
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-ext-refuse-'));
+  try {
+    await runExtensionInstall({ piDir: tmpDir });
+
+    // Second run without --force must throw EXT_INSTALL_COLLISION.
+    await assert.rejects(
+      () => runExtensionInstall({ piDir: tmpDir }),
+      (err: Error & { code?: string }) => err.code === 'EXT_INSTALL_COLLISION'
+    );
+
+    // The pre-existing shim must remain untouched.
+    const shim = await readFile(path.join(tmpDir, 'extensions', 'repo-wiki.ts'), 'utf8');
+    assert.ok(shim.includes('@mfittko/repo-wiki/extension'), 'shim should not have been clobbered');
+
+    // With --force, install succeeds and replaces both paths.
+    await runExtensionInstall({ piDir: tmpDir, force: true });
+    const shimAfter = await readFile(path.join(tmpDir, 'extensions', 'repo-wiki.ts'), 'utf8');
+    assert.ok(shimAfter.includes('@mfittko/repo-wiki/extension'));
+  } finally {
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
 test('repo_wiki_lint tool throws when wiki has lint errors', async () => {
   const { pi, tools } = createCapturingExtensionApi();
   repoWikiExtension(pi as unknown as import('@earendil-works/pi-coding-agent').ExtensionAPI);

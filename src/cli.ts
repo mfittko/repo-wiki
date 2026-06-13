@@ -294,7 +294,8 @@ export async function runCli(argv: string[]) {
       await runExtensionInstall({
         global: Boolean(options.global),
         project: Boolean(options.project),
-        piDir: getStringOption(options, 'pi-dir')
+        piDir: getStringOption(options, 'pi-dir'),
+        force: Boolean(options.force)
       });
       return;
     }

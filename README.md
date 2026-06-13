@@ -73,6 +73,12 @@ To install into the global pi agent directory instead of the current project:
 npx @mfittko/repo-wiki extension install --global
 ```
 
+If a previous shim or skill already exists at the target location, the installer refuses to overwrite it. Re-run with `--force` to replace:
+
+```bash
+npx @mfittko/repo-wiki extension install --force
+```
+
 Inside `pi`, run `/reload` to load the extension. You can then use the slash command and tools:
 
 ```
