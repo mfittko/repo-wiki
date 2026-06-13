@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-13
+
 ### Added
 - Add GitHub Actions npm publish workflow and configure package for public npm release
 - **Scanner analysis foundation** — new `src/extractors.ts` module with `extractImports`, `extractSymbols`, `extractExportedSymbols`, `extractEnvironmentVariables`, `extractRouteSurfaces`, and `detectRuntimeHints`; framework detection covers Express, Fastify, Hono, and Next.js route-handler files
