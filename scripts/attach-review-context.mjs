@@ -113,9 +113,9 @@ async function main() {
   const existingId = await findExistingCommentId(repository, prNumber);
 
   const counts = {
-    changedFiles: bundle.changed?.files?.length ?? 0,
-    adjacentFiles: bundle.adjacent?.files?.length ?? 0,
-    wikiPages: bundle.wiki?.pages?.length ?? 0
+    changedFiles: bundle.changedFiles.length,
+    adjacentFiles: bundle.adjacentFiles.length,
+    wikiPages: bundle.relatedWikiPages.length
   };
   const summaryBody = [
     MARKER,

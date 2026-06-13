@@ -378,6 +378,18 @@ test('CLI review-context handles --format both without --out by falling back to 
   }
 });
 
+test('CLI review-context respects --adjacency 0 (disables adjacent context)', async () => {
+  const repo = await makeReviewFixture();
+  try {
+    const stdout = await runReviewContextCli(['review-context', 'main..feature', '--repo', repo, '--adjacency', '0']);
+    assert.match(stdout, /## Changed lines/);
+    // With depth 0 there must be no Adjacent context section content (no "imported by" headings).
+    assert.doesNotMatch(stdout, /imported by/i);
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
+});
+
 test('writeReviewContextBundle writes markdown and JSON files', async () => {
   const repo = await makeReviewFixture();
   try {

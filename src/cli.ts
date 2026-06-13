@@ -319,7 +319,7 @@ export async function runCli(argv: string[]) {
         wikiDir: getStringOption(options, 'wiki-dir') || getStringOption(options, 'wiki'),
         graphPath: getStringOption(options, 'graph'),
         scanDir: getStringOption(options, 'scan'),
-        adjacencyDepth: parsePositiveInt(getStringOption(options, 'adjacency')) || 1
+        adjacencyDepth: parseNonNegativeInt(getStringOption(options, 'adjacency')) ?? 1
       });
       const outPath = getStringOption(options, 'out');
       if (outPath) {
@@ -495,4 +495,12 @@ function parsePositiveInt(value: string | undefined) {
   }
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseNonNegativeInt(value: string | undefined) {
+  if (!value) {
+    return null;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
