@@ -7,10 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- Release 0.2.5 with pi extension.
-- Update build, CI, and release automation to support the change.
-
 ## [0.2.5] - 2026-06-13
 
 ### Added
@@ -25,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Update build, CI, and release automation to support the change.
 - Expand automated test coverage for the updated behavior.
+
+### Changed
+- Release 0.2.5 with pi extension.
+- Update build, CI, and release automation to support the change.
 
 ## [0.2.4] - 2026-06-13
 
