@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "104e3c23e782dbd282df6b81c63dfae18768b23f"
+source_commit: "06a68a1856f28bfd2083ba36b00bf83a0754e19c"
 page_state: "generated"
 source_paths: ["src/index.ts"]
 compiled_at: "2024-06-05T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module serves as the central entry point for the source code located in `src/index.ts`. It consolidates and exposes key functions, types, and utilities related to assembling page contexts, building prompts, and applying policies within the system. The module orchestrates various aspects of prompt construction and context assembly, likely supporting a larger framework or application that involves document processing, linting, and CLI interactions.
+This module serves as the main entry point for the source code located in `src/index.ts`. It consolidates and exposes core functionalities related to page context assembly, prompt building, and request construction. The module provides a set of utilities and types that facilitate the processing and generation of content, likely within a documentation or content generation system. It integrates multiple internal components by importing from various related modules such as CLI handling, compilation, configuration, context assembly, and linting.
 
 ## Source file list
 
@@ -21,7 +21,7 @@ This module serves as the central entry point for the source code located in `sr
 
 ## Key symbols and entry points
 
-The module exports or defines the following important symbols:
+The module exports and defines the following key symbols:
 
 - `applyFrontmatterPolicy`
 - `assembleAllPageContexts`
@@ -34,37 +34,33 @@ The module exports or defines the following important symbols:
 - `buildRequest`
 - `BuildRequestOptions` (type/interface)
 
-These symbols suggest functionality around:
-
-- Applying policies to frontmatter metadata.
-- Assembling page contexts individually or collectively.
-- Building various types of prompts (foundation, module-specific, cross-cutting).
-- Constructing requests with configurable options.
+These symbols represent the primary API surface of the module, focusing on assembling page contexts and building various types of prompts and requests.
 
 ## Dependencies and imports
 
-The module imports from several internal modules, indicating a modular architecture:
+The module imports from the following internal modules:
 
 - `./cli.js`
 - `./compiler.js`
 - `./config.js`
 - `./context-assembler.js`
 - `./docs-linter.js`
-- Additionally, the excerpt mentions imports from `./frontmatter.js`, `./init.js`, and `./linter.js` though these are not explicitly listed in the import summary.
+- `./frontmatter.js`
+- `./init.js`
+- `./linter.js`
 
-These dependencies suggest integration with command-line interface utilities, compilation processes, configuration management, context assembly logic, and documentation linting.
+These dependencies indicate that the module interacts with command-line interface utilities, compilation logic, configuration management, context assembly mechanisms, documentation linting, frontmatter processing, initialization routines, and general linting functionality.
 
 ## Related tests
 
-No documentation or source cards indicate the presence of related test files or test suites for this module at this time.
+No explicit test files or test-related documentation cards are listed for this module. It is unclear if tests exist or are located elsewhere.
 
 ## Known gaps or open questions
 
+- The module wiki does not include any documentation cards or detailed descriptions beyond symbol and import listings.
 - The exact behavior and implementation details of the exported functions and types are not described here.
-- There is no information on how this module interacts with other parts of the system beyond its imports.
-- No test coverage or examples are currently documented.
-- The repository remote URL and commit SHA are unknown, limiting traceability.
-- The role of some imported modules (e.g., `./init.js`, `./linter.js`) is unclear due to lack of explicit mention in the source cards.
+- There is no information about the module's integration with other parts of the system or its runtime environment.
+- Test coverage and testing strategies for this module are not documented.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

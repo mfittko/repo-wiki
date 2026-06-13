@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "104e3c23e782dbd282df6b81c63dfae18768b23f"
+source_commit: "06a68a1856f28bfd2083ba36b00bf83a0754e19c"
 page_state: "generated"
 source_paths: ["src/wiki-query.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to querying and formatting information from a wiki graph structure. It includes utilities to build explanations and answers based on wiki data, find and format graph paths, and define types representing wiki evidence and explanations. The module is implemented in TypeScript and serves as a source component for handling wiki query logic.
+This module provides functionality for constructing, formatting, and querying wiki-related data structures and explanations. It includes utilities to build and format wiki explanations and query answers, as well as to find and handle graph paths related to wiki content. The module is implemented in TypeScript and serves as a source component for managing wiki query logic.
 
 ## Source file list
 
@@ -21,35 +21,39 @@ This module provides functionality related to querying and formatting informatio
 
 ## Key symbols and entry points
 
-- **buildWikiExplanation**: Constructs a detailed explanation from wiki data.
-- **buildWikiQueryAnswer**: Builds an answer to a query using wiki information.
-- **defaultGraphPathForWiki**: Provides a default graph path configuration for wiki queries.
-- **findWikiGraphPath**: Finds a path within the wiki graph relevant to a query.
-- **formatWikiExplanation**: Formats a wiki explanation for presentation or output.
-- **formatWikiGraphPath**: Formats the graph path data for readability.
-- **formatWikiQueryAnswer**: Formats the answer generated from a wiki query.
-- **WikiEvidence**: Type representing evidence extracted from the wiki.
-- **WikiExplanation**: Type representing an explanation constructed from wiki data.
-- **WikiGraphPathResult**: Type representing the result of a graph path search in the wiki.
+- **Functions:**
+  - `buildWikiExplanation` — Constructs a wiki explanation object or structure.
+  - `buildWikiQueryAnswer` — Builds an answer object for a wiki query.
+  - `defaultGraphPathForWiki` — Provides a default graph path used in wiki queries.
+  - `findWikiGraphPath` — Finds a graph path relevant to a wiki query.
+  - `formatWikiExplanation` — Formats a wiki explanation for output or display.
+  - `formatWikiGraphPath` — Formats a wiki graph path for presentation.
+  - `formatWikiQueryAnswer` — Formats the answer to a wiki query.
+
+- **Types / Interfaces:**
+  - `WikiEvidence` — Represents evidence or supporting data for wiki content.
+  - `WikiExplanation` — Represents an explanation structure for wiki queries.
+  - `WikiGraphPathResult` — Represents the result of a graph path search in the wiki context.
 
 ## Dependencies and imports
 
 - Internal modules:
-  - `./search.js`
-  - `./wiki-graph.js`
+  - `./search.js` — Likely provides search-related utilities used in wiki queries.
+  - `./wiki-graph.js` — Provides graph-related functionality for wiki data.
+
 - Node.js built-in modules:
-  - `node:fs`
-  - `node:path`
+  - `node:fs` — File system operations, possibly for reading or writing wiki data.
+  - `node:path` — Path utilities, likely for handling file or graph path manipulations.
 
 ## Related tests
 
-No documentation or test cards were found associated with this module at this time.
+No explicit test files or test-related documentation cards are listed for this module.
 
 ## Known gaps or open questions
 
-- There are no documented tests or usage examples included in the source cards.
-- The module's integration with other parts of the system is not detailed here.
-- Further documentation on the expected input/output formats and error handling would be beneficial.
+- There is no documentation or test coverage explicitly associated with this module, which may limit understanding of edge cases or usage scenarios.
+- The exact nature and structure of the wiki graph and how it integrates with the rest of the system are not detailed here.
+- The source repository and commit information are unknown, which may affect traceability and versioning context.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

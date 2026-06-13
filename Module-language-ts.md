@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "104e3c23e782dbd282df6b81c63dfae18768b23f"
+source_commit: "06a68a1856f28bfd2083ba36b00bf83a0754e19c"
 page_state: "generated"
 source_paths: ["src/language.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -22,7 +22,7 @@ This module provides functionality related to language detection and classificat
 ## Key symbols and entry points
 
 - `classifyPath`: A function that classifies a file path, likely to determine its type or category.
-- `detectLanguage`: A function that detects the programming language or content language of a given input, presumably based on the file path or content.
+- `detectLanguage`: A function that detects the programming language or content language from a given input, presumably a file path or content.
 
 ## Dependencies and imports
 
@@ -35,9 +35,9 @@ This module provides functionality related to language detection and classificat
 ## Known gaps or open questions
 
 - The exact implementation details and behavior of `classifyPath` and `detectLanguage` are not described here.
-- There is no information about test coverage or usage examples.
+- There is no information about error handling, supported languages, or classification criteria.
+- No test coverage or usage examples are documented.
 - The source repository and commit SHA are unknown, limiting traceability.
-- No documentation cards or additional metadata are available to provide further context.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

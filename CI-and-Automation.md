@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "104e3c23e782dbd282df6b81c63dfae18768b23f"
+source_commit: "06a68a1856f28bfd2083ba36b00bf83a0754e19c"
 page_state: "generated"
 source_paths: [".github/ISSUE_TEMPLATE/config.yml",".github/ISSUE_TEMPLATE/epic.yml",".github/ISSUE_TEMPLATE/task.yml",".github/agents/coordinator.agent.md",".github/agents/developer.agent.md",".github/agents/docs.agent.md",".github/agents/fixer.agent.md",".github/agents/quality.agent.md",".github/agents/review.agent.md",".github/copilot-review-instructions.md",".github/pull_request_template.md",".github/skills/keep-a-changelog/SKILL.md",".github/skills/repo-wiki-navigation/SKILL.md",".github/workflows/changelog-on-merge.yml",".github/workflows/changelog-release.yml",".github/workflows/ci.yml",".github/workflows/npm-publish.yml",".github/workflows/wiki.yml"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,84 +13,76 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides a comprehensive set of continuous integration (CI) workflows, automation scripts, issue and pull request templates, and documentation agents designed to streamline and standardize development, review, and release processes within a GitHub repository. It includes configuration for automated changelog generation, npm package publishing, wiki compilation, and quality assurance workflows. The module also defines roles and responsibilities for various automation agents (e.g., coordinator, developer, fixer, quality, review, docs) to facilitate collaboration and maintain high code and documentation standards.
+This module provides a comprehensive framework for continuous integration (CI), automation workflows, and issue management within the repository. It includes configuration templates for issue tracking, pull request management, and automated workflows that support changelog generation, publishing, and wiki compilation. The module also documents various specialized agents that coordinate and automate tasks such as development, documentation, code fixing, quality assurance, and review processes. Together, these components streamline project maintenance, enforce engineering principles, and enhance collaboration through automation and structured workflows.
 
-Key goals include:
+## Source file list
 
-- Automating CI pipelines to ensure code quality and smooth releases.
-- Providing structured issue and pull request templates to improve project management.
-- Defining agent roles to automate and document review, fixing, and coordination tasks.
-- Supporting changelog maintenance and wiki content generation through automated workflows.
-- Enabling environment-variable-driven configuration for secure and flexible CI operations.
+- `.github/ISSUE_TEMPLATE/config.yml`  
+- `.github/ISSUE_TEMPLATE/epic.yml`  
+- `.github/ISSUE_TEMPLATE/task.yml`  
+- `.github/agents/coordinator.agent.md`  
+- `.github/agents/developer.agent.md`  
+- `.github/agents/docs.agent.md`  
+- `.github/agents/fixer.agent.md`  
+- `.github/agents/quality.agent.md`  
+- `.github/agents/review.agent.md`  
+- `.github/copilot-review-instructions.md`  
+- `.github/pull_request_template.md`  
+- `.github/skills/keep-a-changelog/SKILL.md`  
+- `.github/skills/repo-wiki-navigation/SKILL.md`  
+- `.github/workflows/changelog-on-merge.yml`  
+- `.github/workflows/changelog-release.yml`  
+- `.github/workflows/ci.yml`  
+- `.github/workflows/npm-publish.yml`  
+- `.github/workflows/wiki.yml`  
 
-## Source File List
+## Key symbols and entry points
 
-- `.github/ISSUE_TEMPLATE/config.yml`
-- `.github/ISSUE_TEMPLATE/epic.yml`
-- `.github/ISSUE_TEMPLATE/task.yml`
-- `.github/agents/coordinator.agent.md`
-- `.github/agents/developer.agent.md`
-- `.github/agents/docs.agent.md`
-- `.github/agents/fixer.agent.md`
-- `.github/agents/quality.agent.md`
-- `.github/agents/review.agent.md`
-- `.github/copilot-review-instructions.md`
-- `.github/pull_request_template.md`
-- `.github/skills/keep-a-changelog/SKILL.md`
-- `.github/skills/repo-wiki-navigation/SKILL.md`
-- `.github/workflows/changelog-on-merge.yml`
-- `.github/workflows/changelog-release.yml`
-- `.github/workflows/ci.yml`
-- `.github/workflows/npm-publish.yml`
-- `.github/workflows/wiki.yml`
+- **Issue Templates**:  
+  - `config.yml`, `epic.yml`, `task.yml` define structured issue templates to standardize issue reporting and tracking.
 
-## Key Symbols and Entry Points
+- **Agents Documentation**:  
+  - `coordinator.agent.md`: Describes the coordinator agent responsible for managing workflow cycles and constraints.  
+  - `developer.agent.md`: Details the developer agent’s purpose and engineering principles.  
+  - `docs.agent.md`: Covers the documentation agent’s role and output expectations.  
+  - `fixer.agent.md`: Explains the fixer agent’s responsibilities and review workflow.  
+  - `quality.agent.md`: Defines the quality agent’s purpose and output.  
+  - `review.agent.md`: Outlines the review agent’s scope and inputs.
 
-- **CI Workflows:**
-  - `changelog-on-merge.yml`: Automates changelog updates on merges, requires `GH_TOKEN`.
-  - `changelog-release.yml`: Manages changelog generation during releases.
-  - `ci.yml`: Core continuous integration workflow running tests and checks.
-  - `npm-publish.yml`: Automates npm package publishing, requires `NODE_AUTH_TOKEN`.
-  - `wiki.yml`: Automates wiki compilation and publishing, configurable via `LLMWIKI_COMPILER_MODE` and `LLMWIKI_PUBLISH_REMOTE`.
+- **Pull Request and Review Guidance**:  
+  - `copilot-review-instructions.md`: Provides instructions for Copilot-assisted pull request reviews.  
+  - `pull_request_template.md`: Template for pull request submissions including change summary and acceptance criteria.
 
-- **Issue Templates:**
-  - `config.yml`, `epic.yml`, `task.yml`: Define structured issue templates for consistent issue reporting.
+- **Skills Documentation**:  
+  - `keep-a-changelog/SKILL.md`: Guidance on maintaining changelogs.  
+  - `repo-wiki-navigation/SKILL.md`: Instructions for navigating the repository wiki.
 
-- **Agents Documentation:**
-  - `coordinator.agent.md`: Defines the coordinator agent’s workflow and responsibilities.
-  - `developer.agent.md`: Describes developer agent expectations and principles.
-  - `docs.agent.md`: Details the documentation agent’s purpose and output.
-  - `fixer.agent.md`: Explains fixer agent’s role and review workflow.
-  - `quality.agent.md`: Outlines quality agent’s responsibilities and output.
-  - `review.agent.md`: Covers review agent’s purpose and review scope.
+- **CI Workflows**:  
+  - `changelog-on-merge.yml`: Automates changelog updates on merges, requires `GH_TOKEN`.  
+  - `changelog-release.yml`: Manages changelog generation during releases.  
+  - `ci.yml`: Core continuous integration workflow running background tasks.  
+  - `npm-publish.yml`: Automates npm package publishing.  
+  - `wiki.yml`: Automates wiki compilation and publishing, uses environment variables `LLMWIKI_COMPILER_MODE` and `LLMWIKI_PUBLISH_REMOTE`.
 
-- **Additional Docs:**
-  - `copilot-review-instructions.md`: Guidance for Copilot-assisted pull request reviews.
-  - `pull_request_template.md`: Template for pull request submissions.
-  - Skills documentation for changelog maintenance and wiki navigation.
+## Dependencies and imports
 
-## Dependencies and Imports
+- This module primarily consists of YAML and Markdown files for configuration and documentation; it does not explicitly import external code modules.
+- Environment variables used in workflows include:  
+  - `GH_TOKEN` for authentication in changelog updates.  
+  - `LLMWIKI_COMPILER_MODE` and `LLMWIKI_PUBLISH_REMOTE` for wiki compilation and publishing control.
 
-- No explicit code imports; the module relies on GitHub Actions environment and tokens:
-  - `GH_TOKEN` for changelog automation.
-  - `NODE_AUTH_TOKEN` for npm publishing.
-  - `LLMWIKI_COMPILER_MODE` and `LLMWIKI_PUBLISH_REMOTE` for wiki workflows.
+## Related tests
 
-- The workflows and agents depend on GitHub Actions runners and standard GitHub repository features.
+- No explicit test files or test workflows are included in this module.
+- Testing of CI workflows and automation is likely integrated into the broader repository CI pipeline but is not detailed here.
 
-## Related Tests
+## Known gaps or open questions
 
-- No explicit test files are included in this module.
-- CI workflows likely include automated tests and checks as part of their execution (`ci.yml`).
-- Quality and review agents imply integration with code quality and review processes, but no direct test artifacts are present.
-
-## Known Gaps or Open Questions
-
-- The documentation agent files and agent roles are marked as unvalidated; further validation and refinement may be needed.
-- No direct linkage to test suites or coverage reports is provided.
-- The exact implementation details of the agents’ automation logic are not included, only their documentation.
-- Source repository and commit SHA are unknown, limiting traceability.
-- Environment variable usage is documented but the setup and secrets management are not detailed.
+- The documentation files are marked as unvalidated, indicating that some content may require review or updates for accuracy and completeness.
+- The source repository URL and commit SHA are unknown, limiting traceability.
+- No explicit test coverage or validation workflows are documented within this module.
+- The exact runtime environment and dependencies for the agents and workflows are not fully detailed.
+- Further integration details between agents and workflows could clarify operational flow.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
