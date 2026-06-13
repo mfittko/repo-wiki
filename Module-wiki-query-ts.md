@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "a81b22c39c9e23853e62bf5ce7ade491eda4c723"
+source_commit: "104e3c23e782dbd282df6b81c63dfae18768b23f"
 page_state: "generated"
 source_paths: ["src/wiki-query.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -47,9 +47,9 @@ No documentation or test cards were found associated with this module at this ti
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or test coverage information available for this module.
-- The exact behavior and usage patterns of the exported functions and types would benefit from example usage or further documentation.
-- The integration details with the imported modules (`search.js` and `wiki-graph.js`) are not described here.
+- There are no documented tests or usage examples included in the source cards.
+- The module's integration with other parts of the system is not detailed here.
+- Further documentation on the expected input/output formats and error handling would be beneficial.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

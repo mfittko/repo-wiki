@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "a81b22c39c9e23853e62bf5ce7ade491eda4c723"
+source_commit: "104e3c23e782dbd282df6b81c63dfae18768b23f"
 page_state: "generated"
 source_paths: ["src/frontmatter.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides utilities for handling frontmatter blocks within text files, typically used for metadata in markdown or similar documents. It includes functions and types to extract, parse, and apply policies to frontmatter content, supporting structured metadata processing. The module also defines policies and parsing strategies for frontmatter, including YAML-like structures.
+This module provides utilities and types for handling frontmatter blocks in text files, typically used for metadata in markdown or similar documents. It includes functions to extract, parse, and apply policies to frontmatter content, as well as utilities to strip frontmatter from text. The module supports working with frontmatter policies and parsing simple YAML-like objects.
 
 ## Source file list
 
@@ -21,15 +21,15 @@ This module provides utilities for handling frontmatter blocks within text files
 
 ## Key symbols and entry points
 
-- **applyFrontmatterPolicy**: Applies a specified frontmatter policy to a given frontmatter block.
-- **extractFrontmatterBlock**: Extracts the frontmatter block from a text input.
+- **applyFrontmatterPolicy**: Applies a given frontmatter policy to a frontmatter block.
+- **extractFrontmatterBlock**: Extracts the frontmatter block from a text source.
 - **FRONTMATTER_POLICIES**: A collection of predefined frontmatter policies.
 - **FrontmatterBlock**: Type representing a frontmatter block.
-- **FrontmatterPolicy**: Type defining the interface for frontmatter policies.
-- **isFrontmatterPolicy**: Type guard to check if an object is a FrontmatterPolicy.
+- **FrontmatterPolicy**: Type defining a frontmatter policy.
+- **isFrontmatterPolicy**: Type guard to check if an object is a frontmatter policy.
 - **parseFrontmatterPolicy**: Parses a frontmatter policy from input.
-- **parseSimpleYamlObject**: Parses a simple YAML object from frontmatter content.
-- **stripFrontmatter**: Removes the frontmatter block from a text input.
+- **parseSimpleYamlObject**: Parses a simple YAML-like object from text.
+- **stripFrontmatter**: Removes the frontmatter block from a text source.
 
 ## Dependencies and imports
 
@@ -37,14 +37,13 @@ This module provides utilities for handling frontmatter blocks within text files
 
 ## Related tests
 
-No documentation or test cards were found for this module. It is unknown if there are dedicated tests for the frontmatter utilities.
+- No documentation or test cards were found for this module, so related tests are currently unknown.
 
 ## Known gaps or open questions
 
-- The exact nature and implementation details of the imported `./secret-patterns.js` are not described here.
-- No explicit documentation or test coverage information is available.
-- The module's handling of complex YAML or other frontmatter formats beyond "simple" YAML objects is not detailed.
-- The policies available in `FRONTMATTER_POLICIES` and their specific behaviors are not enumerated in this summary.
+- The module does not have associated documentation or test cards, so the extent of test coverage and usage examples is unclear.
+- The exact nature and structure of `FRONTMATTER_POLICIES` and how policies are defined or applied are not detailed here.
+- The dependency on `./secret-patterns.js` is noted, but the role of this import in frontmatter processing is not described.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "a81b22c39c9e23853e62bf5ce7ade491eda4c723"
+source_commit: "104e3c23e782dbd282df6b81c63dfae18768b23f"
 page_state: "generated"
 source_paths: ["src/docs-ingestor.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality for ingesting and processing documentation related to CI workflow commands. It includes utilities to extract commands and their sources from documentation files, classify documented commands, and create structured documentation cards. The module is designed to support the validation and organization of CI command documentation by parsing source files and extracting relevant command metadata.
+This module provides functionality for ingesting and processing documentation related to CI workflow commands. It includes utilities to extract commands and their sources from documentation files, classify documented commands, and create structured documentation cards. The module is designed to support the validation and organization of CI command documentation by parsing source files and extracting relevant metadata.
 
 ## Source file list
 
@@ -25,29 +25,32 @@ This module provides functionality for ingesting and processing documentation re
 - **classifyDocumentedCommands**: Function to classify commands extracted from documentation.
 - **CommandClassification**: Enum or type defining classification categories for commands.
 - **CommandSource**: Represents the origin or source context of a command.
-- **CommandStatus**: Enum or type representing the status of a command.
-- **createDocumentationCard**: Function to create a structured documentation card for a command.
-- **DocumentedFilePath**: Type or interface representing file paths of documented sources.
-- **extractCiCommands**: Function to extract CI commands from source documentation.
+- **CommandStatus**: Enum or type indicating the status of a command.
+- **createDocumentationCard**: Function to create a structured documentation card for a command or file.
+- **DocumentedFilePath**: Type or interface representing a documented file path.
+- **extractCiCommands**: Function to extract CI commands from source or documentation files.
 - **extractCiCommandSources**: Function to extract sources of CI commands.
 - **extractDocumentationClaims**: Function to extract claims or assertions from documentation.
 
 ## Dependencies and imports
 
-- `./docs-validation.js`: Local module likely providing validation utilities for documentation.
-- `node:fs`: Node.js file system module for file operations.
-- `node:path`: Node.js path module for handling file paths.
+- Imports from local module:
+  - `./docs-validation.js` — likely used for validating documentation or extracted data.
+- Node.js built-in modules:
+  - `node:fs` — for file system operations.
+  - `node:path` — for path manipulations.
 
 ## Related tests
 
-No explicit test files or test-related symbols are indicated in the source cards or module metadata. Further investigation in the repository may be required to locate tests related to this module.
+No explicit test files or test-related symbols are indicated in the source cards or module metadata. It is unclear if tests exist for this module or if they are located elsewhere.
 
 ## Known gaps or open questions
 
-- The module does not list any associated documentation cards or test coverage in the provided metadata.
-- The exact nature and structure of some types (e.g., `CommandClassification`, `CommandStatus`) are not detailed here.
+- The module does not list any associated documentation cards or examples, which may limit understanding of usage patterns.
+- No direct references to test coverage or test files are provided, so the extent of testing is unknown.
+- The exact structure and usage of some types (e.g., `CommandClassification`, `CommandStatus`) are not detailed here.
 - The relationship between this module and `docs-validation.js` is implied but not fully described.
-- No information on error handling or edge cases in command extraction and classification is provided.
+- The source repository and commit SHA are unspecified, limiting traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

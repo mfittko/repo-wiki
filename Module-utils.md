@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "a81b22c39c9e23853e62bf5ce7ade491eda4c723"
+source_commit: "104e3c23e782dbd282df6b81c63dfae18768b23f"
 page_state: "generated"
 source_paths: ["src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -52,13 +52,16 @@ The `utils` module provides a collection of utility functions and types implemen
 
 - `src/utils/dotenv.ts` imports:
   - `./fs.js` (local filesystem utilities)
-  - Node.js built-in modules: `fs`, `path`
+  - `node:fs` (Node.js filesystem module)
+  - `node:path` (Node.js path module)
 
 - `src/utils/fs.ts` imports:
-  - Node.js built-in modules: `fs`, `path`
+  - `node:fs` (Node.js filesystem module)
+  - `node:path` (Node.js path module)
 
 - `src/utils/git.ts` imports:
-  - Node.js built-in modules: `child_process`, `util`
+  - `node:child_process` (Node.js child process module)
+  - `node:util` (Node.js utility module)
 
 - `src/utils/args.ts` has no imports.
 
@@ -69,9 +72,10 @@ No explicit test files or test-related documentation cards are present in the so
 ## Known gaps or open questions
 
 - There is no information about test coverage or test files related to this module.
-- The repository remote URL and commit SHA are unspecified, limiting traceability.
-- The exact runtime environment or usage context for these utilities is not detailed.
-- No documentation or usage examples are provided for the exported symbols.
+- The repository remote URL and commit SHA are unspecified.
+- The exact timestamp of compilation is not provided.
+- No documentation cards or usage examples are available to illustrate the usage of these utilities.
+- The module's integration or dependency on other modules in the project is not detailed.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
