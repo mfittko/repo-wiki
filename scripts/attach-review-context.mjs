@@ -50,10 +50,11 @@ async function resolveRepository(repoPath) {
   if (process.env.GITHUB_REPOSITORY) {
     return process.env.GITHUB_REPOSITORY;
   }
-  const { stdout } = await execFileAsync('git', ['config', '--get', 'remote.origin.url'], { cwd: repoPath });
-  const match = stdout.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
+  const { stdout: rawUrl } = await execFileAsync('git', ['config', '--get', 'remote.origin.url'], { cwd: repoPath });
+  const url = rawUrl.trim();
+  const match = url.match(/github\.com[:/]([^/]+)\/([^/]+?)(?:\.git)?$/);
   if (!match) {
-    throw new Error(`Could not determine GitHub repository from remote: ${stdout}`);
+    throw new Error(`Could not determine GitHub repository from remote: ${url}`);
   }
   return `${match[1]}/${match[2]}`;
 }

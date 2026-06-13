@@ -210,13 +210,23 @@ async function resolveDefaultRemoteRef(repoPath: string): Promise<string> {
   }
 }
 
-async function resolveRef(repoPath: string, ref: string): Promise<string> {
-  try {
-    const { stdout } = await runGit(['rev-parse', '--verify', ref], { cwd: repoPath });
-    return stdout;
-  } catch {
-    throw new Error(`Could not resolve git ref: ${ref}`);
+export async function resolveRef(repoPath: string, ref: string): Promise<string> {
+  // Resolve a ref to a commit SHA. On CI checkouts (actions/checkout for
+  // pull_request) the default branch is only present as `origin/<ref>`, so
+  // fall back to that form before giving up.
+  const candidates = [ref];
+  if (!ref.startsWith('origin/')) {
+    candidates.push(`origin/${ref}`);
   }
+  for (const candidate of candidates) {
+    try {
+      const { stdout } = await runGit(['rev-parse', '--verify', candidate], { cwd: repoPath });
+      return stdout;
+    } catch {
+      // try next candidate
+    }
+  }
+  throw new Error(`Could not resolve git ref: ${ref}`);
 }
 
 async function resolveMergeBase(repoPath: string, baseRef: string, headRef: string): Promise<string> {
@@ -811,16 +821,19 @@ export async function writeReviewContextBundle(
   outPath: string,
   format: 'md' | 'json' | 'both'
 ): Promise<string[]> {
+  // Treat outPath as a base path. Strip a trailing .md / .json so callers
+  // can pass either `bundle` (writes `bundle.md` / `bundle.json`) or
+  // `bundle.md` (writes `bundle.md` + `bundle.json`) without producing
+  // confusing suffixes like `bundle.md.json`.
+  const base = outPath.replace(/\.(md|json)$/i, '');
   const written: string[] = [];
   if (format === 'md' || format === 'both') {
-    const mdPath = format === 'both' && !outPath.endsWith('.md')
-      ? `${outPath}.md`
-      : outPath;
+    const mdPath = `${base}.md`;
     await writeText(mdPath, formatReviewContextMarkdown(bundle));
     written.push(mdPath);
   }
   if (format === 'json' || format === 'both') {
-    const jsonPath = outPath.endsWith('.json') ? outPath : `${outPath}.json`;
+    const jsonPath = `${base}.json`;
     await writeText(jsonPath, formatReviewContextBundle(bundle, 'json'));
     written.push(jsonPath);
   }

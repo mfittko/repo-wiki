@@ -913,3 +913,27 @@ test('CLI review-context rejects unknown --format value', async () => {
     await fs.rm(repo, { recursive: true, force: true });
   }
 });
+
+test('writeReviewContextBundle with format=both strips .md extension to avoid duplicate suffixes', async () => {
+  const repo = await makeReviewFixture();
+  try {
+    const bundle = await buildReviewContextBundle({ repoPath: repo, target: 'main..feature', adjacencyDepth: 0 });
+    const baseOut = path.join(repo, 'bundle.md');
+    const files = await writeReviewContextBundle(bundle, baseOut, 'both');
+    assert.deepEqual(files.sort(), [`${repo}/bundle.md`, `${repo}/bundle.json`].sort());
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
+});
+
+test('writeReviewContextBundle with format=json+outPath ending in .md still writes only JSON (no duplicate suffix)', async () => {
+  const repo = await makeReviewFixture();
+  try {
+    const bundle = await buildReviewContextBundle({ repoPath: repo, target: 'main..feature', adjacencyDepth: 0 });
+    const baseOut = path.join(repo, 'bundle.md');
+    const files = await writeReviewContextBundle(bundle, baseOut, 'json');
+    assert.deepEqual(files, [`${repo}/bundle.json`]);
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
+});
