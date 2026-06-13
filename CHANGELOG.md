@@ -9,12 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Ship `@mfittko/repo-wiki` as a pi-coding-agent extension.
-  - `src/extension.ts` registers a `repo_wiki` slash command and structured tools for scan, plan, compile, lint, publish, search, query, path, and explain.
-  - `repo-wiki extension install [--global|--project] [--pi-dir <dir>]` writes the pi extension shim and copies the bundled `repo-wiki-cli` skill.
-  - `package.json` exports `@mfittko/repo-wiki/extension` and includes the extension build artifacts and `skills/` in the npm tarball.
-  - Smoke test verifies the extension factory registers commands/tools and the install command writes the expected files.
-  - README documents the install path and registered commands/tools.
+- `src/extension.ts` registers a `repo_wiki` slash command and structured tools for scan, plan, compile, lint, publish, search, query, path, and explain.
+- `repo-wiki extension install [--global|--project] [--pi-dir <dir>]` writes the pi extension shim and copies the bundled `repo-wiki-cli` skill.
+- `package.json` exports `@mfittko/repo-wiki/extension` and includes the extension build artifacts and `skills/` in the npm tarball.
+- Smoke test verifies the extension factory registers commands/tools and the install command writes the expected files.
+- README documents the install path and registered commands/tools.
 - `extension install` now refuses to overwrite an existing shim or skill unless `--force` is supplied, preventing accidental clobbering of user content.
+
+### Changed
+- Ship @mfittko/repo-wiki as a pi-coding-agent extension.
+- Update the main repository implementation to match the pull request scope.
+- Update build, CI, and release automation to support the change.
+- Expand automated test coverage for the updated behavior.
 
 ## [0.2.4] - 2026-06-13
 
