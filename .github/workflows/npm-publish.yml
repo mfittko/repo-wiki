@@ -24,9 +24,6 @@ jobs:
       - name: Run checks and tests
         run: npm run check
 
-      - name: Build package
-        run: npm run build
-
       - name: Dry-run pack
         run: npm pack --dry-run
 
