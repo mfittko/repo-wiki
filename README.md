@@ -40,13 +40,13 @@ Today the package includes:
 `repo-wiki` is published to the npm registry with each GitHub Release. After the first release, the supported downstream install path is:
 
 ```bash
-npm install repo-wiki
+npm install @mfittko/repo-wiki
 ```
 
 For local verification or offline installs, you can also install from a tarball produced with `npm pack`:
 
 ```bash
-tarball=$(npm pack repo-wiki | tail -n 1)
+tarball=$(npm pack @mfittko/repo-wiki | tail -n 1)
 npm install "./$tarball"
 ```
 
