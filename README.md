@@ -37,7 +37,7 @@ Today the package includes:
 
 ## Installation
 
-`repo-wiki` is published to the npm registry with each GitHub Release. After the first release, the supported downstream install path is:
+`@mfittko/repo-wiki` is published to the npm registry with each GitHub Release. After the first release, the supported downstream install path is:
 
 ```bash
 npm install @mfittko/repo-wiki
@@ -46,7 +46,7 @@ npm install @mfittko/repo-wiki
 For local verification or offline installs, you can also install from a tarball produced with `npm pack`:
 
 ```bash
-tarball=$(npm pack @mfittko/repo-wiki | tail -n 1)
+tarball=$(npm pack | tail -n 1)
 npm install "./$tarball"
 ```
 
@@ -220,7 +220,7 @@ import {
   compileWiki,
   lintWiki,
   publishWiki
-} from 'repo-wiki';
+} from '@mfittko/repo-wiki';
 ```
 
 Advanced exports also expose prompt-building, provider configuration, frontmatter policies, wiki-patch validation, and page-ownership helpers.
