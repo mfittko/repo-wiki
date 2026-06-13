@@ -61,6 +61,7 @@ const repoWikiQuerySchema = Type.Object({
 const repoWikiPathSchema = Type.Object({
   from: Type.String({ description: 'Start node or page' }),
   to: Type.String({ description: 'End node or page' }),
+  wikiDir: Type.Optional(Type.String({ description: 'Wiki directory' })),
   graphPath: Type.Optional(Type.String()),
 });
 
@@ -277,10 +278,11 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     promptGuidelines: ['Use repo_wiki_path to explain relationships between wiki pages.'],
     parameters: repoWikiPathSchema,
     async execute(_toolCallId, params: Static<typeof repoWikiPathSchema>) {
+      const wikiDir = params.wikiDir || '.llmwiki/wiki';
       const result = await findWikiGraphPath({
         from: params.from,
         to: params.to,
-        graphPath: params.graphPath || defaultGraphPathForWiki('.llmwiki/wiki'),
+        graphPath: params.graphPath || defaultGraphPathForWiki(wikiDir),
       });
       const text = JSON.stringify(result, null, 2);
       if (!result.found) {
