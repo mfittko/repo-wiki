@@ -37,13 +37,13 @@ Today the package includes:
 
 ## Installation
 
-`repo-wiki` is distributed as a packaged npm artifact. The supported downstream install path is:
+`repo-wiki` is published to the npm registry with each GitHub Release. After the first release, the supported downstream install path is:
 
 ```bash
 npm install repo-wiki
 ```
 
-Or, from a local tarball produced with `npm pack`:
+For local verification or offline installs, you can also install from a tarball produced with `npm pack`:
 
 ```bash
 tarball=$(npm pack repo-wiki | tail -n 1)
