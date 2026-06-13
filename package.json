@@ -1,6 +1,6 @@
 {
   "name": "@mfittko/repo-wiki",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Node.js CLI and library for compiling any Git repository and its validated documentation into a GitHub Wiki knowledge base.",
   "type": "module",
   "private": false,
