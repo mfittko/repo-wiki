@@ -825,3 +825,59 @@ test('resolveReviewTarget rejects PR numbers when gh is unavailable', async () =
     await fs.rm(repo, { recursive: true, force: true });
   }
 });
+
+test('formatReviewContextBundle emits per-line diff markers including empty lines', async () => {
+  const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-review-context-diff-'));
+  try {
+    await fs.mkdir(path.join(repo, 'src'), { recursive: true });
+    await fs.mkdir(path.join(repo, '.llmwiki', 'run'), { recursive: true });
+    // File with a blank line in the middle so context includes an empty line.
+    await fs.writeFile(path.join(repo, 'src', 'main.ts'), [
+      'export function greet() {',
+      '  return "hi";',
+      '',
+      'export function farewell() {',
+      '  return "bye";',
+      '}',
+      ''
+    ].join('\n'));
+
+    await runGit(['init', '-b', 'main'], { cwd: repo });
+    await runGit(['config', 'user.email', 'test@example.com'], { cwd: repo });
+    await runGit(['config', 'user.name', 'Test User'], { cwd: repo });
+    await runGit(['add', '.'], { cwd: repo });
+    await runGit(['commit', '-m', 'base'], { cwd: repo });
+
+    await runGit(['checkout', '-b', 'feature'], { cwd: repo });
+    await fs.writeFile(path.join(repo, 'src', 'main.ts'), [
+      'export function greet() {',
+      '  return "hello";',
+      '',
+      'export function farewell() {',
+      '  return "bye";',
+      '}',
+      ''
+    ].join('\n'));
+    await runGit(['add', '.'], { cwd: repo });
+    await runGit(['commit', '-m', 'head'], { cwd: repo });
+
+    await fs.writeFile(path.join(repo, '.llmwiki', 'run', 'manifest.json'), JSON.stringify({
+      files: [{ path: 'src/main.ts', language: 'TypeScript', imports: [], symbols: ['greet', 'farewell'], exported_symbols: [] }]
+    }, null, 2));
+
+    const bundle = await buildReviewContextBundle({ repoPath: repo, target: 'main..feature', adjacencyDepth: 0 });
+    const md = formatReviewContextBundle(bundle, 'md');
+    // Every non-empty changed block line must start with + / - / space.
+    const block = md.split('```diff').slice(1)[0]?.split('```')[0] ?? '';
+    const lines = block.split('\n');
+    for (const line of lines) {
+      if (line === '') continue; // block separator
+      // Hunk headers (e.g. "@@ -1,5 +1,5 @@") are diff metadata, not per-line markers.
+      if (line.startsWith('@@')) continue;
+      const first = line[0];
+      assert.ok(first === '+' || first === '-' || first === ' ', `diff line missing prefix: ${JSON.stringify(line)}`);
+    }
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
+});

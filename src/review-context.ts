@@ -404,6 +404,7 @@ async function buildAdjacentContext(
     : await buildCardsFromWalk(repoPath, warnings);
 
   const sourcePaths = new Set(allCards.map((card) => normalizePath(card.path)));
+  const cardByPath = new Map(allCards.map((card) => [normalizePath(card.path), card]));
   const changedSet = new Set(changedPaths.map(normalizePath));
   const changedCards = allCards.filter((card) => changedSet.has(normalizePath(card.path)));
 
@@ -413,7 +414,7 @@ async function buildAdjacentContext(
   for (let level = 0; level < depth; level += 1) {
     const nextFrontier = new Map<string, string>();
     for (const changedPath of frontier) {
-      const changedCard = allCards.find((card) => normalizePath(card.path) === changedPath);
+      const changedCard = cardByPath.get(changedPath);
       if (!changedCard) {
         continue;
       }
@@ -602,7 +603,13 @@ async function resolveSymbolReferencedFiles(
     }
     try {
       const otherContent = await fs.readFile(path.join(repoPath, other.path), 'utf8');
-      if (patterns.some((pattern) => pattern.test(otherContent))) {
+      // Reset lastIndex on every global regex before .test() so stateful matching
+      // does not leak matches across files.
+      const matched = patterns.some((pattern) => {
+        pattern.lastIndex = 0;
+        return pattern.test(otherContent);
+      });
+      if (matched) {
         neighbors.push(other.path);
       }
     } catch {
@@ -707,12 +714,9 @@ function formatReviewContextMarkdown(bundle: ReviewContextBundle): string {
       for (const hunk of file.hunks) {
         lines.push(hunk.header);
         for (const line of hunk.lines) {
-          const body = line.content;
-          if (line.prefix === ' ' && body === '' && line.content === '') {
-            lines.push('');
-          } else {
-            lines.push(`${line.prefix}${body}`);
-          }
+          // Always emit the diff prefix (+/-/space) even for empty lines so the
+          // per-line markers stay unambiguous.
+          lines.push(`${line.prefix}${line.content}`);
         }
       }
       lines.push('```');
@@ -732,11 +736,9 @@ function formatReviewContextMarkdown(bundle: ReviewContextBundle): string {
       lines.push('');
       lines.push('```diff');
       for (const rawLine of adjacent.content.split(/\r?\n/)) {
-        if (rawLine === '') {
-          lines.push('');
-        } else {
-          lines.push(` ${rawLine}`);
-        }
+        // Always prefix context lines (with a leading space) including blank
+        // ones so the +/-/space markers stay unambiguous.
+        lines.push(` ${rawLine}`);
       }
       lines.push('```');
       lines.push('');
