@@ -36,7 +36,7 @@ Commands:
   path      Find a deterministic traversal in .llmwiki/graph.json.
   explain   Explain a wiki page or graph node with evidence.
   run       Run scan -> plan -> lint-docs -> compile -> lint, optionally followed by publish.
-  extension Install the pi extension shim and skill (extension install [--global|--project] [--pi-dir <dir>]).
+  extension Install the pi extension shim and skill (extension install [--global|--project] [--pi-dir <dir>] [--force]).
 
 Options:
   --target <github-wiki|github-pages>

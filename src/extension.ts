@@ -1,5 +1,6 @@
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
 import { Type, type Static } from 'typebox';
+import path from 'node:path';
 import { runCli } from './cli.js';
 import { scanRepository } from './scanner.js';
 import { createBootstrapPlan } from './planner.js';
@@ -104,8 +105,9 @@ export function truncateForTool(text: string, maxBytes = 50000, maxLines = 2000)
 
 /**
  * Split an input string into argv tokens while respecting single and double
- * quotes and backslash escapes, matching typical shell behavior. Returns
- * ['--help'] for an empty/whitespace-only input.
+ * quotes and backslash escapes, matching typical shell behavior. Returns an
+ * empty array for an empty/whitespace-only input; callers should substitute
+ * their own default when the array is empty.
  */
 export function splitArgs(input: string): string[] {
   const tokens: string[] = [];
@@ -255,7 +257,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
       const text = JSON.stringify(result.summary, null, 2);
       const isError = (result.summary.errors as number) > 0;
       if (isError) {
-        throw new Error(`Wiki lint failed with ${result.summary.errors} error(s)\n${text}`);
+        throw new Error(`Wiki lint failed with ${result.summary.errors} error(s)\n${truncateForTool(text)}`);
       }
       return { content: [{ type: 'text', text: truncateForTool(text) }], details: result.summary };
     },
@@ -269,11 +271,12 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     promptGuidelines: ['Use repo_wiki_publish only when the user asks to publish and a remote is configured.'],
     parameters: repoWikiPublishSchema,
     async execute(_toolCallId, params: Static<typeof repoWikiPublishSchema>) {
-      const config = await loadConfig(process.cwd());
+      const wikiDir = params.wikiDir || '.llmwiki/wiki';
+      const config = await loadConfig(path.dirname(path.dirname(wikiDir)));
       const target = 'github-wiki';
       const branchFromConfig = config.publish?.wiki?.branch;
       const result = await publishWiki({
-        wikiDir: params.wikiDir || '.llmwiki/wiki',
+        wikiDir,
         remote: params.remote,
         target,
         branch: params.branch || branchFromConfig,
