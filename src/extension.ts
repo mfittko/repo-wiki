@@ -91,6 +91,12 @@ function truncateForTool(text: string, maxBytes = 50000, maxLines = 2000): strin
       head.pop();
       joined = head.join('\n');
     }
+    // Hard-truncate any remaining single oversized line to honour maxBytes.
+    while (Buffer.byteLength(joined, 'utf8') > maxBytes) {
+      const buf = Buffer.from(joined, 'utf8');
+      joined = buf.subarray(0, Math.max(0, maxBytes - 1)).toString('utf8');
+      joined = joined.replace(/\uFFFD+$/, '');
+    }
     return `${joined}\n\n[Output truncated]`;
   }
   return text;

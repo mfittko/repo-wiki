@@ -95,7 +95,7 @@ test('extension install writes shim and skill to custom piDir', async () => {
   }
 });
 
-test('extension entrypoint and skill files are listed in package files', async () => {
+test('extension entrypoint and skill files are listed in package files and published tarball', async () => {
   const files = new Set([
     path.join(packageRoot, 'dist/src/extension.js'),
     path.join(packageRoot, 'dist/src/extension.d.ts'),
@@ -104,6 +104,32 @@ test('extension entrypoint and skill files are listed in package files', async (
 
   for (const file of files) {
     assert.ok(await stat(file).then(() => true, () => false), `missing ${path.relative(packageRoot, file)}`);
+  }
+
+  // Verify the files are listed in package.json#files and included in the published tarball.
+  const pkg = JSON.parse(await readFile(path.join(packageRoot, 'package.json'), 'utf8')) as {
+    files?: string[];
+  };
+  assert.ok(Array.isArray(pkg.files), 'package.json#files missing');
+  for (const required of ['dist/', 'skills/', 'dist/src/extension.js', 'dist/src/extension.d.ts']) {
+    assert.ok(
+      pkg.files?.some((entry) => entry === required || required.startsWith(entry)),
+      `package.json#files does not include ${required}`
+    );
+  }
+
+  // Verify npm pack --dry-run tarball contains the extension assets.
+  const { stdout, stderr } = await execFileAsync('npm', ['pack', '--dry-run'], { cwd: packageRoot });
+  const combined = `${stdout}\n${stderr}`;
+  const tarball = stdout.trim().split('\n').pop()!;
+  assert.ok(tarball.length > 0, 'npm pack produced no tarball name');
+  const required = [
+    'dist/src/extension.js',
+    'dist/src/extension.d.ts',
+    'skills/repo-wiki-cli/SKILL.md',
+  ];
+  for (const path of required) {
+    assert.ok(combined.includes(path), `tarball missing ${path}`);
   }
 });
 

@@ -79,7 +79,7 @@ export async function runExtensionInstall(options: ExtensionInstallOptions = {})
 
   const summary = {
     installed: true,
-    scope: options.global ? 'global' : options.project ? 'project' : options.piDir ? 'custom' : 'project',
+    scope: options.piDir ? 'custom' : options.global ? 'global' : 'project',
     shim: shimPath,
     skill: skillDestination,
     reloadHint: 'Run `pi`, then `/reload` to load the repo-wiki extension.',
