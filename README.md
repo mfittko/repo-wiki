@@ -46,8 +46,8 @@ npm install repo-wiki
 Or, from a local tarball produced with `npm pack`:
 
 ```bash
-npm pack repo-wiki
-npm install ./repo-wiki-0.2.0.tgz
+tarball=$(npm pack repo-wiki | tail -n 1)
+npm install "./$tarball"
 ```
 
 After install, the runnable CLI is exposed through `dist/bin/repo-wiki.js` declared in `package.json#bin`:
@@ -56,7 +56,7 @@ After install, the runnable CLI is exposed through `dist/bin/repo-wiki.js` decla
 npx repo-wiki --help
 ```
 
-No clone or local build step is required for normal downstream consumption. The package guarantees the files listed in `package.json#files`, including `dist/`, `README.md`, `CHANGELOG.md`, `.llmwiki/schema.md`, `.llmwiki/config.json`, and the `docs/`, `prompts/`, and `skills/` trees. Local development from a source clone should use `npm install && npm run build` instead.
+No clone or local build step is required for normal downstream consumption. The package guarantees the files listed in `package.json#files`, including `dist/`, `README.md`, `CHANGELOG.md`, `.llmwiki/schema.md`, `.llmwiki/config.json`, and the `docs/`, `prompts/`, and `skills/` trees. Local development from a source clone should use `npm install` instead (the `prepare` script runs the build).
 
 ## Quick start
 
