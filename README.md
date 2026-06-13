@@ -37,7 +37,7 @@ Today the package includes:
 
 ## Installation
 
-`repo-wiki` is published to the npm registry. The supported downstream install path is:
+`repo-wiki` is published to the npm registry with each GitHub Release. After the first release, the supported downstream install path is:
 
 ```bash
 npm install repo-wiki

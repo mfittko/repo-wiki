@@ -1,12 +1,9 @@
 name: Publish to npm
 
 on:
-  push:
-    tags:
-      - 'v*'
   release:
     types:
-      - created
+      - published
 
 jobs:
   publish:
@@ -23,6 +20,9 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
 
       - run: npm ci
+
+      - name: Run checks and tests
+        run: npm run check
 
       - name: Build package
         run: npm run build
