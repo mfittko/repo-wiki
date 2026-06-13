@@ -1,15 +1,15 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "a3ed30252c9bfb054e0b54fe5e6c52f8f0b8d703"
+source_commit: "a33ab6cfdfb7a298ba26e23ddb762c00190f3ef2"
 page_state: "generated"
 source_paths: ["src/wiki-patch.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "<ISO-8601 timestamp>"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
 ---
 
-# Module wiki-patch.ts
+# Module: wiki-patch.ts
 
 ## Purpose
 
@@ -26,8 +26,8 @@ This module provides functionality for parsing, validating, and synthesizing pat
 - **synthesizeWikiPage**: Function to synthesize or generate a wiki page from patch data.
 - **WikiPatch**: Type representing the structure of a wiki patch.
 - **WikiPatchError**: Error class for handling wiki patch related errors.
-- **WikiPatchFrontmatter**: Type describing the frontmatter metadata of a wiki patch.
-- **WikiPatchIssue**: Type representing issues or problems found in a wiki patch.
+- **WikiPatchFrontmatter**: Type representing the frontmatter metadata of a wiki patch.
+- **WikiPatchIssue**: Type or interface representing issues found in a wiki patch.
 - **SynthesizeOptions**: Options type for controlling the synthesis process.
 
 ## Dependencies and imports
@@ -37,14 +37,13 @@ This module provides functionality for parsing, validating, and synthesizing pat
 
 ## Related tests
 
-No documentation or source cards indicate the presence of related test files or test suites for this module.
+No documentation or test files are explicitly listed for this module in the source cards.
 
 ## Known gaps or open questions
 
-- No explicit test coverage or test files are documented.
+- No explicit test coverage or documentation cards are available, indicating potential gaps in documented usage or testing.
 - The exact behavior and implementation details of the imported modules (`llm-provider.js` and `secret-patterns.js`) are not described here.
-- The module's integration context within a larger system or application is not specified.
-- No usage examples or API documentation are currently available.
+- The module's integration context within the larger system is not detailed.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

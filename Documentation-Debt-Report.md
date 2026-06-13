@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "a3ed30252c9bfb054e0b54fe5e6c52f8f0b8d703"
-compiled_at: "2026-06-12T23:52:07.709Z"
+source_commit: "a33ab6cfdfb7a298ba26e23ddb762c00190f3ef2"
+compiled_at: "2026-06-13T00:13:46.553Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 claim_status: "review-needed"
@@ -46,7 +46,7 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
 - Documentation files scanned: 24
 - Claims extracted: 34
 - Stale documents: 1
-- Commands found in docs: 27
+- Commands found in docs: 26
 - Environment variable mentions: 29
 - File path references: 76
 
@@ -77,7 +77,7 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
 | `docs/plans/wiki-graph.md` | unvalidated | secondary | 0 | 3 | 0 | 0 |
 | `docs/plans/wiki-health.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `docs/WHY.md` | partially_validated | secondary | 0 | 5 | 0 | 0 |
-| `README.md` | partially_validated | secondary | 0 | 9 | 16 | 19 |
+| `README.md` | partially_validated | secondary | 0 | 9 | 15 | 19 |
 
 ## Command validation
 
@@ -85,7 +85,7 @@ Commands extracted from documentation code blocks, validated against `package.js
 
 - Validated: 10
 - Missing (package script / Makefile / task-runner target): 0
-- Unvalidated (source unknown): 12
+- Unvalidated (source unknown): 11
 
 | Command | Status | Source |
 |---|---|---|
@@ -101,8 +101,7 @@ Commands extracted from documentation code blocks, validated against `package.js
 | `npm run lint:local` | ✅ validated | package.json |
 | `npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --remote https://github.com/OWNER/repo-wiki.git --branch gh-pages --pages-path .` | ❓ unvalidated | unknown |
 | `npm install repo-wiki` | ❓ unvalidated | unknown |
-| `npm pack repo-wiki` | ❓ unvalidated | unknown |
-| `npm install ./repo-wiki-0.2.0.tgz` | ❓ unvalidated | unknown |
+| `npm install "./$tarball"` | ❓ unvalidated | unknown |
 | `npx repo-wiki --help` | ❓ unvalidated | unknown |
 | `npx repo-wiki run \` | ❓ unvalidated | unknown |
 | `npm run build` | ✅ validated | CI workflow |
@@ -278,8 +277,7 @@ Conservative ADR detection uses deterministic path hints (`ADR/**`, `docs/adr/**
 - `npm install` - command source unknown.
 - `npx repo-wiki publish --target github-pages --wiki .llmwiki/wiki --remote https://github.com/OWNER/repo-wiki.git --branch gh-pages --pages-path .` - command source unknown.
 - `npm install repo-wiki` - command source unknown.
-- `npm pack repo-wiki` - command source unknown.
-- `npm install ./repo-wiki-0.2.0.tgz` - command source unknown.
+- `npm install "./$tarball"` - command source unknown.
 - `npx repo-wiki --help` - command source unknown.
 - `npx repo-wiki run \` - command source unknown.
 

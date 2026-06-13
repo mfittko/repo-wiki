@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "a3ed30252c9bfb054e0b54fe5e6c52f8f0b8d703"
+source_commit: "a33ab6cfdfb7a298ba26e23ddb762c00190f3ef2"
 page_state: "generated"
 source_paths: ["src/linter.ts"]
-compiled_at: "2024-06-15T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides linting functionality as indicated by the presence of the `lintWiki` symbol. It is implemented in TypeScript and serves as a source module within the codebase. The module likely performs linting operations on wiki content or related files, leveraging utilities and patterns imported from other parts of the project.
+This module provides linting functionality as indicated by the presence of the `lintWiki` symbol. It is implemented in TypeScript and serves as a source module within the codebase. The module likely performs linting operations on wiki content or related files, leveraging various utilities and patterns imported from other parts of the project.
 
 ## Source file list
 
@@ -25,28 +25,25 @@ This module provides linting functionality as indicated by the presence of the `
 
 ## Dependencies and imports
 
-The module imports several internal and external dependencies:
+The module imports the following dependencies:
 
-- Internal modules:
-  - `./frontmatter.js`
-  - `./secret-patterns.js`
-  - `./utils/fs.js`
-  - `./wiki-graph.js`
-- Node.js built-in modules:
-  - `fs`
-  - `path`
-
-These imports suggest the module interacts with file system operations, processes frontmatter metadata, applies secret pattern matching, and possibly integrates with a wiki graph structure.
+- `./frontmatter.js`: Likely used for parsing or handling frontmatter metadata in files.
+- `./secret-patterns.js`: Possibly contains patterns for detecting secrets or sensitive information.
+- `./utils/fs.js`: Utility functions related to filesystem operations.
+- `./wiki-graph.js`: Potentially used for managing or analyzing wiki page relationships.
+- `node:fs`: Node.js core filesystem module.
+- `node:path`: Node.js core path module.
 
 ## Related tests
 
-No documentation or test cards are currently associated with this module, and no explicit test files or test-related symbols are indicated in the source cards.
+No documentation or source cards indicate the presence of related tests for this module at this time.
 
 ## Known gaps or open questions
 
-- The exact functionality and behavior of `lintWiki` are not detailed in the available source cards.
-- There is no documentation or test coverage information available, which limits understanding of usage scenarios and robustness.
-- The repository remote URL and commit SHA are unknown, which restricts traceability to the original source context.
+- The exact functionality and interface of `lintWiki` are not detailed in the available source cards.
+- There is no information on test coverage or example usage.
+- The repository remote URL and commit SHA are unknown, limiting traceability.
+- No documentation cards exist to provide further context or usage guidelines.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
