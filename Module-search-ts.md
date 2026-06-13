@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "9897e5b449323bf6db3eac895995c3e384690a41"
+source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
 page_state: "generated"
 source_paths: ["src/search.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "2024-06-14T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to searching within a wiki or documentation context. It includes building and managing a search index, formatting search results, and performing search queries over wiki content. The module is implemented in TypeScript and serves as a core source component for search-related features.
+This module provides functionality related to searching within a wiki or documentation context. It includes building and managing a search index, formatting search results, and performing search queries over the indexed content. The module is implemented in TypeScript and is part of the source code.
 
 ## Source file list
 
@@ -22,13 +22,13 @@ This module provides functionality related to searching within a wiki or documen
 ## Key symbols and entry points
 
 - **buildSearchIndex**: Function to construct or update the search index from source content.
-- **defaultSearchDirForWiki**: A constant or function defining the default directory path used for searching within the wiki.
-- **formatSearchResults**: Function to format raw search results into a user-friendly or display-ready structure.
+- **defaultSearchDirForWiki**: Likely a constant or function defining the default directory path for the wiki search index.
+- **formatSearchResults**: Function to format raw search results into a user-friendly or structured output.
 - **SEARCH_INDEX_VERSION**: A version identifier for the search index format or schema.
-- **searchIndex**: Likely an object or data structure representing the current search index.
-- **SearchIndex**: Type or interface defining the structure of the search index.
-- **SearchIndexEntry**: Type or interface representing individual entries within the search index.
-- **SearchResult**: Type or interface representing the structure of a search result.
+- **searchIndex**: Possibly an instance or data structure representing the current search index.
+- **SearchIndex**: Type or class representing the search index structure.
+- **SearchIndexEntry**: Type or interface representing an individual entry in the search index.
+- **SearchResult**: Type or interface representing a search result item.
 - **searchWiki**: Function to perform search queries against the wiki content using the search index.
 
 ## Dependencies and imports
@@ -40,18 +40,18 @@ This module provides functionality related to searching within a wiki or documen
   - `fs`
   - `path`
 
-These dependencies suggest the module interacts with file system operations and processes frontmatter metadata, likely to extract searchable content and metadata from wiki files.
+These dependencies suggest the module interacts with file system operations and processes frontmatter metadata, likely to extract searchable content and metadata from source files.
 
 ## Related tests
 
-No documentation or source cards indicate the presence of related test files or test suites for this module.
+No documentation or test files are explicitly linked or mentioned for this module in the provided source cards.
 
 ## Known gaps or open questions
 
-- No explicit documentation or test coverage is provided, which may limit understanding of edge cases or usage patterns.
-- The exact nature of the search index structure and the algorithms used for searching and formatting results are not detailed here.
-- The integration points with the rest of the wiki or application ecosystem are not described.
-- The versioning strategy and compatibility considerations for `SEARCH_INDEX_VERSION` are not explained.
+- The exact behavior and API details of the key functions and types are not documented here.
+- No information on test coverage or example usage is available.
+- The source repository and commit SHA are unknown, limiting traceability.
+- The module's integration with other parts of the system or wiki is not described.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

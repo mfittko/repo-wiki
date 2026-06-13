@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "9897e5b449323bf6db3eac895995c3e384690a41"
+source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
 page_state: "generated"
 source_paths: ["src/extractors.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -21,51 +21,31 @@ This module provides a collection of functions designed to analyze and extract v
 
 ## Key symbols and entry points
 
-- `detectRuntimeHints`  
-  Detects hints related to runtime behavior or configuration within the source.
-
-- `extractEnvironmentVariables`  
-  Extracts environment variable definitions or usages from the source.
-
-- `extractExportedSymbols`  
-  Identifies and extracts symbols that are exported from modules or packages.
-
-- `extractGoPackage`  
-  Extracts Go package metadata or structure information.
-
-- `extractImports`  
-  Parses and extracts import statements from source files.
-
-- `extractMigrationSurfaces`  
-  Extracts migration-related surfaces, likely related to database or schema migrations.
-
-- `extractModelSurfaces`  
-  Extracts model-related surfaces, potentially representing data models or domain entities.
-
-- `extractRouteSurfaces`  
-  Extracts route-related surfaces, possibly related to API or web routing.
-
-- `extractSymbols`  
-  General symbol extraction utility for various symbol types.
+- `detectRuntimeHints` — Detects hints related to runtime behavior or configuration.
+- `extractEnvironmentVariables` — Extracts environment variables from the source or runtime context.
+- `extractExportedSymbols` — Retrieves symbols that are exported from a module or package.
+- `extractGoPackage` — Extracts Go package information from source code.
+- `extractImports` — Parses and extracts import statements.
+- `extractMigrationSurfaces` — Identifies migration-related surfaces in the codebase.
+- `extractModelSurfaces` — Extracts model-related surfaces.
+- `extractRouteSurfaces` — Extracts route-related surfaces.
+- `extractSymbols` — General symbol extraction utility.
 
 ## Dependencies and imports
 
-- `path` (Node.js core module)  
-  Used for file path manipulations.
-
-- `typescript`  
-  Utilized for parsing and analyzing TypeScript source code.
+- `path` — Node.js path module, used for file path manipulations.
+- `typescript` — TypeScript compiler API, used for parsing and analyzing TypeScript source code.
 
 ## Related tests
 
-No documentation or source cards indicate the presence of related test files or test coverage for this module at this time.
+No documentation or test files are explicitly linked to this module in the current source cards. It is recommended to verify the presence of tests related to the extraction functions in the broader test suite or consider adding dedicated tests if missing.
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or test coverage linked to this module, which may limit understanding of edge cases or intended usage scenarios.
-- The exact nature and structure of the "surfaces" (migration, model, route) are not detailed in the source cards, leaving their specific roles somewhat ambiguous.
-- The source repository and commit information are unknown, which restricts traceability and version context.
-- Further exploration of how these extractors integrate with other parts of the system would be beneficial to fully understand their application.
+- There is no explicit documentation or test coverage information available for this module.
+- The exact runtime environments or contexts where these extraction functions are applied are not detailed.
+- The relationship between the different "surface" extraction functions (migration, model, route) and their usage contexts could be further clarified.
+- The module's integration with other parts of the system is not described in the available source cards.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

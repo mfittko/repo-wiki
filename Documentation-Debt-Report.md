@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "9897e5b449323bf6db3eac895995c3e384690a41"
-compiled_at: "2026-06-13T10:32:33.393Z"
+source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
+compiled_at: "2026-06-13T21:26:01.279Z"
 kind: "documentation_debt_report"
 documentation_authority: "secondary"
 claim_status: "review-needed"
@@ -44,11 +44,11 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
 
 - Documentation ingestion enabled: true
 - Documentation files scanned: 24
-- Claims extracted: 34
+- Claims extracted: 35
 - Stale documents: 1
-- Commands found in docs: 26
+- Commands found in docs: 29
 - Environment variable mentions: 29
-- File path references: 77
+- File path references: 80
 
 ## Documentation status table
 
@@ -77,7 +77,7 @@ Markdown documentation is ingested as secondary evidence. It is useful for inten
 | `docs/plans/wiki-graph.md` | unvalidated | secondary | 0 | 3 | 0 | 0 |
 | `docs/plans/wiki-health.md` | unvalidated | secondary | 0 | 0 | 0 | 0 |
 | `docs/WHY.md` | partially_validated | secondary | 0 | 5 | 0 | 0 |
-| `README.md` | partially_validated | secondary | 0 | 9 | 15 | 19 |
+| `README.md` | partially_validated | secondary | 0 | 10 | 18 | 19 |
 
 ## Command validation
 
@@ -85,7 +85,7 @@ Commands extracted from documentation code blocks, validated against `package.js
 
 - Validated: 10
 - Missing (package script / Makefile / task-runner target): 0
-- Unvalidated (source unknown): 11
+- Unvalidated (source unknown): 14
 
 | Command | Status | Source |
 |---|---|---|
@@ -103,6 +103,9 @@ Commands extracted from documentation code blocks, validated against `package.js
 | `npm install @mfittko/repo-wiki` | ❓ unvalidated | unknown |
 | `npm install "./$tarball"` | ❓ unvalidated | unknown |
 | `npx repo-wiki --help` | ❓ unvalidated | unknown |
+| `npx @mfittko/repo-wiki extension install` | ❓ unvalidated | unknown |
+| `npx @mfittko/repo-wiki extension install --global` | ❓ unvalidated | unknown |
+| `npx @mfittko/repo-wiki extension install --force` | ❓ unvalidated | unknown |
 | `npx repo-wiki run \` | ❓ unvalidated | unknown |
 | `npm run build` | ✅ validated | CI workflow |
 | `npm run lint:code` | ✅ validated | CI workflow |
@@ -115,8 +118,8 @@ Commands extracted from documentation code blocks, validated against `package.js
 
 Repository file and directory references extracted from markdown links and inline code spans. Generated-output roots such as `dist/`, `coverage/`, and `.llmwiki/` are excluded from extraction.
 
-- Valid: 38
-- Missing: 39
+- Valid: 39
+- Missing: 41
 
 | Documentation location | Reference | Status | Resolved path |
 |---|---|---|---|
@@ -191,12 +194,15 @@ Repository file and directory references extracted from markdown links and inlin
 | `README.md:59` | `docs/` | ✅ valid | `docs` |
 | `README.md:59` | `prompts/` | ✅ valid | `prompts` |
 | `README.md:59` | `skills/` | ✅ valid | `skills` |
-| `README.md:135` | `src/config.ts` | ✅ valid | `src/config.ts` |
-| `README.md:139` | `README.md` | ✅ valid | `README.md` |
-| `README.md:155` | `Architecture.md` | ❌ missing | not found |
-| `README.md:210` | `.github/workflows/wiki.yml` | ✅ valid | `.github/workflows/wiki.yml` |
-| `README.md:254` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
-| `README.md:254` | `docs/plans/wiki-graph.md` | ✅ valid | `docs/plans/wiki-graph.md` |
+| `README.md:63` | `@mfittko/repo-wiki` | ❌ missing | not found |
+| `README.md:96` | `@mfittko/repo-wiki/extension` | ❌ missing | not found |
+| `README.md:96` | `skills/repo-wiki-cli/SKILL.md` | ✅ valid | `skills/repo-wiki-cli/SKILL.md` |
+| `README.md:172` | `src/config.ts` | ✅ valid | `src/config.ts` |
+| `README.md:176` | `README.md` | ✅ valid | `README.md` |
+| `README.md:192` | `Architecture.md` | ❌ missing | not found |
+| `README.md:247` | `.github/workflows/wiki.yml` | ✅ valid | `.github/workflows/wiki.yml` |
+| `README.md:291` | `docs/PLAN.md` | ✅ valid | `docs/PLAN.md` |
+| `README.md:291` | `docs/plans/wiki-graph.md` | ✅ valid | `docs/plans/wiki-graph.md` |
 
 ## Environment variable validation
 
@@ -280,6 +286,9 @@ Conservative ADR detection uses deterministic path hints (`ADR/**`, `docs/adr/**
 - `npm install @mfittko/repo-wiki` - command source unknown.
 - `npm install "./$tarball"` - command source unknown.
 - `npx repo-wiki --help` - command source unknown.
+- `npx @mfittko/repo-wiki extension install` - command source unknown.
+- `npx @mfittko/repo-wiki extension install --global` - command source unknown.
+- `npx @mfittko/repo-wiki extension install --force` - command source unknown.
 - `npx repo-wiki run \` - command source unknown.
 
 ### Broken-reference
@@ -322,7 +331,9 @@ Conservative ADR detection uses deterministic path hints (`ADR/**`, `docs/adr/**
 - `README.md:30` references `Documentation-Debt-Report.md` (missing).
 - `README.md:32` references `Architecture.md` (missing).
 - `README.md:40` references `@mfittko/repo-wiki` (missing).
-- `README.md:155` references `Architecture.md` (missing).
+- `README.md:63` references `@mfittko/repo-wiki` (missing).
+- `README.md:96` references `@mfittko/repo-wiki/extension` (missing).
+- `README.md:192` references `Architecture.md` (missing).
 
 ### ADR-specific
 

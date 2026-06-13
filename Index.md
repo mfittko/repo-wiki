@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "9897e5b449323bf6db3eac895995c3e384690a41"
-compiled_at: "2026-06-13T10:32:33.377Z"
+source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
+compiled_at: "2026-06-13T21:26:01.264Z"
 kind: "index"
 confidence: "medium"
 page_state: "generated"
@@ -35,6 +35,8 @@ page_state: "generated"
 - [Module docs ingestor ts](Module-docs-ingestor-ts.html) - Compiled page for Module docs-ingestor.ts.
 - [Module docs linter ts](Module-docs-linter-ts.html) - Compiled page for Module docs-linter.ts.
 - [Module docs validation ts](Module-docs-validation-ts.html) - Compiled page for Module docs-validation.ts.
+- [Module extension install ts](Module-extension-install-ts.html) - Compiled page for Module extension-install.ts.
+- [Module extension ts](Module-extension-ts.html) - Compiled page for Module extension.ts.
 - [Module extractors ts](Module-extractors-ts.html) - Compiled page for Module extractors.ts.
 - [Module frontmatter ts](Module-frontmatter-ts.html) - Compiled page for Module frontmatter.ts.
 - [Module index ts](Module-index-ts.html) - Compiled page for Module index.ts.
@@ -72,16 +74,16 @@ page_state: "generated"
     "Text": 5,
     "Markdown": 36,
     "YAML": 9,
-    "TypeScript": 54,
+    "TypeScript": 57,
     "JSON": 6,
     "JavaScript": 6
   },
   "categories": {
-    "source": 45,
+    "source": 47,
     "docs": 36,
     "ci": 6,
     "package": 5,
-    "test": 23,
+    "test": 24,
     "infra": 1
   },
   "runtime_hints": {
@@ -100,10 +102,10 @@ page_state: "generated"
       "stale": 1
     },
     "stale": 1,
-    "claims": 34,
-    "commands": 26,
+    "claims": 35,
+    "commands": 29,
     "env_vars": 29,
-    "file_paths": 77
+    "file_paths": 80
   }
 }
 ```

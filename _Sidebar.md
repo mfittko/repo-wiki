@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "9897e5b449323bf6db3eac895995c3e384690a41"
-compiled_at: "2026-06-13T10:32:33.377Z"
+source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
+compiled_at: "2026-06-13T21:26:01.264Z"
 kind: "sidebar"
 confidence: "medium"
 page_state: "generated"
@@ -30,6 +30,8 @@ page_state: "generated"
   - [Module docs-ingestor.ts](Module-docs-ingestor-ts.html)
   - [Module docs-linter.ts](Module-docs-linter-ts.html)
   - [Module docs-validation.ts](Module-docs-validation-ts.html)
+  - [Module extension-install.ts](Module-extension-install-ts.html)
+  - [Module extension.ts](Module-extension-ts.html)
   - [Module extractors.ts](Module-extractors-ts.html)
   - [Module frontmatter.ts](Module-frontmatter-ts.html)
   - [Module index.ts](Module-index-ts.html)
@@ -41,8 +43,6 @@ page_state: "generated"
   - [Module planner.ts](Module-planner-ts.html)
   - [Module prompts.ts](Module-prompts-ts.html)
   - [Module publisher.ts](Module-publisher-ts.html)
-  - [Module repository-analysis.ts](Module-repository-analysis-ts.html)
-  - [Module scanner.ts](Module-scanner-ts.html)
 
 ## Cross-cutting
 

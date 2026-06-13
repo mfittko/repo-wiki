@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "9897e5b449323bf6db3eac895995c3e384690a41"
+source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
 page_state: "generated"
 source_paths: ["src/wiki-graph.ts"]
 compiled_at: "2024-06-05T00:00:00Z"
@@ -9,11 +9,11 @@ confidence: "medium"
 claim_status: "source-grounded"
 ---
 
-# Module `wiki-graph.ts`
+# Module: wiki-graph.ts
 
 ## Purpose
 
-This module provides functionality for constructing and querying a graph representation of wiki pages. It includes utilities to build an index of wiki graph nodes and edges, retrieve nodes by various criteria, and explore relationships between pages such as adjacency and edge types. The module is designed to manage and analyze wiki page connections programmatically.
+This module provides functionality for constructing and querying a graph representation of wiki pages. It includes utilities to build an index of wiki graph nodes and edges, retrieve nodes by various criteria, and explore relationships between pages such as adjacency and edge types. The module is designed to support operations on a managed set of wiki pages, facilitating navigation and analysis of their interconnections.
 
 ## Source file list
 
@@ -21,32 +21,32 @@ This module provides functionality for constructing and querying a graph represe
 
 ## Key symbols and entry points
 
-- **AffectedWikiGraphPageSelection**: Likely a type or interface related to selecting affected pages within the wiki graph.
-- **buildWikiGraphIndex**: Function to build an index of the wiki graph, presumably creating nodes and edges from source data.
-- **getAdjacentNodes**: Retrieves nodes adjacent to a given node, facilitating graph traversal.
-- **getEdgesByType**: Returns edges filtered by their type, enabling focused queries on relationships.
-- **getIncomingEdges**: Gets edges directed towards a specific node.
-- **getManagedPagePaths**: Retrieves paths of pages managed within the graph.
-- **getNodeById**: Fetches a node by its unique identifier.
-- **getNodesByKind**: Retrieves nodes filtered by their kind or category.
-- **getNodesByPath**: Finds nodes based on their associated path.
-- **getOutgoingEdges**: Gets edges originating from a specific node.
+- **AffectedWikiGraphPageSelection** — Likely a type or interface representing a selection of wiki graph pages affected by some operation or criteria.
+- **buildWikiGraphIndex** — Function to build an index structure representing the wiki graph.
+- **getAdjacentNodes** — Retrieves nodes adjacent to a given node in the graph.
+- **getEdgesByType** — Retrieves edges filtered by their type.
+- **getIncomingEdges** — Retrieves edges directed into a specified node.
+- **getManagedPagePaths** — Returns paths of pages managed within the wiki graph.
+- **getNodeById** — Retrieves a node by its unique identifier.
+- **getNodesByKind** — Retrieves nodes filtered by their kind or category.
+- **getNodesByPath** — Retrieves nodes based on their associated file or page path.
+- **getOutgoingEdges** — Retrieves edges directed out from a specified node.
 
 ## Dependencies and imports
 
-- `./utils/fs.js`: A local utility module, likely providing filesystem-related functions.
-- `node:path`: Node.js built-in module for handling and transforming file paths.
+- `./utils/fs.js` — Presumably provides filesystem utilities used for reading or managing wiki page files.
+- `node:path` — Node.js built-in module for handling and transforming file paths.
 
 ## Related tests
 
-No documentation or source cards indicate the presence of related test files or test cases for this module.
+No explicit test files or test-related documentation cards are listed for this module.
 
 ## Known gaps or open questions
 
 - The exact structure and semantics of `AffectedWikiGraphPageSelection` are not detailed.
-- There is no explicit documentation or examples illustrating how to use the exported functions.
-- No test coverage or test references are provided, so the robustness and correctness of the module are not verifiable from the current data.
-- The source repository and commit SHA are unknown, limiting traceability.
+- There is no documentation or test coverage information available to clarify usage patterns or edge cases.
+- The module's integration context within a larger system or how it interacts with other modules is not specified.
+- The source repository and commit information are unknown, limiting traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

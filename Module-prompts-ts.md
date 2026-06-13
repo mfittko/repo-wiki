@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "9897e5b449323bf6db3eac895995c3e384690a41"
+source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
 page_state: "generated"
 source_paths: ["src/prompts.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,9 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides a collection of functions and types related to building and managing prompts, likely for use in documentation generation, code migration, or model-driven contexts. It defines various prompt builders such as `buildArchitecturePrompt`, `buildCrossCuttingPrompt`, `buildFoundationPrompt`, `buildModulePrompt`, and a more generic `buildPrompt`. These functions appear to facilitate the construction of structured prompts, possibly for AI or tooling workflows.
-
-Additionally, the module exports several context and metadata types including `DocCardContext`, `MigrationContext`, `ModelContext`, and `ModuleInfo`, which suggest a role in managing contextual information during prompt construction or processing.
+This module provides a collection of functions and types related to constructing and managing prompts, likely for use in documentation generation, code migration, or model-driven contexts. It includes utilities to build various categorized prompts such as architecture, cross-cutting concerns, foundation, and module-specific prompts. The module also defines several context and information types that support prompt construction and usage.
 
 ## Source file list
 
@@ -37,11 +35,11 @@ Additionally, the module exports several context and metadata types including `D
   - `ModelContext`
   - `ModuleInfo`
 
-These symbols represent the main API surface of the module, with the `build*Prompt` functions serving as primary entry points for creating different categories of prompts.
+These symbols represent the core API of the module, with the `build*Prompt` functions serving as primary entry points for generating different types of prompts. The context and info types provide structured data to support prompt generation and related operations.
 
 ## Dependencies and imports
 
-- The source card notes that `src/prompts.ts` has no imports, indicating this module is self-contained and does not depend on external modules or libraries.
+- The module `src/prompts.ts` does not import any external modules or dependencies, indicating it is self-contained or relies on ambient/global types or data.
 
 ## Related tests
 
@@ -49,10 +47,10 @@ These symbols represent the main API surface of the module, with the `build*Prom
 
 ## Known gaps or open questions
 
-- The exact nature and format of the prompts constructed by the `build*Prompt` functions are not detailed here.
-- The roles and structures of the context types (`DocCardContext`, `MigrationContext`, `ModelContext`) and how they interact with prompt building are not described.
-- There is no information on how this module integrates with other parts of the system or how the prompts are consumed.
-- Absence of related tests or usage examples limits understanding of practical application and robustness.
+- There is no explicit documentation or comments describing the detailed behavior or intended usage of the prompt-building functions and context types.
+- The absence of related test information leaves the coverage and reliability of the module unverified.
+- The source repository and commit information are unknown, limiting traceability.
+- The exact role of each context type (`DocCardContext`, `MigrationContext`, `ModelContext`) and how they interact with prompt builders is not detailed.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

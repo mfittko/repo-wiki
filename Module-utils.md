@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "9897e5b449323bf6db3eac895995c3e384690a41"
+source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
 page_state: "generated"
 source_paths: ["src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "<ISO-8601 timestamp>"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -37,8 +37,8 @@ The `utils` module provides a collection of utility functions and types implemen
 - `DEFAULT_WALK_EXCLUDES` — Default patterns to exclude when walking directories.
 - `ensureDir` — Function to ensure a directory exists, creating it if necessary.
 - `fileExists` — Function to check if a file exists.
-- `readJson` — Function to read and parse JSON files.
-- `walkFiles` — Function to recursively walk files in directories.
+- `readJson` — Function to read and parse a JSON file.
+- `walkFiles` — Function to recursively walk files in a directory.
 - `writeJson` — Function to write JSON data to a file.
 - `writeText` — Function to write text data to a file.
 
@@ -52,13 +52,16 @@ The `utils` module provides a collection of utility functions and types implemen
 
 - `src/utils/dotenv.ts` imports:
   - `./fs.js` (local filesystem utilities)
-  - Node.js built-in modules: `fs`, `path`
+  - `node:fs` (Node.js filesystem module)
+  - `node:path` (Node.js path module)
 
 - `src/utils/fs.ts` imports:
-  - Node.js built-in modules: `fs`, `path`
+  - `node:fs`
+  - `node:path`
 
 - `src/utils/git.ts` imports:
-  - Node.js built-in modules: `child_process`, `util`
+  - `node:child_process` (to spawn Git commands)
+  - `node:util` (for promisification and utilities)
 
 - `src/utils/args.ts` has no imports.
 
@@ -69,9 +72,9 @@ No test files or test-related documentation cards are present in the current sou
 ## Known gaps or open questions
 
 - There is no explicit documentation or test coverage information available for this module.
-- The exact repository remote URL and commit SHA are unknown and should be updated for accurate source tracking.
-- The module's integration or usage context within the larger project is not described.
-- No information on error handling strategies or performance considerations is provided.
+- The exact repository remote URL and commit SHA are not specified.
+- The usage context or higher-level integration of these utilities is not described.
+- No information on error handling strategies or edge cases is provided.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
