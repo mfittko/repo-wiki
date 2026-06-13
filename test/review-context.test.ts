@@ -34,7 +34,7 @@ async function makeReviewFixture() {
     "import { greet } from './greeting';\n\nexport function run() {\n  console.log(greet('world'));\n}\n"
   );
 
-  await runGit(['init'], { cwd: dir });
+  await runGit(['init', '-b', 'main'], { cwd: dir });
   await runGit(['config', 'user.email', 'test@example.com'], { cwd: dir });
   await runGit(['config', 'user.name', 'Test User'], { cwd: dir });
   await runGit(['add', '.'], { cwd: dir });
@@ -274,7 +274,7 @@ test('buildReviewContextBundle uses symbol grep fallback for non-JavaScript lang
     await fs.writeFile(path.join(repo, 'src', 'app.py'), 'from helper import helper\n\ndef main():\n    print(helper())\n');
     await fs.writeFile(path.join(repo, 'src', 'consumer.py'), 'from app import main\n\nmain()\n');
 
-    await runGit(['init'], { cwd: repo });
+    await runGit(['init', '-b', 'main'], { cwd: repo });
     await runGit(['config', 'user.email', 'test@example.com'], { cwd: repo });
     await runGit(['config', 'user.name', 'Test User'], { cwd: repo });
     await runGit(['add', '.'], { cwd: repo });
@@ -405,7 +405,7 @@ test('resolveReviewTarget resolves a branch target against origin/HEAD', async (
   try {
     await fs.mkdir(path.join(repo, 'src'), { recursive: true });
     await fs.writeFile(path.join(repo, 'src', 'a.ts'), 'export const A = 1;\n');
-    await runGit(['init'], { cwd: repo });
+    await runGit(['init', '-b', 'main'], { cwd: repo });
     await runGit(['config', 'user.email', 'test@example.com'], { cwd: repo });
     await runGit(['config', 'user.name', 'Test User'], { cwd: repo });
     await runGit(['add', '.'], { cwd: repo });
@@ -453,7 +453,7 @@ test('buildReviewContextBundle detects JS importers of a changed file', async ()
       "import { greet } from './greeting';\n\ngreet();\n"
     );
 
-    await runGit(['init'], { cwd: repo });
+    await runGit(['init', '-b', 'main'], { cwd: repo });
     await runGit(['config', 'user.email', 'test@example.com'], { cwd: repo });
     await runGit(['config', 'user.name', 'Test User'], { cwd: repo });
     await runGit(['add', '.'], { cwd: repo });
@@ -584,7 +584,7 @@ test('symbol grep returns empty when changed file has no symbols', async () => {
     await fs.writeFile(path.join(repo, 'src', 'a.py'), '# only a comment\n');
     await fs.writeFile(path.join(repo, 'src', 'b.py'), 'x = 1\n');
 
-    await runGit(['init'], { cwd: repo });
+    await runGit(['init', '-b', 'main'], { cwd: repo });
     await runGit(['config', 'user.email', 'test@example.com'], { cwd: repo });
     await runGit(['config', 'user.name', 'Test User'], { cwd: repo });
     await runGit(['add', '.'], { cwd: repo });
@@ -645,7 +645,7 @@ test('non-JS changed file with no symbols returns no adjacent files', async () =
     await fs.mkdir(path.join(repo, '.llmwiki', 'run'), { recursive: true });
     await fs.writeFile(path.join(repo, 'src', 'a.txt'), 'hello\n');
 
-    await runGit(['init'], { cwd: repo });
+    await runGit(['init', '-b', 'main'], { cwd: repo });
     await runGit(['config', 'user.email', 'test@example.com'], { cwd: repo });
     await runGit(['config', 'user.name', 'Test User'], { cwd: repo });
     await runGit(['add', '.'], { cwd: repo });
@@ -698,7 +698,7 @@ test('unreadable changed file surfaces gracefully in symbol fallback', async () 
     await fs.writeFile(path.join(repo, 'src', 'a.py'), 'def helper():\n    return 1\n');
     await fs.writeFile(path.join(repo, 'src', 'b.py'), 'from a import helper\n');
 
-    await runGit(['init'], { cwd: repo });
+    await runGit(['init', '-b', 'main'], { cwd: repo });
     await runGit(['config', 'user.email', 'test@example.com'], { cwd: repo });
     await runGit(['config', 'user.name', 'Test User'], { cwd: repo });
     await runGit(['add', '.'], { cwd: repo });
@@ -737,7 +737,7 @@ test('walk fallback reports unreadable source files', async () => {
     await fs.writeFile(path.join(repo, 'src', 'a.ts'), 'export const A = 1;\n');
     await fs.writeFile(path.join(repo, 'src', 'secret.ts'), 'export const SECRET = 1;\n');
 
-    await runGit(['init'], { cwd: repo });
+    await runGit(['init', '-b', 'main'], { cwd: repo });
     await runGit(['config', 'user.email', 'test@example.com'], { cwd: repo });
     await runGit(['config', 'user.name', 'Test User'], { cwd: repo });
     await runGit(['add', '.'], { cwd: repo });
@@ -769,7 +769,7 @@ test('package imports are skipped during JS adjacency resolution', async () => {
     await fs.writeFile(path.join(repo, 'src', 'util.ts'), 'export const U = 1;\n');
     await fs.writeFile(path.join(repo, 'src', 'main.ts'), "import fs from 'node:fs';\nimport { U } from './util';\n");
 
-    await runGit(['init'], { cwd: repo });
+    await runGit(['init', '-b', 'main'], { cwd: repo });
     await runGit(['config', 'user.email', 'test@example.com'], { cwd: repo });
     await runGit(['config', 'user.name', 'Test User'], { cwd: repo });
     await runGit(['add', '.'], { cwd: repo });
