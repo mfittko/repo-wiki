@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
+source_commit: "f3abfc0fc6ecf916c2293708106a5018ea85180d"
 page_state: "generated"
 source_paths: ["src/search.ts"]
-compiled_at: "2024-06-14T00:00:00Z"
+compiled_at: "<ISO-8601 timestamp>"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to searching within a wiki or documentation context. It includes building and managing a search index, formatting search results, and performing search queries over the indexed content. The module is implemented in TypeScript and is part of the source code.
+This module provides functionality related to searching within the wiki or documentation source. It includes building and managing a search index, formatting search results, and performing search queries. The module is implemented in TypeScript and is part of the source category, indicating it contains core source code for search capabilities.
 
 ## Source file list
 
@@ -21,15 +21,15 @@ This module provides functionality related to searching within a wiki or documen
 
 ## Key symbols and entry points
 
-- **buildSearchIndex**: Function to construct or update the search index from source content.
-- **defaultSearchDirForWiki**: Likely a constant or function defining the default directory path for the wiki search index.
-- **formatSearchResults**: Function to format raw search results into a user-friendly or structured output.
-- **SEARCH_INDEX_VERSION**: A version identifier for the search index format or schema.
-- **searchIndex**: Possibly an instance or data structure representing the current search index.
-- **SearchIndex**: Type or class representing the search index structure.
+- **buildSearchIndex**: Function to construct or update the search index.
+- **defaultSearchDirForWiki**: Default directory path used for searching within the wiki.
+- **formatSearchResults**: Function to format raw search results into a user-friendly structure.
+- **SEARCH_INDEX_VERSION**: Constant representing the version of the search index format.
+- **searchIndex**: Likely an object or data structure holding the current search index.
+- **SearchIndex**: Type or interface defining the structure of the search index.
 - **SearchIndexEntry**: Type or interface representing an individual entry in the search index.
 - **SearchResult**: Type or interface representing a search result item.
-- **searchWiki**: Function to perform search queries against the wiki content using the search index.
+- **searchWiki**: Function to perform a search query against the wiki content.
 
 ## Dependencies and imports
 
@@ -40,18 +40,18 @@ This module provides functionality related to searching within a wiki or documen
   - `fs`
   - `path`
 
-These dependencies suggest the module interacts with file system operations and processes frontmatter metadata, likely to extract searchable content and metadata from source files.
+These dependencies suggest the module interacts with file system operations and processes frontmatter metadata, likely to build and query the search index.
 
 ## Related tests
 
-No documentation or test files are explicitly linked or mentioned for this module in the provided source cards.
+No documentation or source cards indicate the presence of related test files or test cases for this module.
 
 ## Known gaps or open questions
 
-- The exact behavior and API details of the key functions and types are not documented here.
-- No information on test coverage or example usage is available.
-- The source repository and commit SHA are unknown, limiting traceability.
-- The module's integration with other parts of the system or wiki is not described.
+- No explicit test coverage or test files are documented for this module.
+- The exact behavior and API details of the exported functions and types are not described beyond their names.
+- The source repository URL and commit SHA are unknown, limiting traceability.
+- The module's integration with other parts of the system or UI is not detailed.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
+source_commit: "f3abfc0fc6ecf916c2293708106a5018ea85180d"
 page_state: "generated"
 source_paths: ["src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts"]
-compiled_at: "<ISO-8601 timestamp>"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -29,9 +29,9 @@ The `utils` module provides a collection of utility functions and types implemen
 - `ParsedArgs` — Type representing the structure of parsed arguments.
 
 ### `src/utils/dotenv.ts`
+- `DotEnvLoadResult` — Type representing the result of loading environment variables.
 - `loadDotEnv` — Function to load environment variables from `.env` files.
 - `parseDotEnv` — Function to parse `.env` file content.
-- `DotEnvLoadResult` — Type representing the result of loading `.env` files.
 
 ### `src/utils/fs.ts`
 - `DEFAULT_WALK_EXCLUDES` — Default patterns to exclude when walking directories.
@@ -43,38 +43,35 @@ The `utils` module provides a collection of utility functions and types implemen
 - `writeText` — Function to write text data to a file.
 
 ### `src/utils/git.ts`
-- `runGit` — Function to run arbitrary Git commands.
 - `getGitCommit` — Function to retrieve the current Git commit hash.
 - `getGitRemote` — Function to get the Git remote URL.
 - `getGitStatus` — Function to get the current Git status.
+- `runGit` — Function to run arbitrary Git commands.
 
 ## Dependencies and imports
 
 - `src/utils/dotenv.ts` imports:
   - `./fs.js` (local filesystem utilities)
-  - `node:fs` (Node.js filesystem module)
-  - `node:path` (Node.js path module)
+  - Node.js built-in modules: `fs`, `path`
 
 - `src/utils/fs.ts` imports:
-  - `node:fs`
-  - `node:path`
+  - Node.js built-in modules: `fs`, `path`
 
 - `src/utils/git.ts` imports:
-  - `node:child_process` (to spawn Git commands)
-  - `node:util` (for promisification and utilities)
+  - Node.js built-in modules: `child_process`, `util`
 
 - `src/utils/args.ts` has no imports.
 
 ## Related tests
 
-No test files or test-related documentation cards are present in the current source data for this module.
+No explicit test files or test-related documentation cards are present in the source data for this module.
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or test coverage information available for this module.
-- The exact repository remote URL and commit SHA are not specified.
-- The usage context or higher-level integration of these utilities is not described.
-- No information on error handling strategies or edge cases is provided.
+- There is no information about test coverage or test files related to this module.
+- The repository remote URL and commit SHA are unspecified.
+- The exact usage patterns or higher-level integration of these utilities are not documented here.
+- No documentation or usage examples are provided in the source cards.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

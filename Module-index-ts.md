@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
+source_commit: "f3abfc0fc6ecf916c2293708106a5018ea85180d"
 page_state: "generated"
 source_paths: ["src/index.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -21,21 +21,18 @@ This module serves as the primary entry point for the source code located in `sr
 
 ## Key symbols and entry points
 
-- **Functions and Methods:**
-  - `applyFrontmatterPolicy`
-  - `assembleAllPageContexts`
-  - `assemblePageContext`
-  - `buildCrossCuttingPrompt`
-  - `buildFoundationPrompt`
-  - `buildModulePrompt`
-  - `buildPrompt`
-  - `buildRequest`
+- `applyFrontmatterPolicy`
+- `assembleAllPageContexts`
+- `assemblePageContext`
+- `AssemblePageContextInput` (type/interface)
+- `buildCrossCuttingPrompt`
+- `buildFoundationPrompt`
+- `buildModulePrompt`
+- `buildPrompt`
+- `buildRequest`
+- `BuildRequestOptions` (type/interface)
 
-- **Types and Interfaces:**
-  - `AssemblePageContextInput`
-  - `BuildRequestOptions`
-
-These symbols represent the main API surface of the module, facilitating tasks such as assembling page contexts, constructing various prompt types, applying frontmatter policies, and building requests with configurable options.
+These symbols represent the main exported functions and types that facilitate the assembly of page contexts, construction of various prompts, and building of requests, as well as the application of frontmatter policies.
 
 ## Dependencies and imports
 
@@ -48,18 +45,18 @@ The module imports from several internal modules, indicating its role as an aggr
 - `./docs-linter.js`
 - Additionally, it imports from `./frontmatter.js`, `./init.js`, and `./linter.js` as indicated in the source excerpt.
 
-These dependencies suggest the module interacts with command-line interfaces, compilation processes, configuration management, context assembly logic, and documentation linting mechanisms.
+These dependencies suggest the module interacts with command-line interfaces, compilation processes, configuration management, context assembly logic, and documentation linting.
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are associated with this module in the provided source data.
+No explicit test files or test-related documentation are referenced in the source cards or metadata for this module.
 
 ## Known gaps or open questions
 
-- The module's internal implementation details and how the exported functions interrelate are not detailed here.
-- There is no information on test coverage or specific usage examples.
-- The exact repository remote URL and commit SHA are unspecified.
-- The role of some imported modules like `./init.js` and `./linter.js` in this module's context is not fully clear from the available data.
+- There is no direct information about associated test coverage or test modules.
+- The exact behavior and implementation details of the exported symbols are not described here.
+- The repository remote URL and commit SHA are unspecified, limiting traceability.
+- The module's role within the larger system architecture is implied but not explicitly documented.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

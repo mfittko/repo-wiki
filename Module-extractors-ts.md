@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
+source_commit: "f3abfc0fc6ecf916c2293708106a5018ea85180d"
 page_state: "generated"
 source_paths: ["src/extractors.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -38,14 +38,14 @@ This module provides a collection of functions designed to analyze and extract v
 
 ## Related tests
 
-No documentation or test files are explicitly linked to this module in the current source cards. It is recommended to verify the presence of tests related to the extraction functions in the broader test suite or consider adding dedicated tests if missing.
+No documentation or test files are currently linked or documented for this module.
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or test coverage information available for this module.
-- The exact runtime environments or contexts where these extraction functions are applied are not detailed.
-- The relationship between the different "surface" extraction functions (migration, model, route) and their usage contexts could be further clarified.
-- The module's integration with other parts of the system is not described in the available source cards.
+- There is no explicit documentation or test coverage referenced for this module, which may limit understanding of edge cases or intended usage.
+- The exact nature and structure of the "surfaces" (migration, model, route) extracted by the module are not detailed.
+- The runtime environment assumptions or constraints for `detectRuntimeHints` and `extractEnvironmentVariables` are not specified.
+- The module's integration points with other parts of the system are not described.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

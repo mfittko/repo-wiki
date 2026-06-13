@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
+source_commit: "f3abfc0fc6ecf916c2293708106a5018ea85180d"
 page_state: "generated"
 source_paths: ["src/language.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to language detection and classification based on file paths. It includes utilities to classify a given path and detect the programming language associated with it. The module is implemented in TypeScript and serves as a source component within the codebase.
+This module provides functionality related to language detection and classification based on file paths. It includes utilities to classify a given path and detect the language associated with it. The module is implemented in TypeScript and serves as a source component within the codebase.
 
 ## Source file list
 
@@ -22,7 +22,7 @@ This module provides functionality related to language detection and classificat
 ## Key symbols and entry points
 
 - `classifyPath`: A function that classifies a file path, likely to determine its type or category.
-- `detectLanguage`: A function that detects the programming language of a file based on its path or content.
+- `detectLanguage`: A function that detects the programming language or content language from a given input, presumably a file path or content.
 
 ## Dependencies and imports
 

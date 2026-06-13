@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
+source_commit: "f3abfc0fc6ecf916c2293708106a5018ea85180d"
 page_state: "generated"
 source_paths: ["src/compiler.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-The `compiler.ts` module is a core source component responsible for compiling the GitHub Wiki content. It provides the API surface and configuration logic necessary to process and transform wiki pages, including architectural decision records. The module supports runtime configuration via environment variables and exposes HTTP routes for managing wiki content, such as deleting architecture documentation pages.
+The `compiler.ts` module is a core source component responsible for compiling the GitHub Wiki content. It provides the API surface and configuration mechanisms necessary to process and transform wiki pages into a compiled form. The module includes logic to make architectural decisions during compilation and supports runtime configuration via environment variables and HTTP routes.
 
 ## Source file list
 
@@ -21,32 +21,32 @@ The `compiler.ts` module is a core source component responsible for compiling th
 
 ## Key symbols and entry points
 
-- **ArchDecision**: Represents architectural decision records within the wiki content.
-- **compileWiki**: Main function to compile the entire wiki, orchestrating the processing of source documents.
-- **computeArchDecision**: Function to compute or derive architectural decisions from the source data.
+- **ArchDecision**: Represents decisions related to the architecture of the compiled wiki content.
+- **compileWiki**: The primary function to initiate the compilation process of the wiki.
+- **computeArchDecision**: A function to compute architectural decisions based on the current wiki state or configuration.
 
 ## Dependencies and imports
 
-The module imports several internal components to fulfill its responsibilities:
+The module imports several internal components to support its compilation logic:
 
 - `./context-assembler.js`
 - `./data-model-signals.js`
 - `./docs-ingestor.js`
 - `./docs-validation.js`
 - `./frontmatter.js`
-- Additional imports inferred from the excerpt (not explicitly listed in source cards but present in source): `./llm-provider.js`, `./page-ownership.js`, `./search.js`
 
-These dependencies provide context assembly, data modeling, document ingestion and validation, frontmatter parsing, language model integration, page ownership management, and search capabilities.
+These dependencies provide context assembly, data modeling, documentation ingestion, validation, and frontmatter parsing functionalities essential for the compilation process.
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are listed for this module.
+No explicit test files or test-related documentation cards are currently associated with this module.
 
 ## Known gaps or open questions
 
-- The module's runtime behavior is influenced by the environment variable `LLMWIKI_COMPILER_MODE`, but details on the modes and their effects are not documented here.
-- The HTTP route `DELETE Architecture.md` is registered with an unknown handler context (`pages`), but further details on its implementation or usage are not provided.
-- No documentation cards or test coverage information is available, indicating potential areas for future documentation and testing improvements.
+- There is no documentation or test coverage explicitly linked to this module, indicating potential areas for improvement in verification and usage guidance.
+- The exact behavior and configuration options controlled by the environment variable `LLMWIKI_COMPILER_MODE` are not detailed.
+- The HTTP route handling (e.g., DELETE on `Architecture.md`) is noted but lacks further explanation or documentation.
+- The module imports additional files such as `./llm-provider.js`, `./page-ownership.js`, and `./search.js` as per the excerpt, but these are not listed in the main imports, suggesting partial or conditional usage.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

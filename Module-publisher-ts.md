@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f5a973364c2a93ccbfa3b102d1da911a58e92021"
+source_commit: "f3abfc0fc6ecf916c2293708106a5018ea85180d"
 page_state: "generated"
 source_paths: ["src/publisher.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-The `publisher.ts` module provides functionality related to publishing content to GitHub Wikis. It includes configuration and source code to manage publishing targets, policies for frontmatter handling, and utilities to rewrite internal wiki links. The module supports environment-variable-driven configuration for Git remotes and user identity, facilitating automated or scripted publishing workflows.
+The `publisher.ts` module provides functionality related to publishing content to GitHub Wikis. It includes configuration and source code to manage publishing targets, policies for frontmatter handling, and utilities to rewrite internal wiki links. The module supports environment-variable-driven configuration to customize publishing behavior, making it suitable for automated or CI-driven wiki publishing workflows.
 
 ## Source file list
 
@@ -21,21 +21,21 @@ The `publisher.ts` module provides functionality related to publishing content t
 
 ## Key symbols and entry points
 
-- **defaultFrontmatterPolicyForTarget**: Defines default policies for handling frontmatter metadata based on the publishing target.
+- **defaultFrontmatterPolicyForTarget**: Defines default policies for handling frontmatter metadata depending on the publishing target.
 - **PUBLISH_TARGETS**: A collection or enumeration of supported publishing targets.
 - **PublishTarget**: Type or interface representing a publishing target.
-- **publishWiki**: Main function to publish content to a GitHub Wiki, likely accepting options and handling the publishing process.
-- **PublishWikiOptions**: Type or interface defining options for the `publishWiki` function.
-- **rewriteInternalWikiLinks**: Utility function to rewrite internal links within wiki content, ensuring correct linking after publishing.
+- **publishWiki**: Main function to execute the publishing process of a wiki.
+- **PublishWikiOptions**: Options interface/type for configuring the `publishWiki` function.
+- **rewriteInternalWikiLinks**: Utility function to adjust internal wiki links during publishing.
 
 ## Dependencies and imports
 
 - Local modules:
-  - `./frontmatter.js`
-  - `./utils/fs.js`
-  - `./utils/git.js`
+  - `./frontmatter.js` — likely handles frontmatter metadata parsing and policies.
+  - `./utils/fs.js` — filesystem utilities.
+  - `./utils/git.js` — Git-related utilities.
 - External modules:
-  - `https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs` (Mermaid diagram rendering)
+  - `https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs` — Mermaid diagram rendering library.
 - Node.js built-in modules:
   - `fs`
   - `os`
@@ -48,9 +48,9 @@ No explicit test files or test-related documentation cards are listed for this m
 ## Known gaps or open questions
 
 - No documentation cards or detailed usage examples are available.
-- The exact behavior and configuration details of `publishWiki` and related policies are not described in the source cards.
-- The environment variables `GITHUB_WIKI_REMOTE`, `LLMWIKI_GIT_USER_EMAIL`, `LLMWIKI_GIT_USER_NAME`, and `LLMWIKI_PUBLISH_REMOTE` are referenced but their expected values and usage contexts are not documented here.
-- No information on error handling, logging, or integration with other modules is provided.
+- The exact behavior and configuration details of `defaultFrontmatterPolicyForTarget` and `PUBLISH_TARGETS` are not described.
+- The integration and usage of the Mermaid library within the publishing workflow are not detailed.
+- Environment variables such as `GITHUB_WIKI_REMOTE`, `LLMWIKI_GIT_USER_EMAIL`, `LLMWIKI_GIT_USER_NAME`, and `LLMWIKI_PUBLISH_REMOTE` are referenced but their exact roles and expected values are not documented here.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
