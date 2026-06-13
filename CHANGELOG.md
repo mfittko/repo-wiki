@@ -74,6 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Apply plan review findings: 6 new plan docs, P5 drift fix, debt-report linter fixes.
 - use html links in github-pages navigation.
 - Gate `repo-wiki run` on docs/wiki lint errors and block publish on lint failures.
+- address unresolved review comments from #108.
 
 ### Security
 - Fix Ruby extractor heredoc and end-token edge cases.
