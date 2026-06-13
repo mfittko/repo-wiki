@@ -82,7 +82,7 @@ const repoWikiSearchSchema = Type.Object({
   limit: Type.Optional(Type.Number({ default: 10 })),
 });
 
-function truncateForTool(text: string, maxBytes = 50000, maxLines = 2000): string {
+export function truncateForTool(text: string, maxBytes = 50000, maxLines = 2000): string {
   const lines = text.split('\n');
   if (lines.length > maxLines || Buffer.byteLength(text, 'utf8') > maxBytes) {
     const head = lines.slice(0, maxLines);

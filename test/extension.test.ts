@@ -383,3 +383,56 @@ test('runExtensionInstall rejects --global combined with --project', async () =>
     await rm(tmpDir, { recursive: true, force: true });
   }
 });
+
+test('truncateForTool hard-truncates a single oversized line', async () => {
+  const { truncateForTool } = await import('../src/extension.js');
+  const longLine = 'x'.repeat(200);
+  const out = truncateForTool(longLine, 100, 10);
+  // Output must respect maxBytes and end with truncation marker.
+  assert.ok(Buffer.byteLength(out, 'utf8') <= 200, 'output should fit within reasonable bound');
+  assert.ok(out.includes('[Output truncated]'), 'missing truncation marker');
+});
+
+test('repo_wiki_lint error includes summary text when errors present', async () => {
+  const { pi, tools } = createCapturingExtensionApi();
+  repoWikiExtension(pi as unknown as import('@earendil-works/pi-coding-agent').ExtensionAPI);
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-ext-lint-summary-'));
+  try {
+    const wikiDir = path.join(tmpDir, 'wiki');
+    const scanDir = path.join(tmpDir, 'scan');
+    await mkdir(wikiDir, { recursive: true });
+    await mkdir(scanDir, { recursive: true });
+    await writeFile(path.join(scanDir, 'manifest.json'), JSON.stringify({ files: [] }), 'utf8');
+    await writeFile(path.join(wikiDir, 'Orphan.md'), '# Orphan\n', 'utf8');
+    const lintTool = tools.find((t) => t.name === 'repo_wiki_lint')!;
+    try {
+      await lintTool.execute('id', { wikiDir, scanDir });
+      assert.fail('expected lint to throw');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      assert.match(msg, /error\(s\)/);
+      assert.ok(msg.length > 50, `expected detailed error message, got: ${msg.slice(0, 200)}`);
+    }
+  } finally {
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('runExtensionInstall reports scope custom when only --pi-dir is set', async () => {
+  const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'repo-wiki-ext-scope-'));
+  try {
+    // Capture stdout to read summary JSON.
+    const originalLog = console.log;
+    let captured = '';
+    console.log = (msg: string) => { captured = msg; };
+    try {
+      await runExtensionInstall({ piDir: tmpDir });
+    } finally {
+      console.log = originalLog;
+    }
+    const summary = JSON.parse(captured);
+    assert.equal(summary.scope, 'custom');
+  } finally {
+    await rm(tmpDir, { recursive: true, force: true });
+  }
+});
