@@ -67,6 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enrich `.llmwiki/graph.json` with deterministic `page_state`, `wiki_link`, and `provenance` data.
 - Use `.llmwiki/graph.json` for deterministic incremental affected-page selection with safe attribution fallback.
 - Define artifact-based consumer contract for runnable downstream repo-wiki CLI.
+- Publish repo-wiki to npm on release.
 
 ### Fixed
 - Complete deterministic scanner coverage for NestJS, Koa, tRPC, GraphQL, and OpenAPI API surfaces (including GraphQL field-config resolver mapping).
