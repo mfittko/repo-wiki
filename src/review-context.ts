@@ -78,6 +78,27 @@ export type ReviewContextOptions = {
 
 const JS_LANGUAGES = new Set(['JavaScript', 'JavaScript React', 'TypeScript', 'TypeScript React']);
 const JS_EXTENSIONS = ['.tsx', '.ts', '.jsx', '.js', '.mjs', '.cjs'];
+const SOURCE_EXTENSIONS = new Set([
+  ...JS_EXTENSIONS,
+  '.mjs', '.cjs',
+  '.py', '.pyi',
+  '.go',
+  '.rs',
+  '.rb',
+  '.java', '.kt', '.kts', '.scala',
+  '.c', '.cc', '.cpp', '.cxx', '.h', '.hpp',
+  '.cs', '.fs', '.vb',
+  '.swift', '.m', '.mm',
+  '.php',
+  '.sh', '.bash', '.zsh',
+  '.lua', '.pl', '.r'
+]);
+
+function isSourcePath(path: string): boolean {
+  const lastDot = path.lastIndexOf('.');
+  if (lastDot < 0) return false;
+  return SOURCE_EXTENSIONS.has(path.slice(lastDot).toLowerCase());
+}
 
 export async function resolveReviewTarget(
   repoPath: string,
@@ -211,7 +232,8 @@ async function resolveMergeBase(repoPath: string, baseRef: string, headRef: stri
 export async function getChangedFilePaths(
   repoPath: string,
   baseCommit: string,
-  headCommit: string
+  headCommit: string,
+  options: { sourceOnly?: boolean } = {}
 ): Promise<string[]> {
   const { stdout } = await runGit(
     ['diff', '--name-only', '-z', baseCommit, headCommit],
@@ -220,11 +242,15 @@ export async function getChangedFilePaths(
   if (!stdout) {
     return [];
   }
-  return stdout
+  const paths = stdout
     .split('\0')
     .map((entry) => entry.trim())
     .filter(Boolean)
     .sort();
+  if (!options.sourceOnly) {
+    return paths;
+  }
+  return paths.filter((path) => isSourcePath(path));
 }
 
 export async function getGitDiff(
@@ -318,7 +344,7 @@ export async function buildReviewContextBundle(
 ): Promise<ReviewContextBundle> {
   const absoluteRepo = path.resolve(options.repoPath);
   const target = await resolveReviewTarget(absoluteRepo, options.target);
-  const changedPaths = await getChangedFilePaths(absoluteRepo, target.baseCommit, target.headCommit);
+  const changedPaths = await getChangedFilePaths(absoluteRepo, target.baseCommit, target.headCommit, { sourceOnly: true });
   const diffText = await getGitDiff(absoluteRepo, target.baseCommit, target.headCommit);
   const changedFiles = parseGitDiff(diffText);
   const warnings: string[] = [];
@@ -679,6 +705,7 @@ export function formatReviewContextBundle(
     return JSON.stringify(
       {
         target: bundle.target,
+        adjacentDepth: bundle.adjacentDepth,
         changedFiles: bundle.changedFiles,
         adjacentFiles: bundle.adjacentFiles,
         relatedWikiPages: bundle.relatedWikiPages,

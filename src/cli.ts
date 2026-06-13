@@ -311,6 +311,9 @@ export async function runCli(argv: string[]) {
         throw new Error('Missing review context target. Usage: repo-wiki review-context <pr|branch|range> [--out <path>] [--format md|json|both] [--wiki-dir <dir>] [--graph <path>] [--scan <dir>] [--adjacency <depth>]');
       }
       const effectiveFormat = (getStringOption(options, 'format') || (options.json ? 'json' : 'md')) as 'md' | 'json' | 'both';
+      if (!['md', 'json', 'both'].includes(effectiveFormat)) {
+        throw new Error(`Unknown --format: ${effectiveFormat}. Expected one of: md, json, both.`);
+      }
       const bundle = await buildReviewContextBundle({
         repoPath: getStringOption(options, 'repo') || '.',
         target,

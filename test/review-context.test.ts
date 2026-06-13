@@ -881,3 +881,35 @@ test('formatReviewContextBundle emits per-line diff markers including empty line
     await fs.rm(repo, { recursive: true, force: true });
   }
 });
+
+test('CLI review-context --format json writes only the JSON bundle (no markdown)', async () => {
+  const repo = await makeReviewFixture();
+  try {
+    const outDir = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-review-context-format-'));
+    try {
+      const outBase = path.join(outDir, 'bundle');
+      const stdout = await runReviewContextCli(['review-context', 'main..feature', '--repo', repo, '--format', 'json', '--out', outBase]);
+      const parsed = JSON.parse(stdout);
+      assert.equal(parsed.status, 'ok');
+      const files = await fs.readdir(outDir);
+      assert.ok(files.includes('bundle.json'), `expected bundle.json in ${outDir}, got ${files.join(', ')}`);
+      assert.ok(!files.includes('bundle.md'), `expected NO bundle.md, got ${files.join(', ')}`);
+    } finally {
+      await fs.rm(outDir, { recursive: true, force: true });
+    }
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
+});
+
+test('CLI review-context rejects unknown --format value', async () => {
+  const repo = await makeReviewFixture();
+  try {
+    await assert.rejects(
+      () => runReviewContextCli(['review-context', 'main..feature', '--repo', repo, '--format', 'yaml']),
+      /Unknown --format/
+    );
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
+});

@@ -104,7 +104,9 @@ async function main() {
     : path.join(repoPath, '.llmwiki', `review-context-pr-${prNumber}`);
 
   await fs.mkdir(path.dirname(baseOut), { recursive: true });
-  await fs.writeFile(`${baseOut}.md`, `${MARKER}\n\n${mdBody}`, 'utf8');
+  if (format === 'md' || format === 'both') {
+    await fs.writeFile(`${baseOut}.md`, `${MARKER}\n\n${mdBody}`, 'utf8');
+  }
   if (format === 'json' || format === 'both') {
     await fs.writeFile(`${baseOut}.json`, jsonBody, 'utf8');
   }
@@ -134,7 +136,7 @@ async function main() {
   await fs.writeFile(tempBodyFile, summaryBody, 'utf8');
 
   if (existingId) {
-    await execGh(['api', `-X PATCH`, `-F body=@${tempBodyFile}`, `/repos/${repository}/issues/comments/${existingId}`], repoPath);
+    await execGh(['api', '-X', 'PATCH', '-F', `body=@${tempBodyFile}`, `/repos/${repository}/issues/comments/${existingId}`], repoPath);
   } else {
     await execGh(['pr', 'comment', prNumber, '--body-file', tempBodyFile, '--repo', repository], repoPath);
   }
