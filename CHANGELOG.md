@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Add GitHub Actions npm publish workflow and configure package for public npm release
 - **Scanner analysis foundation** — new `src/extractors.ts` module with `extractImports`, `extractSymbols`, `extractExportedSymbols`, `extractEnvironmentVariables`, `extractRouteSurfaces`, and `detectRuntimeHints`; framework detection covers Express, Fastify, Hono, and Next.js route-handler files
 - **Repository analysis** — `src/repository-analysis.ts` with `buildRepositoryAnalysis` (dependency graph, test-to-source mapping) and `extractPackageMetadata` (package name and scripts); integrated into the scanner manifest under an `analysis` key
 - **TypeScript migration** — all files under `src/`, `test/`, and `bin/` converted from `.js` to `.ts`; `tsconfig.json` added with strict-off baseline configuration
