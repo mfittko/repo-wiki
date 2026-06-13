@@ -58,6 +58,43 @@ npx repo-wiki --help
 
 No clone or local build step is required for normal downstream consumption. The package guarantees the files listed in `package.json#files`, including `dist/`, `README.md`, `CHANGELOG.md`, `.llmwiki/schema.md`, `.llmwiki/config.json`, and the `docs/`, `prompts/`, and `skills/` trees. Local development from a source clone should use `npm install` instead (the `prepare` script runs the build).
 
+## Use as a pi extension
+
+`@mfittko/repo-wiki` also ships as a [pi-coding-agent](https://github.com/earendil-works/pi-coding-agent) extension. After installing the npm package, enable the extension and skill:
+
+```bash
+npm install @mfittko/repo-wiki
+npx @mfittko/repo-wiki extension install
+```
+
+To install into the global pi agent directory instead of the current project:
+
+```bash
+npx @mfittko/repo-wiki extension install --global
+```
+
+If a previous shim or skill already exists at the target location, the installer refuses to overwrite it. Re-run with `--force` to replace:
+
+```bash
+npx @mfittko/repo-wiki extension install --force
+```
+
+Inside `pi`, run `/reload` to load the extension. You can then use the slash command and tools:
+
+```
+/repo_wiki scan --repo .
+/repo_wiki compile --scan .llmwiki/run --plan .llmwiki/bootstrap-plan.json --wiki .llmwiki/wiki
+/repo_wiki lint --wiki .llmwiki/wiki
+```
+
+Registered tools include:
+
+- `repo_wiki_cli` – run raw CLI arguments
+- `repo_wiki_scan`, `repo_wiki_plan`, `repo_wiki_compile`, `repo_wiki_lint`, `repo_wiki_publish`
+- `repo_wiki_search`, `repo_wiki_query`, `repo_wiki_path`, `repo_wiki_explain`
+
+The extension entrypoint is published as `@mfittko/repo-wiki/extension` and the skill is shipped in `skills/repo-wiki-cli/SKILL.md`.
+
 ## Quick start
 
 Initialize a repository for repo-wiki:

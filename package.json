@@ -11,6 +11,10 @@
     ".": {
       "types": "./dist/src/index.d.ts",
       "import": "./dist/src/index.js"
+    },
+    "./extension": {
+      "types": "./dist/src/extension.d.ts",
+      "import": "./dist/src/extension.js"
     }
   },
   "files": [
@@ -23,7 +27,9 @@
     "CHANGELOG.md",
     "README.md",
     "AGENTS.md",
-    "LICENSE"
+    "LICENSE",
+    "dist/src/extension.js",
+    "dist/src/extension.d.ts"
   ],
   "engines": {
     "node": ">=24"
@@ -74,7 +80,9 @@
   },
   "types": "./dist/src/index.d.ts",
   "dependencies": {
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "typebox": "1.1.38",
+    "@earendil-works/pi-coding-agent": "^0.79.3"
   },
   "devDependencies": {
     "@types/node": "^22.15.21",

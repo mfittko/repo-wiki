@@ -11,6 +11,7 @@ import { lintDocs } from './docs-linter.js';
 import { loadConfig } from './config.js';
 import { publishWiki, PUBLISH_TARGETS, defaultFrontmatterPolicyForTarget, type PublishTarget } from './publisher.js';
 import { isFrontmatterPolicy, parseFrontmatterPolicy, type FrontmatterPolicy } from './frontmatter.js';
+import { runExtensionInstall } from './extension-install.js';
 
 type PublishConfig = {
   target?: string;
@@ -35,6 +36,7 @@ Commands:
   path      Find a deterministic traversal in .llmwiki/graph.json.
   explain   Explain a wiki page or graph node with evidence.
   run       Run scan -> plan -> lint-docs -> compile -> lint, optionally followed by publish.
+  extension Install the pi extension shim and skill (extension install [--global|--project] [--pi-dir <dir>] [--force]).
 
 Options:
   --target <github-wiki|github-pages>
@@ -281,6 +283,20 @@ export async function runCli(argv: string[]) {
       if (result.summary.status === 'blocked') {
         process.exitCode = 1;
       }
+      return;
+    }
+
+    case 'extension': {
+      const subCommand = rest[0];
+      if (subCommand !== 'install') {
+        throw new Error(`Unknown extension subcommand: ${subCommand ?? '(none)'}\n\n${HELP}`);
+      }
+      await runExtensionInstall({
+        global: Boolean(options.global),
+        project: Boolean(options.project),
+        piDir: getStringOption(options, 'pi-dir'),
+        force: Boolean(options.force)
+      });
       return;
     }
 
