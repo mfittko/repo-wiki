@@ -7,13 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-06-13
+
 ### Added
 - Add repository field for npm provenance.
 
 ### Changed
 - Update build, CI, and release automation to support the change.
-
-## [0.2.4] - 2026-06-13
 
 ### Fixed
 - Add `repository` field to `package.json` so npm provenance validation passes during publish.
