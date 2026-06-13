@@ -99,23 +99,38 @@ async function main() {
   const mdBody = formatReviewContextBundle(bundle, 'md');
   const jsonBody = formatReviewContextBundle(bundle, 'json');
 
-  const outPath = options.out
+  const baseOut = options.out
     ? path.resolve(options.out)
-    : path.join(repoPath, '.llmwiki', `review-context-pr-${prNumber}.md`);
+    : path.join(repoPath, '.llmwiki', `review-context-pr-${prNumber}`);
 
-  await fs.mkdir(path.dirname(outPath), { recursive: true });
-  await fs.writeFile(outPath.endsWith('.md') || format === 'md' ? outPath : `${outPath}.md`, `${MARKER}\n\n${mdBody}`, 'utf8');
+  await fs.mkdir(path.dirname(baseOut), { recursive: true });
+  await fs.writeFile(`${baseOut}.md`, `${MARKER}\n\n${mdBody}`, 'utf8');
   if (format === 'json' || format === 'both') {
-    const jsonOut = outPath.endsWith('.json') ? outPath : `${outPath}.json`;
-    await fs.writeFile(jsonOut, jsonBody, 'utf8');
+    await fs.writeFile(`${baseOut}.json`, jsonBody, 'utf8');
   }
 
   const repository = await resolveRepository(repoPath);
   const existingId = await findExistingCommentId(repository, prNumber);
 
-  const commentBody = `${MARKER}\n\n${mdBody}`;
-  const tempBodyFile = `${outPath}.comment-body`;
-  await fs.writeFile(tempBodyFile, commentBody, 'utf8');
+  const counts = {
+    changedFiles: bundle.changed?.files?.length ?? 0,
+    adjacentFiles: bundle.adjacent?.files?.length ?? 0,
+    wikiPages: bundle.wiki?.pages?.length ?? 0
+  };
+  const summaryBody = [
+    MARKER,
+    '',
+    `📎 \`repo-wiki review-context\` bundle attached for reviewers.`,
+    '',
+    `- Changed files: **${counts.changedFiles}**`,
+    `- Adjacent files: **${counts.adjacentFiles}** (depth ${bundle.adjacencyDepth ?? 1})`,
+    `- Related wiki pages: **${counts.wikiPages}**`,
+    '',
+    `Full bundle: \`${baseOut}.md\`${format === 'json' || format === 'both' ? ` (also \`${baseOut}.json\`)` : ''}. Reviewers should read it as review context, not as a PR comment.`
+  ].join('\n');
+
+  const tempBodyFile = `${baseOut}.summary`;
+  await fs.writeFile(tempBodyFile, summaryBody, 'utf8');
 
   if (existingId) {
     await execGh(['api', `-X PATCH`, `-F body=@${tempBodyFile}`, `/repos/${repository}/issues/comments/${existingId}`], repoPath);
@@ -124,7 +139,7 @@ async function main() {
   }
 
   await fs.unlink(tempBodyFile).catch(() => {});
-  console.log(JSON.stringify({ status: 'ok', pr: prNumber, repository, updated: Boolean(existingId), written: outPath }, null, 2));
+  console.log(JSON.stringify({ status: 'ok', pr: prNumber, repository, updated: Boolean(existingId), bundlePath: `${baseOut}.md`, counts }, null, 2));
 }
 
 main().catch((error) => {

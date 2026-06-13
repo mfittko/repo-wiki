@@ -28,7 +28,14 @@ jobs:
       - name: Install and build
         run: npm ci
 
-      - name: Attach review-context bundle as PR comment
+      - name: Build review-context bundle (local artifact)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node scripts/attach-review-context.mjs --pr ${{ github.event.pull_request.number }} --repo . --format md
+        run: node scripts/attach-review-context.mjs --pr ${{ github.event.pull_request.number }} --repo . --format both
+
+      - name: Upload bundle as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-context-pr-${{ github.event.pull_request.number }}
+          path: .llmwiki/review-context-pr-${{ github.event.pull_request.number }}.*
+          if-no-files-found: warn
