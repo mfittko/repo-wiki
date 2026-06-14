@@ -1,7 +1,7 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f3abfc0fc6ecf916c2293708106a5018ea85180d"
-compiled_at: "2026-06-13T21:28:46.320Z"
+source_commit: "4876d92ad775fdaa882464db71be1c1ed241f47f"
+compiled_at: "2026-06-14T00:48:58.141Z"
 kind: "index"
 confidence: "medium"
 page_state: "generated"
@@ -49,6 +49,7 @@ page_state: "generated"
 - [Module prompts ts](Module-prompts-ts.html) - Compiled page for Module prompts.ts.
 - [Module publisher ts](Module-publisher-ts.html) - Compiled page for Module publisher.ts.
 - [Module repository analysis ts](Module-repository-analysis-ts.html) - Compiled page for Module repository-analysis.ts.
+- [Module review context ts](Module-review-context-ts.html) - Compiled page for Module review-context.ts.
 - [Module scanner ts](Module-scanner-ts.html) - Compiled page for Module scanner.ts.
 - [Module search ts](Module-search-ts.html) - Compiled page for Module search.ts.
 - [Module secret patterns ts](Module-secret-patterns-ts.html) - Compiled page for Module secret-patterns.ts.
@@ -73,22 +74,22 @@ page_state: "generated"
   "languages": {
     "Text": 5,
     "Markdown": 36,
-    "YAML": 9,
-    "TypeScript": 57,
+    "YAML": 10,
+    "TypeScript": 59,
     "JSON": 6,
-    "JavaScript": 6
+    "JavaScript": 7
   },
   "categories": {
-    "source": 47,
+    "source": 49,
     "docs": 36,
-    "ci": 6,
+    "ci": 7,
     "package": 5,
-    "test": 24,
+    "test": 25,
     "infra": 1
   },
   "runtime_hints": {
-    "environment-variable": 15,
-    "background-work": 9,
+    "environment-variable": 18,
+    "background-work": 10,
     "http-route": 8,
     "data-model": 2,
     "orm-model": 2,

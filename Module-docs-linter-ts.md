@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f3abfc0fc6ecf916c2293708106a5018ea85180d"
+source_commit: "4876d92ad775fdaa882464db71be1c1ed241f47f"
 page_state: "generated"
 source_paths: ["src/docs-linter.ts"]
 compiled_at: "2024-06-05T00:00:00Z"
@@ -32,6 +32,7 @@ The module imports several internal and external dependencies:
   - `./docs-ingestor.js`
   - `./docs-validation.js`
   - `./utils/fs.js`
+
 - Node.js built-in modules:
   - `node:fs`
   - `node:path`
@@ -40,12 +41,12 @@ These dependencies indicate that the module likely reads and processes documenta
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are listed for this module. It is unknown if there are dedicated tests for `docs-linter.ts`.
+No explicit test files or test-related documentation cards are listed for this module. It is unknown if tests exist or where they might be located.
 
 ## Known gaps or open questions
 
 - There is no documentation or test coverage information available.
-- The exact behavior and linting rules enforced by `lintDocs` are not described.
+- The exact behavior and API of `lintDocs` are not detailed here.
 - The repository remote URL and commit SHA are unknown, limiting traceability.
 - No usage examples or integration details are provided.
 

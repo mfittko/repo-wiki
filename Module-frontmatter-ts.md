@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f3abfc0fc6ecf916c2293708106a5018ea85180d"
+source_commit: "4876d92ad775fdaa882464db71be1c1ed241f47f"
 page_state: "generated"
 source_paths: ["src/frontmatter.ts"]
-compiled_at: "2024-06-14T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides utilities and types for handling frontmatter blocks within text files. It includes functionality to extract, parse, and apply policies to frontmatter content, particularly focusing on YAML-like structures. The module supports defining and enforcing frontmatter policies, parsing simple YAML objects, and stripping frontmatter from content.
+This module provides utilities and types for handling frontmatter in text files, particularly focusing on parsing, extracting, and applying policies to frontmatter blocks. It includes functionality to identify and manipulate frontmatter sections, parse simple YAML objects within frontmatter, and enforce or apply frontmatter policies. The module is implemented in TypeScript and imports secret pattern definitions from a related module.
 
 ## Source file list
 
@@ -21,30 +21,30 @@ This module provides utilities and types for handling frontmatter blocks within 
 
 ## Key symbols and entry points
 
-- **applyFrontmatterPolicy**: Applies a defined frontmatter policy to a given frontmatter block.
-- **extractFrontmatterBlock**: Extracts the frontmatter block from a text source.
-- **FRONTMATTER_POLICIES**: A collection or registry of predefined frontmatter policies.
-- **FrontmatterBlock**: Type representing a frontmatter block extracted from content.
-- **FrontmatterPolicy**: Type defining the structure and rules of a frontmatter policy.
-- **isFrontmatterPolicy**: Type guard or predicate to check if an object conforms to a frontmatter policy.
-- **parseFrontmatterPolicy**: Parses a frontmatter policy from a given input.
-- **parseSimpleYamlObject**: Parses a simple YAML object, likely used for interpreting frontmatter content.
-- **stripFrontmatter**: Removes the frontmatter block from a text source, returning the content without frontmatter.
+- **applyFrontmatterPolicy**: Function to apply a given frontmatter policy to a frontmatter block or content.
+- **extractFrontmatterBlock**: Function to extract the frontmatter block from a text source.
+- **FRONTMATTER_POLICIES**: Collection or enumeration of predefined frontmatter policies.
+- **FrontmatterBlock**: Type or interface representing a frontmatter block structure.
+- **FrontmatterPolicy**: Type or interface defining the shape of a frontmatter policy.
+- **isFrontmatterPolicy**: Type guard or predicate function to check if an object conforms to a frontmatter policy.
+- **parseFrontmatterPolicy**: Function to parse a frontmatter policy from a given input.
+- **parseSimpleYamlObject**: Function to parse simple YAML objects, likely used within frontmatter content.
+- **stripFrontmatter**: Function to remove frontmatter from a text source, returning the content without frontmatter.
 
 ## Dependencies and imports
 
-- Imports from `./secret-patterns.js` — likely used for pattern matching or secret detection within frontmatter or related content.
+- Imports from `./secret-patterns.js`: This dependency likely provides pattern definitions or utilities used internally for parsing or identifying frontmatter content.
 
 ## Related tests
 
-No documentation or test cards were found for this module. It is unknown if dedicated tests exist for the frontmatter utilities.
+- No explicit test files or test-related documentation cards are listed for this module.
 
 ## Known gaps or open questions
 
-- The exact nature and structure of `FRONTMATTER_POLICIES` and how policies are defined or extended is not detailed.
-- No explicit documentation or examples are provided for usage patterns.
-- The relationship between frontmatter policies and secret patterns imported from `./secret-patterns.js` is not fully clear.
-- Absence of test references leaves the coverage and reliability of the module uncertain.
+- The module documentation does not specify detailed usage examples or the exact nature of the frontmatter policies.
+- There is no information on how this module integrates with other parts of the system or how frontmatter policies are defined or extended.
+- No test coverage or test references are provided, so the extent of validation for these utilities is unknown.
+- The source repository and commit information are not provided, limiting traceability.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

@@ -1,8 +1,8 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f3abfc0fc6ecf916c2293708106a5018ea85180d"
+source_commit: "4876d92ad775fdaa882464db71be1c1ed241f47f"
 page_state: "generated"
-source_paths: [".devloops",".env.example",".gitignore",".llmwiki/schema.md",".pi/AGENTS.md",".tsbuildinfo","AGENTS.md","CHANGELOG.md","LICENSE","README.md","bin/repo-wiki.ts","package-lock.json","package.json","prompts/compiler.md","prompts/lint.md","prompts/page-templates.md","scripts/update-changelog.mjs","skills/repo-wiki-cli/SKILL.md","test/cli.test.ts","test/compiler-eval.test.ts"]
+source_paths: [".devloops",".env.example",".gitignore",".llmwiki/schema.md",".pi/AGENTS.md",".tsbuildinfo","AGENTS.md","CHANGELOG.md","LICENSE","README.md","bin/repo-wiki.ts","package-lock.json","package.json","prompts/compiler.md","prompts/lint.md","prompts/page-templates.md","scripts/attach-review-context.mjs","scripts/update-changelog.mjs","skills/repo-wiki-cli/SKILL.md","test/cli.test.ts"]
 compiled_at: "2024-06-15T12:00:00Z"
 kind: "module"
 confidence: "medium"
@@ -13,18 +13,19 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-The Repository Root module represents the top-level directory of the project repository. It contains a diverse set of files and directories that collectively define the source code, documentation, configuration, package manifests, tests, continuous integration (CI) workflows, and infrastructure scripts. This module serves as the foundational layer for the entire project, providing essential resources such as environment configuration, build metadata, licensing, changelogs, and CLI entry points.
+The Repository Root module encompasses the foundational files and configurations that define the structure, behavior, and metadata of the entire repository. It includes source code entry points, configuration files, documentation, package manifests, scripts for CI and changelog management, and a comprehensive suite of tests. This module serves as the central hub for orchestrating repository-wide operations such as compilation, testing, continuous integration, and documentation generation.
 
-Key purposes include:
+Key purposes grounded in source files include:
 
-- **Source code and CLI entry points:** Core scripts and binaries such as `bin/repo-wiki.ts` and various JavaScript/TypeScript source files.
-- **Configuration and environment management:** Files like `.env.example` and `.gitignore` manage environment variables and version control exclusions.
-- **Documentation:** Markdown files including `README.md`, `CHANGELOG.md`, `AGENTS.md`, and prompt templates provide user and developer guidance.
-- **Package management:** `package.json` and `package-lock.json` define dependencies and package metadata.
-- **Testing:** A comprehensive suite of test files under `test/` ensures code quality and correctness.
-- **CI and infrastructure:** Workflow definitions and deployment scripts under `test/fixtures` and `scripts/` support automation and deployment.
+- **Source and Configuration Management:** Core source files like `bin/repo-wiki.ts` and scripts under `scripts/` provide CLI entry points and automation for changelog updates and review context attachment. Configuration files such as `.env.example`, `.gitignore`, and `.tsbuildinfo` manage environment variables, ignore rules, and TypeScript build metadata respectively.
 
-This module is critical for orchestrating the build, test, documentation, and deployment lifecycle of the repository.
+- **Documentation and Data Models:** Markdown files including `README.md`, `CHANGELOG.md`, `AGENTS.md`, and schema definitions under `.llmwiki/schema.md` document the repository’s agents, data models, and usage instructions.
+
+- **Package and Dependency Management:** `package.json` and `package-lock.json` define the package manifest and locked dependencies, essential for consistent builds and deployments.
+
+- **Testing and Validation:** A broad array of test files under `test/` validate CLI behavior, compiler functionality, context assembly, linting, and integration with various extractors and providers, ensuring robustness and correctness.
+
+- **Continuous Integration and Infrastructure:** CI workflows and infrastructure scripts located in test fixtures and `scripts/` support automated testing and deployment pipelines.
 
 ## Source File List
 
@@ -44,6 +45,7 @@ This module is critical for orchestrating the build, test, documentation, and de
 - `prompts/compiler.md`
 - `prompts/lint.md`
 - `prompts/page-templates.md`
+- `scripts/attach-review-context.mjs`
 - `scripts/update-changelog.mjs`
 - `skills/repo-wiki-cli/SKILL.md`
 - `test/cli.test.ts`
@@ -74,45 +76,45 @@ This module is critical for orchestrating the build, test, documentation, and de
 - `test/page-ownership.test.ts`
 - `test/publisher.test.ts`
 - `test/repository-analysis.test.ts`
+- `test/review-context.test.ts`
 - `test/run-compiled-tests.ts`
 - `test/scanner.test.ts`
-- `test/search.test.ts`
-- `test/update-changelog.test.ts`
 
 ## Key Symbols and Entry Points
 
-- **`bin/repo-wiki.ts`**: The main CLI entry point script importing from `../src/cli.js`.
-- **`scripts/update-changelog.mjs`**: Contains functions and constants for changelog management such as `appendEntry`, `classifyPrimaryCategory`, and `deriveChangelogEntries`.
-- **Test suites**: Various test files export test helpers and assertions, e.g., `captureCli`, `assertAllPathsGrounded`, `createFixture`.
-- **Package manifests**: `package.json` and `package-lock.json` define dependencies and scripts for the repository.
-- **Documentation files**: `README.md`, `CHANGELOG.md`, and prompt markdown files provide user-facing documentation and templates.
+- **bin/repo-wiki.ts:** CLI entry point importing core CLI logic from `../src/cli.js`.
+- **scripts/attach-review-context.mjs:** Script managing review context attachment with symbols like `MARKER`, `execFileAsync`, and `main`.
+- **scripts/update-changelog.mjs:** Changelog update automation with symbols such as `appendEntry`, `classifyPrimaryCategory`, and `emitOrWriteChangelog`.
+- **test/cli.test.ts:** Test utilities including `captureCli`, `captureCliResult`, and `execFileAsync`.
+- **test/compiler.test.ts:** Core compiler test functions like `assertNoWallClockFields`, `buildArchManifest`, and `createPlan`.
+- **test/compiler-eval.test.ts:** Functions for fixture preparation and evaluation such as `assertAllPathsGrounded` and `runFixturePipeline`.
+- **test/context-assembler.test.ts:** `createFixture` for context assembly testing.
 
 ## Dependencies and Imports
 
-- The CLI script `bin/repo-wiki.ts` imports from `../src/cli.js`.
-- The changelog update script imports Node.js core modules: `child_process`, `fs/promises`, `path`, and `util`.
-- Test files import various internal modules such as `../src/compiler.js`, `../src/llm-provider.js`, `../src/planner.js`, `../src/scanner.js`, `../src/utils/git.js`, and Node.js built-in modules like `assert/strict`, `fs`, `os`, `path`, `test`, and `url`.
-- The module relies on environment variables for configuration, including `GITHUB_REPOSITORY`, `GITHUB_TOKEN`, `LLMWIKI_COMPILER_MODE`, `LLMWIKI_LLM_API_KEY`, `APP_MODE`, `LLMWIKI_LLM_BASE_URL`, `PORT`, `LLMWIKI_GIT_USER_NAME`, and `LLMWIKI_PUBLISH_REMOTE`.
+- **Node.js built-in modules:** `child_process`, `fs`, `fs/promises`, `path`, `url`, `util`, `assert/strict`, `os`, `test`.
+- **Internal imports:** 
+  - `../src/cli.js` (used by `bin/repo-wiki.ts`)
+  - `../src/compiler.js`, `../src/linter.js`, `../src/llm-provider.js`, `../src/page-ownership.js`, `../src/context-assembler.js`, `../src/docs-ingestor.js`, `../src/docs-linter.js`, `../src/docs-validation.js`, `../src/planner.js`, `../src/scanner.js`, `../src/utils/git.js` (used in various test files)
+- **Runtime environment variables:** `GITHUB_REPOSITORY`, `GITHUB_TOKEN`, `LLMWIKI_COMPILER_MODE`, `LLMWIKI_LLM_API_KEY`, `LLMWIKI_LLM_PROVIDER`, `REPO_WIKI_MISSING_TEST_KEY`, `APP_MODE`, `LLMWIKI_LLM_BASE_URL`, `PORT`.
 
 ## Related Tests
 
-- CLI behavior and execution tested in `test/cli.test.ts`.
-- Compiler functionality and evaluation tested in `test/compiler.test.ts` and `test/compiler-eval.test.ts`.
-- Context assembly and page ownership logic tested in `test/context-assembler.test.ts` and `test/page-ownership.test.ts`.
-- Documentation linting and validation tested in `test/docs-linter.test.ts`.
-- Environment variable handling tested in `test/dotenv.test.ts`.
-- Extractors for Go, Rust, and utilities tested in respective `test/extractors-*.test.ts` files.
-- Integration and fixture-based tests under `test/fixtures/compiler-e2e/` simulate real repository scenarios.
-- Additional tests cover linter, frontmatter, publisher, repository analysis, scanning, searching, and changelog updating.
+The module includes extensive testing coverage across multiple aspects:
+
+- CLI behavior and result capturing (`test/cli.test.ts`)
+- Compiler evaluation and plan creation (`test/compiler-eval.test.ts`, `test/compiler.test.ts`)
+- Context assembly (`test/context-assembler.test.ts`)
+- Documentation linting and validation (`test/docs-linter.test.ts`)
+- Environment variable handling (`test/dotenv.test.ts`)
+- Extension and extractor tests for Go, Rust, and utilities (`test/extension.test.ts`, `test/extractors-go.test.ts`, `test/extractors-rust.test.ts`, `test/extractors-utils.test.ts`)
+- Frontmatter parsing and page ownership (`test/frontmatter.test.ts`, `test/page-ownership.test.ts`)
+- Repository analysis and review context (`test/repository-analysis.test.ts`, `test/review-context.test.ts`)
+- Publisher and scanning tests (`test/publisher.test.ts`, `test/scanner.test.ts`)
+- Integration and fixture-based end-to-end tests under `test/fixtures/compiler-e2e/`
 
 ## Known Gaps or Open Questions
 
-- The exact repository remote URL and commit SHA are unknown, limiting traceability.
-- No explicit documentation cards or detailed module-level documentation exist beyond source and prompt markdown files.
-- The internal structure of `../src/cli.js` and other source modules is not detailed here, limiting understanding of core logic.
-- Runtime environment assumptions and deployment details are implicit and may require further clarification.
-- The role and integration of `.devloops` and `.tsbuildinfo` files are not fully described.
-- The relationship between the various prompt markdown files and their usage in the system is not explicitly documented.
-
-<!-- HUMAN_NOTES_START -->
-<!-- HUMAN_NOTES_END -->
+- **Source repository and commit information:** The source repository remote URL and commit SHA are unknown, limiting traceability.
+- **Runtime environment specifics:** While environment variables are documented, their exact usage contexts and required values are not fully detailed.
+-

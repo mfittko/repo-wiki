@@ -1,10 +1,10 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "f3abfc0fc6ecf916c2293708106a5018ea85180d"
-compiled_at: "2026-06-13T21:28:46.327Z"
+source_commit: "4876d92ad775fdaa882464db71be1c1ed241f47f"
+compiled_at: "2026-06-14T00:48:58.148Z"
 kind: "agent_context_pack"
 claim_status: "grounded"
-source_paths: [".devloops",".env.example",".github/ISSUE_TEMPLATE/config.yml",".github/ISSUE_TEMPLATE/epic.yml",".github/ISSUE_TEMPLATE/task.yml",".github/workflows/changelog-on-merge.yml",".github/workflows/changelog-release.yml",".github/workflows/ci.yml",".github/workflows/npm-publish.yml",".github/workflows/wiki.yml",".gitignore",".tsbuildinfo","bin/repo-wiki.ts","LICENSE","package-lock.json","package.json","scripts/update-changelog.mjs","src/cli.ts","src/compiler.ts","src/config.ts","src/context-assembler.ts","src/data-model-signals.ts","src/docs-ingestor.ts","src/docs-linter.ts","src/docs-validation.ts","src/extension-install.ts","src/extension.ts","src/extractors.ts","src/frontmatter.ts","src/index.ts","src/init.ts","src/language.ts","src/linter.ts","src/llm-provider.ts","src/page-ownership.ts","src/planner.ts","src/prompts.ts","src/publisher.ts","src/repository-analysis.ts","src/scanner.ts","src/search.ts","src/secret-patterns.ts","src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts","src/wiki-graph.ts","src/wiki-patch.ts","src/wiki-query.ts","test/cli.test.ts"]
+source_paths: [".devloops",".env.example",".github/ISSUE_TEMPLATE/config.yml",".github/ISSUE_TEMPLATE/epic.yml",".github/ISSUE_TEMPLATE/task.yml",".github/workflows/changelog-on-merge.yml",".github/workflows/changelog-release.yml",".github/workflows/ci.yml",".github/workflows/npm-publish.yml",".github/workflows/review-context.yml",".github/workflows/wiki.yml",".gitignore",".tsbuildinfo","bin/repo-wiki.ts","LICENSE","package-lock.json","package.json","scripts/attach-review-context.mjs","scripts/update-changelog.mjs","src/cli.ts","src/compiler.ts","src/config.ts","src/context-assembler.ts","src/data-model-signals.ts","src/docs-ingestor.ts","src/docs-linter.ts","src/docs-validation.ts","src/extension-install.ts","src/extension.ts","src/extractors.ts","src/frontmatter.ts","src/index.ts","src/init.ts","src/language.ts","src/linter.ts","src/llm-provider.ts","src/page-ownership.ts","src/planner.ts","src/prompts.ts","src/publisher.ts","src/repository-analysis.ts","src/review-context.ts","src/scanner.ts","src/search.ts","src/secret-patterns.ts","src/utils/args.ts","src/utils/dotenv.ts","src/utils/fs.ts","src/utils/git.ts","src/wiki-graph.ts"]
 confidence: "medium"
 page_state: "generated"
 ---
@@ -15,9 +15,9 @@ This page is the compact entry point for coding agents and developers.
 ## Repository snapshot
 
 - Source: `https://github.com/mfittko/repo-wiki`
-- Commit: `f3abfc0fc6ecf916c2293708106a5018ea85180d`
-- Last compiled: `2026-06-13T21:28:46.320Z`
-- Files scanned: 119
+- Commit: `4876d92ad775fdaa882464db71be1c1ed241f47f`
+- Last compiled: `2026-06-14T00:48:58.141Z`
+- Files scanned: 123
 
 ## Read first
 
