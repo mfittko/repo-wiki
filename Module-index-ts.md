@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "4876d92ad775fdaa882464db71be1c1ed241f47f"
+source_commit: "b0953206f44fa44851f3fa8f9b52d7b620b0b262"
 page_state: "generated"
 source_paths: ["src/index.ts"]
 compiled_at: "<ISO-8601 timestamp>"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module serves as the main entry point for the source code located in `src/index.ts`. It consolidates and exports core functionalities related to page context assembly, prompt building, and request construction. The module integrates multiple components such as CLI handling, compilation, configuration, context assembly, and documentation linting to provide a cohesive interface for building and managing prompts and page contexts within the application.
+This module serves as the primary entry point for the source code located in `src/index.ts`. It consolidates and exposes core functionalities related to prompt building, page context assembly, frontmatter policy application, and request construction. The module integrates multiple internal components such as CLI handling, compilation, configuration, context assembly, and documentation linting to provide a cohesive interface for these operations.
 
 ## Source file list
 
@@ -21,45 +21,40 @@ This module serves as the main entry point for the source code located in `src/i
 
 ## Key symbols and entry points
 
-- **Functions:**
-  - `applyFrontmatterPolicy`
-  - `assembleAllPageContexts`
-  - `assemblePageContext`
-  - `buildCrossCuttingPrompt`
-  - `buildFoundationPrompt`
-  - `buildModulePrompt`
-  - `buildPrompt`
-  - `buildRequest`
+The module exports and defines several important symbols, including:
 
-- **Types:**
-  - `AssemblePageContextInput`
-  - `BuildRequestOptions`
-
-These symbols represent the primary API surface of the module, facilitating operations such as applying frontmatter policies, assembling page contexts, and constructing various types of prompts and requests.
+- `applyFrontmatterPolicy` — likely applies rules or transformations to frontmatter metadata.
+- `assembleAllPageContexts` — assembles contexts for all pages, possibly aggregating data for processing.
+- `assemblePageContext` — assembles context for a single page.
+- `AssemblePageContextInput` — a type or interface defining input parameters for page context assembly.
+- `buildCrossCuttingPrompt` — constructs prompts that span multiple concerns or modules.
+- `buildFoundationPrompt` — builds foundational prompts, possibly base templates or initial prompts.
+- `buildModulePrompt` — creates prompts specific to a module.
+- `buildPrompt` — a general prompt builder function.
+- `buildRequest` — constructs request objects, potentially for API or processing calls.
+- `BuildRequestOptions` — options or configuration for building requests.
 
 ## Dependencies and imports
 
-The module imports functionality from several internal modules, indicating its role as an integrator:
+The module imports from several internal modules, indicating a modular architecture:
 
-- `./cli.js`
-- `./compiler.js`
-- `./config.js`
-- `./context-assembler.js`
-- `./docs-linter.js`
-- Additionally, it references other modules such as `./frontmatter.js`, `./init.js`, and `./linter.js` as part of its broader import graph.
-
-These dependencies suggest the module coordinates between command-line interface logic, compilation processes, configuration management, context assembly, and documentation linting.
+- `./cli.js` — command-line interface utilities or entry points.
+- `./compiler.js` — compilation-related functionality.
+- `./config.js` — configuration management.
+- `./context-assembler.js` — logic for assembling page contexts.
+- `./docs-linter.js` — documentation linting utilities.
+- Additionally, the excerpt mentions imports from `./frontmatter.js`, `./init.js`, and `./linter.js`, suggesting further integration with frontmatter processing, initialization routines, and linting.
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are listed for this module. It is unclear if tests exist or are located elsewhere in the repository.
+No documentation or source cards indicate the presence of related test files or test coverage for this module at this time.
 
 ## Known gaps or open questions
 
-- The module's documentation does not specify detailed behavior or usage examples for the exported functions and types.
-- There is no direct information about test coverage or testing strategies related to this module.
-- The exact role of some imported modules (e.g., `./frontmatter.js`, `./init.js`, `./linter.js`) in the context of this module is not fully detailed.
-- The repository remote URL and commit SHA are unspecified, limiting traceability.
+- The exact behavior and implementation details of the exported functions and types are not described beyond their names.
+- There is no information on test coverage or examples demonstrating usage.
+- The relationship between the various prompt-building functions and how they differ or compose is not detailed.
+- The role of some imports like `./init.js` and `./linter.js` is unclear since they are not explicitly listed in the main imports excerpt but are mentioned in the source excerpt.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

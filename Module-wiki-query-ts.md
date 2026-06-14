@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "4876d92ad775fdaa882464db71be1c1ed241f47f"
+source_commit: "b0953206f44fa44851f3fa8f9b52d7b620b0b262"
 page_state: "generated"
 source_paths: ["src/wiki-query.ts"]
-compiled_at: "2024-06-01T00:00:00Z"
+compiled_at: "<ISO-8601 timestamp>"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to querying and formatting information from a wiki graph structure. It includes utilities to build explanations and answers based on wiki data, find and format graph paths, and define types representing wiki evidence and explanations. The module is implemented in TypeScript and serves as a source component for handling wiki query logic.
+This module provides functionality for constructing, formatting, and querying wiki-related explanations and graph paths. It includes utilities to build and format wiki explanations and answers, as well as to find and represent graph paths relevant to wiki data. The module is implemented in TypeScript and serves as a source component for handling wiki query logic.
 
 ## Source file list
 
@@ -21,16 +21,16 @@ This module provides functionality related to querying and formatting informatio
 
 ## Key symbols and entry points
 
-- **buildWikiExplanation**: Constructs a detailed explanation from wiki data.
-- **buildWikiQueryAnswer**: Builds an answer to a query using wiki information.
-- **defaultGraphPathForWiki**: Provides a default graph path configuration for wiki queries.
-- **findWikiGraphPath**: Searches for a path within the wiki graph.
-- **formatWikiExplanation**: Formats a wiki explanation for presentation.
-- **formatWikiGraphPath**: Formats a graph path result for display.
+- **buildWikiExplanation**: Constructs a detailed explanation object for wiki queries.
+- **buildWikiQueryAnswer**: Builds an answer object based on wiki query results.
+- **defaultGraphPathForWiki**: Provides a default graph path used in wiki queries.
+- **findWikiGraphPath**: Searches and identifies graph paths relevant to wiki data.
+- **formatWikiExplanation**: Formats a wiki explanation into a presentable form.
+- **formatWikiGraphPath**: Formats a wiki graph path result for display or further processing.
 - **formatWikiQueryAnswer**: Formats the answer generated from a wiki query.
-- **WikiEvidence**: Type representing evidence extracted from the wiki.
-- **WikiExplanation**: Type representing an explanation derived from wiki data.
-- **WikiGraphPathResult**: Type representing the result of a graph path search in the wiki.
+- **WikiEvidence**: Type or interface representing evidence used in wiki explanations.
+- **WikiExplanation**: Type or interface representing the structure of a wiki explanation.
+- **WikiGraphPathResult**: Type or interface representing the result of a wiki graph path search.
 
 ## Dependencies and imports
 
@@ -43,13 +43,13 @@ This module provides functionality related to querying and formatting informatio
 
 ## Related tests
 
-No documentation or test cards were found related to this module at this time.
+No documentation or test files are explicitly associated with this module in the current source cards.
 
 ## Known gaps or open questions
 
-- There is no explicit documentation or test coverage information available for this module.
-- The exact behavior and usage scenarios of the key functions and types would benefit from example usage or further documentation.
-- The source repository and commit SHA are unspecified, limiting traceability.
+- There are no documented tests or example usage provided in the source cards.
+- The exact behavior and data structures of the key functions and types are not detailed beyond their names and general purpose.
+- Integration details with other modules or the broader system context are not specified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

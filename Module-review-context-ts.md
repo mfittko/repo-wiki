@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "4876d92ad775fdaa882464db71be1c1ed241f47f"
+source_commit: "b0953206f44fa44851f3fa8f9b52d7b620b0b262"
 page_state: "generated"
 source_paths: ["src/review-context.ts"]
-compiled_at: "<ISO-8601 timestamp>"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to constructing and managing review contexts for code changes. It includes types and functions to parse git diffs, extract changed file paths, and build structured bundles representing review contexts. These bundles can be formatted and used to facilitate code review processes by organizing diffs and related metadata.
+This module provides functionality related to constructing and managing review contexts based on Git diffs and file changes. It includes types and functions to parse Git diffs, extract changed file paths, and build structured bundles of review context information. The module appears to be designed to support code review tooling or automated analysis by organizing diff data into manageable structures.
 
 ## Source file list
 
@@ -21,39 +21,48 @@ This module provides functionality related to constructing and managing review c
 
 ## Key symbols and entry points
 
-- **AdjacentFile**: Likely a type or interface representing a file adjacent to a diff or review context.
-- **buildReviewContextBundle**: Function to assemble a comprehensive review context bundle from diff data.
-- **DiffFile**: Type representing a file in a diff.
-- **DiffHunk**: Type representing a hunk (a contiguous block of changes) within a diff file.
-- **DiffHunkLine**: Type representing a single line within a diff hunk.
-- **formatReviewContextBundle**: Function to format a review context bundle, possibly for display or export.
-- **getChangedFilePaths**: Function to extract the list of changed file paths from a diff or repository state.
-- **getGitDiff**: Function to retrieve git diff data, likely from the local repository.
-- **parseGitDiff**: Function to parse raw git diff output into structured data.
-- **RelatedWikiPage**: Possibly a type or utility related to linking review context data to wiki pages.
+- **Types and Interfaces:**
+  - `AdjacentFile`
+  - `DiffFile`
+  - `DiffHunk`
+  - `DiffHunkLine`
+  - `RelatedWikiPage`
+
+- **Functions:**
+  - `buildReviewContextBundle` — Constructs a comprehensive review context bundle from diff data.
+  - `formatReviewContextBundle` — Formats the review context bundle for output or further processing.
+  - `getChangedFilePaths` — Retrieves the list of file paths changed in a Git diff.
+  - `getGitDiff` — Obtains the raw Git diff data.
+  - `parseGitDiff` — Parses raw Git diff text into structured diff objects.
 
 ## Dependencies and imports
 
-This module imports from several internal utilities and modules:
+The module imports several internal utilities and modules, as well as Node.js core modules:
 
-- `./extractors.js`
-- `./frontmatter.js`
-- `./language.js`
-- `./utils/fs.js`
-- `./utils/git.js`
+- Internal modules:
+  - `./extractors.js`
+  - `./frontmatter.js`
+  - `./language.js`
+  - `./utils/fs.js`
+  - `./utils/git.js`
+  - `./wiki-graph.js`
+  - `./wiki-query.js`
 
-Additionally, it imports from Node.js core modules such as `fs`. It also references modules related to wiki graph and query functionality (`./wiki-graph.js`, `./wiki-query.js`), indicating integration with wiki or documentation systems.
+- Node.js core module:
+  - `fs`
+
+These dependencies suggest the module integrates file system operations, Git interactions, language processing, and wiki-related graph and query utilities to build its review context features.
 
 ## Related tests
 
-No explicit test files or test-related documentation cards are listed for this module. It is unclear if dedicated tests exist or are located elsewhere.
+No explicit test files or test-related documentation cards were identified for this module in the provided source cards or metadata.
 
 ## Known gaps or open questions
 
-- There is no documentation or comments provided in the source cards, so detailed behavior and usage patterns of the key functions and types are not fully clear.
-- The relationship between review context bundles and wiki pages (via `RelatedWikiPage`) is not elaborated.
-- The absence of related test information leaves the testing coverage and reliability of this module uncertain.
-- The exact structure and format of the review context bundles and how they integrate with other systems remain to be clarified.
+- There is no documentation or test coverage information available, which limits understanding of usage patterns and robustness.
+- The exact structure and format of the review context bundle and how it integrates with other parts of the system are not detailed.
+- The role of `RelatedWikiPage` and how wiki-related imports interact with the review context is not fully clear from the source card excerpt.
+- The module’s error handling, performance characteristics, and configuration options are not described.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

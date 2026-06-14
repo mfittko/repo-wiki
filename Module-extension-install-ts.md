@@ -1,9 +1,9 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "4876d92ad775fdaa882464db71be1c1ed241f47f"
+source_commit: "b0953206f44fa44851f3fa8f9b52d7b620b0b262"
 page_state: "generated"
 source_paths: ["src/extension-install.ts"]
-compiled_at: "2024-06-05T00:00:00Z"
+compiled_at: "2024-06-01T00:00:00Z"
 kind: "module"
 confidence: "medium"
 claim_status: "source-grounded"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality related to the installation of extensions. It exports key symbols that facilitate running extension installation processes, likely as part of a larger system managing extensions. The module is implemented in TypeScript and imports utilities from both internal and Node.js standard libraries.
+This module provides functionality related to the installation of extensions. It exports types and functions that facilitate running extension installation processes, likely as part of a larger system managing extensions.
 
 ## Source file list
 
@@ -21,30 +21,29 @@ This module provides functionality related to the installation of extensions. It
 
 ## Key symbols and entry points
 
-- **ExtensionInstallOptions**: Likely a type or interface defining configuration options for extension installation.
-- **runExtensionInstall**: A function that executes the extension installation process.
+- **ExtensionInstallOptions**: A type or interface defining options for the extension installation process.
+- **runExtensionInstall**: The primary function to execute the extension installation logic.
 
 ## Dependencies and imports
 
 The module imports from the following sources:
 
-- `@mfittko/repo-wiki/extension`: An internal or third-party package related to repository wiki extensions.
+- `@mfittko/repo-wiki/extension` — likely for extension-related utilities or types.
 - Node.js built-in modules:
-  - `node:fs/promises`: For asynchronous filesystem operations.
-  - `node:os`: For operating system-related utility methods.
-  - `node:path`: For handling and transforming file paths.
-  - `node:url`: For URL resolution and parsing.
+  - `node:fs/promises` — for asynchronous filesystem operations.
+  - `node:os` — for operating system-related utilities.
+  - `node:path` — for file path manipulations.
+  - `node:url` — for URL handling.
 
 ## Related tests
 
-No documentation or source cards indicate the presence of related tests for this module.
+No documentation or test cards are currently available for this module, so related tests are unknown.
 
 ## Known gaps or open questions
 
 - There is no explicit documentation or test coverage information available.
-- The exact behavior and API details of `ExtensionInstallOptions` and `runExtensionInstall` are not described beyond their symbol names.
+- The exact behavior and usage scenarios of `runExtensionInstall` and `ExtensionInstallOptions` are not detailed.
 - The repository remote URL and commit SHA are unknown, limiting traceability.
-- The module's integration context within the larger system is not specified.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->

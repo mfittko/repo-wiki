@@ -1,6 +1,6 @@
 ---
 source_repo: "https://github.com/mfittko/repo-wiki"
-source_commit: "4876d92ad775fdaa882464db71be1c1ed241f47f"
+source_commit: "b0953206f44fa44851f3fa8f9b52d7b620b0b262"
 page_state: "generated"
 source_paths: ["src/context-assembler.ts"]
 compiled_at: "2024-06-01T00:00:00Z"
@@ -13,7 +13,7 @@ claim_status: "source-grounded"
 
 ## Purpose
 
-This module provides functionality to assemble and manage page contexts within an application. It exports several key functions and types related to constructing comprehensive page context objects, handling budgets, page types, and redacting sensitive information. The module appears to be a core part of the source code responsible for aggregating and preparing contextual data for pages, likely to be used in rendering or processing workflows.
+This module provides functionality to assemble and manage page context data structures. It includes utilities to build comprehensive page contexts, handle context budgets, redact sensitive information, and define types related to page context assembly. The module is implemented in TypeScript and serves as a source component for context assembly operations.
 
 ## Source file list
 
@@ -21,32 +21,29 @@ This module provides functionality to assemble and manage page contexts within a
 
 ## Key symbols and entry points
 
-- **Functions:**
-  - `assembleAllPageContexts` — Likely responsible for assembling context data for multiple pages.
-  - `assemblePageContext` — Builds the context for a single page based on input parameters.
-  - `redactSecretLikeText` — Utility function to redact or mask sensitive or secret-like text within contexts.
-
-- **Types / Interfaces:**
-  - `AssemblePageContextInput` — Input structure for assembling a page context.
-  - `PageContext` — Represents the assembled context of a page.
-  - `PageContextBudget` — Defines budget-related constraints or metadata within a page context.
-  - `PageContextPage` — Represents page-specific data within the context.
-  - `PageContextType` — Enumerates or defines types of page contexts.
+- **assembleAllPageContexts**: Function to assemble contexts for all pages.
+- **assemblePageContext**: Function to assemble the context for a single page.
+- **AssemblePageContextInput**: Input type/interface for assembling a page context.
+- **PageContext**: Type representing the assembled page context.
+- **PageContextBudget**: Type related to budgeting or limiting context data.
+- **PageContextPage**: Type representing a page within the context.
+- **PageContextType**: Enum or type defining possible page context types.
+- **redactSecretLikeText**: Utility function to redact text that appears to contain secrets or sensitive information.
 
 ## Dependencies and imports
 
-- The source card indicates that `src/context-assembler.ts` has **no imports**, suggesting this module is self-contained or relies on ambient/global types or data.
+- This module does not import any external modules or dependencies.
 
 ## Related tests
 
-- No documentation or source cards indicate the presence of related test files or test cases for this module at this time.
+- No documentation or source cards indicate the presence of related test files or test suites for this module.
 
 ## Known gaps or open questions
 
-- The exact internal implementation details and how these functions interact with other parts of the system are not documented here.
-- No information on related tests or usage examples is available.
-- The source repository and commit SHA are unknown, limiting traceability.
-- The purpose and structure of some types (e.g., `PageContextBudget`, `PageContextType`) would benefit from further elaboration or examples.
+- There is no explicit documentation or test coverage information available.
+- The exact behavior and implementation details of the key functions and types are not described beyond their names and presence.
+- The source repository and commit information are unknown, limiting traceability.
+- The module does not declare any external dependencies, which may imply self-contained logic or missing import details.
 
 <!-- HUMAN_NOTES_START -->
 <!-- HUMAN_NOTES_END -->
