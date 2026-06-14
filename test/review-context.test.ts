@@ -31,8 +31,9 @@ async function makeReviewFixture() {
   );
   await fs.writeFile(
     path.join(dir, 'src', 'main.ts'),
-    "import { greet } from './greeting';\n\nexport function run() {\n  console.log(greet('world'));\n}\n"
+    "import { greet } from './greeting';\nimport { nothing } from './missing';\n\nexport function run() {\n  console.log(greet('world'));\n}\n"
   );
+  await fs.writeFile(path.join(dir, 'README.md'), '# fixture\n');
 
   await runGit(['init', '-b', 'main'], { cwd: dir });
   await runGit(['config', 'user.email', 'test@example.com'], { cwd: dir });
@@ -43,7 +44,7 @@ async function makeReviewFixture() {
   await runGit(['checkout', '-b', 'feature'], { cwd: dir });
   await fs.writeFile(
     path.join(dir, 'src', 'main.ts'),
-    "import { greet } from './greeting';\n\nexport const APP = 'demo';\n\nexport function run() {\n  console.log(greet('world'));\n}\n"
+    "import { greet } from './greeting';\nimport { nothing } from './missing';\n\nexport const APP = 'demo';\n\nexport function run() {\n  console.log(greet('world'));\n}\n"
   );
   await runGit(['add', '.'], { cwd: dir });
   await runGit(['commit', '-m', 'head'], { cwd: dir });
@@ -74,12 +75,20 @@ async function makeReviewFixture() {
         kind: 'source_card',
         path: 'src/main.ts',
         language: 'TypeScript',
-        imports: ['./greeting'],
+        imports: ['./greeting', './missing'],
         symbols: ['run', 'APP'],
         exported_symbols: [
           { name: 'run', kind: 'function' },
           { name: 'APP', kind: 'const' }
         ]
+      },
+      {
+        kind: 'source_card',
+        path: 'README.md',
+        language: 'Text',
+        imports: ['./main'],
+        symbols: [],
+        exported_symbols: []
       }
     ]
   };
@@ -813,15 +822,17 @@ test('package imports are skipped during JS adjacency resolution', async () => {
 
 test('resolveReviewTarget rejects PR numbers when gh is unavailable', async () => {
   const repo = await makeReviewFixture();
-  const originalPath = process.env.PATH;
-  process.env.PATH = '';
+  const testDir = path.dirname(fileURLToPath(import.meta.url));
   try {
     await assert.rejects(
-      () => resolveReviewTarget(repo, '999999'),
+      () => execFileAsync(
+        process.execPath,
+        ['--input-type=module', '-e', 'import { resolveReviewTarget } from "../src/review-context.js"; await resolveReviewTarget(process.env.REPO_PATH, "999999");'],
+        { cwd: testDir, env: { ...process.env, PATH: '', REPO_PATH: repo }, maxBuffer: 20 * 1024 * 1024 }
+      ),
       /GitHub CLI \(gh\) is required/
     );
   } finally {
-    process.env.PATH = originalPath;
     await fs.rm(repo, { recursive: true, force: true });
   }
 });
@@ -933,6 +944,114 @@ test('writeReviewContextBundle with format=json+outPath ending in .md still writ
     const baseOut = path.join(repo, 'bundle.md');
     const files = await writeReviewContextBundle(bundle, baseOut, 'json');
     assert.deepEqual(files, [`${repo}/bundle.json`]);
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+  }
+});
+
+test('buildAdjacentContext skips path-traversal neighbor paths', async () => {
+  const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-review-context-traverse-'));
+  const secretFile = path.join(path.dirname(repo), 'secret.ts');
+  try {
+    await fs.mkdir(path.join(repo, 'src'), { recursive: true });
+    await fs.mkdir(path.join(repo, '.llmwiki', 'run'), { recursive: true });
+    await fs.writeFile(
+      path.join(repo, 'src', 'main.ts'),
+      "import { x } from '../../secret';\nexport const A = 1;\n"
+    );
+    await fs.writeFile(secretFile, 'export function x(): number { return 1; }\n');
+
+    await runGit(['init', '-b', 'main'], { cwd: repo });
+    await runGit(['config', 'user.email', 'test@example.com'], { cwd: repo });
+    await runGit(['config', 'user.name', 'Test User'], { cwd: repo });
+    await runGit(['add', '.'], { cwd: repo });
+    await runGit(['commit', '-m', 'base'], { cwd: repo });
+
+    await runGit(['checkout', '-b', 'feature'], { cwd: repo });
+    await fs.writeFile(
+      path.join(repo, 'src', 'main.ts'),
+      "import { x } from '../../secret';\nexport const A = 2;\n"
+    );
+    await runGit(['add', '.'], { cwd: repo });
+    await runGit(['commit', '-m', 'head'], { cwd: repo });
+
+    const manifest = {
+      files: [
+        { path: 'src/main.ts', language: 'TypeScript', imports: ['../../secret'], symbols: ['A'], exported_symbols: [{ name: 'A', kind: 'const' }] },
+        { path: '../secret.ts', language: 'TypeScript', imports: [], symbols: ['x'], exported_symbols: [{ name: 'x', kind: 'function' }] }
+      ]
+    };
+    await fs.writeFile(path.join(repo, '.llmwiki', 'run', 'manifest.json'), JSON.stringify(manifest, null, 2));
+
+    const bundle = await buildReviewContextBundle({ repoPath: repo, target: 'main..feature', adjacencyDepth: 1 });
+    assert.ok(!bundle.adjacentFiles.some((file) => file.path.includes('secret')), `adjacent secret leaked: ${JSON.stringify(bundle.adjacentFiles)}`);
+    assert.ok(bundle.warnings.some((w) => w.includes('Invalid adjacent path')), `expected traversal warning, got ${bundle.warnings.join(', ')}`);
+  } finally {
+    await fs.rm(repo, { recursive: true, force: true });
+    await fs.unlink(secretFile).catch(() => {});
+  }
+});
+
+test('symbol fallback ignores path-traversal and unreadable neighbor files', async () => {
+  const repo = await fs.mkdtemp(path.join(os.tmpdir(), 'repo-wiki-review-context-symbol-traverse-'));
+  const outsideFile = path.join(path.dirname(repo), 'evil.py');
+  try {
+    await fs.mkdir(path.join(repo, 'src'), { recursive: true });
+    await fs.mkdir(path.join(repo, '.llmwiki', 'run'), { recursive: true });
+    await fs.writeFile(path.join(repo, 'src', 'app.py'), 'def main():\n    pass\n');
+    await fs.writeFile(path.join(repo, 'src', 'unreadable.py'), 'def helper():\n    pass\n');
+    await fs.writeFile(outsideFile, 'def main():\n    pass\n');
+
+    await runGit(['init', '-b', 'main'], { cwd: repo });
+    await runGit(['config', 'user.email', 'test@example.com'], { cwd: repo });
+    await runGit(['config', 'user.name', 'Test User'], { cwd: repo });
+    await runGit(['add', '.'], { cwd: repo });
+    await runGit(['commit', '-m', 'base'], { cwd: repo });
+
+    await runGit(['checkout', '-b', 'feature'], { cwd: repo });
+    await fs.writeFile(path.join(repo, 'src', 'app.py'), 'def main():\n    return 1\n');
+    await runGit(['add', '.'], { cwd: repo });
+    await runGit(['commit', '-m', 'head'], { cwd: repo });
+
+    const manifest = {
+      files: [
+        { path: 'src/app.py', language: 'Python', imports: [], symbols: ['main'], exported_symbols: [{ name: 'main', kind: 'function' }] },
+        { path: '../evil.py', language: 'Python', imports: [], symbols: ['main'], exported_symbols: [] },
+        { path: 'src/unreadable.py', language: 'Python', imports: [], symbols: ['helper'], exported_symbols: [{ name: 'helper', kind: 'function' }] }
+      ]
+    };
+    await fs.writeFile(path.join(repo, '.llmwiki', 'run', 'manifest.json'), JSON.stringify(manifest, null, 2));
+
+    await fs.chmod(path.join(repo, 'src', 'unreadable.py'), 0o000);
+    const bundle = await buildReviewContextBundle({ repoPath: repo, target: 'main..feature', adjacencyDepth: 1 });
+    assert.equal(bundle.adjacentFiles.length, 0);
+  } finally {
+    await fs.chmod(path.join(repo, 'src', 'unreadable.py'), 0o644).catch(() => {});
+    await fs.rm(repo, { recursive: true, force: true });
+    await fs.unlink(outsideFile).catch(() => {});
+  }
+});
+
+test('buildRelatedWikiPages skips path-traversal page paths', async () => {
+  const repo = await makeReviewFixture();
+  try {
+    const graph = JSON.parse(await fs.readFile(path.join(repo, '.llmwiki', 'graph.json'), 'utf8'));
+    graph.nodes.push({
+      id: 'page:../escaped.md',
+      kind: 'page',
+      path: '../escaped.md',
+      page_state: 'generated'
+    });
+    graph.edges.push({ type: 'affects', from: 'source:src/main.ts', to: 'page:../escaped.md' });
+    await fs.writeFile(path.join(repo, '.llmwiki', 'graph.json'), JSON.stringify(graph, null, 2));
+
+    const bundle = await buildReviewContextBundle({
+      repoPath: repo,
+      target: 'main..feature',
+      adjacencyDepth: 1
+    });
+    assert.ok(!bundle.relatedWikiPages.some((page) => page.path.includes('escaped')));
+    assert.ok(bundle.warnings.some((w) => w.includes('Invalid wiki page path')));
   } finally {
     await fs.rm(repo, { recursive: true, force: true });
   }

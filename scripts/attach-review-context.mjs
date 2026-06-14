@@ -123,14 +123,7 @@ async function main() {
   const artifactName = `review-context-pr-${prNumber}`;
   const summaryBody = [
     MARKER,
-    '',
-    `📎 \`repo-wiki review-context\` bundle attached for reviewers.`,
-    '',
-    `- Changed files: **${counts.changedFiles}**`,
-    `- Adjacent files: **${counts.adjacentFiles}** (depth ${bundle.adjacencyDepth ?? 1})`,
-    `- Related wiki pages: **${counts.wikiPages}**`,
-    '',
-    `Full bundle is review-agent handoff context — not part of the PR. Reviewers can download it from the workflow run's **${artifactName}** artifact, or read it directly from the \`.llmwiki/review-context-pr-${prNumber}.md\` file in the run workspace.`
+    `📎 \`repo-wiki review-context\` bundle: ${counts.changedFiles} changed / ${counts.adjacentFiles} adjacent (depth ${bundle.adjacencyDepth ?? 1}) / ${counts.wikiPages} wiki pages · artifact \`${artifactName}\`.`
   ].join('\n');
 
   const tempBodyFile = `${baseOut}.summary`;

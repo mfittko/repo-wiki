@@ -80,7 +80,6 @@ const JS_LANGUAGES = new Set(['JavaScript', 'JavaScript React', 'TypeScript', 'T
 const JS_EXTENSIONS = ['.tsx', '.ts', '.jsx', '.js', '.mjs', '.cjs'];
 const SOURCE_EXTENSIONS = new Set([
   ...JS_EXTENSIONS,
-  '.mjs', '.cjs',
   '.py', '.pyi',
   '.go',
   '.rs',
@@ -100,6 +99,15 @@ function isSourcePath(path: string): boolean {
   return SOURCE_EXTENSIONS.has(path.slice(lastDot).toLowerCase());
 }
 
+function safeRepoRelativePath(rootPath: string, relative: string): string | null {
+  const resolved = path.resolve(rootPath, relative);
+  const normalizedRoot = path.resolve(rootPath);
+  if (resolved !== normalizedRoot && !resolved.startsWith(normalizedRoot + path.sep)) {
+    return null;
+  }
+  return resolved;
+}
+
 export async function resolveReviewTarget(
   repoPath: string,
   target: string
@@ -109,8 +117,7 @@ export async function resolveReviewTarget(
   if (/^#?\d+$/.test(target)) {
     const prNumber = target.replace(/^#/, '');
     const prInfo = await resolvePullRequest(absoluteRepo, prNumber);
-    const baseCommit = await resolveMergeBase(absoluteRepo, prInfo.baseRef, prInfo.headRef);
-    const headCommit = await resolveRef(absoluteRepo, prInfo.headRef);
+    const baseCommit = await resolveMergeBase(absoluteRepo, prInfo.baseCommit, prInfo.headCommit);
     return {
       kind: 'pr',
       raw: target,
@@ -118,7 +125,7 @@ export async function resolveReviewTarget(
       baseRef: prInfo.baseRef,
       headRef: prInfo.headRef,
       baseCommit,
-      headCommit
+      headCommit: prInfo.headCommit
     };
   }
 
@@ -158,29 +165,21 @@ export async function resolveReviewTarget(
 async function resolvePullRequest(
   repoPath: string,
   prNumber: string
-): Promise<{ title: string; baseRef: string; headRef: string }> {
-  try {
-    const { stdout } = await runGit(
-      ['-C', repoPath, 'remote', 'get-url', 'origin'],
-      { cwd: repoPath }
-    );
-    void stdout;
-  } catch {
-    // continue
-  }
-
+): Promise<{ title: string; baseRef: string; headRef: string; baseCommit: string; headCommit: string }> {
   const { stdout } = await execGh(
     repoPath,
-    ['pr', 'view', prNumber, '--json', 'number,title,baseRefName,headRefName,files']
+    ['pr', 'view', prNumber, '--json', 'title,baseRefName,headRefName,baseRefOid,headRefOid']
   );
   const parsed = JSON.parse(stdout);
-  if (!parsed.baseRefName || !parsed.headRefName) {
+  if (!parsed.baseRefName || !parsed.headRefName || !parsed.baseRefOid || !parsed.headRefOid) {
     throw new Error(`Could not resolve PR ${prNumber}: missing base or head ref`);
   }
   return {
     title: parsed.title || `PR #${prNumber}`,
     baseRef: parsed.baseRefName,
-    headRef: parsed.headRefName
+    headRef: parsed.headRefName,
+    baseCommit: parsed.baseRefOid,
+    headCommit: parsed.headRefOid
   };
 }
 
@@ -507,7 +506,11 @@ async function buildAdjacentContext(
 
   const results: AdjacentFile[] = [];
   for (const neighborPath of [...adjacent.keys()].sort()) {
-    const absolute = path.join(repoPath, neighborPath);
+    const absolute = safeRepoRelativePath(repoPath, neighborPath);
+    if (!absolute) {
+      warnings.push(`Invalid adjacent path: ${neighborPath}`);
+      continue;
+    }
     try {
       const content = await fs.readFile(absolute, 'utf8');
       results.push({
@@ -627,7 +630,10 @@ async function resolveSymbolReferencedFiles(
   allCards: AdjacencyManifestCard[],
   repoPath: string
 ): Promise<string[]> {
-  const absolute = path.join(repoPath, changedCard.path);
+  const absolute = safeRepoRelativePath(repoPath, changedCard.path);
+  if (!absolute) {
+    return [];
+  }
   let content: string;
   try {
     content = await fs.readFile(absolute, 'utf8');
@@ -652,8 +658,12 @@ async function resolveSymbolReferencedFiles(
     if (normalizePath(other.path) === normalizePath(changedCard.path)) {
       continue;
     }
+    const otherAbsolute = safeRepoRelativePath(repoPath, other.path);
+    if (!otherAbsolute) {
+      continue;
+    }
     try {
-      const otherContent = await fs.readFile(path.join(repoPath, other.path), 'utf8');
+      const otherContent = await fs.readFile(otherAbsolute, 'utf8');
       // Reset lastIndex on every global regex before .test() so stateful matching
       // does not leak matches across files.
       const matched = patterns.some((pattern) => {
@@ -675,7 +685,7 @@ function escapeRegExp(value: string): string {
 }
 
 type WikiOptions = {
-  repoPath: string;
+  repoPath?: string;
   wikiDir: string;
   graphPath: string;
   changedPaths: string[];
@@ -683,7 +693,7 @@ type WikiOptions = {
 };
 
 async function buildRelatedWikiPages(options: WikiOptions): Promise<RelatedWikiPage[]> {
-  const { repoPath, wikiDir, graphPath, changedPaths, warnings } = options;
+  const { wikiDir, graphPath, changedPaths, warnings } = options;
   if (!(await fileExists(graphPath))) {
     warnings.push(`Wiki graph not found at ${graphPath}; skipping related wiki pages.`);
     return [];
@@ -702,7 +712,11 @@ async function buildRelatedWikiPages(options: WikiOptions): Promise<RelatedWikiP
   const pages: RelatedWikiPage[] = [];
   for (const selection of selections) {
     const pagePath = selection.pagePath;
-    const absolute = path.join(wikiDir, pagePath);
+    const absolute = safeRepoRelativePath(wikiDir, pagePath);
+    if (!absolute) {
+      warnings.push(`Invalid wiki page path: ${pagePath}`);
+      continue;
+    }
     let rawContent: string;
     try {
       rawContent = await fs.readFile(absolute, 'utf8');
@@ -776,7 +790,6 @@ function formatReviewContextMarkdown(bundle: ReviewContextBundle): string {
     }
   }
 
-  const depth = bundle.adjacentDepth;
   lines.push(`## Adjacent context (depth ${bundle.adjacentDepth})`);
   lines.push('');
   if (bundle.adjacentFiles.length === 0) {

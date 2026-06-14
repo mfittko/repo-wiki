@@ -47,8 +47,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/attach-review-context.mjs --pr ${{ github.event.pull_request.number }} --repo . --format both
+        continue-on-error: true
 
       - name: Upload bundle as workflow artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: review-context-pr-${{ github.event.pull_request.number }}
