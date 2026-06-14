@@ -211,9 +211,10 @@ async function resolveDefaultRemoteRef(repoPath: string): Promise<string> {
 }
 
 export async function resolveRef(repoPath: string, ref: string): Promise<string> {
-  // Resolve a ref to a commit SHA. On CI checkouts (actions/checkout for
-  // pull_request) the default branch is only present as `origin/<ref>`, so
-  // fall back to that form before giving up.
+  // Resolve a ref to a commit SHA. Try, in order:
+  //   1. the ref as-given (local branch or tag)
+  //   2. origin/<ref> (CI PR checkouts only have remote-tracking branches)
+  //   3. explicit fetch from origin followed by re-checking origin/<ref>
   const candidates = [ref];
   if (!ref.startsWith('origin/')) {
     candidates.push(`origin/${ref}`);
@@ -226,13 +227,27 @@ export async function resolveRef(repoPath: string, ref: string): Promise<string>
       // try next candidate
     }
   }
+  if (!ref.startsWith('origin/')) {
+    try {
+      await runGit(['fetch', '--no-tags', 'origin', ref], { cwd: repoPath });
+    } catch {
+      // ignore fetch errors; the final rev-parse will surface the real reason
+    }
+    try {
+      const { stdout } = await runGit(['rev-parse', '--verify', `origin/${ref}`], { cwd: repoPath });
+      return stdout;
+    } catch {
+      // fall through to the error below
+    }
+  }
   throw new Error(`Could not resolve git ref: ${ref}`);
 }
 
 async function resolveMergeBase(repoPath: string, baseRef: string, headRef: string): Promise<string> {
   const baseCommit = await resolveRef(repoPath, baseRef);
+  const headCommit = await resolveRef(repoPath, headRef);
   try {
-    const { stdout } = await runGit(['merge-base', baseCommit, headRef], { cwd: repoPath });
+    const { stdout } = await runGit(['merge-base', baseCommit, headCommit], { cwd: repoPath });
     return stdout;
   } catch {
     throw new Error(`Could not compute merge-base for ${baseRef}..${headRef}`);
