@@ -29,6 +29,20 @@ jobs:
       - name: Install and build
         run: npm ci
 
+      - name: Generate local wiki + graph for context
+        # Produces .llmwiki/run/manifest.json, .llmwiki/bootstrap-plan.json,
+        # .llmwiki/wiki/, and .llmwiki/graph.json so the bundle can include
+        # related wiki pages and `affects` edges. CI never has the wiki
+        # checked in, so generate it on the fly. If anything fails the
+        # bundle still builds with a warning.
+        run: |
+          node ./dist/bin/repo-wiki.js run --mode bootstrap \
+            --repo . \
+            --scan .llmwiki/run \
+            --plan .llmwiki/bootstrap-plan.json \
+            --wiki .llmwiki/wiki
+        continue-on-error: true
+
       - name: Build review-context bundle (local artifact)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -39,4 +53,5 @@ jobs:
         with:
           name: review-context-pr-${{ github.event.pull_request.number }}
           path: .llmwiki/review-context-pr-${{ github.event.pull_request.number }}.*
+          include-hidden-files: true
           if-no-files-found: warn
