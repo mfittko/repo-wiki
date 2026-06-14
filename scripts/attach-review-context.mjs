@@ -137,7 +137,15 @@ async function main() {
   await fs.writeFile(tempBodyFile, summaryBody, 'utf8');
 
   if (existingId) {
-    await execGh(['api', '-X', 'PATCH', '-F', `body=@${tempBodyFile}`, `/repos/${repository}/issues/comments/${existingId}`], repoPath);
+    try {
+      await execGh(['api', '-X', 'PATCH', '-F', `body=@${tempBodyFile}`, `/repos/${repository}/issues/comments/${existingId}`], repoPath);
+    } catch (error) {
+      // The comment we located may have been deleted between runs, or
+      // `gh pr view --json comments` may have returned a stale/different
+      // id. Fall through and post a fresh comment.
+      console.warn(`Failed to update existing comment ${existingId}: ${error?.stderr || error?.message || String(error)}. Posting a new comment instead.`);
+      await execGh(['pr', 'comment', prNumber, '--body-file', tempBodyFile, '--repo', repository], repoPath);
+    }
   } else {
     await execGh(['pr', 'comment', prNumber, '--body-file', tempBodyFile, '--repo', repository], repoPath);
   }
