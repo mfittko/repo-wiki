@@ -23,4 +23,6 @@ export type { WikiPatch, WikiPatchFrontmatter, WikiPatchIssue, SynthesizeOptions
 export { buildSearchIndex, searchWiki, searchIndex, formatSearchResults, defaultSearchDirForWiki, SEARCH_INDEX_VERSION } from './search.js';
 export type { SearchIndex, SearchIndexEntry, SearchResult } from './search.js';
 export { buildWikiQueryAnswer, buildWikiExplanation, findWikiGraphPath, formatWikiQueryAnswer, formatWikiExplanation, formatWikiGraphPath, defaultGraphPathForWiki } from './wiki-query.js';
+export { buildReviewContextBundle, formatReviewContextBundle, writeReviewContextBundle } from './review-context.js';
+export type { ReviewContextBundle, ReviewContextOptions, ResolvedReviewTarget } from './review-context.js';
 export type { WikiEvidence, WikiQueryAnswer, WikiExplanation, WikiGraphPathResult } from './wiki-query.js';

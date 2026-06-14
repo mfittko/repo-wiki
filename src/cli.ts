@@ -12,6 +12,7 @@ import { loadConfig } from './config.js';
 import { publishWiki, PUBLISH_TARGETS, defaultFrontmatterPolicyForTarget, type PublishTarget } from './publisher.js';
 import { isFrontmatterPolicy, parseFrontmatterPolicy, type FrontmatterPolicy } from './frontmatter.js';
 import { runExtensionInstall } from './extension-install.js';
+import { buildReviewContextBundle, formatReviewContextBundle, writeReviewContextBundle } from './review-context.js';
 
 type PublishConfig = {
   target?: string;
@@ -36,6 +37,7 @@ Commands:
   path      Find a deterministic traversal in .llmwiki/graph.json.
   explain   Explain a wiki page or graph node with evidence.
   run       Run scan -> plan -> lint-docs -> compile -> lint, optionally followed by publish.
+  review-context Produce a deterministic review bundle (diff + adjacent context + wiki pages).
   extension Install the pi extension shim and skill (extension install [--global|--project] [--pi-dir <dir>] [--force]).
 
 Options:
@@ -300,6 +302,40 @@ export async function runCli(argv: string[]) {
       return;
     }
 
+
+
+    case 'review-context': {
+      const positionals = getPositionals(rest);
+      const target = positionals[0];
+      if (!target) {
+        throw new Error('Missing review context target. Usage: repo-wiki review-context <pr|branch|range> [--out <path>] [--format md|json|both] [--wiki-dir <dir>] [--graph <path>] [--scan <dir>] [--adjacency <depth>]');
+      }
+      const effectiveFormat = (getStringOption(options, 'format') || (options.json ? 'json' : 'md')) as 'md' | 'json' | 'both';
+      if (!['md', 'json', 'both'].includes(effectiveFormat)) {
+        throw new Error(`Unknown --format: ${effectiveFormat}. Expected one of: md, json, both.`);
+      }
+      const bundle = await buildReviewContextBundle({
+        repoPath: getStringOption(options, 'repo') || '.',
+        target,
+        outPath: getStringOption(options, 'out'),
+        format: effectiveFormat,
+        wikiDir: getStringOption(options, 'wiki-dir') || getStringOption(options, 'wiki'),
+        graphPath: getStringOption(options, 'graph'),
+        scanDir: getStringOption(options, 'scan'),
+        adjacencyDepth: parseNonNegativeInt(getStringOption(options, 'adjacency')) ?? 1
+      });
+      const outPath = getStringOption(options, 'out');
+      if (outPath) {
+        const written = await writeReviewContextBundle(bundle, outPath, effectiveFormat);
+        console.log(JSON.stringify({ status: 'ok', written }, null, 2));
+      } else {
+        if (effectiveFormat === 'both') {
+          console.error('Warning: --format both requires --out; falling back to markdown output.');
+        }
+        console.log(formatReviewContextBundle(bundle, effectiveFormat === 'both' ? 'md' : effectiveFormat));
+      }
+      return;
+    }
     default:
       throw new Error(`Unknown command: ${command}\n\n${HELP}`);
   }
@@ -462,4 +498,12 @@ function parsePositiveInt(value: string | undefined) {
   }
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseNonNegativeInt(value: string | undefined) {
+  if (!value) {
+    return null;
+  }
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }

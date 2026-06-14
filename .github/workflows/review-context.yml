@@ -1,0 +1,59 @@
+name: Review Context
+
+on:
+  pull_request:
+    types:
+      - opened
+      - synchronize
+      - ready_for_review
+
+jobs:
+  attach-review-context:
+    name: Attach review-context bundle
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Install and build
+        run: npm ci
+
+      - name: Generate local wiki + graph for context
+        # Produces .llmwiki/run/manifest.json, .llmwiki/bootstrap-plan.json,
+        # .llmwiki/wiki/, and .llmwiki/graph.json so the bundle can include
+        # related wiki pages and `affects` edges. CI never has the wiki
+        # checked in, so generate it on the fly. If anything fails the
+        # bundle still builds with a warning.
+        run: |
+          node ./dist/bin/repo-wiki.js run --mode bootstrap \
+            --repo . \
+            --scan .llmwiki/run \
+            --plan .llmwiki/bootstrap-plan.json \
+            --wiki .llmwiki/wiki
+        continue-on-error: true
+
+      - name: Build review-context bundle (local artifact)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/attach-review-context.mjs --pr ${{ github.event.pull_request.number }} --repo . --format both
+        continue-on-error: true
+
+      - name: Upload bundle as workflow artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: review-context-pr-${{ github.event.pull_request.number }}
+          path: .llmwiki/review-context-pr-${{ github.event.pull_request.number }}.*
+          include-hidden-files: true
+          if-no-files-found: warn

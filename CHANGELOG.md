@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Add `repo-wiki review-context <target>` command producing a deterministic markdown bundle with changed lines, adjacent source context, and related wiki pages.
+- Add `scripts/attach-review-context.mjs` and a `.github/workflows/review-context.yml` workflow to post the bundle as a PR comment on draft and ready-for-review events.
+
 ## [0.2.5] - 2026-06-13
 
 ### Added
