@@ -46,7 +46,7 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
   const absoluteRepo = path.resolve(repoPath);
   const absoluteOut = path.resolve(outDir);
   await fs.mkdir(absoluteOut, { recursive: true });
-  await fs.mkdir(path.join(absoluteOut, 'cards'));
+  await fs.mkdir(path.join(absoluteOut, 'cards'), { recursive: true });
 
   const config = await loadConfig(absoluteRepo);
   const commit = headRef || await getGitCommit(absoluteRepo);

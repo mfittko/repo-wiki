@@ -74,7 +74,6 @@ export function buildRepositoryAnalysis(cards: SourceCard[]) {
       ...(typeof entry.end_line === 'number' ? { end_line: entry.end_line } : {})
     })))
     .sort(compareCommandSourceEntries);
-  const taskRunnerTargetSources = cards
 
   return {
     package_scripts: packageScripts,

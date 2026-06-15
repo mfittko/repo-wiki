@@ -15,7 +15,7 @@ const COMMON_ENV_VAR_NAMES = new Set(['CI', 'HOME', 'PATH', 'PORT', 'SHELL', 'TE
 const RECOGNIZED_DOC_COMMAND_PREFIX = /^(npm|pnpm|yarn|node|npx|make|just|task|docker|git)\b/;
 
 export type CommandStatus = 'validated' | 'missing' | 'unvalidated';
-export type CommandSource = 'validated' | 'missing' | 'unvalidated' | 'package_scripts' | 'ci_workflow' | 'unknown';
+export type CommandSource = 'package_scripts' | 'ci_workflow' | 'unknown';
 
 export type CommandClassification = {
   command: string;

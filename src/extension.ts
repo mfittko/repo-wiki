@@ -76,7 +76,8 @@ const repoWikiQuerySchema = {
     wikiDir: { type: 'string' },
     graphPath: { type: 'string' },
     limit: { type: 'number', default: 5 }
-  }
+  },
+  required: ['question']
 };
 
 const repoWikiPathSchema = {
@@ -86,7 +87,8 @@ const repoWikiPathSchema = {
     to: { type: 'string', description: 'End node or page' },
     wikiDir: { type: 'string', description: 'Wiki directory' },
     graphPath: { type: 'string' }
-  }
+  },
+  required: ['from', 'to']
 };
 
 const repoWikiExplainSchema = {
@@ -95,7 +97,8 @@ const repoWikiExplainSchema = {
     target: { type: 'string', description: 'Page or node to explain' },
     wikiDir: { type: 'string' },
     graphPath: { type: 'string' }
-  }
+  },
+  required: ['target']
 };
 
 const repoWikiSearchSchema = {
@@ -104,7 +107,8 @@ const repoWikiSearchSchema = {
     query: { type: 'string', description: 'Search query' },
     wikiDir: { type: 'string' },
     limit: { type: 'number', default: 10 }
-  }
+  },
+  required: ['query']
 };
 
 export function truncateForTool(text: string, maxBytes = 50000, maxLines = 2000): string {

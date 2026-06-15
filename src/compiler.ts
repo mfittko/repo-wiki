@@ -306,13 +306,13 @@ export async function compileWiki({
           withNotes = setPageStateMixed(withNotes);
         }
         await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, withNotes.endsWith('\n') ? withNotes : `${withNotes}\n`, 'utf8');
+    await fs.writeFile(filePath, withNotes.endsWith('\n') ? withNotes : `${withNotes}\n`, 'utf8');
         continue;
       }
     }
 
     await fs.mkdir(path.dirname(filePath), { recursive: true });
-  await fs.writeFile(filePath, newContent.endsWith('\n') ? newContent : `${newContent}\n`, 'utf8');
+    await fs.writeFile(filePath, newContent.endsWith('\n') ? newContent : `${newContent}\n`, 'utf8');
     // Track first write of Architecture.md (no existing file).
     if (file === 'Architecture.md' && archDecision === null) {
       archDecision = 'full-regenerated';
