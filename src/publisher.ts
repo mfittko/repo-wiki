@@ -1,7 +1,6 @@
 import { promises as fs } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fileExists } from './utils/fs.js';
 import { getGitStatus, runGit } from './utils/git.js';
 import { applyFrontmatterPolicy, stripFrontmatter, type FrontmatterPolicy } from './frontmatter.js';
 
@@ -93,7 +92,7 @@ export async function publishWiki({
   assertSafeGitArgument(publishBranch, 'branch');
   assertSafeGitArgument(publishRemote, 'remote');
 
-  if (!await fileExists(absoluteWikiDir)) {
+  if (!(await fs.access(absoluteWikiDir).then(() => true).catch(() => false))) {
     throw new Error(`Wiki directory does not exist: ${absoluteWikiDir}`);
   }
 
@@ -416,14 +415,14 @@ async function ensurePagesSiteSupport(siteRootDir: string, publishDir: string, p
 async function ensurePagesEntryAndNavigation(publishDir: string) {
   const homePath = path.join(publishDir, 'Home.md');
   const indexPath = path.join(publishDir, 'index.md');
-  if (await fileExists(homePath) && !await fileExists(indexPath)) {
+  if ((await fs.access(homePath).then(() => true).catch(() => false)) && !(await fs.access(indexPath).then(() => true).catch(() => false))) {
     const homeContent = await fs.readFile(homePath, 'utf8');
     await fs.writeFile(indexPath, homeContent, 'utf8');
   }
 
   const sidebarPath = path.join(publishDir, '_Sidebar.md');
   const navigationPath = path.join(publishDir, 'Navigation.md');
-  if (await fileExists(sidebarPath) && !await fileExists(navigationPath)) {
+  if ((await fs.access(sidebarPath).then(() => true).catch(() => false)) && !(await fs.access(navigationPath).then(() => true).catch(() => false))) {
     const sidebarContent = await fs.readFile(sidebarPath, 'utf8');
     await fs.writeFile(navigationPath, rewritePagesNavigationLinks(sidebarContent), 'utf8');
   }
@@ -463,13 +462,13 @@ async function ensurePagesMermaidSupport(siteRootDir: string, pagesPath: string)
   const configPath = path.join(siteRootDir, '_config.yml');
   // Regenerate if new, marked as repo-wiki generated, or matching known legacy repo-wiki defaults.
   // Preserve markerless files that do not match those legacy signatures as user-customized.
-  if (!await fileExists(configPath) || await isRepoWikiGeneratedFile(configPath, 'config')) {
+  if (!(await fs.access(configPath).then(() => true).catch(() => false)) || await isRepoWikiGeneratedFile(configPath, 'config')) {
     await fs.writeFile(configPath, buildPagesConfig(pagesPath), 'utf8');
   }
 
   const layoutDir = path.join(siteRootDir, '_layouts');
   const layoutPath = path.join(layoutDir, 'repo-wiki.html');
-  if (!await fileExists(layoutPath) || await isRepoWikiGeneratedFile(layoutPath, 'layout')) {
+  if (!(await fs.access(layoutPath).then(() => true).catch(() => false)) || await isRepoWikiGeneratedFile(layoutPath, 'layout')) {
     await fs.mkdir(layoutDir, { recursive: true });
     await fs.writeFile(layoutPath, PAGES_LAYOUT, 'utf8');
   }
@@ -493,7 +492,7 @@ async function ensurePagesNavInclude(siteRootDir: string, publishDir: string) {
   // Preserve every markerless existing nav include as user-customized. Even markup
   // resembling an older generated nav may have been edited by hand, so only files
   // with the current repo-wiki marker are safe to refresh automatically.
-  if (await fileExists(navIncludePath) && !await isRepoWikiGeneratedFile(navIncludePath)) {
+  if ((await fs.access(navIncludePath).then(() => true).catch(() => false)) && !await isRepoWikiGeneratedFile(navIncludePath)) {
     return;
   }
 
@@ -501,9 +500,9 @@ async function ensurePagesNavInclude(siteRootDir: string, publishDir: string) {
   const sidebarPath = path.join(publishDir, '_Sidebar.md');
   const navMdPath = path.join(publishDir, 'Navigation.md');
 
-  if (await fileExists(sidebarPath)) {
+  if ((await fs.access(sidebarPath).then(() => true).catch(() => false))) {
     navBody = parseSidebarToNavHtml(await fs.readFile(sidebarPath, 'utf8'));
-  } else if (await fileExists(navMdPath)) {
+  } else if ((await fs.access(navMdPath).then(() => true).catch(() => false))) {
     navBody = parseSidebarToNavHtml(await fs.readFile(navMdPath, 'utf8'));
   }
 

@@ -3,7 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { Writable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { DEFAULT_WALK_EXCLUDES, ensureDir, walkFiles, writeJson } from './utils/fs.js';
+import { DEFAULT_WALK_EXCLUDES, walkFiles } from './utils/fs.js';
 import { getGitCommit, getGitRemote } from './utils/git.js';
 import { classifyPath, detectLanguage } from './language.js';
 import {
@@ -22,10 +22,7 @@ import { loadConfig } from './config.js';
 import {
   isDocumentationFile,
   createDocumentationCard,
-  extractCiCommandSources,
-  extractMakeTargetSources,
-  extractJustfileTargetSources,
-  extractTaskfileTargetSources
+  extractCiCommandSources
 } from './docs-ingestor.js';
 
 const MAX_TEXT_BYTES = 512_000;
@@ -48,8 +45,8 @@ type AnalysisMetadata = {
 export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef }: ScannerOptions) {
   const absoluteRepo = path.resolve(repoPath);
   const absoluteOut = path.resolve(outDir);
-  await ensureDir(absoluteOut);
-  await ensureDir(path.join(absoluteOut, 'cards'));
+  await fs.mkdir(absoluteOut, { recursive: true });
+  await fs.mkdir(path.join(absoluteOut, 'cards'));
 
   const config = await loadConfig(absoluteRepo);
   const commit = headRef || await getGitCommit(absoluteRepo);
@@ -87,10 +84,6 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     const ciWorkflowCommandSources = contentAvailable && kind === 'ci' ? extractCiCommandSources(content) : [];
     const ciWorkflowCommands = [...new Set(ciWorkflowCommandSources.map((entry) => entry.command))];
     const lowerBaseName = path.basename(file.relative).toLowerCase();
-    const makeTargetSources = contentAvailable && lowerBaseName === 'makefile' ? extractMakeTargetSources(content) : [];
-    const makeTargets = [...new Set(makeTargetSources.map((entry) => entry.target))];
-    const taskRunnerTargetSources = getTaskRunnerTargetSources(lowerBaseName, content, contentAvailable);
-    const taskRunnerTargets = [...new Set(taskRunnerTargetSources.map((entry) => entry.target))];
     const goPackage = (language === 'Go' && contentAvailable) ? extractGoPackage(content, language) : null;
     const imports = contentAvailable ? extractImports(content, language) : [];
     const symbols = contentAvailable ? extractSymbols(content, language) : [];
@@ -134,22 +127,20 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
       ...(packageMetadata || {}),
       ...(ciWorkflowCommands.length ? { ci_workflow_commands: ciWorkflowCommands } : {}),
       ...(ciWorkflowCommandSources.length ? { ci_workflow_command_sources: ciWorkflowCommandSources } : {}),
-      ...(makeTargets.length ? { make_targets: makeTargets } : {}),
-      ...(makeTargetSources.length ? { make_target_sources: makeTargetSources } : {}),
-      ...(taskRunnerTargets.length ? { task_runner_targets: taskRunnerTargets } : {}),
-      ...(taskRunnerTargetSources.length ? { task_runner_target_sources: taskRunnerTargetSources } : {}),
       ...(goPackage !== null ? { go_package: goPackage } : {}),
       skipped_content: !contentAvailable,
       reasons: inferReasons(file.relative, kind, content, { environmentVariables, routeSurfaces, migrationSurfaces, modelSurfaces })
     };
 
     cards.push(card);
-    await writeJson(path.join(absoluteOut, 'cards', `${safeFileName(file.relative)}.json`), card);
+    await fs.mkdir(path.dirname(path.join(absoluteOut, 'cards', `${safeFileName(file.relative)}.json`)), { recursive: true });
+    await fs.writeFile(path.join(absoluteOut, 'cards', `${safeFileName(file.relative)}.json`), `${JSON.stringify(card, null, 2)}\n`, 'utf8');
 
     if (contentAvailable && isDocumentationFile(file.relative, config)) {
       const documentationCard = await createDocumentationCard({ file, content, config, repoPath: absoluteRepo });
       documentationCards.push(documentationCard);
-      await writeJson(path.join(absoluteOut, 'docs', `${safeFileName(file.relative)}.json`), documentationCard);
+      await fs.mkdir(path.dirname(path.join(absoluteOut, 'docs', `${safeFileName(file.relative)}.json`)), { recursive: true });
+      await fs.writeFile(path.join(absoluteOut, 'docs', `${safeFileName(file.relative)}.json`), `${JSON.stringify(documentationCard, null, 2)}\n`, 'utf8');
     }
   }
 
@@ -186,7 +177,8 @@ export async function scanRepository({ mode, repoPath, outDir, baseRef, headRef 
     files: cards
   };
 
-  await writeJson(path.join(absoluteOut, 'manifest.json'), manifest);
+  await fs.mkdir(path.dirname(path.join(absoluteOut, 'manifest.json')), { recursive: true });
+  await fs.writeFile(path.join(absoluteOut, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
 
   return {
     manifest,
@@ -362,9 +354,3 @@ function summarizeDocumentation(cards: any[]) {
   return { files: cards.length, statuses, stale, claims, commands, env_vars: envVars, file_paths: filePaths };
 }
 
-function getTaskRunnerTargetSources(lowerBaseName: string, content: string, contentAvailable: boolean) {
-  if (!contentAvailable) return [];
-  if (lowerBaseName === 'justfile') return extractJustfileTargetSources(content);
-  if (lowerBaseName === 'taskfile.yml' || lowerBaseName === 'taskfile.yaml') return extractTaskfileTargetSources(content);
-  return [];
-}

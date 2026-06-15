@@ -12,10 +12,6 @@ type SourceCard = {
   package_script_sources?: Array<{ name: string; line?: number; end_line?: number }>;
   ci_workflow_commands?: string[];
   ci_workflow_command_sources?: Array<{ command: string; line?: number; end_line?: number }>;
-  make_targets?: string[];
-  make_target_sources?: Array<{ target: string; line?: number }>;
-  task_runner_targets?: string[];
-  task_runner_target_sources?: Array<{ target: string; runner: 'just' | 'taskfile'; line?: number }>;
 };
 
 const FILE_NODE_PREFIX = 'file:';
@@ -78,32 +74,12 @@ export function buildRepositoryAnalysis(cards: SourceCard[]) {
       ...(typeof entry.end_line === 'number' ? { end_line: entry.end_line } : {})
     })))
     .sort(compareCommandSourceEntries);
-  const makeTargets = [...new Set(cards.flatMap((card) => card.make_targets || []))].sort();
-  const makeTargetSources = cards
-    .flatMap((card) => (card.make_target_sources || []).map((entry) => ({
-      path: card.path,
-      target: entry.target,
-      ...(typeof entry.line === 'number' ? { line: entry.line } : {})
-    })))
-    .sort(compareTargetSourceEntries);
-  const taskRunnerTargets = [...new Set(cards.flatMap((card) => card.task_runner_targets || []))].sort();
   const taskRunnerTargetSources = cards
-    .flatMap((card) => (card.task_runner_target_sources || []).map((entry) => ({
-      path: card.path,
-      target: entry.target,
-      runner: entry.runner,
-      ...(typeof entry.line === 'number' ? { line: entry.line } : {})
-    })))
-    .sort(compareTaskRunnerTargetSourceEntries);
 
   return {
     package_scripts: packageScripts,
     ci_workflow_commands: ciWorkflowCommands,
     ci_workflow_command_sources: ciWorkflowCommandSources,
-    make_targets: makeTargets,
-    make_target_sources: makeTargetSources,
-    task_runner_targets: taskRunnerTargets,
-    task_runner_target_sources: taskRunnerTargetSources,
     dependency_graph: {
       nodes: dependencyGraph.nodes,
       edges: dependencyEdges,
@@ -539,18 +515,6 @@ function compareTargetSourceEntries(
 ) {
   const pathLineOrder = comparePathAndLine(left, right);
   if (pathLineOrder !== 0) return pathLineOrder;
-  return left.target.localeCompare(right.target);
-}
-
-function compareTaskRunnerTargetSourceEntries(
-  left: { path: string; target: string; runner: 'just' | 'taskfile'; line?: number },
-  right: { path: string; target: string; runner: 'just' | 'taskfile'; line?: number }
-) {
-  const pathLineOrder = comparePathAndLine(left, right);
-  if (pathLineOrder !== 0) return pathLineOrder;
-  if (left.runner !== right.runner) {
-    return left.runner.localeCompare(right.runner);
-  }
   return left.target.localeCompare(right.target);
 }
 

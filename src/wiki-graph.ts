@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { readJson } from './utils/fs.js';
+import { promises as fs } from 'node:fs';
 
 const MANAGED_PAGE_STATES = new Set(['generated', 'mixed']);
 const GRAPH_NODE_KINDS_WITH_PATH_LOOKUPS = new Set(['page', 'source', 'documentation', 'module']);
@@ -19,7 +19,7 @@ export type WikiGraphEdge = {
   to: string;
 };
 
-export type WikiGraphData = {
+type WikiGraphData = {
   schema_version: number;
   nodes: WikiGraphNode[];
   edges: WikiGraphEdge[];
@@ -37,14 +37,14 @@ export type WikiGraphIndex = {
   incomingEdgesByNodeId: Map<string, WikiGraphEdge[]>;
 };
 
-export type AffectedWikiGraphPageSelection = {
+type AffectedWikiGraphPageSelection = {
   pageId: string;
   pagePath: string;
   pageState: string;
   changedPaths: string[];
 };
 
-export type WikiGraphTraversalSelection = {
+type WikiGraphTraversalSelection = {
   nodeId: string;
   path: string;
   kind: string;
@@ -63,7 +63,7 @@ export class WikiGraphError extends Error {
 }
 
 export async function loadWikiGraph(graphPath: string): Promise<WikiGraphIndex> {
-  const raw = await readJson(graphPath);
+  const raw = JSON.parse(await fs.readFile(graphPath, 'utf8'));
   return buildWikiGraphIndex(raw, { graphPath });
 }
 
@@ -197,7 +197,6 @@ export function getAdjacentNodes(
     .filter((node): node is WikiGraphNode => !!node);
 }
 
-
 export function selectLinkedPagePaths(index: WikiGraphIndex, pagePath: string): WikiGraphTraversalSelection[] {
   return selectPageTraversalNodes(index, pagePath, 'wiki_link', ['page']);
 }
@@ -266,7 +265,6 @@ export function selectAffectedPagePaths(
 export function isManagedPageState(pageState: string | undefined): boolean {
   return MANAGED_PAGE_STATES.has(String(pageState || 'generated'));
 }
-
 
 function selectPageTraversalNodes(
   index: WikiGraphIndex,

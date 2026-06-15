@@ -1,5 +1,5 @@
 /** Shared patterns for detecting credential-like content in generated or published wiki markdown. */
-export const SECRET_PATTERNS: readonly RegExp[] = [
+const SECRET_PATTERNS: readonly RegExp[] = [
   /AKIA[0-9A-Z]{16}/,
   /-----BEGIN (RSA|DSA|EC|OPENSSH) PRIVATE KEY-----/,
   /ghp_[A-Za-z0-9_]{30,}/,

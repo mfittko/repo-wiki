@@ -299,7 +299,6 @@ function inferEvidenceStrength(ref: string): WikiEvidence['strength'] {
   return /\.(md|mdx|markdown)$/i.test(ref) ? 'documentation' : 'source';
 }
 
-
 function normalizeTarget(value: string) {
   return value
     .toLowerCase()
@@ -315,7 +314,6 @@ function normalizeTarget(value: string) {
 function compareNodes(left: WikiGraphNode, right: WikiGraphNode) {
   return left.kind.localeCompare(right.kind) || left.path.localeCompare(right.path) || left.id.localeCompare(right.id);
 }
-
 
 function compareEvidence(left: WikiEvidence, right: WikiEvidence) {
   return evidenceStrengthRank(left.strength) - evidenceStrengthRank(right.strength)

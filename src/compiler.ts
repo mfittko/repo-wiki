@@ -3,7 +3,6 @@ import { promises as fs } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { hasDataModelSignals } from './data-model-signals.js';
 import { assembleAllPageContexts, assemblePageContext } from './context-assembler.js';
-import { ensureDir, readJson, writeJson, writeText } from './utils/fs.js';
 import { buildRouteSurfaceIndex, cleanDocumentedPathTarget, collectKnownEnvironmentVariables, collectManifestDirectories, dedupeRouteValidationFindings, normalizeRepoPath, resolveDocumentedPathFromManifest, validateRouteClaims } from './docs-validation.js';
 import { classifyDocumentedCommands, extractRouteClaims, mergePackageScripts } from './docs-ingestor.js';
 import { extractFrontmatterBlock } from './frontmatter.js';
@@ -28,10 +27,10 @@ export async function compileWiki({
   /** Override the LLM provider (for testing). Only used when compiler.mode=llm. */
   _provider?: LLMProvider | null;
 }) {
-  const manifest = await readJson(path.join(scanDir, 'manifest.json'));
-  const plan = await readJson(planFile);
+  const manifest = JSON.parse(await fs.readFile(path.join(scanDir, 'manifest.json'), 'utf8'));
+  const plan = JSON.parse(await fs.readFile(planFile, 'utf8'));
   const pageContexts = assembleAllPageContexts({ manifest, plan });
-  await ensureDir(wikiDir);
+  await fs.mkdir(wikiDir, { recursive: true });
 
   const KNOWN_MODES = ['deterministic', 'llm'];
   const rawMode = resolveCompilerMode(config?.compiler);
@@ -306,12 +305,14 @@ export async function compileWiki({
           // If it has no page_state field at all (e.g. LLM output), inject it.
           withNotes = setPageStateMixed(withNotes);
         }
-        await writeText(filePath, withNotes);
+        await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, withNotes.endsWith('\n') ? withNotes : `${withNotes}\n`, 'utf8');
         continue;
       }
     }
 
-    await writeText(filePath, newContent);
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+  await fs.writeFile(filePath, newContent.endsWith('\n') ? newContent : `${newContent}\n`, 'utf8');
     // Track first write of Architecture.md (no existing file).
     if (file === 'Architecture.md' && archDecision === null) {
       archDecision = 'full-regenerated';
@@ -320,7 +321,9 @@ export async function compileWiki({
 
   // Keep the graph artifact rooted in the local .llmwiki workspace rather than the configurable wikiDir.
   // This preserves the fixed `.llmwiki/graph.json` contract even when callers override `--wiki`.
-  await writeJson(path.join(path.dirname(scanDir), 'graph.json'), await buildWikiGraph(manifest, plan, wikiDir));
+  const graphPath = path.join(path.dirname(scanDir), 'graph.json');
+  await fs.mkdir(path.dirname(graphPath), { recursive: true });
+  await fs.writeFile(graphPath, `${JSON.stringify(await buildWikiGraph(manifest, plan, wikiDir), null, 2)}\n`, 'utf8');
 
   // Keep the search artifact rooted in the local .llmwiki workspace rather than the configurable wikiDir.
   // This preserves the fixed `.llmwiki/search/` contract even when callers override `--wiki`.
@@ -944,7 +947,6 @@ function extractMarkdownLinkTargets(line: string, referenceTargets = new Map<str
   return targets;
 }
 
-
 function extractFrontmatterSourcePaths(content: string): string[] {
   const block = extractFrontmatterBlock(content);
   if (!block) {
@@ -995,7 +997,6 @@ function extractFrontmatterSourcePaths(content: string): string[] {
     .map((entry) => canonicalRepoRelativePath(normalizeYamlPathScalar(entry).trim()))
     .filter(Boolean)) as string[];
 }
-
 
 function parseInlineYamlSequence(value: string): string[] {
   try {
@@ -1692,16 +1693,7 @@ function renderDocumentationDebtReport(manifest) {
   const allDocCommands: string[] = docs.flatMap((doc) => doc.validation?.commands || []);
   const uniqueDocCommands = [...new Set(allDocCommands)];
   const ciCommands: string[] = manifest.analysis?.ci_workflow_commands || [];
-  const makeTargets: string[] = manifest.analysis?.make_targets || [];
-  const taskRunnerTargetSources: Array<{ target: string; runner: 'just' | 'taskfile' }> = manifest.analysis?.task_runner_target_sources || [];
-  const taskRunnerTargetsByRunner = {
-    just: [...new Set(taskRunnerTargetSources.filter((entry) => entry.runner === 'just').map((entry) => entry.target))],
-    taskfile: [...new Set(taskRunnerTargetSources.filter((entry) => entry.runner === 'taskfile').map((entry) => entry.target))]
-  };
-  const classified = classifyDocumentedCommands(uniqueDocCommands, allPackageScripts, ciCommands, {
-    makeTargets,
-    taskRunnerTargetsByRunner
-  });
+  const classified = classifyDocumentedCommands(uniqueDocCommands, allPackageScripts, ciCommands);
   const validatedCmds = classified.filter((c) => c.status === 'validated');
   const missingCmds = classified.filter((c) => c.status === 'missing');
   const unvalidatedCmds = classified.filter((c) => c.status === 'unvalidated');
@@ -1741,8 +1733,6 @@ function renderDocumentationDebtReport(manifest) {
     ...docs.filter((doc) => doc.claims?.length && doc.status === 'unvalidated').map((doc) => `- \`${doc.path}\` - documentation claims have no validation signal.`),
     ...missingCmds.map((finding) => {
       if (finding.source === 'package_scripts') return `- \`${redactSensitiveText(finding.command)}\` - package script not found.`;
-      if (finding.source === 'makefile') return `- \`${redactSensitiveText(finding.command)}\` - Makefile target not found.`;
-      if (finding.source === 'task_runner') return `- \`${redactSensitiveText(finding.command)}\` - task-runner target not found.`;
       return `- \`${redactSensitiveText(finding.command)}\` - command reference not found.`;
     }),
     ...unvalidatedCmds.map((finding) => `- \`${redactSensitiveText(finding.command)}\` - command source unknown.`),
@@ -1763,8 +1753,6 @@ function renderDocumentationDebtReport(manifest) {
     const sourceLabels: Record<string, string> = {
       package_scripts: 'package.json',
       ci_workflow: 'CI workflow',
-      makefile: 'Makefile',
-      task_runner: 'Task runner'
     };
     const source = sourceLabels[c.source] || 'unknown';
     return tableRow([code(redactSensitiveText(c.command)), badge, source]);

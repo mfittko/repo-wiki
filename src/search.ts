@@ -1,7 +1,6 @@
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
 import { extractFrontmatterBlock, parseSimpleYamlObject } from './frontmatter.js';
-import { ensureDir, writeJson } from './utils/fs.js';
 
 export const SEARCH_INDEX_VERSION = 1;
 const DEFAULT_LIMIT = 10;
@@ -139,9 +138,10 @@ export async function buildSearchIndex({
     entries
   };
 
-  await ensureDir(resolvedOutDir);
+  await fs.mkdir(resolvedOutDir, { recursive: true });
   const outFile = path.join(resolvedOutDir, 'index.json');
-  await writeJson(outFile, index);
+  await fs.mkdir(path.dirname(outFile), { recursive: true });
+  await fs.writeFile(outFile, `${JSON.stringify(index, null, 2)}\n`, 'utf8');
 
   return {
     index,
@@ -500,7 +500,6 @@ function truncate(value: string, maxLength: number) {
   }
   return `${normalized.slice(0, Math.max(0, maxLength - 1)).trimEnd()}…`;
 }
-
 
 function normalizeStoredPath(value: string) {
   return value.replaceAll(path.sep, '/');

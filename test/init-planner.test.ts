@@ -5,7 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { initProject } from '../src/init.js';
 import { createBootstrapPlan } from '../src/planner.js';
-import { readJson } from '../src/utils/fs.js';
+import { promises as fs } from 'node:fs';
 
 async function exists(filePath: string) {
   try {
@@ -77,7 +77,7 @@ test('createBootstrapPlan groups modules and emits cross-cutting pages from mani
     }, null, 2), 'utf8');
 
     const result = await createBootstrapPlan({ scanDir, outFile });
-    const plan = await readJson(outFile);
+    const plan = JSON.parse(await fs.readFile(outFile, 'utf8'));
 
     assert.equal(result.summary.outFile, outFile);
     assert.ok(plan.modules.some((module: any) => module.name === 'Service web'));
@@ -128,7 +128,7 @@ test('createBootstrapPlan emits data-model page for ORM-only signal paths', asyn
     }, null, 2), 'utf8');
 
     const result = await createBootstrapPlan({ scanDir, outFile });
-    const plan = await readJson(outFile);
+    const plan = JSON.parse(await fs.readFile(outFile, 'utf8'));
 
     assert.equal(result.summary.outFile, outFile);
     assert.ok(plan.pages.some((page: any) => page.path === 'Data-Model-and-Migrations.md'));
@@ -292,7 +292,7 @@ test('createBootstrapPlan builds affected_page_graph mapping source files to wik
     }, null, 2), 'utf8');
 
     await createBootstrapPlan({ scanDir, outFile });
-    const plan = await readJson(outFile);
+    const plan = JSON.parse(await fs.readFile(outFile, 'utf8'));
 
     assert.ok(plan.affected_page_graph, 'plan should include affected_page_graph');
     assert.ok(Array.isArray(plan.affected_page_graph.source_to_pages), 'source_to_pages should be an array');
@@ -489,7 +489,7 @@ test('createBootstrapPlan incremental mode selects affected pages from graph and
     }, null, 2), 'utf8');
 
     await createBootstrapPlan({ scanDir, outFile });
-    const plan = await readJson(outFile);
+    const plan = JSON.parse(await fs.readFile(outFile, 'utf8'));
     assert.ok(plan.incremental_selection, 'incremental plan should include incremental_selection');
     assert.equal(plan.incremental_selection.summary.graph_available, true);
     assert.equal(plan.incremental_selection.summary.graph_used, true);
@@ -569,7 +569,7 @@ test('createBootstrapPlan incremental mode supports documentation graph node IDs
     }, null, 2), 'utf8');
 
     await createBootstrapPlan({ scanDir, outFile });
-    const plan = await readJson(outFile);
+    const plan = JSON.parse(await fs.readFile(outFile, 'utf8'));
     const selectedByPage = new Map<string, any>(plan.incremental_selection.selected_pages.map((entry: any) => [entry.page, entry]));
 
     assert.ok(selectedByPage.has('Documentation-Debt-Report.md'), 'documentation node ids should resolve docs changes to affected pages');
@@ -615,7 +615,7 @@ test('createBootstrapPlan incremental mode falls back when graph is present but 
     }, null, 2), 'utf8');
 
     await createBootstrapPlan({ scanDir, outFile });
-    const plan = await readJson(outFile);
+    const plan = JSON.parse(await fs.readFile(outFile, 'utf8'));
 
     assert.ok(plan.incremental_selection, 'incremental plan should include incremental_selection');
     assert.equal(plan.incremental_selection.summary.graph_available, true);
@@ -676,7 +676,7 @@ test('createBootstrapPlan incremental mode falls back when changed paths are abs
     }, null, 2), 'utf8');
 
     await createBootstrapPlan({ scanDir, outFile });
-    const plan = await readJson(outFile);
+    const plan = JSON.parse(await fs.readFile(outFile, 'utf8'));
 
     assert.ok(plan.incremental_selection, 'incremental plan should include incremental_selection');
     assert.equal(plan.incremental_selection.summary.graph_available, true);
@@ -758,7 +758,7 @@ test('createBootstrapPlan incremental mode falls back deterministically when gra
     }, null, 2), 'utf8');
 
     await createBootstrapPlan({ scanDir, outFile });
-    const plan = await readJson(outFile);
+    const plan = JSON.parse(await fs.readFile(outFile, 'utf8'));
 
     assert.ok(plan.incremental_selection, 'incremental plan should include incremental_selection');
     assert.equal(plan.incremental_selection.summary.graph_available, false);

@@ -1,12 +1,12 @@
 import path from 'node:path';
 import { hasDataModelSignals } from './data-model-signals.js';
-import { readJson, writeJson } from './utils/fs.js';
+import { promises as fs } from 'node:fs';
 import { loadWikiGraph, selectAffectedPagePaths } from './wiki-graph.js';
 
 const ALWAYS_AFFECTED_INCREMENTAL_PAGES: readonly string[] = ['Agent-Context-Pack.md', 'Index.md', 'Log.md', '_Sidebar.md'];
 
 export async function createBootstrapPlan({ scanDir, outFile }) {
-  const manifest = await readJson(path.join(scanDir, 'manifest.json'));
+  const manifest = JSON.parse(await fs.readFile(path.join(scanDir, 'manifest.json'), 'utf8'));
   const modules = groupIntoModules(manifest.files);
   const pages = createPagePlan(manifest, modules);
   const affectedPageGraph = buildAffectedPageGraph(manifest, modules, pages);
@@ -47,7 +47,8 @@ export async function createBootstrapPlan({ scanDir, outFile }) {
     ...(incrementalSelection ? { incremental_selection: incrementalSelection } : {})
   };
 
-  await writeJson(outFile, plan);
+  await fs.mkdir(path.dirname(outFile), { recursive: true });
+  await fs.writeFile(outFile, `${JSON.stringify(plan, null, 2)}\n`, 'utf8');
 
   return {
     plan,

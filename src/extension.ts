@@ -1,5 +1,4 @@
 import type { ExtensionAPI, ExtensionContext } from '@earendil-works/pi-coding-agent';
-import { Type, type Static } from 'typebox';
 import path from 'node:path';
 import { runCli } from './cli.js';
 import { scanRepository } from './scanner.js';
@@ -16,72 +15,97 @@ import {
 import { searchWiki, defaultSearchDirForWiki } from './search.js';
 import { loadConfig } from './config.js';
 
-const repoWikiCommandSchema = Type.Object({
-  args: Type.Optional(Type.String({ description: 'Arguments passed to the repo-wiki CLI' })),
-});
+const repoWikiCommandSchema = {
+  type: 'object',
+  properties: {
+    args: { type: 'string', description: 'Arguments passed to the repo-wiki CLI' }
+  }
+};
 
-const repoWikiScanSchema = Type.Object({
-  repoPath: Type.Optional(Type.String({ description: 'Repository path' })),
-  mode: Type.Optional(
-    Type.Union(
-      [Type.Literal('bootstrap'), Type.Literal('incremental')],
-      { description: 'Scan mode: bootstrap (full) or incremental (changed paths only)' }
-    )
-  ),
-  outDir: Type.Optional(Type.String({ description: 'Output scan directory' })),
-  baseRef: Type.Optional(Type.String()),
-  headRef: Type.Optional(Type.String()),
-});
+const repoWikiScanSchema = {
+  type: 'object',
+  properties: {
+    repoPath: { type: 'string', description: 'Repository path' },
+    mode: { type: 'string', enum: ['bootstrap', 'incremental'], description: 'Scan mode: bootstrap (full) or incremental (changed paths only)' },
+    outDir: { type: 'string', description: 'Output scan directory' },
+    baseRef: { type: 'string' },
+    headRef: { type: 'string' }
+  }
+};
 
-const repoWikiPlanSchema = Type.Object({
-  scanDir: Type.Optional(Type.String({ description: 'Scan directory' })),
-  outFile: Type.Optional(Type.String({ description: 'Plan output file' })),
-});
+const repoWikiPlanSchema = {
+  type: 'object',
+  properties: {
+    scanDir: { type: 'string', description: 'Scan directory' },
+    outFile: { type: 'string', description: 'Plan output file' }
+  }
+};
 
-const repoWikiCompileSchema = Type.Object({
-  repoPath: Type.Optional(Type.String({ description: 'Repository path for config' })),
-  scanDir: Type.Optional(Type.String()),
-  planFile: Type.Optional(Type.String()),
-  wikiDir: Type.Optional(Type.String()),
-});
+const repoWikiCompileSchema = {
+  type: 'object',
+  properties: {
+    repoPath: { type: 'string', description: 'Repository path for config' },
+    scanDir: { type: 'string' },
+    planFile: { type: 'string' },
+    wikiDir: { type: 'string' }
+  }
+};
 
-const repoWikiLintSchema = Type.Object({
-  wikiDir: Type.Optional(Type.String()),
-  scanDir: Type.Optional(Type.String()),
-});
+const repoWikiLintSchema = {
+  type: 'object',
+  properties: {
+    wikiDir: { type: 'string' },
+    scanDir: { type: 'string' }
+  }
+};
 
-const repoWikiPublishSchema = Type.Object({
-  wikiDir: Type.Optional(Type.String()),
-  remote: Type.Optional(Type.String()),
-  branch: Type.Optional(Type.String()),
-  dryRun: Type.Optional(Type.Boolean()),
-});
+const repoWikiPublishSchema = {
+  type: 'object',
+  properties: {
+    wikiDir: { type: 'string' },
+    remote: { type: 'string' },
+    branch: { type: 'string' },
+    dryRun: { type: 'boolean' }
+  }
+};
 
-const repoWikiQuerySchema = Type.Object({
-  question: Type.String({ description: 'Question to answer from the wiki' }),
-  wikiDir: Type.Optional(Type.String()),
-  graphPath: Type.Optional(Type.String()),
-  limit: Type.Optional(Type.Number({ default: 5 })),
-});
+const repoWikiQuerySchema = {
+  type: 'object',
+  properties: {
+    question: { type: 'string', description: 'Question to answer from the wiki' },
+    wikiDir: { type: 'string' },
+    graphPath: { type: 'string' },
+    limit: { type: 'number', default: 5 }
+  }
+};
 
-const repoWikiPathSchema = Type.Object({
-  from: Type.String({ description: 'Start node or page' }),
-  to: Type.String({ description: 'End node or page' }),
-  wikiDir: Type.Optional(Type.String({ description: 'Wiki directory' })),
-  graphPath: Type.Optional(Type.String()),
-});
+const repoWikiPathSchema = {
+  type: 'object',
+  properties: {
+    from: { type: 'string', description: 'Start node or page' },
+    to: { type: 'string', description: 'End node or page' },
+    wikiDir: { type: 'string', description: 'Wiki directory' },
+    graphPath: { type: 'string' }
+  }
+};
 
-const repoWikiExplainSchema = Type.Object({
-  target: Type.String({ description: 'Page or node to explain' }),
-  wikiDir: Type.Optional(Type.String()),
-  graphPath: Type.Optional(Type.String()),
-});
+const repoWikiExplainSchema = {
+  type: 'object',
+  properties: {
+    target: { type: 'string', description: 'Page or node to explain' },
+    wikiDir: { type: 'string' },
+    graphPath: { type: 'string' }
+  }
+};
 
-const repoWikiSearchSchema = Type.Object({
-  query: Type.String({ description: 'Search query' }),
-  wikiDir: Type.Optional(Type.String()),
-  limit: Type.Optional(Type.Number({ default: 10 })),
-});
+const repoWikiSearchSchema = {
+  type: 'object',
+  properties: {
+    query: { type: 'string', description: 'Search query' },
+    wikiDir: { type: 'string' },
+    limit: { type: 'number', default: 10 }
+  }
+};
 
 export function truncateForTool(text: string, maxBytes = 50000, maxLines = 2000): string {
   const marker = '\n\n[Output truncated]';
@@ -203,7 +227,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     promptSnippet: 'Run repo-wiki CLI commands inside pi.',
     promptGuidelines: ['Use repo_wiki_cli when the user asks for repo-wiki CLI behavior and structured tool arguments are not needed.'],
     parameters: repoWikiCommandSchema,
-    async execute(_toolCallId, params: Static<typeof repoWikiCommandSchema>) {
+    async execute(_toolCallId, params: any) {
       const tokens = params.args?.trim() ? splitArgs(params.args) : ['--help'];
       await runCliIsolated(tokens);
       return { content: [{ type: 'text', text: 'repo-wiki CLI command finished' }], details: {} };
@@ -217,7 +241,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     promptSnippet: 'Scan a repository for repo-wiki.',
     promptGuidelines: ['Use repo_wiki_scan before planning or compiling a wiki.'],
     parameters: repoWikiScanSchema,
-    async execute(_toolCallId, params: Static<typeof repoWikiScanSchema>) {
+    async execute(_toolCallId, params: any) {
       const result = await scanRepository({
         mode: params.mode ?? 'bootstrap',
         repoPath: params.repoPath || '.',
@@ -237,7 +261,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     promptSnippet: 'Create a repo-wiki page plan.',
     promptGuidelines: ['Use repo_wiki_plan after scan and before compile.'],
     parameters: repoWikiPlanSchema,
-    async execute(_toolCallId, params: Static<typeof repoWikiPlanSchema>) {
+    async execute(_toolCallId, params: any) {
       const result = await createBootstrapPlan({
         scanDir: params.scanDir || '.llmwiki/run',
         outFile: params.outFile || '.llmwiki/bootstrap-plan.json',
@@ -254,7 +278,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     promptSnippet: 'Compile a repo-wiki from scan and plan.',
     promptGuidelines: ['Use repo_wiki_compile after scan and plan.'],
     parameters: repoWikiCompileSchema,
-    async execute(_toolCallId, params: Static<typeof repoWikiCompileSchema>) {
+    async execute(_toolCallId, params: any) {
       const repoPath = params.repoPath || '.';
       const config = await loadConfig(repoPath);
       const result = await compileWiki({
@@ -275,7 +299,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     promptSnippet: 'Lint a repo-wiki.',
     promptGuidelines: ['Use repo_wiki_lint after compile to validate the wiki.'],
     parameters: repoWikiLintSchema,
-    async execute(_toolCallId, params: Static<typeof repoWikiLintSchema>) {
+    async execute(_toolCallId, params: any) {
       const result = await lintWiki({
         wikiDir: params.wikiDir || '.llmwiki/wiki',
         scanDir: params.scanDir || '.llmwiki/run',
@@ -296,7 +320,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     promptSnippet: 'Publish a repo-wiki to GitHub Wiki.',
     promptGuidelines: ['Use repo_wiki_publish only when the user asks to publish and a remote is configured.'],
     parameters: repoWikiPublishSchema,
-    async execute(_toolCallId, params: Static<typeof repoWikiPublishSchema>) {
+    async execute(_toolCallId, params: any) {
       const wikiDir = params.wikiDir || '.llmwiki/wiki';
       const config = await loadConfig(path.dirname(path.dirname(wikiDir)));
       const target = 'github-wiki';
@@ -322,7 +346,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     promptSnippet: 'Search the repo-wiki.',
     promptGuidelines: ['Use repo_wiki_search to find wiki pages by keyword.'],
     parameters: repoWikiSearchSchema,
-    async execute(_toolCallId, params: Static<typeof repoWikiSearchSchema>) {
+    async execute(_toolCallId, params: any) {
       const wikiDir = params.wikiDir || '.llmwiki/wiki';
       const result = await searchWiki({
         query: params.query,
@@ -342,7 +366,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     promptSnippet: 'Query the repo-wiki for an answer.',
     promptGuidelines: ['Use repo_wiki_query for evidence-backed answers about the repository.'],
     parameters: repoWikiQuerySchema,
-    async execute(_toolCallId, params: Static<typeof repoWikiQuerySchema>) {
+    async execute(_toolCallId, params: any) {
       const wikiDir = params.wikiDir || '.llmwiki/wiki';
       const result = await buildWikiQueryAnswer({
         question: params.question,
@@ -363,7 +387,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     promptSnippet: 'Find a path in the repo-wiki graph.',
     promptGuidelines: ['Use repo_wiki_path to explain relationships between wiki pages.'],
     parameters: repoWikiPathSchema,
-    async execute(_toolCallId, params: Static<typeof repoWikiPathSchema>) {
+    async execute(_toolCallId, params: any) {
       const wikiDir = params.wikiDir || '.llmwiki/wiki';
       const result = await findWikiGraphPath({
         from: params.from,
@@ -387,7 +411,7 @@ export default function repoWikiExtension(pi: ExtensionAPI) {
     promptSnippet: 'Explain a repo-wiki node or page.',
     promptGuidelines: ['Use repo_wiki_explain to summarize a specific wiki topic.'],
     parameters: repoWikiExplainSchema,
-    async execute(_toolCallId, params: Static<typeof repoWikiExplainSchema>) {
+    async execute(_toolCallId, params: any) {
       const wikiDir = params.wikiDir || '.llmwiki/wiki';
       const result = await buildWikiExplanation({
         target: params.target,

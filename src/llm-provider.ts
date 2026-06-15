@@ -378,10 +378,10 @@ function buildMockContent(request: LLMRequest): string {
 
 // ── Provider configuration ─────────────────────────────────────────────────
 
-export type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+type ReasoningEffort = 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
 
 /** Per-archetype LLM overrides for architecture synthesis requests. */
-export interface ArchitecturePageBudget {
+interface ArchitecturePageBudget {
   /** Model override for architecture synthesis. */
   model?: string;
   /** Output-token budget override for architecture synthesis. */
@@ -393,7 +393,7 @@ export interface ArchitecturePageBudget {
 }
 
 /** Per-archetype LLM override configuration. */
-export interface PageBudgets {
+interface PageBudgets {
   /** Overrides applied when synthesizing the Architecture page. */
   architecture?: ArchitecturePageBudget;
 }
@@ -621,7 +621,7 @@ function providerForMode(mode?: string): string | undefined {
  * and reasoning effort. These supplement (not replace) the global provider
  * config.
  */
-export interface ResolvedArchitectureOverrides {
+interface ResolvedArchitectureOverrides {
   /** Architecture-specific model override, or undefined if not set. */
   model: string | undefined;
   /** Architecture-specific max output tokens override, or undefined if not set. */

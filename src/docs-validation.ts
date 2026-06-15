@@ -6,12 +6,12 @@ const COMMON_ENV_VAR_NAMES = new Set(['CI', 'HOME', 'PATH', 'PORT', 'SHELL', 'TE
 const WILDCARD_ROUTE_METHODS = new Set(['ANY', 'ALL', 'USE']);
 const WILDCARD_ROUTE_METHOD_LIST = [...WILDCARD_ROUTE_METHODS];
 
-export type PathResolution = {
+type PathResolution = {
   valid: boolean;
   path: string;
 };
 
-export type DocumentedPathSource = 'link' | 'inline_code';
+type DocumentedPathSource = 'link' | 'inline_code';
 export type RouteEvidence = {
   source_path: string;
   framework: string;

@@ -14,34 +14,6 @@ type WalkFilesOptions = {
   onSuppressNestedRepository?: (relativePath: string) => void;
 };
 
-export async function ensureDir(dirPath: string) {
-  await fs.mkdir(dirPath, { recursive: true });
-}
-
-export async function readJson(filePath: string) {
-  const raw = await fs.readFile(filePath, 'utf8');
-  return JSON.parse(raw);
-}
-
-export async function writeJson(filePath: string, data: unknown) {
-  await ensureDir(path.dirname(filePath));
-  await fs.writeFile(filePath, `${JSON.stringify(data, null, 2)}\n`, 'utf8');
-}
-
-export async function writeText(filePath: string, content: string) {
-  await ensureDir(path.dirname(filePath));
-  await fs.writeFile(filePath, content.endsWith('\n') ? content : `${content}\n`, 'utf8');
-}
-
-export async function fileExists(filePath: string) {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export async function walkFiles(rootDir: string, options: WalkFilesOptions = {}): Promise<WalkFile[]> {
   const exclude = [...new Set([...(options.exclude || DEFAULT_WALK_EXCLUDES), ...(options.additionalExclude || [])])];
   const files: WalkFile[] = [];
