@@ -140,7 +140,6 @@ export async function buildSearchIndex({
 
   await fs.mkdir(resolvedOutDir, { recursive: true });
   const outFile = path.join(resolvedOutDir, 'index.json');
-  await fs.mkdir(path.dirname(outFile), { recursive: true });
   await fs.writeFile(outFile, `${JSON.stringify(index, null, 2)}\n`, 'utf8');
 
   return {

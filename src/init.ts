@@ -111,7 +111,7 @@ export async function initProject({ repoPath = '.', force = false, writeAgents =
   if (writeAgents) {
     if (force || !(await fs.access(agentsPath).then(() => true).catch(() => false))) {
       await fs.mkdir(path.dirname(agentsPath), { recursive: true });
-    await fs.writeFile(agentsPath, AGENT_POINTER.endsWith('\n') ? AGENT_POINTER : `${AGENT_POINTER}\n`, 'utf8');
+      await fs.writeFile(agentsPath, AGENT_POINTER.endsWith('\n') ? AGENT_POINTER : `${AGENT_POINTER}\n`, 'utf8');
       written.push(path.relative(absoluteRepo, agentsPath));
     } else {
       skipped.push(path.relative(absoluteRepo, agentsPath));

@@ -306,7 +306,7 @@ export async function compileWiki({
           withNotes = setPageStateMixed(withNotes);
         }
         await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, withNotes.endsWith('\n') ? withNotes : `${withNotes}\n`, 'utf8');
+        await fs.writeFile(filePath, withNotes.endsWith('\n') ? withNotes : `${withNotes}\n`, 'utf8');
         continue;
       }
     }
