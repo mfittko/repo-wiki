@@ -2,7 +2,6 @@ import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { extractFrontmatterBlock, stripFrontmatter } from './frontmatter.js';
 import { containsSecretLikeContent } from './secret-patterns.js';
-import { readJson } from './utils/fs.js';
 import { loadWikiGraph, getEdgesByType, getIncomingEdges, getNodeById, getNodesByKind, getOutgoingEdges, isManagedPageState, isSupportedWikiGraphSchema } from './wiki-graph.js';
 
 const REQUIRED_PAGES = [
@@ -61,7 +60,7 @@ type GraphHealthFinding = {
 };
 
 export async function lintWiki({ wikiDir, scanDir }: { wikiDir: string; scanDir: string }) {
-  const manifest = await readJson(path.join(scanDir, 'manifest.json'));
+  const manifest = JSON.parse(await fs.readFile(path.join(scanDir, 'manifest.json'), 'utf8'));
   const issues: LintIssue[] = [];
   const files = await listMarkdown(wikiDir);
   const topLevelPages = await listTopLevelMarkdown(wikiDir);

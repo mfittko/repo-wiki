@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { LLM_DEFAULTS } from './llm-provider.js';
-import { ensureDir, fileExists, writeJson, writeText } from './utils/fs.js';
+import { promises as fs } from 'node:fs';
 
 const DEFAULT_CONFIG = {
   schema_version: 1,
@@ -90,25 +90,28 @@ export async function initProject({ repoPath = '.', force = false, writeAgents =
   const written = [];
   const skipped = [];
 
-  await ensureDir(llmwikiDir);
+  await fs.mkdir(llmwikiDir, { recursive: true });
 
-  if (force || !await fileExists(configPath)) {
-    await writeJson(configPath, DEFAULT_CONFIG);
+  if (force || !(await fs.access(configPath).then(() => true).catch(() => false))) {
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+    await fs.writeFile(configPath, `${JSON.stringify(DEFAULT_CONFIG, null, 2)}\n`, 'utf8');
     written.push(path.relative(absoluteRepo, configPath));
   } else {
     skipped.push(path.relative(absoluteRepo, configPath));
   }
 
-  if (force || !await fileExists(schemaPath)) {
-    await writeText(schemaPath, DEFAULT_SCHEMA);
+  if (force || !(await fs.access(schemaPath).then(() => true).catch(() => false))) {
+    await fs.mkdir(path.dirname(schemaPath), { recursive: true });
+    await fs.writeFile(schemaPath, DEFAULT_SCHEMA.endsWith('\n') ? DEFAULT_SCHEMA : `${DEFAULT_SCHEMA}\n`, 'utf8');
     written.push(path.relative(absoluteRepo, schemaPath));
   } else {
     skipped.push(path.relative(absoluteRepo, schemaPath));
   }
 
   if (writeAgents) {
-    if (force || !await fileExists(agentsPath)) {
-      await writeText(agentsPath, AGENT_POINTER);
+    if (force || !(await fs.access(agentsPath).then(() => true).catch(() => false))) {
+      await fs.mkdir(path.dirname(agentsPath), { recursive: true });
+      await fs.writeFile(agentsPath, AGENT_POINTER.endsWith('\n') ? AGENT_POINTER : `${AGENT_POINTER}\n`, 'utf8');
       written.push(path.relative(absoluteRepo, agentsPath));
     } else {
       skipped.push(path.relative(absoluteRepo, agentsPath));

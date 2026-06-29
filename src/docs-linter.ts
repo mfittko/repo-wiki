@@ -1,12 +1,11 @@
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
-import { readJson } from './utils/fs.js';
 import { loadConfig } from './config.js';
 import { buildRouteSurfaceIndex, cleanDocumentedPathTarget, collectKnownEnvironmentVariables, dedupeRouteValidationFindings, resolveDocumentedPathOnDisk, validateRouteClaims } from './docs-validation.js';
 import { classifyDocumentedCommands, extractCiCommands, extractRouteClaims, mergePackageScripts } from './docs-ingestor.js';
 
 export async function lintDocs({ scanDir, repoPath = '.' }) {
-  const manifest = await readJson(path.join(scanDir, 'manifest.json'));
+  const manifest = JSON.parse(await fs.readFile(path.join(scanDir, 'manifest.json'), 'utf8'));
   const config = await loadConfig(repoPath);
   const strictness = getDocumentationValidationStrictness(config.documentation?.validation_strictness);
   const issues = [];
@@ -18,13 +17,6 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
 
   // Collect merged package scripts from manifest analysis
   const allPackageScripts = mergePackageScripts(manifest);
-  const makeTargets = manifest.analysis?.make_targets || [];
-  const taskRunnerTargetSources: Array<{ target: string; runner: 'just' | 'taskfile' }> = manifest.analysis?.task_runner_target_sources || [];
-  const taskRunnerTargetsByRunner = {
-    just: [...new Set(taskRunnerTargetSources.filter((entry) => entry.runner === 'just').map((entry) => entry.target))],
-    taskfile: [...new Set(taskRunnerTargetSources.filter((entry) => entry.runner === 'taskfile').map((entry) => entry.target))]
-  };
-
   // Collect CI commands from scan analysis and refresh workflow YAML files when available.
   const ciCommands = new Set<string>(manifest.analysis?.ci_workflow_commands || []);
   const workflowsDir = path.join(repoRoot, '.github', 'workflows');
@@ -66,10 +58,7 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
     // Validate documented commands against package scripts and CI workflows
     const docCommands: string[] = doc.validation?.commands || [];
     if (docCommands.length > 0) {
-      const classified = classifyDocumentedCommands(docCommands, allPackageScripts, [...ciCommands], {
-        makeTargets,
-        taskRunnerTargetsByRunner
-      });
+      const classified = classifyDocumentedCommands(docCommands, allPackageScripts, [...ciCommands]);
       for (const cls of classified) {
         if (cls.status === 'missing' && cls.source === 'package_scripts') {
           pushIssue(issues, issue(
@@ -78,24 +67,6 @@ export async function lintDocs({ scanDir, repoPath = '.' }) {
             'standard',
             'missing-package-script',
             `${doc.path} documents '${cls.command}' but script '${cls.script_name}' is not defined in package.json.`
-          ));
-        }
-        if (cls.status === 'missing' && cls.source === 'makefile') {
-          pushIssue(issues, issue(
-            undefined,
-            strictness,
-            'standard',
-            'missing-make-target',
-            `${doc.path} documents '${cls.command}' but Makefile target '${cls.target_name}' is not defined.`
-          ));
-        }
-        if (cls.status === 'missing' && cls.source === 'task_runner') {
-          pushIssue(issues, issue(
-            undefined,
-            strictness,
-            'standard',
-            'missing-task-runner-target',
-            `${doc.path} documents '${cls.command}' but task-runner target '${cls.target_name}' is not defined.`
           ));
         }
       }

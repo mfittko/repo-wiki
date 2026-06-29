@@ -1,5 +1,5 @@
-import { parseArgs, type ParsedArgs } from './utils/args.js';
-import { loadDotEnv } from './utils/dotenv.js';
+import { parseArgs as parseNodeArgs } from 'node:util';
+import path from 'node:path';
 import { initProject } from './init.js';
 import { scanRepository } from './scanner.js';
 import { createBootstrapPlan } from './planner.js';
@@ -19,6 +19,41 @@ type PublishConfig = {
   frontmatter?: string;
   wiki?: { branch?: string; frontmatter?: string };
   pages?: { branch?: string; path?: string; frontmatter?: string };
+};
+
+type ParsedOptions = Record<string, string | boolean | undefined>;
+
+const CLI_OPTIONS = {
+  repo: { type: 'string' },
+  mode: { type: 'string' },
+  out: { type: 'string' },
+  scan: { type: 'string' },
+  plan: { type: 'string' },
+  wiki: { type: 'string' },
+  'wiki-dir': { type: 'string' },
+  base: { type: 'string' },
+  head: { type: 'string' },
+  target: { type: 'string' },
+  'pages-path': { type: 'string' },
+  'frontmatter-policy': { type: 'string' },
+  frontmatter: { type: 'string' },
+  remote: { type: 'string' },
+  branch: { type: 'string' },
+  message: { type: 'string' },
+  index: { type: 'string' },
+  search: { type: 'string' },
+  graph: { type: 'string' },
+  limit: { type: 'string' },
+  adjacency: { type: 'string' },
+  format: { type: 'string' },
+  'pi-dir': { type: 'string' },
+  force: { type: 'boolean' },
+  'write-agents': { type: 'boolean' },
+  'dry-run': { type: 'boolean' },
+  json: { type: 'boolean' },
+  global: { type: 'boolean' },
+  project: { type: 'boolean' },
+  publish: { type: 'boolean' },
 };
 
 const HELP = `
@@ -63,12 +98,12 @@ Examples:
   npx repo-wiki run --mode bootstrap --repo /path/to/existing/repo --wiki /tmp/repo-wiki
 `.trim();
 
-function getStringOption(options: ParsedArgs, key: string) {
+function getStringOption(options: ParsedOptions, key: string) {
   const value = options[key];
   return typeof value === 'string' ? value : undefined;
 }
 
-function getPublishTargetOption(options: ParsedArgs, configuredTarget?: string): PublishTarget {
+function getPublishTargetOption(options: ParsedOptions, configuredTarget?: string): PublishTarget {
   const value = getStringOption(options, 'target') || configuredTarget;
   if (!value) {
     return 'github-wiki';
@@ -80,7 +115,7 @@ function getPublishTargetOption(options: ParsedArgs, configuredTarget?: string):
   return 'github-wiki';
 }
 
-function getFrontmatterPolicyOption(options: ParsedArgs, target: PublishTarget, configuredPolicy?: string): FrontmatterPolicy {
+function getFrontmatterPolicyOption(options: ParsedOptions, target: PublishTarget, configuredPolicy?: string): FrontmatterPolicy {
   const explicitOptionName = getFrontmatterOptionName(options);
   const explicitValue = explicitOptionName ? getStringOption(options, explicitOptionName.slice(2)) : undefined;
   const value = explicitValue || configuredPolicy;
@@ -96,7 +131,7 @@ function getFrontmatterPolicyOption(options: ParsedArgs, target: PublishTarget, 
   return policy;
 }
 
-function getFrontmatterOptionName(options: ParsedArgs): '--frontmatter-policy' | '--frontmatter' | null {
+function getFrontmatterOptionName(options: ParsedOptions): '--frontmatter-policy' | '--frontmatter' | null {
   if (getStringOption(options, 'frontmatter-policy') !== undefined) {
     return '--frontmatter-policy';
   }
@@ -108,8 +143,9 @@ function getFrontmatterOptionName(options: ParsedArgs): '--frontmatter-policy' |
 
 export async function runCli(argv: string[]) {
   const [command, ...rest] = argv;
-  const options = parseArgs(rest);
-  await loadDotEnv(getDotEnvBaseDir(command, options));
+  const { values: rawOptions, positionals } = parseNodeArgs({ args: rest, options: CLI_OPTIONS as any, allowPositionals: true });
+  const options = rawOptions as unknown as ParsedOptions;
+  loadEnvFileForCommand(command, options);
 
   if (!command || command === 'help' || command === '--help' || command === '-h') {
     console.log(HELP);
@@ -206,7 +242,6 @@ export async function runCli(argv: string[]) {
     }
 
     case 'search': {
-      const positionals = getPositionals(rest);
       const query = positionals.join(' ').trim();
       if (!query) {
         throw new Error('Missing search query. Usage: repo-wiki search <query> [--wiki <path>] [--json]');
@@ -232,7 +267,6 @@ export async function runCli(argv: string[]) {
     }
 
     case 'query': {
-      const positionals = getPositionals(rest);
       const question = positionals.join(' ').trim();
       if (!question) {
         throw new Error('Missing query question. Usage: repo-wiki query <question> [--wiki <path>] [--graph <path>] [--json]');
@@ -247,7 +281,6 @@ export async function runCli(argv: string[]) {
     }
 
     case 'path': {
-      const positionals = getPositionals(rest);
       const [from, to] = positionals;
       if (!from || !to) {
         throw new Error('Missing path endpoints. Usage: repo-wiki path <from> <to> [--graph <path>] [--json]');
@@ -263,7 +296,6 @@ export async function runCli(argv: string[]) {
     }
 
     case 'explain': {
-      const positionals = getPositionals(rest);
       const target = positionals.join(' ').trim();
       if (!target) {
         throw new Error('Missing explain target. Usage: repo-wiki explain <node-or-page> [--wiki <path>] [--graph <path>] [--json]');
@@ -289,7 +321,7 @@ export async function runCli(argv: string[]) {
     }
 
     case 'extension': {
-      const subCommand = rest[0];
+      const subCommand = positionals[0];
       if (subCommand !== 'install') {
         throw new Error(`Unknown extension subcommand: ${subCommand ?? '(none)'}\n\n${HELP}`);
       }
@@ -302,10 +334,7 @@ export async function runCli(argv: string[]) {
       return;
     }
 
-
-
     case 'review-context': {
-      const positionals = getPositionals(rest);
       const target = positionals[0];
       if (!target) {
         throw new Error('Missing review context target. Usage: repo-wiki review-context <pr|branch|range> [--out <path>] [--format md|json|both] [--wiki-dir <dir>] [--graph <path>] [--scan <dir>] [--adjacency <depth>]');
@@ -341,15 +370,19 @@ export async function runCli(argv: string[]) {
   }
 }
 
-function getDotEnvBaseDir(command: string | undefined, options: ParsedArgs) {
+function loadEnvFileForCommand(command: string | undefined, options: ParsedOptions) {
   const repoPath = getStringOption(options, 'repo');
-  if (repoPath && ['init', 'scan', 'compile', 'lint-docs', 'run'].includes(command || '')) {
-    return repoPath;
+  const baseDir = repoPath && ['init', 'scan', 'compile', 'lint-docs', 'run'].includes(command || '') ? path.resolve(repoPath) : process.cwd();
+  try {
+    process.loadEnvFile(path.join(baseDir, '.env'));
+  } catch (error: any) {
+    if (error?.code !== 'ENOENT') {
+      throw error;
+    }
   }
-  return process.cwd();
 }
 
-async function runPipeline(options: ParsedArgs) {
+async function runPipeline(options: ParsedOptions) {
   const mode = getStringOption(options, 'mode') || 'bootstrap';
   const repoPath = getStringOption(options, 'repo') || '.';
   const config = await loadConfig(repoPath);
@@ -471,25 +504,6 @@ function getConfiguredFrontmatterPolicy(configuredPublish: PublishConfig | undef
     return configuredPublish?.wiki?.frontmatter || configuredPublish?.frontmatter;
   }
   return configuredPublish?.frontmatter;
-}
-
-function getPositionals(argv: string[]) {
-  const positionals: string[] = [];
-
-  for (let index = 0; index < argv.length; index += 1) {
-    const token = argv[index];
-    if (!token.startsWith('--')) {
-      positionals.push(token);
-      continue;
-    }
-
-    const next = argv[index + 1];
-    if (next && !next.startsWith('--')) {
-      index += 1;
-    }
-  }
-
-  return positionals;
 }
 
 function parsePositiveInt(value: string | undefined) {

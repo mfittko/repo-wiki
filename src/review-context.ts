@@ -1,14 +1,14 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { runGit } from './utils/git.js';
-import { readJson, fileExists, walkFiles, writeText } from './utils/fs.js';
+import { walkFiles } from './utils/fs.js';
 import { detectLanguage } from './language.js';
 import { extractImports, extractSymbols, extractExportedSymbols } from './extractors.js';
 import { buildWikiGraphIndex, selectAffectedPagePaths } from './wiki-graph.js';
 import { extractFrontmatterBlock } from './frontmatter.js';
 import { defaultGraphPathForWiki } from './wiki-query.js';
 
-export type ReviewContextTargetKind = 'pr' | 'branch' | 'range';
+type ReviewContextTargetKind = 'pr' | 'branch' | 'range';
 
 export type ResolvedReviewTarget = {
   kind: ReviewContextTargetKind;
@@ -20,14 +20,14 @@ export type ResolvedReviewTarget = {
   headCommit: string;
 };
 
-export type DiffHunkLine = {
+type DiffHunkLine = {
   prefix: ' ' | '+' | '-';
   content: string;
   oldLine?: number;
   newLine?: number;
 };
 
-export type DiffHunk = {
+type DiffHunk = {
   header: string;
   oldStart: number;
   oldCount: number;
@@ -36,19 +36,19 @@ export type DiffHunk = {
   lines: DiffHunkLine[];
 };
 
-export type DiffFile = {
+type DiffFile = {
   oldPath: string;
   newPath: string;
   hunks: DiffHunk[];
 };
 
-export type AdjacentFile = {
+type AdjacentFile = {
   path: string;
   relation: string;
   content: string;
 };
 
-export type RelatedWikiPage = {
+type RelatedWikiPage = {
   path: string;
   title: string;
   changedPaths: string[];
@@ -410,11 +410,11 @@ export async function buildReviewContextBundle(
 
 async function loadScanManifest(scanDir: string): Promise<{ files: Array<{ path: string; language: string; imports: string[]; symbols: string[]; exported_symbols: Array<{ name: string }> }> } | null> {
   const manifestPath = path.join(scanDir, 'manifest.json');
-  if (!(await fileExists(manifestPath))) {
+  if (!((await fs.access(manifestPath).then(() => true).catch(() => false)))) {
     return null;
   }
   try {
-    const raw = await readJson(manifestPath);
+    const raw = JSON.parse(await fs.readFile(manifestPath, 'utf8'));
     if (raw && typeof raw === 'object' && Array.isArray((raw as any).files)) {
       return raw as any;
     }
@@ -694,14 +694,14 @@ type WikiOptions = {
 
 async function buildRelatedWikiPages(options: WikiOptions): Promise<RelatedWikiPage[]> {
   const { wikiDir, graphPath, changedPaths, warnings } = options;
-  if (!(await fileExists(graphPath))) {
+  if (!((await fs.access(graphPath).then(() => true).catch(() => false)))) {
     warnings.push(`Wiki graph not found at ${graphPath}; skipping related wiki pages.`);
     return [];
   }
 
   let index;
   try {
-    const raw = await readJson(graphPath);
+    const raw = JSON.parse(await fs.readFile(graphPath, 'utf8'));
     index = buildWikiGraphIndex(raw, { graphPath });
   } catch (error: any) {
     warnings.push(`Could not load wiki graph: ${error?.message || String(error)}`);
@@ -857,12 +857,16 @@ export async function writeReviewContextBundle(
   const written: string[] = [];
   if (format === 'md' || format === 'both') {
     const mdPath = `${base}.md`;
-    await writeText(mdPath, formatReviewContextMarkdown(bundle));
+    const mdContent = formatReviewContextMarkdown(bundle);
+    await fs.mkdir(path.dirname(mdPath), { recursive: true });
+    await fs.writeFile(mdPath, mdContent.endsWith('\n') ? mdContent : `${mdContent}\n`, 'utf8');
     written.push(mdPath);
   }
   if (format === 'json' || format === 'both') {
     const jsonPath = `${base}.json`;
-    await writeText(jsonPath, formatReviewContextBundle(bundle, 'json'));
+    const jsonContent = formatReviewContextBundle(bundle, 'json');
+    await fs.mkdir(path.dirname(jsonPath), { recursive: true });
+    await fs.writeFile(jsonPath, jsonContent.endsWith('\n') ? jsonContent : `${jsonContent}\n`, 'utf8');
     written.push(jsonPath);
   }
   return written;

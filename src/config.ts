@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { fileExists, readJson } from './utils/fs.js';
+import { promises as fs } from 'node:fs';
 import { LLM_DEFAULTS } from './llm-provider.js';
 
 export const DEFAULT_CONFIG = {
@@ -67,10 +67,10 @@ export const DEFAULT_CONFIG = {
 
 export async function loadConfig(repoPath) {
   const configPath = path.join(path.resolve(repoPath), '.llmwiki', 'config.json');
-  if (!(await fileExists(configPath))) {
+  if (!((await fs.access(configPath).then(() => true).catch(() => false)))) {
     return { ...DEFAULT_CONFIG, config_path: null };
   }
-  const userConfig = await readJson(configPath);
+  const userConfig = JSON.parse(await fs.readFile(configPath, 'utf8'));
   return deepMerge(DEFAULT_CONFIG, userConfig, { config_path: configPath });
 }
 

@@ -15,7 +15,7 @@ const COMMON_ENV_VAR_NAMES = new Set(['CI', 'HOME', 'PATH', 'PORT', 'SHELL', 'TE
 const RECOGNIZED_DOC_COMMAND_PREFIX = /^(npm|pnpm|yarn|node|npx|make|just|task|docker|git)\b/;
 
 export type CommandStatus = 'validated' | 'missing' | 'unvalidated';
-export type CommandSource = 'package_scripts' | 'ci_workflow' | 'makefile' | 'task_runner' | 'unknown';
+export type CommandSource = 'package_scripts' | 'ci_workflow' | 'unknown';
 
 export type CommandClassification = {
   command: string;
@@ -42,18 +42,8 @@ export type CiWorkflowCommandSource = {
   end_line?: number;
 };
 
-export type MakeTargetSource = {
-  target: string;
-  line?: number;
-};
 
-export type TaskRunnerName = 'just' | 'taskfile';
 
-export type TaskRunnerTargetSource = {
-  target: string;
-  runner: TaskRunnerName;
-  line?: number;
-};
 
 type AdrMetadata = {
   detected: boolean;
@@ -65,17 +55,9 @@ type AdrMetadata = {
   superseded: boolean;
 };
 
-type CommandClassificationOptions = {
-  makeTargets?: string[];
-  taskRunnerTargets?: string[];
-  taskRunnerTargetsByRunner?: Partial<Record<TaskRunnerName, string[]>>;
-};
+type CommandClassificationOptions = {}; // ponytail: task-runner validation removed
 
-type NormalizedCommandClassificationOptions = {
-  makeTargets: Set<string>;
-  taskRunnerTargets: Set<string>;
-  taskRunnerTargetsByRunner: Partial<Record<TaskRunnerName, Set<string>>>;
-};
+type NormalizedCommandClassificationOptions = {};
 
 /**
  * Extract npm/shell commands from CI workflow YAML content.
@@ -112,100 +94,6 @@ export function extractCiCommandSources(content: string): CiWorkflowCommandSourc
     }
   }
   return commands;
-}
-
-export function extractMakeTargets(content: string): string[] {
-  return [...new Set(extractMakeTargetSources(content).map((entry) => entry.target))];
-}
-
-export function extractMakeTargetSources(content: string): MakeTargetSource[] {
-  const targets: MakeTargetSource[] = [];
-  const seen = new Set<string>();
-  const lines = content.split('\n');
-  for (let index = 0; index < lines.length; index += 1) {
-    const rawLine = lines[index];
-    if (/^\s*#/.test(rawLine) || /^\t/.test(rawLine)) continue;
-    const line = rawLine.trimStart();
-    const match = /^([^:#=][^:#=]*?):(?![=])/.exec(line);
-    if (!match) continue;
-    for (const target of match[1].trim().split(/\s+/)) {
-      if (!isDeterministicTargetName(target)) continue;
-      const key = `${target}\u0000${index + 1}`;
-      if (seen.has(key)) continue;
-      seen.add(key);
-      targets.push({ target, line: index + 1 });
-    }
-  }
-  return targets;
-}
-
-export function extractJustfileTargets(content: string): string[] {
-  return [...new Set(extractJustfileTargetSources(content).map((entry) => entry.target))];
-}
-
-export function extractJustfileTargetSources(content: string): TaskRunnerTargetSource[] {
-  const targets: TaskRunnerTargetSource[] = [];
-  const seen = new Set<string>();
-  const lines = content.split('\n');
-  for (let index = 0; index < lines.length; index += 1) {
-    const rawLine = lines[index];
-    if (/^\s*#/.test(rawLine) || /^\s+/.test(rawLine)) continue;
-    const match = /^([A-Za-z0-9_][A-Za-z0-9_./-]*)\s*:(?![=])/.exec(rawLine);
-    if (!match) continue;
-    const target = match[1];
-    if (!isDeterministicTargetName(target)) continue;
-    const key = `${target}\u0000${index + 1}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    targets.push({ target, runner: 'just', line: index + 1 });
-  }
-  return targets;
-}
-
-export function extractTaskfileTargets(content: string): string[] {
-  return [...new Set(extractTaskfileTargetSources(content).map((entry) => entry.target))];
-}
-
-export function extractTaskfileTargetSources(content: string): TaskRunnerTargetSource[] {
-  const targets: TaskRunnerTargetSource[] = [];
-  const seen = new Set<string>();
-  const lines = content.split('\n');
-  let tasksIndent: number | null = null;
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const rawLine = lines[index];
-    const trimmed = rawLine.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-
-    if (tasksIndent === null) {
-      const tasksMatch = /^(\s*)tasks\s*:\s*(?:#.*)?$/.exec(rawLine);
-      if (tasksMatch) {
-        tasksIndent = tasksMatch[1].length;
-      }
-      continue;
-    }
-
-    const indent = leadingSpaces(rawLine);
-    if (indent <= tasksIndent) {
-      tasksIndent = null;
-      index -= 1;
-      continue;
-    }
-    // Task names are direct children under `tasks:` in canonical Taskfile YAML.
-    if (indent !== tasksIndent + 2) continue;
-
-    // Taskfile keys may be quoted. `\1` matches the same quote char captured in group 1.
-    const targetMatch = /^\s*(["']?)([A-Za-z0-9_][A-Za-z0-9_./-]*)\1\s*:\s*(?:$|#)/.exec(rawLine);
-    if (!targetMatch) continue;
-    const target = targetMatch[2];
-    if (!isDeterministicTargetName(target)) continue;
-    const key = `${target}\u0000${index + 1}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    targets.push({ target, runner: 'taskfile', line: index + 1 });
-  }
-
-  return targets;
 }
 
 /**
@@ -278,26 +166,7 @@ function classifyCommand(
     };
   }
 
-  const makeTarget = parseMakeTarget(command);
-  if (makeTarget) {
-    return {
-      command,
-      status: options.makeTargets.has(makeTarget) ? 'validated' : 'missing',
-      source: 'makefile',
-      target_name: makeTarget
-    };
-  }
 
-  const taskRunnerTarget = parseTaskRunnerTarget(command);
-  if (taskRunnerTarget) {
-    const known = options.taskRunnerTargetsByRunner[taskRunnerTarget.runner] || options.taskRunnerTargets;
-    return {
-      command,
-      status: known.has(taskRunnerTarget.target) ? 'validated' : 'missing',
-      source: 'task_runner',
-      target_name: taskRunnerTarget.target
-    };
-  }
 
   return { command, status: 'unvalidated', source: 'unknown' };
 }
@@ -663,15 +532,8 @@ function stripContinuationBackslash(line: string) {
   return line.replace(/(\\+)(\s*)$/, (_, slashes: string, ws: string) => `${slashes.slice(0, -1)}${ws}`);
 }
 
-function normalizeCommandClassificationOptions(options: CommandClassificationOptions): NormalizedCommandClassificationOptions {
-  return {
-    makeTargets: new Set(options.makeTargets || []),
-    taskRunnerTargets: new Set(options.taskRunnerTargets || []),
-    taskRunnerTargetsByRunner: {
-      just: new Set(options.taskRunnerTargetsByRunner?.just || []),
-      taskfile: new Set(options.taskRunnerTargetsByRunner?.taskfile || [])
-    }
-  };
+function normalizeCommandClassificationOptions(_options: CommandClassificationOptions): NormalizedCommandClassificationOptions {
+  return {};
 }
 
 function parseNpmRunScript(command: string): string | undefined {
@@ -696,59 +558,6 @@ function hasNpmWorkspaceSelector(command: string): boolean {
 
 function tokenizeShellWords(command: string): string[] {
   return (command.match(/"[^"]*"|'[^']*'|\S+/g) || []).map((token) => token.replace(/^["']|["']$/g, ''));
-}
-
-function parseMakeTarget(command: string): string | undefined {
-  const tokens = tokenizeShellWords(command);
-  if (tokens[0] !== 'make') return undefined;
-  return findFirstTaskToken(tokens.slice(1), makeOptionConsumesValue);
-}
-
-function parseTaskRunnerTarget(command: string): { runner: TaskRunnerName; target: string } | undefined {
-  const tokens = tokenizeShellWords(command);
-  if (tokens[0] !== 'just' && tokens[0] !== 'task') return undefined;
-  const target = findFirstTaskToken(tokens.slice(1));
-  if (!target) return undefined;
-  return {
-    runner: tokens[0] === 'just' ? 'just' : 'taskfile',
-    target
-  };
-}
-
-function findFirstTaskToken(tokens: string[], optionConsumesValue: (option: string) => boolean = () => false): string | undefined {
-  for (let index = 0; index < tokens.length; index += 1) {
-    const token = tokens[index];
-    if (!token) continue;
-    if (token === '--') return tokens[index + 1];
-    // Skip assignment-style flags (`--flag=value`) and variable assignments (`FOO=bar`).
-    if (token.includes('=')) continue;
-    if (token.startsWith('-')) {
-      if (optionConsumesValue(token) && index + 1 < tokens.length) {
-        index += 1;
-      }
-      continue;
-    }
-    return token;
-  }
-  return undefined;
-}
-
-function makeOptionConsumesValue(option: string) {
-  return option === '-C'
-    || option === '-f'
-    || option === '--directory'
-    || option === '--file'
-    || option === '--makefile';
-}
-
-function isDeterministicTargetName(target: string) {
-  // Exclude special/pattern/expansion tokens to keep Make/task extraction deterministic.
-  return Boolean(target)
-    && !target.startsWith('.')
-    && !target.includes('%')
-    && !target.includes('$')
-    && !target.includes('(')
-    && !target.includes(')');
 }
 
 function splitShellCommand(command: string, recognizedOnly = true): string[] {
